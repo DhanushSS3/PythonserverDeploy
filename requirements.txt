@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]  # uvicorn is needed to run the FastAPI app, [standard] includes common extras
+sqlalchemy
+aiomysql           # Asynchronous driver for MySQL/MariaDB
+pydantic           # Data validation (often installed with FastAPI, but explicit is good)
+python-dotenv      # For loading environment variables from a .env file
+passlib[bcrypt]    # For password hashing (bcrypt is a strong hashing algorithm)
+python-jose[cryptography] # For JWT token handling (authentication)
+SQLModel           # If you plan to use SQLModel's Pydantic integration features
+redis
