@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 # Import your database models and session dependency
-from app.database.models import User
-from app.database.session import get_db
+from app.database.models import User # Assuming User model is imported here
+from app.database.session import get_db # Assuming get_db dependency is imported here
 
 from app.core.config import get_settings
 
@@ -33,7 +33,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Get application settings
 settings = get_settings()
 
-# --- Password Hashing Functions (Keep Existing) ---
+# --- Password Hashing Functions ---
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verifies a plain password against a hashed password.
@@ -206,20 +206,28 @@ async def delete_refresh_token(refresh_token: str):
 from fastapi.security import OAuth2PasswordBearer
 
 # Define the OAuth2 scheme. The tokenUrl points to your login endpoint.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
+# The auto_error=False allows us to handle authentication errors manually
+# (e.g., to return a custom response or require 2FA verification).
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login", auto_error=False)
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency to get the current authenticated user from the access token.
+    Does NOT enforce 2FA check here. 2FA check is done after initial login.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if token is None:
+         logger.warning("Access token is missing.")
+         raise credentials_exception
+
     try:
         payload = decode_token(token)
         user_id: int = payload.get("sub")
@@ -254,3 +262,20 @@ async def get_current_user(
     except Exception as e:
         logger.error(f"Unexpected error in get_current_user dependency for token: {token[:20]}... : {e}") # Log part of token
         raise credentials_exception
+
+# --- Dependency specifically for admin users ---
+async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """
+    FastAPI dependency to get the current authenticated user and check if they are an admin.
+    """
+    # The get_current_user dependency handles token validation and fetching the user
+    # We just need to check the user's role/type
+    if current_user.user_type != 'admin':
+        logger.warning(f"User ID {current_user.id} attempted to access admin resource without admin privileges.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this resource. Admin privileges required."
+        )
+    # If the user is an admin, return the user object
+    return current_user
+

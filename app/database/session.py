@@ -4,6 +4,9 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator
+import logging # Import logging
+
+logger = logging.getLogger(__name__) # Get logger for this module
 
 # Import the Base from base.py. This is needed for creating tables.
 from .base import Base
@@ -15,13 +18,13 @@ from app.core.config import get_settings # Import get_settings
 # We'll get these from environment variables using our config module.
 settings = get_settings() # Get the settings instance
 
-# Construct the asynchronous database URL using settings
+# Construct the asynchronous database URL using settings property
 # Using aiomysql driver for async MySQL/MariaDB support
 # Ensure you have aiomysql installed: pip install aiomysql
-DATABASE_URL = settings.DATABASE_URL # Use the property from settings
+DATABASE_URL = settings.ASYNC_DATABASE_URL # Use the new property from settings
 
 # --- ADD THIS PRINT STATEMENT ---
-print(f"Attempting to connect to database using URL: {DATABASE_URL}")
+logger.info(f"Attempting to connect to database using URL: {DATABASE_URL[:20]}...") # Log part of the URL
 # --- END OF PRINT STATEMENT ---
 
 
@@ -55,7 +58,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             # await session.commit() # Example commit if managing transactions here
         except Exception as e:
             # await session.rollback() # Example rollback
-            print(f"Database session error: {e}") # Basic error logging
+            logger.error(f"Database session error: {e}", exc_info=True) # Log the error
             raise # Re-raise the exception
         finally:
             await session.close()
@@ -74,9 +77,9 @@ async def create_all_tables():
         # or that app/database/models.py imports them if they are split.
         # The import below assumes all models are in app/database/models.py
         from . import models # Adjust import if models are in separate files
-        print("Running Base.metadata.create_all...")
+        logger.info("Running Base.metadata.create_all...")
         await conn.run_sync(Base.metadata.create_all)
-        print("Base.metadata.create_all finished.")
+        logger.info("Base.metadata.create_all finished.")
 
 # Example of how to use create_all_tables (e.g., in main.py startup event)
 # import asyncio

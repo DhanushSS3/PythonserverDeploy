@@ -1,12 +1,16 @@
 # app/crud/user.py
 
-from typing import Optional # Import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select # Import select
+from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
+# REMOVE THIS LINE: from sqlalchemy.orm import with_for_update # Incorrect import
+
+# with_for_update is used as an option directly in the select statement,
+# it is not imported from sqlalchemy.orm
 
 from app.database.models import User # Import the User model
-# from app.schemas.user import UserCreate # Not strictly needed here, but can be useful for type hinting if preferred
+from app.schemas.user import UserCreate, UserUpdate # Import UserCreate and UserUpdate
 from app.core.security import get_password_hash # Import the password hashing utility
 
 # Function to get a user by email
@@ -21,9 +25,7 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     Returns:
         The User SQLAlchemy model instance if found, otherwise None.
     """
-    # Use select to build the query
     result = await db.execute(select(User).filter(User.email == email))
-    # scalars().first() gets the first result as a scalar (the User object)
     return result.scalars().first()
 
 # Function to get a user by phone number
@@ -41,7 +43,8 @@ async def get_user_by_phone_number(db: AsyncSession, phone_number: str) -> User 
     result = await db.execute(select(User).filter(User.phone_number == phone_number))
     return result.scalars().first()
 
-# Function to get a user by ID (useful for authentication dependency)
+
+# Function to get a user by ID (useful for authentication dependency and update/delete)
 async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     """
     Retrieves a user from the database by their ID.
@@ -55,6 +58,89 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     """
     result = await db.execute(select(User).filter(User.id == user_id))
     return result.scalars().first()
+
+# Function to get a user by ID with locking (for updates involving sensitive fields)
+async def get_user_by_id_with_lock(db: AsyncSession, user_id: int) -> User | None:
+    """
+    Retrieves a user from the database by their ID with a row-level lock.
+    Use this when updating sensitive fields like wallet balance.
+
+    Args:
+        db: The asynchronous database session.
+        user_id: The ID to search for.
+
+    Returns:
+        The User SQLAlchemy model instance if found, otherwise None.
+    """
+    # Use with_for_update() as an option on the select statement
+    # No direct import is needed for with_for_update() itself.
+    result = await db.execute(
+        select(User)
+        .filter(User.id == user_id)
+        .with_for_update() # <-- Apply the lock here using the method
+    )
+    return result.scalars().first()
+
+
+# Function to get all users
+async def get_all_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[User]:
+    """
+    Retrieves a list of all users from the database with pagination.
+
+    Args:
+        db: The asynchronous database session.
+        skip: The number of records to skip (for pagination).
+        limit: The maximum number of records to return (for pagination).
+
+    Returns:
+        A list of User SQLAlchemy model instances.
+    """
+    result = await db.execute(select(User).offset(skip).limit(limit))
+    return result.scalars().all()
+
+# Function to get all demo users
+async def get_demo_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[User]:
+    """
+    Retrieves a list of all demo users from the database with pagination.
+
+    Args:
+        db: The asynchronous database session.
+        skip: The number of records to skip (for pagination).
+        limit: The maximum number of records to return (for pagination).
+
+    Returns:
+        A list of User SQLAlchemy model instances with user_type='demo'.
+    """
+    # Select users and filter by user_type = 'demo'
+    result = await db.execute(
+        select(User)
+        .filter(User.user_type == 'demo') # <-- Filter by user_type
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+# Function to get all live users
+async def get_live_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[User]:
+    """
+    Retrieves a list of all live users from the database with pagination.
+
+    Args:
+        db: The asynchronous database session.
+        skip: The number of records to skip (for pagination).
+        limit: The maximum number of records to return (for pagination).
+
+    Returns:
+        A list of User SQLAlchemy model instances with user_type='live'.
+    """
+    # Select users and filter by user_type = 'live'
+    result = await db.execute(
+        select(User)
+        .filter(User.user_type == 'live') # <-- Filter by user_type
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
 
 
 # Function to create a new user (updated to accept file paths and proof types)
@@ -102,4 +188,47 @@ async def create_user(
 
     return db_user
 
-# You can add more CRUD functions here (e.g., update_user, delete_user)
+# Function to update an existing user
+async def update_user(db: AsyncSession, db_user: User, user_update: UserUpdate) -> User:
+    """
+    Updates an existing user in the database.
+
+    Args:
+        db: The asynchronous database session.
+        db_user: The User SQLAlchemy model instance to update.
+        user_update: A UserUpdate Pydantic model containing the update data.
+
+    Returns:
+        The updated User SQLAlchemy model instance.
+    """
+    # Convert the UserUpdate Pydantic model to a dictionary, excluding unset fields
+    update_data = user_update.model_dump(exclude_unset=True) # Use model_dump for Pydantic V2+
+
+    # Iterate over the update data and set the corresponding attributes on the SQLAlchemy model
+    for field, value in update_data.items():
+        # You might add specific logic here for certain fields if needed
+        # For example, if updating password (though a separate endpoint is better)
+        # if field == "password" and value:
+        #     setattr(db_user, "hashed_password", get_password_hash(value))
+        # elif field == "email" and value != db_user.email:
+        #     # Add logic to handle email change (e.g., re-verification)
+        #     setattr(db_user, field, value)
+        # else:
+        setattr(db_user, field, value)
+
+    await db.commit()
+    await db.refresh(db_user) # Refresh to get the updated values
+
+    return db_user
+
+# Function to delete a user
+async def delete_user(db: AsyncSession, db_user: User):
+    """
+    Deletes a user from the database.
+
+    Args:
+        db: The asynchronous database session.
+        db_user: The User SQLAlchemy model instance to delete.
+    """
+    await db.delete(db_user)
+    await db.commit()

@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    UniqueConstraint,
     func # Import func for default timestamps
 )
 # Import DECIMAL from sqlalchemy.types and alias it as SQLDecimal
@@ -127,7 +128,8 @@ class Group(Base):
 
     # String fields
     symbol = Column(String(255), nullable=True) # Nullable as requested
-    name = Column(String(255), index=True, nullable=False, unique=True) # Name is required and unique
+    # REMOVED unique=True from name
+    name = Column(String(255), index=True, nullable=False) # Name is required, but not unique on its own
 
     # Integer types
     commision_type = Column(Integer, nullable=False) # Changed from str to int
@@ -156,6 +158,10 @@ class Group(Base):
     # Timestamps (Using SQLAlchemy's func.now() for database-side default)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # --- Add Unique Constraint for (symbol, name) combination ---
+    __table_args__ = (UniqueConstraint('symbol', 'name', name='_symbol_name_uc'),)
+    # The name='_symbol_name_uc' is optional but good practice for clarity
 
     # Relationships (Optional, but good practice)
     # If you decide to link users directly to groups via a foreign key on the Group model,

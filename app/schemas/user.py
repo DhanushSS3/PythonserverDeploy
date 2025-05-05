@@ -5,16 +5,10 @@ from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
 from decimal import Decimal
 
-# Import UploadFile for file uploads (still needed for the image fields)
+# Import UploadFile for file uploads (still needed for the image fields in UserCreate)
 from fastapi import UploadFile
 
 # Schema for data received when creating a user (Request Body)
-# Note: When using multipart/form-data for file uploads,
-# the other user data fields are typically sent as Form fields
-# in the endpoint function signature, not strictly validated by this Pydantic model
-# for the *entire* request body. However, keeping this schema is useful for documentation.
-# The actual validation for individual fields (like email format, password min length)
-# is handled by the Form(...) and File(...) annotations in the endpoint.
 class UserCreate(BaseModel):
     """
     Pydantic model for user registration request data (primarily for documentation
@@ -39,10 +33,10 @@ class UserCreate(BaseModel):
     group_name: Optional[str] = Field(None, max_length=255, description="Name of the trading group the user belongs to.")
 
     # Proof fields: Strings for type, UploadFile for images (handled in endpoint)
-    id_proof: Optional[str] = Field(None, description="Type of ID proof (e.g., Aadhaar, Passport).") # <-- Changed to Optional[str]
-    id_proof_image: Optional[UploadFile] = Field(None, description="ID proof image file.") # Keep as UploadFile
-    address_proof: Optional[str] = Field(None, description="Type of address proof (e.g., Utility Bill, Bank Statement).") # <-- Changed to Optional[str]
-    address_proof_image: Optional[UploadFile] = Field(None, description="Address proof image file.") # Keep as UploadFile
+    id_proof: Optional[str] = Field(None, description="Type of ID proof (e.g., Aadhaar, Passport).")
+    id_proof_image: Optional[UploadFile] = Field(None, description="ID proof image file.")
+    address_proof: Optional[str] = Field(None, description="Type of address proof (e.g., Utility Bill, Bank Statement).")
+    address_proof_image: Optional[UploadFile] = Field(None, description="Address proof image file.")
 
     # Note: Financial fields (wallet_balance, leverage, margin, etc.)
     # and unique identifiers (account_number, reffered_code) are typically
@@ -82,10 +76,10 @@ class UserResponse(BaseModel):
     is_self_trading: int = Field(..., description="Flag indicating if the user is self-trading.")
 
     # Proof fields (Storing paths to the images and string identifiers)
-    id_proof: Optional[str] = Field(None, description="Type of ID proof (e.g., Aadhaar, Passport).") # <-- Changed to Optional[str]
-    id_proof_image: Optional[str] = Field(None, description="Path to the ID proof image file.") # Keep as Optional[str] (path)
-    address_proof: Optional[str] = Field(None, description="Type of address proof (e.g., Utility Bill, Bank Statement).") # <-- Changed to Optional[str]
-    address_proof_image: Optional[str] = Field(None, description="Path to the address proof image file.") # Keep as Optional[str] (path)
+    id_proof: Optional[str] = Field(None, description="Type of ID proof (e.g., Aadhaar, Passport).")
+    id_proof_image: Optional[str] = Field(None, description="Path to the ID proof image file.")
+    address_proof: Optional[str] = Field(None, description="Type of address proof (e.g., Utility Bill, Bank Statement).")
+    address_proof_image: Optional[str] = Field(None, description="Path to the address proof image file.")
 
     bank_ifsc_code: Optional[str] = Field(None, description="Bank IFSC code.")
     bank_holder_name: Optional[str] = Field(None, description="Bank account holder name.")
@@ -103,14 +97,62 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# Schema for sending OTP request (reused for password reset request)
+# --- New Schema for Updating a User ---
+class UserUpdate(BaseModel):
+    """
+    Pydantic model for updating user data.
+    All fields are optional, allowing partial updates.
+    Sensitive fields like password should be updated via dedicated endpoints.
+    """
+    name: Optional[str] = Field(None, description="Full name of the user.")
+    email: Optional[EmailStr] = Field(None, description="User's email address.")
+    phone_number: Optional[str] = Field(None, max_length=20, description="User's phone number.")
+    user_type: Optional[str] = Field(None, max_length=100, description="Type of user (e.g., 'trader', 'investor').")
+    security_question: Optional[str] = Field(None, max_length=255, description="Security question for recovery.")
+    fund_manager: Optional[str] = Field(None, max_length=255, description="Name of the assigned fund manager.")
+    is_self_trading: Optional[int] = Field(None, description="Flag indicating if the user is self-trading (0 or 1).")
+    group_name: Optional[str] = Field(None, max_length=255, description="Name of the trading group the user belongs to.")
+    city: Optional[str] = Field(None, description="City of the user.")
+    state: Optional[str] = Field(None, description="State of the user.")
+    pincode: Optional[int] = Field(None, description="Pincode of the user's location.")
+
+    # Financial fields can also be updated, but require careful handling (locking)
+    # Note: Direct updates to wallet_balance might be restricted via this endpoint
+    # and handled through specific deposit/withdrawal/trade endpoints.
+    # Including them here for completeness, assuming logic in CRUD handles this.
+    wallet_balance: Optional[Decimal] = Field(None, max_digits=18, decimal_places=8, description="Current wallet balance.")
+    leverage: Optional[Decimal] = Field(None, max_digits=10, decimal_places=2, description="User's leverage setting.")
+    margin: Optional[Decimal] = Field(None, max_digits=18, decimal_places=8, description="User's current margin.")
+
+    # Status fields might be updated by admins
+    status: Optional[int] = Field(None, description="User account status (0 or 1).")
+    isActive: Optional[int] = Field(None, description="User active status (0 or 1).")
+
+    # Bank details
+    bank_ifsc_code: Optional[str] = Field(None, max_length=50, description="Bank IFSC code.")
+    bank_holder_name: Optional[str] = Field(None, max_length=255, description="Bank account holder name.")
+    bank_branch_name: Optional[str] = Field(None, max_length=255, description="Bank branch name.")
+    bank_account_number: Optional[str] = Field(None, max_length=100, description="Bank account number.")
+
+    # Referral fields (might be updated by admins)
+    referred_by_id: Optional[int] = Field(None, description="ID of the user who referred this user.")
+    reffered_code: Optional[str] = Field(None, description="User's unique referral code.")
+
+    # Note: Password should NOT be updated via this schema. Use a dedicated endpoint.
+    # id_proof and address_proof *types* might be updatable, but images require file upload endpoints.
+    id_proof: Optional[str] = Field(None, description="Type of ID proof (e.g., Aadhaar, Passport).")
+    address_proof: Optional[str] = Field(None, description="Type of address proof (e.g., Utility Bill, Bank Statement).")
+
+
+# --- OTP and Password Reset Schemas (Keep Existing) ---
+# ... (Keep the existing SendOTPRequest, VerifyOTPRequest, RequestPasswordReset, ResetPasswordConfirm, StatusResponse schemas here) ...
+
 class SendOTPRequest(BaseModel):
     """
     Pydantic model for the request body to send an OTP (for verification or password reset).
     """
     email: EmailStr = Field(..., description="Email address to send the OTP to.")
 
-# Schema for verifying OTP request (reused for password reset verification)
 class VerifyOTPRequest(BaseModel):
     """
     Pydantic model for the request body to verify an OTP (for verification or password reset).
@@ -118,14 +160,12 @@ class VerifyOTPRequest(BaseModel):
     email: EmailStr = Field(..., description="Email address associated with the OTP.")
     otp_code: str = Field(..., description="The OTP code received by the user.")
 
-# Schema for password reset request (send OTP)
 class RequestPasswordReset(BaseModel):
     """
     Pydantic model for requesting a password reset (sends OTP).
     """
     email: EmailStr = Field(..., description="Email address to send the password reset OTP to.")
 
-# Schema for confirming password reset (verify OTP and set new password)
 class ResetPasswordConfirm(BaseModel):
     """
     Pydantic model for confirming password reset and setting a new password.
@@ -134,15 +174,14 @@ class ResetPasswordConfirm(BaseModel):
     otp_code: str = Field(..., description="The OTP code received by the user.")
     new_password: str = Field(..., min_length=8, description="The new password for the user account.")
 
-# Schema for OTP/Password Reset response (e.g., success message)
 class StatusResponse(BaseModel):
     """
     Generic Pydantic model for simple status responses.
     """
     message: str = Field(..., description="Response message.")
-    # You might include other fields here, e.g., a token upon successful verification
-    # access_token: Optional[str] = None
-    # token_type: Optional[str] = "bearer"
+
+
+# --- Authentication Schemas (Keep Existing) ---
 
 class UserLogin(BaseModel):
     """

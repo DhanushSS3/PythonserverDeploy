@@ -1,6 +1,6 @@
 # app/api/v1/endpoints/users.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +8,7 @@ import datetime
 import shutil
 import os
 import uuid
-from typing import Optional
+from typing import Optional, List
 import logging
 
 # Import select for database queries
@@ -21,6 +21,7 @@ from app.database.models import User
 from app.schemas.user import (
     UserCreate,
     UserResponse,
+    UserUpdate,
     SendOTPRequest,
     VerifyOTPRequest,
     RequestPasswordReset,
@@ -210,23 +211,27 @@ async def send_otp_for_verification(
         return StatusResponse(message="If a user with that email exists, an OTP has been sent.")
 
     try:
+        # Create a new OTP for the user (reusing the create_otp function)
         otp_record = await crud_otp.create_otp(db, user_id=user.id)
-        subject = "Your Trading App Email Verification OTP"
-        body = f"Your One-Time Password (OTP) for email verification is: {otp_record.otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes."
+
+        # Send the email with the password reset OTP
+        subject = "Your Trading App Password Reset OTP"
+        body = f"Your One-Time Password (OTP) for password reset is: {otp_record.otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes."
         await email_service.send_email(
             to_email=user.email,
             subject=subject,
             body=body
         )
-        logger.info(f"OTP sent successfully for email verification to {user.email}.")
-        return StatusResponse(message="OTP sent successfully for email verification.")
+
+        return StatusResponse(message="Password reset OTP sent successfully.")
+
     except Exception as e:
-        logger.error(f"Error sending OTP for verification to {user.email}: {e}")
+        # Log the error and return a generic error response
+        logger.error(f"Error sending password reset OTP to {user.email}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send OTP. Please try again later."
+            detail="Failed to send password reset OTP. Please try again later."
         )
-
 
 @router.post(
     "/verify-otp",
@@ -241,26 +246,34 @@ async def verify_user_otp(
     """
     Verifies the user-provided OTP for initial email verification.
     """
+    # Find the user by email
     user = await crud_user.get_user_by_email(db, email=verify_request.email)
     if not user:
+        # Return a generic error message for security
         logger.warning(f"Verification attempt for non-existent email: {verify_request.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid email or OTP."
         )
 
+    # Get the valid OTP record for the user
     otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=verify_request.otp_code)
 
     if not otp_record:
+        # If no valid OTP found (either incorrect or expired)
         logger.warning(f"Invalid or expired OTP provided for email: {verify_request.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP."
         )
 
+    # If OTP is valid, set user status to active
     user.status = 1
     user.isActive = 1
-    await db.commit()
+    await db.commit() # Commit the status update
+    # await db.refresh(user) # No need to refresh if not returning the user object
+
+    # Delete the used OTP record
     await crud_otp.delete_otp(db, otp_id=otp_record.id)
     logger.info(f"Email verified successfully for user ID: {user.id}")
 
@@ -406,7 +419,7 @@ async def refresh_access_token(
     try:
         # Decode the refresh token to get the user ID
         payload = decode_token(token_refresh.refresh_token)
-        user_id_from_payload: int = payload.get("sub") # Renamed variable for clarity
+        user_id_from_payload: int = payload.get("sub")
         if user_id_from_payload is None:
             logger.warning("Refresh token payload missing 'sub' claim.")
             raise HTTPException(
@@ -421,14 +434,13 @@ async def refresh_access_token(
         redis_token_data = await get_refresh_token_data(token_refresh.refresh_token)
 
         # Add debugging log before the comparison
-        if redis_token_data: # Check if redis_token_data is not None before accessing its keys
+        if redis_token_data:
              logger.debug(f"Comparing Redis user_id (type: {type(redis_token_data.get('user_id'))}, value: {redis_token_data.get('user_id')}) with decoded user_id (type: {type(user_id_from_payload)}, value: {user_id_from_payload})")
         else:
              logger.debug("redis_token_data is None. Cannot perform user_id comparison.")
 
 
         # Check if redis_token_data is not None AND the user ID from Redis matches the user ID from the token payload
-        # Explicitly cast user_id_from_payload to string for comparison with Redis user_id (which is int from JSON)
         if not redis_token_data or (redis_token_data and str(redis_token_data.get("user_id")) != str(user_id_from_payload)):
              logger.warning(f"Refresh token validation failed for user ID {user_id_from_payload}. Data found: {bool(redis_token_data)}, User ID match: {str(redis_token_data.get('user_id')) == str(user_id_from_payload) if redis_token_data else False}")
              raise HTTPException(
@@ -440,7 +452,7 @@ async def refresh_access_token(
         logger.info(f"Refresh token validated successfully for user ID: {user_id_from_payload}")
 
         # Fetch the user to ensure they still exist and are active
-        result = await db.execute(select(User).filter(User.id == user_id_from_payload)) # Use user_id_from_payload
+        result = await db.execute(select(User).filter(User.id == user_id_from_payload))
         user = result.scalars().first()
 
         if user is None or user.isActive != 1:
@@ -496,9 +508,203 @@ async def logout_user(
             detail="An error occurred during logout."
         )
 
+# Endpoint to get all users (Admin Only)
+@router.get(
+    "/users",
+    response_model=List[UserResponse],
+    summary="Get all users (Admin Only)",
+    description="Retrieves a list of all registered users (requires admin authentication)."
+)
+async def read_users(
+    skip: int = Query(0, description="Number of users to skip"),
+    limit: int = Query(100, description="Maximum number of users to return"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user) # Ensure user is authenticated
+):
+    """
+    Retrieves a paginated list of all users. Restricted to administrators.
+    """
+    # --- Admin Authorization Check ---
+    # Assuming 'admin' is a specific value in the user_type field for administrators
+    if current_user.user_type != 'admin':
+        logger.warning(f"User ID {current_user.id} attempted to access /users without admin privileges.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this resource. Admin privileges required."
+        )
+    # --- End Admin Authorization Check ---
+
+    users = await crud_user.get_all_users(db, skip=skip, limit=limit)
+    return users
+
+# Endpoint to get all demo users (Admin Only)
+@router.get(
+    "/users/demo",
+    response_model=List[UserResponse],
+    summary="Get all demo users (Admin Only)",
+    description="Retrieves a list of all registered demo users (requires admin authentication)."
+)
+async def read_demo_users(
+    skip: int = Query(0, description="Number of demo users to skip"),
+    limit: int = Query(100, description="Maximum number of demo users to return"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user) # Ensure user is authenticated
+):
+    """
+    Retrieves a paginated list of all demo users. Restricted to administrators.
+    """
+    # --- Admin Authorization Check ---
+    if current_user.user_type != 'admin':
+        logger.warning(f"User ID {current_user.id} attempted to access /users/demo without admin privileges.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this resource. Admin privileges required."
+        )
+    # --- End Admin Authorization Check ---
+
+    users = await crud_user.get_demo_users(db, skip=skip, limit=limit)
+    return users
+
+# Endpoint to get all live users (Admin Only)
+@router.get(
+    "/users/live",
+    response_model=List[UserResponse],
+    summary="Get all live users (Admin Only)",
+    description="Retrieves a list of all registered live users (requires admin authentication)."
+)
+async def read_live_users(
+    skip: int = Query(0, description="Number of live users to skip"),
+    limit: int = Query(100, description="Maximum number of live users to return"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user) # Ensure user is authenticated
+):
+    """
+    Retrieves a paginated list of all live users. Restricted to administrators.
+    """
+    # --- Admin Authorization Check ---
+    if current_user.user_type != 'admin':
+        logger.warning(f"User ID {current_user.id} attempted to access /users/live without admin privileges.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this resource. Admin privileges required."
+        )
+    # --- End Admin Authorization Check ---
+
+    users = await crud_user.get_live_users(db, skip=skip, limit=limit)
+    return users
+
+
 @router.get("/me", response_model=UserResponse, summary="Get current user details")
 async def read_users_me(current_user: User = Depends(get_current_user)):
     """
     Retrieves the details of the currently authenticated user.
     """
+    # This endpoint is accessible to any authenticated user
     return current_user
+
+# Endpoint to update a user by ID (Admin Only)
+@router.patch(
+    "/users/{user_id}", # Using PATCH for partial updates
+    response_model=UserResponse,
+    summary="Update a user by ID (Admin Only)",
+    description="Updates the details of a specific user by ID (requires admin authentication)."
+)
+async def update_user_by_id(
+    user_id: int, # User ID from the path
+    user_update: UserUpdate, # Update data from the request body
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user) # Ensure user is authenticated
+):
+    """
+    Updates a user's information. Includes database locking if sensitive fields are updated. Restricted to administrators.
+    """
+    # --- Admin Authorization Check ---
+    if current_user.user_type != 'admin':
+        logger.warning(f"User ID {current_user.id} attempted to update user ID {user_id} without admin privileges.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform this action. Admin privileges required."
+        )
+    # --- End Admin Authorization Check ---
+
+
+    # Determine if sensitive financial fields are being updated to apply locking
+    update_data_dict = user_update.model_dump(exclude_unset=True)
+    sensitive_fields = ["wallet_balance", "leverage", "margin"]
+    needs_locking = any(field in update_data_dict for field in sensitive_fields)
+
+    # Fetch the user, applying a lock if necessary
+    if needs_locking:
+        db_user = await crud_user.get_user_by_id_with_lock(db, user_id=user_id)
+        if db_user is None:
+             raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        logger.info(f"Acquired lock for user ID {user_id} during update.")
+    else:
+        db_user = await crud_user.get_user_by_id(db, user_id=user_id)
+        if db_user is None:
+             raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+
+    try:
+        updated_user = await crud_user.update_user(db=db, db_user=db_user, user_update=user_update)
+        logger.info(f"User ID {user_id} updated successfully by admin {current_user.id}.")
+        return updated_user
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating user ID {user_id} by admin {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the user."
+        )
+
+# Endpoint to delete a user by ID (Admin Only)
+@router.delete(
+    "/users/{user_id}",
+    response_model=StatusResponse,
+    summary="Delete a user by ID (Admin Only)",
+    description="Deletes a specific user by ID (requires admin authentication)."
+)
+async def delete_user_by_id(
+    user_id: int, # User ID from the path
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user) # Ensure user is authenticated
+):
+    """
+    Deletes a user account. Restricted to administrators.
+    """
+    # --- Admin Authorization Check ---
+    if current_user.user_type != 'admin':
+        logger.warning(f"User ID {current_user.id} attempted to delete user ID {user_id} without admin privileges.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform this action. Admin privileges required."
+        )
+    # --- End Admin Authorization Check ---
+
+    # Fetch the user to delete
+    db_user = await crud_user.get_user_by_id(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    try:
+        await crud_user.delete_user(db=db, db_user=db_user)
+        logger.info(f"User ID {user_id} deleted successfully by admin {current_user.id}.")
+        return StatusResponse(message=f"User with ID {user_id} deleted successfully.")
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error deleting user ID {user_id} by admin {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while deleting the user."
+        )
