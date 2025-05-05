@@ -1,8 +1,10 @@
 # app/main.py
 
 from fastapi import FastAPI, Depends
+from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
+import os # Import os
 
 # Import configuration settings
 from app.core.config import get_settings
@@ -11,12 +13,13 @@ from app.core.config import get_settings
 from app.database.session import get_db, create_all_tables
 
 # Import your database models to ensure they are registered with SQLAlchemy metadata
-# This is necessary for create_all_tables to find them.
-# If you have models in separate files, import them here or in app.database.models.__init__.py
-from app.database import models # Assuming models are in app/database/models.py
+from app.database import models
 
 # Import the main API router for version 1
-from app.api.v1.api import api_router # Import the main API router
+from app.api.v1.api import api_router
+
+# Import Redis connection functions from security module
+from app.core.security import connect_to_redis, close_redis_connection
 
 # Get application settings
 settings = get_settings()
@@ -25,7 +28,7 @@ settings = get_settings()
 tags_metadata = [
     {
         "name": "users",
-        "description": "Operations related to user accounts.",
+        "description": "Operations related to user accounts and authentication.",
     },
     # Add metadata for other tags as you create them:
     # {
@@ -46,15 +49,23 @@ tags_metadata = [
     # },
 ]
 
+# Define the directory for static files (where uploaded proofs will be served from)
+STATIC_DIRECTORY = "uploads" # This should match the parent directory of proofs
+# Ensure the static directory exists
+os.makedirs(STATIC_DIRECTORY, exist_ok=True)
 
 # Create the FastAPI application instance
 app = FastAPI(
     title="Trading App Backend",
     description="FastAPI backend for a real-time trading application",
     version="1.0.0",
-    openapi_tags=tags_metadata, # Include the tags metadata here
-    # Add other FastAPI configurations here if needed
+    openapi_tags=tags_metadata,
 )
+
+# --- Mount Static Files Directory ---
+# This will serve files from the STATIC_DIRECTORY under the /static URL path
+app.mount("/static", StaticFiles(directory=STATIC_DIRECTORY), name="static")
+
 
 # --- Application Event Handlers ---
 
@@ -62,18 +73,17 @@ app = FastAPI(
 async def startup_event():
     """
     Handles application startup events.
-    Connects to the database and creates tables if they don't exist (for development).
+    Connects to the database and Redis, and creates tables (for development).
     """
     print("Application starting up...")
-    # In a production environment, you would typically use database migration tools
-    # like Alembic instead of create_all_tables().
-    # For development, this is convenient to set up the database quickly.
     print("Creating database tables (if they don't exist)...")
     await create_all_tables()
     print("Database tables checked/created.")
-    # You could also initialize other services here, e.g., Redis connection
-    # print("Connecting to Redis...")
-    # await connect_to_redis() # Placeholder for Redis connection logic
+
+    print("Connecting to Redis...")
+    await connect_to_redis()
+    print("Redis connection status checked.")
+
     print("Application startup complete.")
 
 
@@ -81,18 +91,19 @@ async def startup_event():
 async def shutdown_event():
     """
     Handles application shutdown events.
-    Clean up resources, e.g., close database connections, Redis connections.
+    Clean up resources, e.g., close database and Redis connections.
     """
     print("Application shutting down...")
     # Close database connections if necessary (SQLAlchemy engine manages pool)
-    # Close Redis connections if necessary
-    # print("Closing Redis connection...")
-    # await close_redis_connection() # Placeholder for Redis connection logic
+
+    print("Closing Redis connection...")
+    await close_redis_connection()
+    print("Redis connection closed.")
+
     print("Application shutdown complete.")
 
 
 # --- Include API Routers ---
-# Include the main API router for version 1
 app.include_router(api_router, prefix="/api/v1")
 
 # --- Root Endpoint (for testing) ---
@@ -110,10 +121,9 @@ async def read_root():
 #     Endpoint to test the database connection by querying the user count.
 #     """
 #     try:
-#         # Example query: count users (requires User model to be imported)
-#         from sqlalchemy import select # Import select here for the example
+#         from sqlalchemy import select
 #         user_count = await db.execute(select(models.User).select_from(models.User))
-#         count = len(user_count.scalars().all()) # Or use count() if supported by dialect/version
+#         count = len(user_count.scalars().all())
 #         return {"database_connection_ok": True, "user_count": count}
 #     except Exception as e:
 #         print(f"Database connection test failed: {e}")
@@ -134,5 +144,6 @@ async def read_root():
 
 # To run this application:
 # 1. Make sure you are in your virtual environment.
-# 2. Make sure you have installed uvicorn: pip install uvicorn[standard]
-# 3. Run from your project root directory: uvicorn app.main:app --reload
+# 2. Make sure you have installed uvicorn, python-jose[cryptography], redis, python-multipart.
+# 3. Make sure your database and Redis servers are running.
+# 4. Run from your project root directory: uvicorn app.main:app --reload
