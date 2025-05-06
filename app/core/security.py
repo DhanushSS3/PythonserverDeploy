@@ -4,7 +4,7 @@ import datetime
 from typing import Any, Union, Optional
 from passlib.context import CryptContext
 from jose import jwt, JWTError
-from redis import asyncio as aioredis
+from redis import asyncio as aioredis # Use async Redis client
 import json
 import logging
 
@@ -24,8 +24,9 @@ from app.database.session import get_db # Assuming get_db dependency is imported
 from app.core.config import get_settings
 
 # Configure logging
-logging.basicConfig(level=logging.INFO) # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-logger = logging.getLogger(__name__) # Get a logger for this module
+# Basic config is fine for development, use a more advanced one for production
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configure the password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -82,55 +83,72 @@ def decode_token(token: str) -> dict[str, Any]:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
+        # Log the specific JWT error for debugging if needed
+        logger.warning("JWTError during token decoding/validation.", exc_info=True)
         raise JWTError("Could not validate credentials")
 
-# --- Redis Integration for Refresh Tokens ---
+# --- Redis Integration ---
 
-# Global Redis client instance (initialized on startup)
-redis_client: Optional[aioredis.Redis] = None
+# Remove the global client variable here. It will be managed in main.py now.
+# redis_client: Optional[aioredis.Redis] = None # REMOVE THIS LINE
 
-async def connect_to_redis():
+async def connect_to_redis() -> Optional[aioredis.Redis]: # Add return type hint
     """
-    Establishes connection to the Redis server.
-    Called during application startup.
+    Establishes connection to the Redis server and returns the client instance.
+    Called during application startup. Returns None if connection fails.
     """
-    global redis_client
+    # Remove the global declaration inside the function
+    # global redis_client # REMOVE THIS LINE
     logger.info("Attempting to connect to Redis...")
     try:
         logger.info(f"Redis connection parameters: host={settings.REDIS_HOST}, port={settings.REDIS_PORT}, db={settings.REDIS_DB}, password={'<set>' if settings.REDIS_PASSWORD else '<not set>'}")
 
-        redis_client = aioredis.Redis(
+        # Create the client instance
+        client = aioredis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             db=settings.REDIS_DB,
             password=settings.REDIS_PASSWORD,
             decode_responses=True # Decode responses to get strings instead of bytes
         )
-        await redis_client.ping()
+        # Ping the server to verify the connection is live
+        await client.ping()
         logger.info("Connected to Redis successfully.")
+        return client # RETURN the client instance
+
     except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}")
-        # Consider raising the exception here if Redis is mandatory for startup:
+        logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
+        # Do NOT re-raise here if you want startup to potentially continue without Redis (e.g., for features not requiring Redis)
+        # If Redis is *mandatory* for the app to function, re-raise the exception:
         # raise e
+        return None # Return None if connection fails
 
 
-async def close_redis_connection():
+async def close_redis_connection(client: Optional[aioredis.Redis]): # Accept client as argument
     """
     Closes the Redis connection.
-    Called during application shutdown.
+    Called during application shutdown. Accepts the client instance to close.
     """
-    global redis_client
-    if redis_client:
+    # Remove global declaration
+    # global redis_client # REMOVE THIS LINE
+    if client: # Use the passed client
         logger.info("Closing Redis connection...")
-        await redis_client.close()
-        logger.info("Redis connection closed.")
+        try:
+            await client.close()
+            logger.info("Redis connection closed.")
+        except Exception as e:
+            logger.error(f"Error closing Redis connection: {e}", exc_info=True)
 
-async def store_refresh_token(user_id: int, refresh_token: str):
+
+# --- Redis Functions that now require passing the client ---
+
+async def store_refresh_token(client: aioredis.Redis, user_id: int, refresh_token: str): # Add client argument
     """
     Stores a refresh token in Redis associated with a user ID.
+    Requires an active Redis client instance.
     """
-    if not redis_client:
-        logger.warning("Redis client not initialized. Cannot store refresh token.")
+    if not client: # Check the passed client
+        logger.warning("Redis client not provided to store_refresh_token. Cannot store refresh token.")
         return
 
     redis_key = f"refresh_token:{refresh_token}"
@@ -138,73 +156,72 @@ async def store_refresh_token(user_id: int, refresh_token: str):
     token_data = {"user_id": user_id, "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(seconds=expiry_seconds)).isoformat()}
     token_data_json = json.dumps(token_data)
 
-    logger.info(f"Storing refresh token for user ID {user_id}. Key: {redis_key}, Data: {token_data_json}, Expiry (seconds): {expiry_seconds}")
+    logger.info(f"Storing refresh token for user ID {user_id}. Key: {redis_key}, Expiry (seconds): {expiry_seconds}") # Omit data in log for security
 
     try:
-        await redis_client.set(redis_key, token_data_json, ex=expiry_seconds)
+        # Use the passed client instance
+        await client.set(redis_key, token_data_json, ex=expiry_seconds)
         logger.info(f"Refresh token stored successfully for user ID: {user_id}")
     except Exception as e:
-        logger.error(f"Error storing refresh token in Redis for user ID {user_id}: {e}")
+        logger.error(f"Error storing refresh token in Redis for user ID {user_id}: {e}", exc_info=True)
 
-async def get_refresh_token_data(refresh_token: str) -> dict[str, Any] | None:
-    """
-    Retrieves refresh token data from Redis.
-    """
-    if not redis_client:
-        logger.warning("Redis client not initialized. Cannot retrieve refresh token.")
-        return None
+async def get_refresh_token_data(client: aioredis.Redis, refresh_token: str) -> dict[str, Any] | None: # Add client argument
+     """
+     Retrieves refresh token data from Redis.
+     Requires an active Redis client instance.
+     """
+     if not client:
+         logger.warning("Redis client not provided to get_refresh_token_data. Cannot retrieve refresh token.")
+         return None
 
-    redis_key = f"refresh_token:{refresh_token}"
-    logger.info(f"Attempting to retrieve refresh token data for key: {redis_key}")
+     redis_key = f"refresh_token:{refresh_token}"
+     logger.info(f"Attempting to retrieve refresh token data for key: {redis_key}")
 
-    try:
-        token_data_json = await redis_client.get(redis_key)
-        logger.info(f"Redis GET result for key {redis_key}: {token_data_json}")
+     try:
+         # Use the passed client instance
+         token_data_json = await client.get(redis_key)
+         # logger.debug(f"Redis GET result for key {redis_key}: {token_data_json}") # Debug log
 
-        if token_data_json:
-            token_data = json.loads(token_data_json)
-            logger.info(f"Parsed token data from Redis: {token_data}")
-            # Optional: Add an extra check for expiry time stored in the value
-            # expires_at = datetime.datetime.fromisoformat(token_data["expires_at"])
-            # if expires_at > datetime.datetime.utcnow():
-            #     return token_data
-            # else:
-            #     logger.warning(f"Refresh token data found but expired based on value for key: {redis_key}")
-            #     await redis_client.delete(redis_key) # Clean up expired token
-            #     return None
-            return token_data # Relying on Redis TTL for expiry
-        else:
-            logger.info(f"No refresh token data found in Redis for key: {redis_key}")
-            return None # Token not found in Redis
-    except Exception as e:
-        logger.error(f"Error retrieving or parsing refresh token from Redis for key {redis_key}: {e}")
-        return None
+         if token_data_json:
+             token_data = json.loads(token_data_json)
+             # logger.debug(f"Parsed token data from Redis: {token_data}") # Debug log
+             return token_data # Relying on Redis TTL for expiry
+         else:
+             logger.info(f"No refresh token data found in Redis for key: {redis_key}")
+             return None # Token not found in Redis
+     except json.JSONDecodeError:
+         logger.error(f"Failed to decode JSON from Redis data for key {redis_key}: {token_data_json}", exc_info=True)
+         return None
+     except Exception as e:
+         logger.error(f"Error retrieving or parsing refresh token from Redis for key {redis_key}: {e}", exc_info=True)
+         return None
 
-async def delete_refresh_token(refresh_token: str):
+async def delete_refresh_token(client: aioredis.Redis, refresh_token: str): # Add client argument
     """
     Deletes a refresh token from Redis.
+    Requires an active Redis client instance.
     """
-    if not redis_client:
-        logger.warning("Redis client not initialized. Cannot delete refresh token.")
+    if not client:
+        logger.warning("Redis client not provided to delete_refresh_token. Cannot delete refresh token.")
         return
 
     redis_key = f"refresh_token:{refresh_token}"
     logger.info(f"Attempting to delete refresh token for key: {redis_key}")
 
     try:
-        deleted_count = await redis_client.delete(redis_key)
+        # Use the passed client instance
+        deleted_count = await client.delete(redis_key)
         if deleted_count > 0:
             logger.info(f"Refresh token deleted from Redis for key: {redis_key}")
         else:
             logger.warning(f"Attempted to delete refresh token, but key not found in Redis: {redis_key}")
     except Exception as e:
-        logger.error(f"Error deleting refresh token from Redis for key {redis_key}: {e}")
+        logger.error(f"Error deleting refresh token from Redis for key {redis_key}: {e}", exc_info=True)
+
 
 # --- Authentication Dependency (for protecting routes) ---
 
 # OAuth2PasswordBearer is a FastAPI utility for handling OAuth2 token flow
-from fastapi.security import OAuth2PasswordBearer
-
 # Define the OAuth2 scheme. The tokenUrl points to your login endpoint.
 # The auto_error=False allows us to handle authentication errors manually
 # (e.g., to return a custom response or require 2FA verification).
@@ -212,11 +229,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login", auto_error=
 
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db) # Assuming get_db is the dependency for DB session
 ) -> User:
     """
     FastAPI dependency to get the current authenticated user from the access token.
-    Does NOT enforce 2FA check here. 2FA check is done after initial login.
+    Does NOT enforce 2FA check here. 2FA check is typically done after initial login.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -229,15 +246,16 @@ async def get_current_user(
          raise credentials_exception
 
     try:
-        payload = decode_token(token)
+        payload = decode_token(token) # Use the local decode_token function
+        # The 'sub' claim should contain the user identifier, usually the user ID
         user_id: int = payload.get("sub")
         if user_id is None:
             logger.warning("Access token payload missing 'sub' claim.")
             raise credentials_exception
 
-        logger.info(f"Access token validated for user ID: {user_id}")
+        # logger.info(f"Access token validated for user ID: {user_id}") # Debug log
 
-        # Fetch the user from the database
+        # Fetch the user from the database using the provided session
         result = await db.execute(select(User).filter(User.id == user_id))
         user = result.scalars().first()
 
@@ -245,32 +263,33 @@ async def get_current_user(
             logger.warning(f"User ID {user_id} from access token not found in database.")
             raise credentials_exception
 
-        # Optional: Check if the user is active/verified
-        if user.isActive != 1:
+        # Optional: Check if the user is active/verified - crucial for security
+        if user.isActive != 1: # Assuming 'isActive' is the correct attribute/column name
              logger.warning(f"User ID {user_id} is not active or verified.")
              raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is not active or verified."
             )
 
-        logger.info(f"Authenticated user ID {user_id} retrieved successfully.")
+        # logger.info(f"Authenticated user ID {user_id} retrieved successfully.") # Debug log
         return user
 
     except JWTError:
-        logger.warning("JWTError during access token validation.")
+        logger.warning("JWTError during access token validation.", exc_info=True)
         raise credentials_exception
     except Exception as e:
-        logger.error(f"Unexpected error in get_current_user dependency for token: {token[:20]}... : {e}") # Log part of token
+        logger.error(f"Unexpected error in get_current_user dependency for token: {token[:20]}... : {e}", exc_info=True) # Log part of token
         raise credentials_exception
 
 # --- Dependency specifically for admin users ---
 async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """
     FastAPI dependency to get the current authenticated user and check if they are an admin.
+    Requires successful authentication via get_current_user first.
     """
     # The get_current_user dependency handles token validation and fetching the user
     # We just need to check the user's role/type
-    if current_user.user_type != 'admin':
+    if current_user.user_type != 'admin': # Assuming 'user_type' is the attribute/column name for user role
         logger.warning(f"User ID {current_user.id} attempted to access admin resource without admin privileges.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -279,3 +298,4 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
     # If the user is an admin, return the user object
     return current_user
 
+# You might add other dependencies here, e.g., get_active_user, verify_2fa etc.
