@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Market Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #log {
+            white-space: pre-wrap;
+            background: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ccc;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Live Market Data Stream</h2>
+<label for="token">JWT Token:</label>
+<input type="text" id="token" size="80" placeholder="Paste your JWT token here">
+<br><br>
+<button onclick="connectWebSocket()">Connect</button>
+<button onclick="disconnectWebSocket()">Disconnect</button>
+
+<h3>Status: <span id="status">Disconnected</span></h3>
+
+<div id="log"></div>
+
+<script>
+    let socket = null;
+
+    function logMessage(message) {
+        const logDiv = document.getElementById("log");
+        logDiv.textContent += message + "\n";
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function connectWebSocket() {
+        const token = document.getElementById("token").value.trim();
+        if (!token) {
+            alert("Please enter your JWT token.");
+            return;
+        }
+
+        const wsUrl = `ws://${window.location.hostname}:8000/api/v1/ws/market-data?token=${encodeURIComponent(token)}`;
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+            document.getElementById("status").textContent = "Connected";
+            logMessage("✅ WebSocket connected.");
+        };
+
+        socket.onmessage = (event) => {
+            logMessage(`📨 Message received:\n${event.data}`);
+        };
+
+        socket.onclose = () => {
+            document.getElementById("status").textContent = "Disconnected";
+            logMessage("❌ WebSocket disconnected.");
+        };
+
+        socket.onerror = (error) => {
+            logMessage("⚠️ WebSocket error: " + error);
+        };
+    }
+
+    function disconnectWebSocket() {
+        if (socket) {
+            socket.close();
+            socket = null;
+            document.getElementById("status").textContent = "Disconnected";
+            logMessage("🔌 WebSocket manually closed.");
+        }
+    }
+</script>
+
+</body>
+</html>
