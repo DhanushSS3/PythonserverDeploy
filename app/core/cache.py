@@ -152,23 +152,79 @@ async def set_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
 async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, symbol: str) -> Optional[Dict[str, Any]]:
     """
     Retrieves group-specific settings for a given symbol from Redis cache.
-    Returns None if not found.
+    If symbol is "ALL", retrieves settings for all symbols for the group.
+    Returns None if no settings found for the specified symbol or group.
     """
     if not redis_client:
         logger.warning(f"Redis client not available for getting group-symbol settings cache for group '{group_name}', symbol '{symbol}'.")
         return None
 
-    key = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}" # Use lower/upper for consistency
-    try:
-        settings_json = await redis_client.get(key)
-        if settings_json:
-            settings = json.loads(settings_json, object_hook=decode_decimal)
-            logger.debug(f"Group-symbol settings retrieved from cache for group '{group_name}', symbol '{symbol}'.")
-            return settings
-        return None
-    except Exception as e:
-        logger.error(f"Error getting group-symbol settings cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
-        return None
+    if symbol.upper() == "ALL":
+        # --- Handle retrieval of ALL settings for the group ---
+        all_settings: Dict[str, Dict[str, Any]] = {}
+        # Scan for all keys related to this group's symbol settings
+        # Use a cursor for efficient scanning of many keys
+        cursor = '0'
+        prefix = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:"
+        try:
+            while cursor != 0:
+                # Use scan instead of keys for production environments
+                # The keys are already strings if decode_responses is True
+                cursor, keys = await redis_client.scan(cursor=cursor, match=f"{prefix}*", count=100) # Adjust count as needed
+
+                if keys:
+                    # Retrieve all found keys in a pipeline for efficiency
+                    pipe = redis_client.pipeline()
+                    for key in keys:
+                        pipe.get(key)
+                    results = await pipe.execute()
+
+                    # Process the results
+                    for key, settings_json in zip(keys, results):
+                        if settings_json:
+                            try:
+                                settings = json.loads(settings_json, object_hook=decode_decimal)
+                                # Extract symbol from the key (key format: prefix:group_name:symbol)
+                                # Key is already a string, no need to decode
+                                key_parts = key.split(':')
+                                if len(key_parts) == 3 and key_parts[0] == REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX.rstrip(':'):
+                                     symbol_from_key = key_parts[2]
+                                     all_settings[symbol_from_key] = settings
+                                else:
+                                     # Key is already a string, no need to decode for logging
+                                     logger.warning(f"Skipping incorrectly formatted Redis key: {key}")
+                            except json.JSONDecodeError:
+                                 # Key is already a string, no need to decode for logging
+                                 logger.error(f"Failed to decode JSON for settings key: {key}. Data: {settings_json}", exc_info=True)
+                            except Exception as e:
+                                # Key is already a string, no need to decode for logging
+                                logger.error(f"Unexpected error processing settings key {key}: {e}", exc_info=True)
+
+            if all_settings:
+                 logger.debug(f"Aggregated {len(all_settings)} group-symbol settings for group '{group_name}'.")
+                 return all_settings
+            else:
+                 logger.debug(f"No group-symbol settings found for group '{group_name}' using scan.")
+                 return None # Return None if no settings were found for the group
+
+        except Exception as e:
+             logger.error(f"Error scanning or retrieving group-symbol settings for group '{group_name}': {e}", exc_info=True)
+             return None # Return None on error
+
+    else:
+        # --- Handle retrieval of settings for a single symbol ---
+        key = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}" # Use lower/upper for consistency
+        try:
+            settings_json = await redis_client.get(key)
+            if settings_json:
+                settings = json.loads(settings_json, object_hook=decode_decimal)
+                logger.debug(f"Group-symbol settings retrieved from cache for group '{group_name}', symbol '{symbol}'.")
+                return settings
+            logger.debug(f"Group-symbol settings not found in cache for group '{group_name}', symbol '{symbol}'.")
+            return None # Return None if settings for the specific symbol are not found
+        except Exception as e:
+            logger.error(f"Error getting group-symbol settings cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
+            return None
 
 # You might also want a function to cache ALL settings for a group,
 # or cache ALL group-symbol settings globally if the dataset is small enough.

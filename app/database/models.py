@@ -310,4 +310,3 @@ class OTP(Base):
 
     # Relationship back to the User
     user = relationship("User", back_populates="otps")
-
