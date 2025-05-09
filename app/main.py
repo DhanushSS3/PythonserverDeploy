@@ -1,29 +1,33 @@
 # app/main.py
 
-# Import necessary components from fastapi, including Query
+# Import necessary components from fastapi
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 import asyncio
 import os # Import os
-import json # Import json for the publisher task
+import json # Import json
 from typing import Optional # Import Optional if not already imported
-
-# --- REMOVE THESE LINES IF THEY ARE STILL HERE ---
-# >>> Remove this import <<<
-# import aioredis # Import aioredis for type hinting
-# >>> Add this import for the type hint <<<
-# Import the Redis client type from the standard redis library's asyncio module
-# from redis.asyncio import Redis # This import is now typically in redis_client.py
-# --- END REMOVE ---
 
 import logging # Import logging
 
 # Configure basic logging early
-# In a real production setup, you'd use a more advanced logger configuration
-# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Set root logger level to INFO to avoid hang caused by excessive debug logs from other libs
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Get specific loggers and set their levels to DEBUG to see detailed logs from those modules
+# This helps focus debug output on relevant parts and avoids hanging due to excessive logging
+logging.getLogger('app.api.v1.endpoints.market_data_ws').setLevel(logging.DEBUG)
+logging.getLogger('app.firebase_stream').setLevel(logging.DEBUG) # <-- ENSURE THIS IS DEBUG
+# Optionally set other loggers to DEBUG if needed, e.g., for database or redis issues:
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+# logging.getLogger('redis').setLevel(logging.DEBUG)
+
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Keep the logger for main.py at INFO or DEBUG as desired for main's logs
+logger.setLevel(logging.DEBUG)
+
 
 # Import Firebase Admin SDK components
 import firebase_admin
@@ -35,142 +39,124 @@ from app.core.config import get_settings
 # Import database session dependency and table creation function
 from app.database.session import get_db, create_all_tables
 
-# Import your database models to ensure they are registered with SQLAlchemy metadata
-from app.database import models # Ensure models are imported so SQLAlchemy knows about them
-
-# Import the Redis client dependency and the global instance from your new file
-from app.dependencies.redis_client import get_redis_client, global_redis_client_instance # <--- MODIFIED IMPORT
-
-# Import security functions for Redis connection/disconnection
-from app.core.security import connect_to_redis, close_redis_connection # <--- Ensure these are imported from security.py
-
-# Import the API router from app.api.v1.api
+# Import API router
 from app.api.v1.api import api_router
 
-# Import the shared state (for the redis publish queue)
-from app.shared_state import redis_publish_queue # Ensure this is imported
+# Import background tasks
+from app.firebase_stream import process_firebase_events # Import the firebase processing task
+from app.api.v1.endpoints.market_data_ws import redis_publisher_task, redis_market_data_broadcaster # Import Redis tasks
+
+# Import Redis dependency and global instance
+from app.dependencies.redis_client import get_redis_client, global_redis_client_instance
+from app.core.security import close_redis_connection # Import the Redis close function
+
+# Import shared state (for the queue)
+from app.shared_state import redis_publish_queue # Import the queue
 
 
 # Get application settings
 settings = get_settings()
 
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Initialize FastAPI application
+# Initialize FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Mount static files directory
-# This serves files from the 'uploads' directory (where proofs are saved) under the '/static' URL path
-# Make sure the UPLOAD_DIRECTORY in users.py matches this path structure
-app.mount("/static", StaticFiles(directory="uploads"), name="static")
+# --- Static Files (if you have a frontend) ---
+# Mount a directory to serve static files (e.g., HTML, CSS, JS for a frontend)
+# Example: If your static files are in a directory named 'static' at the project root
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-# --- Database Startup Event ---
+# --- Application Startup Event ---
 @app.on_event("startup")
 async def startup_event():
     """
-    Application startup event: Initialize Firebase, Database, and Redis.
+    Application startup event: Initialize Firebase Admin SDK, connect to Redis,
+    create database tables, and start background tasks (Firebase listener, Redis publisher, Broadcaster).
     """
     logger.info("Application startup event triggered.")
 
-    # --- Initialize Firebase Admin SDK ---
+    # 1. Initialize Firebase Admin SDK
+    firebase_app_instance = None # Initialize to None
     try:
-        # Ensure the path to the service account key is correct
         cred_path = settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH
         if not os.path.exists(cred_path):
              logger.critical(f"Firebase service account key file not found at: {cred_path}")
-             # Depending on criticality, you might want to raise an exception or exit
-             # For now, we log and continue, but Firebase functionality will fail.
+             # Depending on your deployment, you might raise an error or handle this differently
+             # For now, we'll log and continue, but Firebase listener will likely fail
         else:
             cred = credentials.Certificate(cred_path)
-            # Check if Firebase app is already initialized (e.g., in case of --reload)
+            # Check if Firebase app is already initialized (important for --reload)
             if not firebase_admin._apps:
-                 firebase_admin.initialize_app(cred, {
+                 firebase_app_instance = firebase_admin.initialize_app(cred, {
                     'databaseURL': settings.FIREBASE_DATABASE_URL
                  })
                  logger.info("Firebase Admin SDK initialized successfully.")
             else:
+                 # If already initialized (e.g., due to --reload), get the default app
+                 firebase_app_instance = firebase_admin.get_app()
                  logger.info("Firebase Admin SDK already initialized.")
 
     except Exception as e:
         logger.critical(f"Failed to initialize Firebase Admin SDK: {e}", exc_info=True)
-        # Decide how to handle Firebase initialization failure
+        # firebase_app_instance remains None if initialization fails
 
 
-    # --- Create Database Tables (if not using migrations) ---
-    # Use migrations (like Alembic) in production! This is for quick setup/dev.
+    # 2. Connect to Redis
+    # The get_redis_client dependency handles the connection, but we can trigger it here
+    # to ensure the global instance is set early.
+    global global_redis_client_instance # Ensure we are modifying the global instance
+    try:
+        # Call the dependency function to establish the connection and set the global instance
+        global_redis_client_instance = await get_redis_client()
+        if global_redis_client_instance:
+             logger.info("Redis client initialized successfully.")
+        else:
+             logger.critical("Redis client failed to initialize.") # This will be logged if get_redis_client returns None
+
+    except Exception as e:
+        logger.critical(f"Failed to connect to Redis during startup: {e}", exc_info=True)
+        global_redis_client_instance = None # Ensure instance is None if connection fails
+
+
+    # 3. Create Database Tables (if they don't exist)
+    # Use the async function to create tables
     try:
         await create_all_tables()
         logger.info("Database tables ensured/created.")
     except Exception as e:
         logger.critical(f"Failed to create database tables: {e}", exc_info=True)
-        # Decide how to handle DB initialization failure
+        # Depending on criticality, you might want to exit or handle this differently
 
 
-    # --- Initialize Redis Client ---
-    global global_redis_client_instance # Declare global instance to modify it
-    try:
-        global_redis_client_instance = await connect_to_redis() # Use the function from security.py
-        if global_redis_client_instance:
-             logger.info("Redis client initialized successfully.")
-             # Optional: Ping Redis to confirm connection
-             # await global_redis_client_instance.ping()
-             # logger.info("Redis server ping successful.")
-        else:
-             logger.critical("Failed to initialize Redis client.")
-             # Decide how to handle Redis initialization failure
+    # 4. Start Background Tasks
+    # Ensure Redis client and Firebase app instance are available before starting tasks
+    if global_redis_client_instance and firebase_app_instance:
+        # Start the Firebase stream processing task
+        # It needs the firebase_db instance (aliased from firebase_admin.db) and the path
+        # ***** CORRECTED LINE BELOW *****
+        asyncio.create_task(process_firebase_events(firebase_db, path=settings.FIREBASE_DATA_PATH))
+        logger.info("Firebase stream processing task scheduled.")
 
-    except Exception as e:
-        logger.critical(f"Failed to initialize Redis client: {e}", exc_info=True)
-        # Decide how to handle Redis initialization failure
-
-    # --- Start Background Tasks ---
-    # Import tasks here to avoid circular imports at top level if tasks import other app modules
-    from app.firebase_stream import process_firebase_stream_events
-    from app.api.v1.endpoints.market_data_ws import redis_market_data_broadcaster
-    # from app.core.security import redis_publisher_task # Assuming you have this task in security.py or another file
-    # app/main.py
-
-# ... (Keep existing imports) ...
-
-    # --- Import Background Tasks from their correct locations ---
-    from app.firebase_stream import process_firebase_stream_events
-    from app.api.v1.endpoints.market_data_ws import redis_market_data_broadcaster
-    # --- CHANGE THIS LINE ---
-    from app.api.v1.endpoints.market_data_ws import redis_publisher_task # <--- Import from market_data_ws.py
-
-
-# ... (Rest of main.py including startup_event where the task is scheduled) ...
-
-
-    # Start the Firebase streaming task
-    # This task reads from Firebase and puts messages onto the redis_publish_queue
-    asyncio.create_task(process_firebase_stream_events(
-        firebase_db_instance=firebase_db,
-        path=settings.FIREBASE_DATA_PATH # Use setting for data path
-    ))
-    logger.info("Firebase stream processing task scheduled.")
-
-    # Start the Redis publisher task
-    # This task reads from redis_publish_queue and publishes to Redis Pub/Sub
-    if global_redis_client_instance:
-        asyncio.create_task(redis_publisher_task(redis_client=global_redis_client_instance))
+        # Start the Redis publisher task
+        # It needs the Redis client instance and the shared queue
+        asyncio.create_task(redis_publisher_task(global_redis_client_instance))
         logger.info("Redis publisher task scheduled.")
-    else:
-        logger.warning("Redis client not initialized. Skipping Redis publisher task.")
 
+        # Start the Redis market data broadcaster task
+        # It needs the Redis client instance
+        asyncio.create_task(redis_market_data_broadcaster(global_redis_client_instance))
+        logger.info("Redis market data broadcaster task scheduled.")
 
-    # Start the Redis market data broadcaster task
-    # This task subscribes to Redis Pub/Sub and sends data to WS clients
-    if global_redis_client_instance:
-         asyncio.create_task(redis_market_data_broadcaster(redis_client=global_redis_client_instance))
-         logger.info("Redis market data broadcaster task scheduled.")
     else:
-         logger.warning("Redis client not initialized. Skipping Redis market data broadcaster task.")
+        missing_services = []
+        if not global_redis_client_instance:
+            missing_services.append("Redis client")
+        if not firebase_app_instance:
+            missing_services.append("Firebase app instance")
+        logger.warning(f"Background tasks (Firebase listener, Redis publisher/broadcaster) not started due to missing: {', '.join(missing_services)}.")
 
 
     logger.info("Application startup event finished.")
@@ -200,8 +186,8 @@ async def shutdown_event():
 
 
 # --- Dependency to get the Redis client instance ---
-# REMOVE THE DEFINITION OF get_redis_client HERE IF IT EXISTS.
-# It is now defined in app.dependencies.redis_client.py
+# The get_redis_client function is now imported from app.dependencies.redis_client
+
 
 # --- API Routers ---
 # Include your API routers here
@@ -216,12 +202,7 @@ async def read_root():
     return {"message": "Welcome to the Trading App Backend!"}
 
 
-# Dependency to get the Redis client instance (already imported from app.dependencies.redis_client)
-# This function is used by endpoints needing a Redis client via FastAPI's Depends()
+# The redis_publisher_task and redis_market_data_broadcaster are now imported from market_data_ws.py
+# The process_firebase_events task is now imported from firebase_stream.py
 
-# The redis_publisher_task should be imported from where it's defined (e.g., security.py or a separate tasks module)
-# The redis_market_data_broadcaster should be imported from where it's defined (e.g., market_data_ws.py)
-
-# Ensure these tasks are imported and scheduled in the startup event
-# from app.core.security import redis_publisher_task # Example: if publisher is in security.py
-# from app.api.v1.endpoints.market_data_ws import redis_market_data_broadcaster # Example: if broadcaster is in market_data_ws.py
+# Ensure these tasks are imported and scheduled in the startup event (done in startup_event function)

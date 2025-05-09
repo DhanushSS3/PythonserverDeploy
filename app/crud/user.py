@@ -13,6 +13,14 @@ from app.database.models import User # Import the User model
 from app.schemas.user import UserCreate, UserUpdate # Import UserCreate and UserUpdate
 from app.core.security import get_password_hash # Import the password hashing utility
 
+
+async def get_user(db: AsyncSession, user_id: int) -> Optional[User]:
+    """
+    Retrieves a user from the database by their ID.
+    """
+    result = await db.execute(select(User).filter(User.id == user_id))
+    return result.scalars().first()
+
 # Function to get a user by email
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     """
