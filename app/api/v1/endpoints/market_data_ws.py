@@ -116,7 +116,6 @@ async def websocket_endpoint(
 
         # Fetch and cache initial user portfolio (positions, etc.)
         # Assuming crud_user has a get_user_portfolio function or similar
-        # For now, you might fetch positions here if they are stored in the DB separately from the main user model
         # For this example, I'll assume positions are fetched and part of the initial portfolio cache
         user_positions = [] # REPLACE THIS WITH ACTUAL DB FETCH FOR USER'S OPEN POSITIONS
 
@@ -176,7 +175,8 @@ async def websocket_endpoint(
             # If you don't expect messages from the client, you could perhaps remove this or add a timeout
             # Use a small timeout to allow the task to be cancelled gracefully if needed
             try:
-                message = await asyncio.wait_for(websocket.receive_text(), timeout=1.0) # Added timeout
+                # Adjusted timeout based on common market data update frequency
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=0.1) # Added timeout
                 logger.debug(f"Received message from user {user_id}: {message}")
                 # Process client message if necessary (e.g., parse JSON command)
                 # Example: if message is a JSON string like {"command": "subscribe", "symbol": "EURUSD"}
@@ -235,37 +235,51 @@ async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_
         return
 
     try:
+        # Fetch group settings from the database based on group_name
+        # Assuming crud_group.get_groups takes a database session and a search parameter (like name)
+        # It should return a list of group setting objects/models
+        # Adjust this call based on your actual crud_group implementation
         group_settings_list = await crud_group.get_groups(db, search=group_name)
 
         if not group_settings_list:
              logger.warning(f"No group settings found in DB for group '{group_name}'. Cannot cache settings.")
              return
 
+        # Prepare a dictionary of all settings for this group, keyed by symbol
+        # Ensure that the attributes accessed here ('symbol', 'spread', etc.) match your Group model
         all_group_settings: Dict[str, Dict[str, Any]] = {}
         for group_setting in group_settings_list:
+            # Safely get the symbol, ensuring it's not None
             symbol = getattr(group_setting, 'symbol', None)
             if symbol:
+                # Extract relevant settings for the symbol from the group setting object/model
+                # Use getattr with a default value (like Decimal(0.0) or None) for safety
                 settings = {
                     "commision_type": getattr(group_setting, 'commision_type', None),
                     "commision_value_type": getattr(group_setting, 'commision_value_type', None),
                     "type": getattr(group_setting, 'type', None),
                     "pip_currency": getattr(group_setting, 'pip_currency', None),
                     "show_points": getattr(group_setting, 'show_points', None),
-                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)),
-                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)),
-                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)),
-                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)),
-                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)),
-                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)),
-                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)),
-                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)),
-                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)),
-                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)),
+                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)), # Keep as Decimal
+                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)), # Keep as Decimal
+                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)), # Keep as Decimal
+                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), # Keep as Decimal
+                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)), # Keep as Decimal
+                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)), # Keep as Decimal
+                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)), # Keep as Decimal
+                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)), # Keep as Decimal
+                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Keep as Decimal
+                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Keep as Decimal
+                    # Add other symbol-specific settings from the Group model here
                 }
-                all_group_settings[symbol.upper()] = settings
+                all_group_settings[symbol.upper()] = settings # Use upper symbol for consistency
 
+        # Now iterate through the populated dictionary and cache each symbol's settings
+        # Ensure set_group_symbol_settings_cache is imported from app.core.cache
+        # from app.core.cache import set_group_symbol_settings_cache # Already imported at the top
         for symbol, settings in all_group_settings.items():
             await set_group_symbol_settings_cache(redis_client, group_name, symbol, settings)
+
 
         logger.debug(f"Initially cached {len(all_group_settings)} group-symbol settings for group '{group_name}'.")
 
@@ -278,6 +292,7 @@ async def redis_publisher_task(redis_client: Redis):
     """
     Asynchronously consumes market data from the shared queue and publishes it to Redis Pub/Sub.
     Runs as an asyncio background task.
+    Filters out the _timestamp key.
     """
     logger.info("Redis publisher task started. Publishing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
 
@@ -299,7 +314,18 @@ async def redis_publisher_task(redis_client: Redis):
                 # Ensure the message is a JSON string before publishing
                 # The data received from the queue is likely a dictionary from the Firebase listener
                 # Use DecimalEncoder to safely serialize Decimal values to strings
-                message_to_publish = json.dumps(raw_market_data_message, cls=DecimalEncoder) # Use DecimalEncoder for safety
+                # Filter out the _timestamp key before publishing
+                message_to_publish_data = {k: v for k, v in raw_market_data_message.items() if k != '_timestamp'}
+
+                # Only publish if there is actual market data after filtering
+                if message_to_publish_data:
+                     message_to_publish = json.dumps(message_to_publish_data, cls=DecimalEncoder) # Use DecimalEncoder for safety
+                else:
+                     # Skip publishing if only _timestamp was present
+                     logger.debug("Publisher: Message contained only _timestamp, skipping publishing.")
+                     redis_publish_queue.task_done() # Indicate the task is done for this item
+                     continue # Skip to the next message
+
             except Exception as e:
                 logger.error(f"Publisher failed to serialize message to JSON: {e}. Skipping message.", exc_info=True)
                 redis_publish_queue.task_done() # Indicate the task is done for this item, even if failed
@@ -329,7 +355,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
     """
     Asynchronously subscribes to Redis Pub/Sub market data channel and broadcasts
     personalized market data and account updates to connected WebSocket clients.
-    Runs as an asyncio background task.
+    Runs as an asyncio background task. Skips processing of the _timestamp key.
     """
     logger.info("Redis market data broadcaster task started. Subscribing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
 
@@ -348,11 +374,15 @@ async def redis_market_data_broadcaster(redis_client: Redis):
         async for message in pubsub.listen():
             if message['type'] == 'message':
                 # A new message (market data update) is received from Redis
+                # The message['data'] is already decoded to string by the Redis client
+                # No need to filter _timestamp here if the publisher already does it,
+                # but keeping the check below adds robustness.
                 logger.debug(f"Received message from Redis: {message['data']}")
 
                 try:
                     # Parse the JSON message received from Redis
                     # Use object_hook to handle potential Decimal values if the publisher sent them as strings
+                    # The data received here should NOT contain the _timestamp if filtered by the publisher
                     processed_data = json.loads(message['data'], object_hook=decode_decimal) # Decode potential Decimals back
 
                     # --- NEW DEBUG LOG: Inspect processed_data ---
@@ -393,9 +423,9 @@ async def redis_market_data_broadcaster(redis_client: Redis):
 
                         # --- ADD LOGGING FOR CACHE RETRIEVAL ---
                         logger.debug(f"Attempting to retrieve group symbol settings from cache for user {user_id}, group '{group_name}', symbol 'ALL'.")
+                        # This call should now correctly return a dictionary of settings due to the fix in cache.py
                         user_group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-                        logger.debug(f"Retrieved group symbol settings from cache for user {user_id}: Type={type(user_group_symbol_settings)}, Value={user_group_symbol_settings}")
-                        # --- END LOGGING FOR CACHE RETRIEVAL ---
+                        logger.debug(f"Retrieved group symbol settings from cache for user {user_id}: Type={type(user_group_symbol_settings)}. Value preview: {str(user_group_symbol_settings)[:500]}...") # Limit value preview
 
 
                         if not user_data:
@@ -408,22 +438,36 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                         # to get adjusted_market_prices for this user.
                         adjusted_market_prices: Dict[str, Any] = {}
 
-                        # Fix: Check if user_group_symbol_settings is a dictionary before iterating
-                        if isinstance(processed_data, dict) and isinstance(user_group_symbol_settings, dict):
+                        # Fix: Ensure processed_data is a dictionary before iterating
+                        if isinstance(processed_data, dict):
                              for symbol, market_data in processed_data.items():
+                                 # Explicitly skip the _timestamp key if it was somehow not filtered earlier
+                                 if symbol == '_timestamp':
+                                     continue # Skip the timestamp entry
+
+                                 # Ensure market_data for the symbol is a dictionary
                                  if isinstance(market_data, dict):
                                       # Use .get() with a default of None for safety
                                       raw_ask_price = market_data.get('o') # 'o' for Ask
                                       raw_bid_price = market_data.get('b') # 'b' for Bid
 
                                       # Get group settings for this symbol (case-insensitive lookup for symbol)
-                                      symbol_settings = user_group_symbol_settings.get(symbol.upper())
+                                      # Ensure user_group_symbol_settings is a dictionary before accessing
+                                      symbol_settings = None
+                                      if isinstance(user_group_symbol_settings, dict):
+                                          symbol_settings = user_group_symbol_settings.get(symbol.upper())
+                                      else:
+                                           # Log if group settings are not a dictionary (shouldn't happen after cache.py fix, but good for debugging)
+                                           # This warning should now be less frequent/eliminated if the cache fix works
+                                           logger.warning(f"User {user_id}: user_group_symbol_settings is not a dictionary (Type: {type(user_group_symbol_settings)}). Cannot apply group settings for symbol {symbol}.")
+
 
                                       # Perform spread calculation if we have raw prices and symbol settings
                                       if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
                                            try:
                                                 # Ensure spread and spread_pip are Decimal types for accurate calculation
                                                 # Convert from string or other types if necessary (caching should handle this)
+                                                # Use Decimal() with str() for safe conversion
                                                 spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0)))
                                                 spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
                                                 ask_decimal = decimal.Decimal(str(raw_ask_price))
@@ -440,7 +484,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                                                 # Store adjusted prices (and maybe original raw prices if needed by the client)
                                                 # Convert Decimal to float for JSON serialization if not using a custom encoder
                                                 # Since you have DecimalEncoder, you can keep them as Decimal here if the encoder supports it.
-                                                # However, sending as floats is often simpler for frontend consumption.
+                                                # Sending as floats is often simpler for frontend consumption.
                                                 adjusted_market_prices[symbol.upper()] = {
                                                      'raw_ask': float(ask_decimal), # Original Ask price
                                                      'raw_bid': float(bid_decimal), # Original Bid price
@@ -450,11 +494,14 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                                                      'spread_value': float(spread_value), # Include calculated spread value
                                                      'half_spread': float(half_spread), # Include calculated half spread
                                                      # Include other group/symbol settings relevant to the client (e.g., pips, commission)
-                                                     'pips': float(symbol_settings.get('pips', 0)) # Example of including another setting
+                                                     'pips': float(symbol_settings.get('pips', 0)), # Example of including another setting
+                                                     # Add other settings here as needed by the frontend, converting Decimals to float
+                                                     'commision': float(symbol_settings.get('commision', 0)),
+                                                     'margin_factor': float(symbol_settings.get('margin', 0)) # Assuming 'margin' is a factor
                                                 }
                                            except Exception as calc_e:
                                                 logger.error(f"Error calculating spread for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
-                                                # If calculation fails, send the raw prices if available
+                                                # If calculation fails, send the raw prices if available as a fallback
                                                 if raw_ask_price is not None and raw_bid_price is not None:
                                                     adjusted_market_prices[symbol.upper()] = {
                                                         'raw_ask': float(raw_ask_price),
@@ -476,12 +523,11 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                                       else:
                                            logger.warning(f"Incomplete market data for user {user_id}, symbol {symbol}. Skipping.")
                                  else:
-                                      logger.warning(f"Market data for symbol {symbol} is not in expected dictionary format for user {user_id}. Data: {market_data}")
+                                      # This warning is now specifically for entries that are not dictionaries and are not _timestamp
+                                      logger.warning(f"Market data for symbol {symbol} is not in expected dictionary format for user {user_id}. Type: {type(market_data)}. Data: {market_data}")
                         elif not isinstance(processed_data, dict):
                              logger.warning(f"Processed data from Redis is not a dictionary for user {user_id}. Type: {type(processed_data)}")
-                        elif not isinstance(user_group_symbol_settings, dict):
-                            # This warning is already logged above where user_group_symbol_settings is retrieved
-                            pass # Avoid duplicate log
+                        # The case where user_group_symbol_settings is not a dictionary is now handled inside the symbol loop
 
 
                         # 2. Use the user's portfolio (user_portfolio) and current market prices (processed_data or adjusted_market_prices)
@@ -498,6 +544,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                              # based on the user's open positions (from user_portfolio['positions']) and the
                              # current *adjusted* market prices (adjusted_market_prices).
                              # This requires significant trading logic based on position entry price, size, type (buy/sell), etc.
+                             # Refer to trading documentation or examples for calculating PnL, margin, and equity.
                         }
 
 
@@ -649,14 +696,7 @@ async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_
                 all_group_settings[symbol.upper()] = settings
 
         for symbol, settings in all_group_settings.items():
-            # Here, you are setting cache for each symbol individually
             await set_group_symbol_settings_cache(redis_client, group_name, symbol, settings)
-
-        # You might also consider setting a single cache key for ALL settings for the group here
-        # This depends on how get_group_symbol_settings_cache("ALL") is implemented.
-        # Example (assuming a hypothetical set_all_group_symbol_settings_cache):
-        # await set_all_group_symbol_settings_cache(redis_client, group_name, all_group_settings)
-
 
         logger.debug(f"Initially cached {len(all_group_settings)} group-symbol settings for group '{group_name}'.")
 
