@@ -436,7 +436,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                         # --- Calculate Personalized Data ---
                         # Apply group settings (spread, pips, commission etc.) to raw market data (processed_data)
                         # to get adjusted_market_prices for this user.
-                        adjusted_market_prices: Dict[str, Any] = {}
+                        adjusted_market_prices_filtered: Dict[str, Any] = {} # Use a new dictionary for filtered data
 
                         # Fix: Ensure processed_data is a dictionary before iterating
                         if isinstance(processed_data, dict):
@@ -481,45 +481,32 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                                                 adjusted_sell_price = bid_decimal - half_spread
                                                 adjusted_buy_price = ask_decimal + half_spread
 
-                                                # Store adjusted prices (and maybe original raw prices if needed by the client)
+                                                # Store only the requested fields: 'buy', 'sell', and 'spread_value'
                                                 # Convert Decimal to float for JSON serialization if not using a custom encoder
-                                                # Since you have DecimalEncoder, you can keep them as Decimal here if the encoder supports it.
-                                                # Sending as floats is often simpler for frontend consumption.
-                                                adjusted_market_prices[symbol.upper()] = {
-                                                     'raw_ask': float(ask_decimal), # Original Ask price
-                                                     'raw_bid': float(bid_decimal), # Original Bid price
+                                                adjusted_market_prices_filtered[symbol.upper()] = {
                                                      'buy': float(adjusted_buy_price), # Adjusted BUY price for the user
                                                      'sell': float(adjusted_sell_price), # Adjusted SELL price for the user
-                                                     # You can add other symbol-specific data from market_data or settings here
                                                      'spread_value': float(spread_value), # Include calculated spread value
-                                                     'half_spread': float(half_spread), # Include calculated half spread
-                                                     # Include other group/symbol settings relevant to the client (e.g., pips, commission)
-                                                     'pips': float(symbol_settings.get('pips', 0)), # Example of including another setting
-                                                     # Add other settings here as needed by the frontend, converting Decimals to float
-                                                     'commision': float(symbol_settings.get('commision', 0)),
-                                                     'margin_factor': float(symbol_settings.get('margin', 0)) # Assuming 'margin' is a factor
                                                 }
                                            except Exception as calc_e:
                                                 logger.error(f"Error calculating spread for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
-                                                # If calculation fails, send the raw prices if available as a fallback
+                                                # If calculation fails, send the raw prices if available as a fallback (but only the requested fields)
                                                 if raw_ask_price is not None and raw_bid_price is not None:
-                                                    adjusted_market_prices[symbol.upper()] = {
-                                                        'raw_ask': float(raw_ask_price),
-                                                        'raw_bid': float(raw_bid_price),
+                                                    adjusted_market_prices_filtered[symbol.upper()] = {
                                                         'buy': float(raw_ask_price), # Fallback to raw ask if calculation fails
                                                         'sell': float(raw_bid_price) # Fallback to raw bid if calculation fails
+                                                        # No spread_value if calculation failed
                                                     }
-                                                logger.warning(f"Falling back to raw prices for user {user_id}, symbol {symbol} due to calculation error.")
+                                                logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol} due to calculation error.")
                                       elif raw_ask_price is not None and raw_bid_price is not None:
-                                           # If no group settings found for this symbol, send raw prices as a fallback
-                                            adjusted_market_prices[symbol.upper()] = {
-                                                'raw_ask': float(raw_ask_price),
-                                                'raw_bid': float(raw_bid_price),
+                                           # If no group settings found for this symbol, send raw prices as a fallback (only requested fields)
+                                            adjusted_market_prices_filtered[symbol.upper()] = {
                                                 'buy': float(raw_ask_price), # Fallback to raw ask
                                                 'sell': float(raw_bid_price) # Fallback to raw bid
+                                                # No spread_value if no settings
                                             }
                                             # Log this specific fallback reason
-                                            logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol} in the retrieved group settings dictionary. Sending raw prices for this symbol.")
+                                            logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol} in the retrieved group settings dictionary. Sending raw prices (buy/sell) for this symbol.")
                                       else:
                                            logger.warning(f"Incomplete market data for user {user_id}, symbol {symbol}. Skipping.")
                                  else:
@@ -542,7 +529,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                              "positions": user_portfolio.get("positions", []) # Use cached positions or fetch/calculate
                              # You MUST implement the calculation of equity, margin, free_margin, and profit_loss
                              # based on the user's open positions (from user_portfolio['positions']) and the
-                             # current *adjusted* market prices (adjusted_market_prices).
+                             # current *adjusted* market prices (adjusted_market_prices_filtered).
                              # This requires significant trading logic based on position entry price, size, type (buy/sell), etc.
                              # Refer to trading documentation or examples for calculating PnL, margin, and equity.
                         }
@@ -550,17 +537,17 @@ async def redis_market_data_broadcaster(redis_client: Redis):
 
                         # --- DEBUG LOGS SHOULD BE HERE ---
                         # These logs will show the data before we check if it's non-empty
-                        logger.debug(f"User {user_id}: adjusted_market_prices before check: {adjusted_market_prices}")
+                        logger.debug(f"User {user_id}: adjusted_market_prices_filtered before check: {adjusted_market_prices_filtered}")
                         logger.debug(f"User {user_id}: calculated_account_data before check: {calculated_account_data}")
                         # --- END DEBUG LOGS ---
 
-                        # Check if there is data to send (either market prices or account data)
+                        # Check if there is data to send (either filtered market prices or account data)
                         # Only send if there are adjusted market prices OR calculated account data
-                        if adjusted_market_prices or calculated_account_data:
+                        if adjusted_market_prices_filtered or calculated_account_data:
                             data_to_send = {
                                 "type": "market_data_update",
-                                "data": adjusted_market_prices, # Sending the processed/adjusted market data
-                                "account": calculated_account_data # Sending calculated account data
+                                "data": adjusted_market_prices_filtered, # Sending the filtered market data
+                                "account": calculated_account_data # Sending calculated account data (personal details)
                             }
 
                             # --- NEW DEBUG LOGS BEFORE SEND ---
@@ -584,7 +571,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                             logger.info(f"Sending personalized data to user {user_id}.") # This log should now appear if send is successful
 
                         else:
-                             # This log appears if both adjusted_market_prices and calculated_account_data are empty/falsey
+                             # This log appears if both adjusted_market_prices_filtered and calculated_account_data are empty/falsey
                              logger.info(f"No market prices or account data to send for user {user_id} on this tick.")
 
 

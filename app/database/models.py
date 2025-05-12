@@ -310,3 +310,83 @@ class OTP(Base):
 
     # Relationship back to the User
     user = relationship("User", back_populates="otps")
+
+
+# app/database/models.py
+
+# ... (existing imports like datetime, Decimal, List, Optional, etc.) ...
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func, # Import func for default timestamps
+    Float # Import Float or use SQLDecimal for digit, contract_size, etc.
+)
+# Import DECIMAL from sqlalchemy.types and alias it as SQLDecimal
+from sqlalchemy.types import DECIMAL as SQLDecimal
+import uuid # Import uuid for handling UUID strings if storing the 'id'
+
+from sqlalchemy.orm import relationship # Import relationship for defining relationships
+
+# Assuming you have a base declarative model defined in database/base.py
+from .base import Base # Assuming Base is defined in app/database.base
+
+
+# ... (existing User, Group, Symbol, Wallet, UserOrder, OTP models) ...
+
+
+# --- New Model for External Symbol Information ---
+
+class ExternalSymbolInfo(Base):
+    """
+    SQLAlchemy model for the 'external_symbol_info' table.
+    Stores static data fetched from an external symbol API.
+    """
+    __tablename__ = "external_symbol_info"
+
+    # Using a database-generated integer primary key is generally simpler
+    # if the external 'id' is not strictly needed for relationships within your DB.
+    # If you need to reference the external 'id', store it in a separate column.
+    id = Column(Integer, primary_key=True, index=True) # Using integer primary key
+
+    # Store the external API's ID if needed for reference
+    external_id = Column(String(36), index=True, nullable=True) # Store external API's UUID string ID
+
+    # fix_symbol should be unique for lookups
+    fix_symbol = Column(String(255), unique=True, index=True, nullable=False)
+    description = Column(String(255), nullable=True)
+    # Using SQLDecimal for precise decimal values. Adjust precision and scale as needed.
+    digit = Column(SQLDecimal(10, 5), nullable=True)
+    base = Column(String(10), nullable=True) # Base currency/asset
+    profit = Column(String(10), nullable=True) # Profit currency
+    # Storing 'margin' from API as String based on your example ("BTC", "1:10")
+    margin = Column(String(50), nullable=True)
+    contract_size = Column(SQLDecimal(20, 8), nullable=True) # Adjust precision/scale
+    # Storing 'margin_leverage' as String
+    margin_leverage = Column(String(50), nullable=True)
+    swap = Column(String(255), nullable=True) # Swap information
+    commission = Column(String(255), nullable=True) # Commission information
+    minimum_per_trade = Column(SQLDecimal(20, 8), nullable=True)
+    steps = Column(SQLDecimal(20, 8), nullable=True)
+    maximum_per_trade = Column(SQLDecimal(20, 8), nullable=True)
+    maximum_per_login = Column(String(255), nullable=True) # Assuming string
+    is_subscribed = Column(Boolean, default=False, nullable=False)
+    exchange_folder_id = Column(String(36), nullable=True) # Store as string
+
+    # The 'type' field from the API response indicates instrument type
+    # Map 'type' to 'instrument_type' column
+    instrument_type = Column(String(10), nullable=True) # Store as string ("1", "2", "3", "4")
+
+    # Optional: Add timestamps for when the data was inserted/updated in your DB
+    # created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    # updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    def __repr__(self):
+        return f"<ExternalSymbolInfo(fix_symbol='{self.fix_symbol}', instrument_type='{self.instrument_type}', contract_size={self.contract_size})>"
+
+# Ensure this new model is imported or defined in app/database/models.py
+# so that it's discoverable by SQLAlchemy.
