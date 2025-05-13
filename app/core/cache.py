@@ -16,6 +16,7 @@ REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX = "group_symbol_settings:" # Stores sprea
 
 # Expiry times (adjust as needed)
 USER_DATA_CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60 # Example: User session length
+# USER_DATA_CACHE_EXPIRY_SECONDS = 10
 USER_PORTFOLIO_CACHE_EXPIRY_SECONDS = 5 * 60 # Example: Short expiry, updated frequently
 GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 
@@ -229,3 +230,83 @@ async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
 # You might also want a function to cache ALL settings for a group,
 # or cache ALL group-symbol settings globally if the dataset is small enough.
 # For now, fetching per symbol on demand from cache/DB is a good start.
+
+# Add these functions to your app/core/cache.py file
+
+# New key prefix for adjusted market prices per group and symbol
+REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX = "adjusted_market_price:"
+
+# Example expiry for adjusted market prices (adjust based on how frequently data updates)
+ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS = 10 # Example: Cache for 10 seconds
+
+async def set_adjusted_market_price_cache(
+    redis_client: Redis,
+    group_name: str,
+    symbol: str,
+    buy_price: decimal.Decimal,
+    sell_price: decimal.Decimal,
+    spread_value: decimal.Decimal # Include spread value as well
+):
+    """
+    Caches the adjusted market buy and sell prices (and spread value)
+    for a specific group and symbol in Redis.
+    Key structure: adjusted_market_price:{group_name}:{symbol}
+    Value is a JSON string: {"buy": "...", "sell": "...", "spread_value": "..."}
+    """
+    key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}" # Use lower/upper for consistency
+    try:
+        # Create a dictionary with Decimal values
+        adjusted_prices_data = {
+            "buy": buy_price,
+            "sell": sell_price,
+            "spread_value": spread_value # Store spread value
+        }
+        # Serialize the dictionary to a JSON string, using DecimalEncoder to handle Decimal types
+        adjusted_prices_json = json.dumps(adjusted_prices_data, cls=DecimalEncoder)
+
+        # Use setex to set the key with an expiry time
+        await redis_client.setex(
+            key,
+            ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS,
+            adjusted_prices_json
+        )
+        logger.debug(f"Cached adjusted market price for group '{group_name}', symbol '{symbol}'. Key: {key}")
+
+    except Exception as e:
+        logger.error(f"Error caching adjusted market price for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
+
+async def get_adjusted_market_price_cache(
+    redis_client: Redis,
+    group_name: str,
+    symbol: str
+) -> Optional[Dict[str, decimal.Decimal]]:
+    """
+    Retrieves the cached adjusted market buy and sell prices (and spread value)
+    for a specific group and symbol from Redis.
+    Returns a dictionary {"buy": Decimal, "sell": Decimal, "spread_value": Decimal} or None if not found/error.
+    """
+    key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}" # Use lower/upper for consistency
+    try:
+        adjusted_prices_json = await redis_client.get(key)
+        if adjusted_prices_json:
+            # Decode the JSON string, using decode_decimal to convert strings back to Decimal
+            adjusted_prices_data = json.loads(adjusted_prices_json, object_hook=decode_decimal)
+
+            # Ensure the expected keys are present and have Decimal values
+            # Check if it's a dictionary and contains 'buy', 'sell', and 'spread_value' keys with Decimal values
+            if isinstance(adjusted_prices_data, dict) and \
+               'buy' in adjusted_prices_data and isinstance(adjusted_prices_data['buy'], decimal.Decimal) and \
+               'sell' in adjusted_prices_data and isinstance(adjusted_prices_data['sell'], decimal.Decimal) and \
+               'spread_value' in adjusted_prices_data and isinstance(adjusted_prices_data['spread_value'], decimal.Decimal):
+                logger.debug(f"Adjusted market price retrieved from cache for group '{group_name}', symbol '{symbol}'.")
+                return adjusted_prices_data
+            else:
+                 logger.warning(f"Cached data for key '{key}' is not in expected format: {adjusted_prices_data}")
+                 return None
+
+        logger.debug(f"Adjusted market price not found in cache for group '{group_name}', symbol '{symbol}'. Key: {key}")
+        return None # Return None if the key is not found
+
+    except Exception as e:
+        logger.error(f"Error retrieving adjusted market price cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
+        return None # Return None on error

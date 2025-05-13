@@ -44,6 +44,9 @@ def get_latest_market_data(symbol: str = None):
 # Event to keep the main async task alive while the listener runs in a background thread
 _keep_alive_event = asyncio.Event()
 
+# Store the Firebase listener handle for cleanup
+_listener_handle = None
+
 
 # --- Main async task for Firebase Stream Processing ---
 async def process_firebase_events(firebase_db_instance, path: str = 'datafeeds'):
@@ -216,18 +219,44 @@ async def process_firebase_events(firebase_db_instance, path: str = 'datafeeds')
 
 
     # --- Start Listening and Keep Task Alive ---
+    global _listener_handle
     try:
         ref = firebase_db_instance.reference(path)
         logger.info(f"Attempting to start Firebase Admin listener for path: '{path}'.")
-        listener_handle = ref.listen(listener)
+        _listener_handle = ref.listen(listener)
         logger.info(f"Firebase Admin listener started successfully for path: '{path}'. Queuing data for Redis publishing.")
 
-        await _keep_alive_event.wait()
-        logger.info("Firebase event processing task finished waiting on keep-alive event.") 
+        try:
+            await _keep_alive_event.wait()
+            logger.info("Firebase event processing task finished waiting on keep-alive event.")
+        except asyncio.CancelledError:
+            logger.info("Firebase event processing task cancelled.")
+            raise
+        finally:
+            # Ensure cleanup happens even if we're cancelled
+            if _listener_handle is not None:
+                _listener_handle.close()
+                _listener_handle = None
+                logger.info("Firebase listener closed.")
 
-    except asyncio.CancelledError:
-        logger.info("Firebase event processing task cancelled.")
     except Exception as e:
         logger.critical(f"FATAL ERROR: Firebase event processing task failed during setup or main loop for path '{path}': {e}", exc_info=True)
+        raise
+    finally:
+        logger.info("Firebase Admin event processing task finished.")
 
-    logger.info("Firebase Admin event processing task finished.")
+
+def cleanup_firebase():
+    """Clean up Firebase resources. Call this during application shutdown."""
+    global _listener_handle
+    if _listener_handle is not None:
+        try:
+            _listener_handle.close()
+            logger.info("Firebase listener closed during cleanup.")
+        except Exception as e:
+            logger.error(f"Error closing Firebase listener during cleanup: {e}", exc_info=True)
+        finally:
+            _listener_handle = None
+    
+    # Signal any waiting tasks to complete
+    _keep_alive_event.set()

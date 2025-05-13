@@ -56,7 +56,7 @@ from app.shared_state import redis_publish_queue # Import the queue
 
 # Get application settings
 settings = get_settings()
-
+print(f"DEBUG: API_V1_STR is set to: {settings.API_V1_STR}")
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -135,19 +135,26 @@ async def startup_event():
     # Ensure Redis client and Firebase app instance are available before starting tasks
     if global_redis_client_instance and firebase_app_instance:
         # Start the Firebase stream processing task
-        # It needs the firebase_db instance (aliased from firebase_admin.db) and the path
-        # ***** CORRECTED LINE BELOW *****
-        asyncio.create_task(process_firebase_events(firebase_db, path=settings.FIREBASE_DATA_PATH))
+        firebase_task = asyncio.create_task(process_firebase_events(firebase_db, path=settings.FIREBASE_DATA_PATH))
+        firebase_task.set_name("firebase_listener")
+        background_tasks.add(firebase_task)
+        firebase_task.add_done_callback(background_tasks.discard)
         logger.info("Firebase stream processing task scheduled.")
 
         # Start the Redis publisher task
-        # It needs the Redis client instance and the shared queue
-        asyncio.create_task(redis_publisher_task(global_redis_client_instance))
+        # It needs the Redis client instance and the queue
+        publisher_task = asyncio.create_task(redis_publisher_task(global_redis_client_instance))
+        publisher_task.set_name("redis_publisher_task")
+        background_tasks.add(publisher_task)
+        publisher_task.add_done_callback(background_tasks.discard)
         logger.info("Redis publisher task scheduled.")
 
         # Start the Redis market data broadcaster task
         # It needs the Redis client instance
-        asyncio.create_task(redis_market_data_broadcaster(global_redis_client_instance))
+        broadcaster_task = asyncio.create_task(redis_market_data_broadcaster(global_redis_client_instance))
+        broadcaster_task.set_name("redis_market_data_broadcaster")
+        background_tasks.add(broadcaster_task)
+        broadcaster_task.add_done_callback(background_tasks.discard)
         logger.info("Redis market data broadcaster task scheduled.")
 
     else:
@@ -162,26 +169,42 @@ async def startup_event():
     logger.info("Application startup event finished.")
 
 
+# Store background tasks
+background_tasks = set()
+
 # --- Database Shutdown Event ---
 @app.on_event("shutdown")
 async def shutdown_event():
     """
-    Application shutdown event: Close Database and Redis connections.
+    Application shutdown event: Cancel background tasks and close connections.
     """
     logger.info("Application shutdown event triggered.")
-    # Close database connection pool (if applicable to your engine configuration)
-    # await engine.dispose() # Use engine.dispose() if using AsyncEngine
-    # logger.info("Database connection pool closed.")
-
+    
+    # Cancel all background tasks
+    logger.info("Cancelling background tasks...")
+    for task in background_tasks:
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                logger.info(f"Background task {task.get_name()} cancelled successfully.")
+            except Exception as e:
+                logger.error(f"Error cancelling background task {task.get_name()}: {e}", exc_info=True)
+    
     # Close Redis connection
-    global global_redis_client_instance # Declare global instance to access it
+    global global_redis_client_instance
     if global_redis_client_instance:
-        await close_redis_connection(global_redis_client_instance) # Use the function from security.py
-        global_redis_client_instance = None # Set to None after closing
+        await close_redis_connection(global_redis_client_instance)
+        global_redis_client_instance = None
         logger.info("Redis client connection closed.")
     else:
         logger.warning("Redis client was not initialized or already closed during shutdown.")
-
+    
+    # Clean up Firebase resources
+    from app.firebase_stream import cleanup_firebase
+    cleanup_firebase()
+    
     logger.info("Application shutdown event finished.")
 
 
