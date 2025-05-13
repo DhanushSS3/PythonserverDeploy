@@ -48,6 +48,26 @@ async def get_orders_by_user_id(
     )
     return result.scalars().all()
 
+# --- NEW FUNCTION: Get open orders by user ID and symbol ---
+async def get_open_orders_by_user_id_and_symbol(
+    db: AsyncSession, user_id: int, symbol: str
+) -> List[UserOrder]:
+    """
+    Retrieves all open orders for a specific user and symbol.
+    This is used for hedging logic to find existing opposing positions efficiently.
+    """
+    result = await db.execute(
+        select(UserOrder)
+        .filter(
+            UserOrder.order_user_id == user_id,
+            UserOrder.order_company_name == symbol, # Assuming order_company_name stores the symbol
+            UserOrder.order_status == 'OPEN' # Filter for only open orders
+        )
+        # No limit or offset needed here as we need all open positions for the symbol
+    )
+    return result.scalars().all()
+
+
 async def get_all_orders(
     db: AsyncSession, skip: int = 0, limit: int = 100
 ) -> List[UserOrder]:
