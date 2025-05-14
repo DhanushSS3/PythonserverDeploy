@@ -13,6 +13,7 @@ class OrderPlacementRequest(BaseModel):
     """
     # order_status: str # Status will be set by the backend, e.g., "PENDING" or "OPEN"
     # order_user_id: int # Will be taken from the authenticated user
+    order_id: str
     symbol: str = Field(..., alias="order_company_name") # User provides symbol, maps to order_company_name
     order_type: str # e.g., "BUY", "SELL"
     order_price: Decimal # The price at which the user wants to place the order (or market price if market order)

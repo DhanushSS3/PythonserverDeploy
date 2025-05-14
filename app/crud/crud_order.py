@@ -14,10 +14,7 @@ async def create_user_order(db: AsyncSession, order_data: dict) -> UserOrder:
     Creates a new user order in the database.
     Expects order_data to be a dictionary with all necessary fields for UserOrder.
     """
-    # Generate a unique order_id if not provided (though typically it should be generated before this call)
-    if "order_id" not in order_data or not order_data["order_id"]:
-        order_data["order_id"] = str(uuid.uuid4())
-
+    
     db_order = UserOrder(**order_data)
     db.add(db_order)
     await db.commit()
