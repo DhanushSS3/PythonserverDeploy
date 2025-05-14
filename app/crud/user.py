@@ -4,6 +4,8 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
+from decimal import Decimal
+
 # REMOVE THIS LINE: from sqlalchemy.orm import with_for_update # Incorrect import
 
 # with_for_update is used as an option directly in the select statement,
@@ -68,26 +70,26 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     return result.scalars().first()
 
 # Function to get a user by ID with locking (for updates involving sensitive fields)
-async def get_user_by_id_with_lock(db: AsyncSession, user_id: int) -> User | None:
-    """
-    Retrieves a user from the database by their ID with a row-level lock.
-    Use this when updating sensitive fields like wallet balance.
+# async def get_user_by_id_with_lock(db: AsyncSession, user_id: int) -> User | None:
+#     """
+#     Retrieves a user from the database by their ID with a row-level lock.
+#     Use this when updating sensitive fields like wallet balance.
 
-    Args:
-        db: The asynchronous database session.
-        user_id: The ID to search for.
+#     Args:
+#         db: The asynchronous database session.
+#         user_id: The ID to search for.
 
-    Returns:
-        The User SQLAlchemy model instance if found, otherwise None.
-    """
-    # Use with_for_update() as an option on the select statement
-    # No direct import is needed for with_for_update() itself.
-    result = await db.execute(
-        select(User)
-        .filter(User.id == user_id)
-        .with_for_update() # <-- Apply the lock here using the method
-    )
-    return result.scalars().first()
+#     Returns:
+#         The User SQLAlchemy model instance if found, otherwise None.
+#     """
+#     # Use with_for_update() as an option on the select statement
+#     # No direct import is needed for with_for_update() itself.
+#     result = await db.execute(
+#         select(User)
+#         .filter(User.id == user_id)
+#         .with_for_update() # <-- Apply the lock here using the method
+#     )
+#     return result.scalars().first()
 
 
 # Function to get all users
@@ -240,3 +242,38 @@ async def delete_user(db: AsyncSession, db_user: User):
     """
     await db.delete(db_user)
     await db.commit()
+
+from sqlalchemy.future import select
+from sqlalchemy import func # Need func for count if implementing count functions
+
+# ... (existing get_user, get_user_by_email, get_user_by_phone_number, get_user_by_id) ...
+
+# Function to get user by ID with locking (for updates involving sensitive fields)
+async def get_user_by_id_with_lock(db: AsyncSession, user_id: int) -> User | None:
+    """
+    Retrieves a user from the database by their ID with a row-level lock.
+    Use this when updating sensitive fields like wallet balance or margin.
+    Includes the user's margin and wallet_balance.
+    """
+    # Use with_for_update() as an option on the select statement
+    # This correctly fetches the User object including margin and wallet_balance
+    result = await db.execute(
+        select(User)
+        .filter(User.id == user_id)
+        .with_for_update() # <-- Apply the lock here using the method
+    )
+    return result.scalars().first()
+
+# --- Optional: Dedicated function to get only the user's margin ---
+# This is not strictly necessary as get_user_by_id already provides it,
+# but added as per your request for a function specifically for margin.
+async def get_user_margin_by_id(db: AsyncSession, user_id: int) -> Optional[Decimal]:
+    """
+    Retrieves only the margin value for a specific user from the database.
+    """
+    result = await db.execute(
+        select(User.margin)
+        .filter(User.id == user_id)
+    )
+    # Use scalar_one_or_none() to get the single margin value or None
+    return result.scalar_one_or_none()
