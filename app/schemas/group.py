@@ -13,7 +13,7 @@ class GroupCreate(BaseModel):
     """
     # String fields
     symbol: Optional[str] = Field(None, description="Symbol associated with the group (optional).")
-    name: str = Field(..., description="Name of the group (required and unique).") # Name is required
+    name: str = Field(..., description="Name of the group (required).") # Name is required
 
     # Integer types
     commision_type: int = Field(..., description="Type of commission (integer).") # Required
@@ -37,6 +37,12 @@ class GroupCreate(BaseModel):
     pips: Decimal = Field(..., max_digits=10, decimal_places=4, description="Pips value.") # Required
     spread_pip: Optional[Decimal] = Field(None, max_digits=10, decimal_places=4, description="Spread pip value (optional).")
 
+    # --- NEW FIELDS ---
+    sending_orders: Optional[str] = Field(None, description="Where orders are sent (e.g., 'Barclays', 'Rock').")
+    book: Optional[str] = Field(None, description="Book type (e.g., 'A', 'B').")
+    # --- END NEW FIELDS ---
+
+
     # created_at and updated_at are handled by the database model
 
 
@@ -49,8 +55,8 @@ class GroupUpdate(BaseModel):
     # String fields
     symbol: Optional[str] = Field(None, description="Symbol associated with the group (optional).")
     name: Optional[str] = Field(None, description="Name of the group.") # Name is optional for update
-    # Note: The unique constraint on 'name' in the model means you cannot update
-    # the name to a value that already exists in another group.
+    # Note: The unique constraint on '(symbol, name)' in the model means you cannot update
+    # the symbol/name combination to a value that already exists in another group.
 
     # Integer types
     commision_type: Optional[int] = Field(None, description="Type of commission (integer).")
@@ -73,6 +79,11 @@ class GroupUpdate(BaseModel):
     max_lot: Optional[Decimal] = Field(None, max_digits=10, decimal_places=4, description="Maximum lot size.")
     pips: Optional[Decimal] = Field(None, max_digits=10, decimal_places=4, description="Pips value.")
     spread_pip: Optional[Decimal] = Field(None, max_digits=10, decimal_places=4, description="Spread pip value (optional).")
+
+    # --- NEW FIELDS ---
+    sending_orders: Optional[str] = Field(None, description="Where orders are sent (e.g., 'Barclays', 'Rock').")
+    book: Optional[str] = Field(None, description="Book type (e.g., 'A', 'B').")
+    # --- END NEW FIELDS ---
 
 
 # Schema for data returned after creating/fetching a group
@@ -107,6 +118,12 @@ class GroupResponse(BaseModel):
     max_lot: Decimal = Field(..., max_digits=10, decimal_places=4, description="Maximum lot size.")
     pips: Decimal = Field(..., max_digits=10, decimal_places=4, description="Pips value.")
     spread_pip: Optional[Decimal] = Field(None, max_digits=10, decimal_places=4, description="Spread pip value (optional).")
+
+    # --- NEW FIELDS ---
+    sending_orders: Optional[str] = Field(None, description="Where orders are sent (e.g., 'Barclays', 'Rock').")
+    book: Optional[str] = Field(None, description="Book type (e.g., 'A', 'B').")
+    # --- END NEW FIELDS ---
+
 
     # Timestamps
     created_at: datetime.datetime = Field(..., description="Timestamp when the group was created.")

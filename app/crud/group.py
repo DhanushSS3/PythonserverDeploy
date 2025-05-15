@@ -38,7 +38,7 @@ async def get_group_by_symbol_and_name(db: AsyncSession, symbol: Optional[str], 
         # Filter where symbol is NULL
         query = query.filter(Group.symbol.is_(None))
     else:
-        # Filter where symbol matches the value
+        # Filter where symbol == symbol
         query = query.filter(Group.symbol == symbol)
 
     result = await db.execute(query)
@@ -69,10 +69,10 @@ async def get_groups(
     # Apply search filter if provided
     if search:
         # Use or_ to search in either name or symbol
+        # Ensure Group.symbol is not None before applying ilike to avoid potential errors
         query = query.filter(
             or_(
                 Group.name.ilike(f"%{search}%"), # Case-insensitive search in name
-                # Check if Group.symbol is not None before applying ilike to avoid errors
                 Group.symbol.ilike(f"%{search}%") if Group.symbol is not None else False
             )
         )
@@ -88,6 +88,7 @@ async def create_group(db: AsyncSession, group_create: GroupCreate) -> Group:
     """
     Creates a new group in the database.
     Checks for unique symbol and name combination before creating.
+    Includes sending_orders and book fields.
     """
     # Check if a group with the same symbol and name already exists
     existing_group = await get_group_by_symbol_and_name(db, symbol=group_create.symbol, name=group_create.name)
@@ -116,6 +117,10 @@ async def create_group(db: AsyncSession, group_create: GroupCreate) -> Group:
         max_lot=group_create.max_lot,
         pips=group_create.pips,
         spread_pip=group_create.spread_pip,
+        # --- Include New Fields ---
+        sending_orders=group_create.sending_orders,
+        book=group_create.book,
+        # --- End New Fields ---
         # created_at and updated_at will be set by database defaults
     )
     db.add(db_group)
@@ -128,6 +133,7 @@ async def update_group(db: AsyncSession, db_group: Group, group_update: GroupUpd
     """
     Updates an existing group in the database.
     Handles potential unique constraint violation on symbol and name combination.
+    Includes sending_orders and book fields in the update.
     """
     # Convert the GroupUpdate Pydantic model to a dictionary, excluding unset fields
     update_data = group_update.model_dump(exclude_unset=True)
@@ -149,7 +155,14 @@ async def update_group(db: AsyncSession, db_group: Group, group_update: GroupUpd
 
     # Apply updates from the Pydantic model to the SQLAlchemy model
     for field, value in update_data.items():
-        setattr(db_group, field, value)
+        # Ensure the field exists on the SQLAlchemy model before setting
+        if hasattr(db_group, field):
+            setattr(db_group, field, value)
+        else:
+            # Optional: Log a warning if trying to set a field that doesn't exist on the model
+            # logger.warning(f"Attempted to update non-existent field '{field}' on Group model.")
+            pass # Silently ignore fields not in the model
+
 
     await db.commit()
     await db.refresh(db_group) # Refresh to get the updated values

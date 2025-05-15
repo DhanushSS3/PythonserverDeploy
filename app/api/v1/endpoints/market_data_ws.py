@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db # Assuming get_db is in app.database.session
 from app.crud import user as crud_user # Assuming user CRUD is in app.crud.user
 from app.crud import group as crud_group # Assuming group CRUD is in app.crud.group
+# Import the updated crud_order with the new function
+from app.crud import crud_order
 
 
 # Import security functions for token validation
@@ -30,10 +32,10 @@ from app.core.cache import (
     get_user_data_cache,
     set_user_portfolio_cache,
     get_user_portfolio_cache,
-    get_user_positions_from_cache,
+    get_user_positions_from_cache, # Keep this if still needed elsewhere, but broadcaster will fetch all
     set_adjusted_market_price_cache,
-    set_group_symbol_settings_cache, # New import
-    get_group_symbol_settings_cache,  # New import
+    set_group_symbol_settings_cache,
+    get_group_symbol_settings_cache,
     DecimalEncoder, # Import DecimalEncoder
     decode_decimal # Import decode_decimal
 )
@@ -44,13 +46,16 @@ from app.dependencies.redis_client import get_redis_client
 # Import the shared state for the Redis publish queue
 from app.shared_state import redis_publish_queue # This queue is consumed by the publisher
 
+# Import the new portfolio calculation service
+from app.services.portfolio_calculator import calculate_user_portfolio
+
 # Configure logging for this module
 logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG) # Level set in main.py for granular control
 
 
 # Dictionary to store active WebSocket connections
-# Key: user_id, Value: {'websocket': WebSocket, 'group_name': str}
+# Key: user_id, Value: {'websocket': WebSocket, 'group_name': str, 'db_session': AsyncSession}
 # Need a lock as this dictionary is accessed from the WebSocket endpoint (main thread)
 # and the broadcaster task (main thread)
 active_websocket_connections: Dict[int, Dict[str, Any]] = {}
@@ -69,12 +74,12 @@ router = APIRouter(
 async def websocket_endpoint(
     websocket: WebSocket,
     token: str = Query(...), # Expect token as query parameter
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db), # Inject DB session
     redis_client: Redis = Depends(get_redis_client) # Inject Redis client
 ):
     """
-    WebSocket endpoint to stream market data to authenticated users.
-    Requires a valid JWT token as a query parameter for authentication.
+    WebSocket endpoint to stream market data and personalized account updates
+    to authenticated users. Requires a valid JWT token.
     """
     logger.info(f"Attempting to accept WebSocket connection from {websocket.client.host}:{websocket.client.port} with token...")
 
@@ -91,52 +96,66 @@ async def websocket_endpoint(
             logger.warning(f"Authentication failed for connection from {websocket.client.host}:{websocket.client.port}: User ID not found in token.")
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token: User ID missing")
 
-        # Optionally verify user exists in DB and is active
-        # Assuming crud_user has a get_user_by_id function that takes db session and user_id
-        # Ensure crud_user is imported at the top
+        # Verify user exists in DB and is active
         db_user = await crud_user.get_user_by_id(db, user_id)
         if db_user is None or not getattr(db_user, 'isActive', True): # Check if user exists and is active (assuming 'isActive' attribute)
              logger.warning(f"Authentication failed for user ID {user_id} from {websocket.client.host}:{websocket.client.port}: User not found or inactive.")
              raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="User not found or inactive")
 
-        # Get user's group name (assuming user model has group_name attribute)
+        # Get user's group name
         group_name = getattr(db_user, 'group_name', 'default') # Use default group if not specified
 
-        # Cache user data (including group_name) and initial portfolio
-        # Assuming user model has attributes like leverage, margin, wallet_balance
+        # Cache user data (including group_name, balance, leverage)
         user_data_to_cache = {
             "id": user_id,
             "group_name": group_name,
-            "leverage": float(getattr(db_user, 'leverage', 1)), # Cache leverage as float
-            "margin": float(getattr(db_user, 'margin', 0)), # Cache margin as float
+            # Ensure these are Decimal types for consistent calculations later
+            "leverage": decimal.Decimal(str(getattr(db_user, 'leverage', 1.0))),
+            "wallet_balance": decimal.Decimal(str(getattr(db_user, 'wallet_balance', 0.0)))
             # Add other user attributes needed for market data/account calculation
-            "wallet_balance": float(getattr(db_user, 'wallet_balance', 0)) # Cache balance as float
         }
         await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-        logger.debug(f"Cached user data (including group_name) for user ID {user_id}")
+        logger.debug(f"Cached user data (including group_name, balance, leverage) for user ID {user_id}")
 
-        # Fetch and cache initial user portfolio (positions, etc.)
-        # Assuming crud_user has a get_user_portfolio function or similar
-        # For this example, I'll assume positions are fetched and part of the initial portfolio cache
-        user_positions = [] # REPLACE THIS WITH ACTUAL DB FETCH FOR USER'S OPEN POSITIONS
+        # Fetch and cache initial user portfolio (specifically open positions)
+        # Use the new CRUD function to get all open orders for this user
+        open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id)
 
+        # Convert ORM objects to dictionaries for caching
+        # Ensure Decimal values are handled during conversion
+        initial_positions_data = []
+        for pos in open_positions_orm:
+             pos_dict = {}
+             # Manually copy relevant attributes, converting Decimal to str for JSON safety in cache
+             for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']:
+                  value = getattr(pos, attr, None)
+                  if isinstance(value, decimal.Decimal):
+                       pos_dict[attr] = str(value) # Store Decimal as string in cache
+                  else:
+                       pos_dict[attr] = value
+             # Add a placeholder for profit_loss, which will be calculated dynamically
+             pos_dict['profit_loss'] = "0.0" # Store as string "0.0" initially
+             initial_positions_data.append(pos_dict)
+
+
+        # Initial portfolio data structure (balance and positions are fetched/cached)
+        # Equity, margin, free_margin, profit_loss will be CALCULATED dynamically
         user_portfolio_data = {
-             "balance": float(getattr(db_user, 'wallet_balance', 0)), # Use cached balance from user_data or refetch
-             "equity": float(getattr(db_user, 'wallet_balance', 0)), # Placeholder: Equity usually includes PnL
-             "margin": 0.0, # Placeholder: Calculate margin based on positions
-             "free_margin": float(getattr(db_user, 'wallet_balance', 0)), # Placeholder: Free margin = Equity - Used Margin
-             "profit_loss": 0.0, # Placeholder: Calculate PnL from positions and current market data
-             "positions": user_positions # Include fetched positions here
+             # Balance is part of user_data cache now, but include here for the portfolio structure
+             "balance": str(user_data_to_cache["wallet_balance"]), # Store balance as string in portfolio cache
+             "equity": "0.0", # Placeholder - will be calculated
+             "margin": "0.0", # Placeholder - will be calculated (total used margin)
+             "free_margin": "0.0", # Placeholder - will be calculated
+             "profit_loss": "0.0", # Placeholder - will be calculated (total PnL)
+             "positions": initial_positions_data # List of open positions (from DB)
         }
+        # Cache the initial portfolio data
         await set_user_portfolio_cache(redis_client, user_id, user_portfolio_data)
-        logger.debug(f"Cached initial user portfolio for user ID {user_id}")
+        logger.debug(f"Cached initial user portfolio (with {len(initial_positions_data)} open positions) for user ID {user_id}")
 
         # Cache Group-Symbol Settings (Initial Load)
         # Fetch and cache all settings for the user's group
-        # Assuming crud_group has a get_groups function that can filter by name or return all
-        # The helper function update_group_symbol_settings is defined below or imported
         await update_group_symbol_settings(group_name, db, redis_client)
-
         logger.debug(f"Initially cached group-symbol settings for group '{group_name}'.")
 
 
@@ -153,15 +172,17 @@ async def websocket_endpoint(
 
 
     await websocket.accept()
-    logger.info(f"WebSocket connection accepted and authenticated for user ID {user_id} (Group: {group_name}) from 127.0.0.1:{websocket.client.port}.") # Updated log to include port
+    logger.info(f"WebSocket connection accepted and authenticated for user ID {user_id} (Group: {group_name}).")
 
     # Add the new connection to the active connections dictionary (thread-safe)
     with active_connections_lock:
         active_websocket_connections[user_id] = {
             'websocket': websocket,
             'group_name': group_name,
-            # Store other necessary user info if needed by the broadcaster
-            'user_id': user_id # Store user_id here for easy access in broadcaster loop
+            'user_id': user_id,
+            # Note: We are NOT storing the db session here.
+            # DB access in the broadcaster task will need a new session instance per tick if needed,
+            # but we aim to rely on cached data for performance.
         }
         logger.info(f"New authenticated WebSocket connection added for user {user_id}. Total active connections: {len(active_websocket_connections)}")
 
@@ -169,24 +190,18 @@ async def websocket_endpoint(
     # --- WebSocket Communication Loop ---
     try:
         # This loop keeps the connection open and listens for messages from the client
-        # You might handle control messages (e.g., subscribe/unsubscribe to specific symbols) here
-        # For market data streaming, the server primarily sends data, so this loop might be simple.
         while True:
-            # Listen for incoming messages from the client (e.g., control signals)
-            # If you don't expect messages from the client, you could perhaps remove this or add a timeout
-            # Use a small timeout to allow the task to be cancelled gracefully if needed
             try:
-                # Adjusted timeout based on common market data update frequency
-                message = await asyncio.wait_for(websocket.receive_text(), timeout=0.1) # Added timeout
+                # Use a small timeout to allow the task to be cancelled gracefully if needed
+                # Client messages are not expected for market data stream currently
+                # This receive is mainly to detect disconnects or potential control messages later
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=1.0) # Increased timeout slightly
                 logger.debug(f"Received message from user {user_id}: {message}")
                 # Process client message if necessary (e.g., parse JSON command)
-                # Example: if message is a JSON string like {"command": "subscribe", "symbol": "EURUSD"}
-                # You would update the user's subscription list here if implementing symbol filtering per user
-                # For now, we assume all connected users get all published data (filtered by group settings)
 
             except asyncio.TimeoutError:
-                 # Handle timeout if receive has a timeout
-                 pass # Continue waiting for messages after timeout
+                 # Handle timeout if receive has a timeout - simply continue the loop
+                 pass
 
             except WebSocketDisconnect:
                 logger.info(f"WebSocket disconnected by client {user_id}.")
@@ -205,11 +220,9 @@ async def websocket_endpoint(
         with active_connections_lock:
             if user_id in active_websocket_connections:
                 del active_websocket_connections[user_id]
-                # Fix: Call len() on the dictionary, not the lock
                 logger.info(f"WebSocket connection closed for user {user_id}. Total active connections: {len(active_websocket_connections)}")
         # Close the WebSocket gracefully, if not already closed
         try:
-             # Fix: Check client_state against the WebSocketState enum
              if websocket.client_state != WebSocketState.DISCONNECTED:
                  await websocket.close() # Ensure the WebSocket is closed gracefully
              else:
@@ -223,535 +236,6 @@ async def websocket_endpoint(
 # It's defined here for now, called from websocket_endpoint.
 # It requires database access (AsyncSession) and Redis client (Redis).
 # Ensure crud_group and caching functions are imported at the top.
-
-# Assuming crud_group.get_groups exists and returns models with necessary attributes
-# and assuming set_group_symbol_settings_cache exists in app.core.cache
-async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_client: Redis):
-    """
-    Fetches group-symbol settings from the database and caches them in Redis.
-    Called during WebSocket connection setup and potentially on admin updates.
-    """
-    if not group_name:
-        logger.warning("Cannot update group-symbol settings: group_name is missing.")
-        return
-
-    try:
-        # Fetch group settings from the database based on group_name
-        # Assuming crud_group.get_groups takes a database session and a search parameter (like name)
-        # It should return a list of group setting objects/models
-        # Adjust this call based on your actual crud_group implementation
-        group_settings_list = await crud_group.get_groups(db, search=group_name)
-
-        if not group_settings_list:
-             logger.warning(f"No group settings found in DB for group '{group_name}'. Cannot cache settings.")
-             return
-
-        # Prepare a dictionary of all settings for this group, keyed by symbol
-        # Ensure that the attributes accessed here ('symbol', 'spread', etc.) match your Group model
-        all_group_settings: Dict[str, Dict[str, Any]] = {}
-        for group_setting in group_settings_list:
-            # Safely get the symbol, ensuring it's not None
-            symbol = getattr(group_setting, 'symbol', None)
-            if symbol:
-                # Extract relevant settings for the symbol from the group setting object/model
-                # Use getattr with a default value (like Decimal(0.0) or None) for safety
-                settings = {
-                    "commision_type": getattr(group_setting, 'commision_type', None),
-                    "commision_value_type": getattr(group_setting, 'commision_value_type', None),
-                    "type": getattr(group_setting, 'type', None),
-                    "pip_currency": getattr(group_setting, 'pip_currency', None),
-                    "show_points": getattr(group_setting, 'show_points', None),
-                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)), # Keep as Decimal
-                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)), # Keep as Decimal
-                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)), # Keep as Decimal
-                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), # Keep as Decimal
-                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)), # Keep as Decimal
-                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)), # Keep as Decimal
-                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)), # Keep as Decimal
-                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)), # Keep as Decimal
-                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Keep as Decimal
-                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Keep as Decimal
-                    # Add other symbol-specific settings from the Group model here
-                }
-                all_group_settings[symbol.upper()] = settings # Use upper symbol for consistency
-
-        # Now iterate through the populated dictionary and cache each symbol's settings
-        # Ensure set_group_symbol_settings_cache is imported from app.core.cache
-        # from app.core.cache import set_group_symbol_settings_cache # Already imported at the top
-        for symbol, settings in all_group_settings.items():
-            await set_group_symbol_settings_cache(redis_client, group_name, symbol, settings)
-
-
-        logger.debug(f"Initially cached {len(all_group_settings)} group-symbol settings for group '{group_name}'.")
-
-    except Exception as e:
-        logger.error(f"Error fetching or caching initial group-symbol settings for group '{group_name}': {e}", exc_info=True)
-
-
-# --- Redis Publisher Task ---
-async def redis_publisher_task(redis_client: Redis):
-    """
-    Asynchronously consumes market data from the shared queue and publishes it to Redis Pub/Sub.
-    Runs as an asyncio background task.
-    Filters out the _timestamp key.
-    """
-    logger.info("Redis publisher task started. Publishing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
-
-    if not redis_client:
-        logger.critical("Redis client not provided for publisher task. Exiting.")
-        return
-
-    try:
-        # Consume messages from the queue
-        # This loop will block when the queue is empty and wake up when new data is available
-        while True:
-            raw_market_data_message = await redis_publish_queue.get() # Get data from the shared queue
-
-            if raw_market_data_message is None:
-                logger.info("Publisher task received shutdown signal (None). Exiting.")
-                break # Exit the loop if a None message is received (shutdown signal)
-
-            try:
-                # Ensure the message is a JSON string before publishing
-                # The data received from the queue is likely a dictionary from the Firebase listener
-                # Use DecimalEncoder to safely serialize Decimal values to strings
-                # Filter out the _timestamp key before publishing
-                message_to_publish_data = {k: v for k, v in raw_market_data_message.items() if k != '_timestamp'}
-
-                # Only publish if there is actual market data after filtering
-                if message_to_publish_data:
-                     message_to_publish = json.dumps(message_to_publish_data, cls=DecimalEncoder) # Use DecimalEncoder for safety
-                else:
-                     # Skip publishing if only _timestamp was present
-                     logger.debug("Publisher: Message contained only _timestamp, skipping publishing.")
-                     redis_publish_queue.task_done() # Indicate the task is done for this item
-                     continue # Skip to the next message
-
-            except Exception as e:
-                logger.error(f"Publisher failed to serialize message to JSON: {e}. Skipping message.", exc_info=True)
-                redis_publish_queue.task_done() # Indicate the task is done for this item, even if failed
-                continue # Skip to the next message
-
-            try:
-                # Publish the JSON string to the Redis channel
-                await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, message_to_publish)
-                # logger.debug(f"Published message to Redis channel '{REDIS_MARKET_DATA_CHANNEL}'. Message: {message_to_publish[:100]}...") # Debug log for published message snippet
-            except Exception as e:
-                logger.error(f"Publisher failed to publish message to Redis: {e}. Message: {message_to_publish[:100]}... Skipping.", exc_info=True)
-                # Do not break here, try to publish next messages
-
-            redis_publish_queue.task_done() # Indicate the task is done for this item
-
-    except asyncio.CancelledError:
-        logger.info("Redis publisher task cancelled.")
-    except Exception as e:
-        logger.critical(f"FATAL ERROR: Redis publisher task failed: {e}", exc_info=True)
-
-    finally:
-        logger.info("Redis publisher task finished.")
-
-
-# --- Redis Market Data Broadcaster Task ---
-# async def redis_market_data_broadcaster(redis_client: Redis):
-#     """
-#     Asynchronously subscribes to Redis Pub/Sub market data channel and broadcasts
-#     personalized market data and account updates to connected WebSocket clients.
-#     Runs as an asyncio background task. Skips processing of the _timestamp key.
-#     """
-#     logger.info("Redis market data broadcaster task started. Subscribing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
-
-#     if not redis_client:
-#         logger.critical("Redis client not provided for broadcaster task. Exiting.")
-#         return
-
-#     try:
-#         # Subscribe to the market data channel
-#         pubsub = redis_client.pubsub()
-#         await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
-#         logger.info("Successfully subscribed to Redis channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
-
-#         # Listen for messages on the subscribed channel
-#         # This loop will block waiting for new messages
-#         async for message in pubsub.listen():
-#             if message['type'] == 'message':
-#                 # A new message (market data update) is received from Redis
-#                 # The message['data'] is already decoded to string by the Redis client
-#                 # No need to filter _timestamp here if the publisher already does it,
-#                 # but keeping the check below adds robustness.
-#                 logger.debug(f"Received message from Redis: {message['data']}")
-
-#                 try:
-#                     # Parse the JSON message received from Redis
-#                     # Use object_hook to handle potential Decimal values if the publisher sent them as strings
-#                     # The data received here should NOT contain the _timestamp if filtered by the publisher
-#                     processed_data = json.loads(message['data'], object_hook=decode_decimal) # Decode potential Decimals back
-
-#                     # --- NEW DEBUG LOG: Inspect processed_data ---
-#                     logger.debug(f"Broadcaster: Successfully decoded message from Redis. Processed data type: {type(processed_data)}. Data preview: {str(processed_data)[:500]}...")
-#                     # --- END NEW DEBUG LOG ---
-
-#                 except json.JSONDecodeError as e:
-#                      logger.error(f"Broadcaster failed to decode JSON message from Redis: {e}. Skipping message.", exc_info=True)
-#                      continue # Skip to the next message from Redis
-#                 except Exception as e:
-#                      logger.error(f"Broadcaster failed to process message from Redis: {e}. Skipping message.", exc_info=True)
-#                      continue # Catch any other errors during initial message processing
-
-
-#                 # Get a snapshot of currently active connections
-#                 # Iterate over a copy of the dictionary as connections might be removed during iteration
-#                 connections_snapshot = list(active_websocket_connections.items())
-
-#                 # --- NEW DEBUG LOG: Check connection snapshot size ---
-#                 logger.debug(f"Broadcaster: Processing message. Active connections snapshot size: {len(connections_snapshot)}")
-#                 # --- END NEW DEBUG LOG ---
-
-
-#                 # Iterate through all active connections and send personalized data
-#                 for user_id, websocket_info in connections_snapshot:
-
-#                     # --- ADD THIS TRY...EXCEPT BLOCK HERE to catch errors per client ---
-#                     try:
-#                         websocket = websocket_info['websocket']
-#                         group_name = websocket_info['group_name']
-#                         # user_id = websocket_info['user_id'] # Already have user_id from iterating items()
-
-
-#                         # Retrieve cached user data, portfolio, and group settings for personalization
-#                         # These need to be awaited as they are async Redis calls
-#                         user_data = await get_user_data_cache(redis_client, user_id)
-#                         user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
-
-#                         # --- ADD LOGGING FOR CACHE RETRIEVAL ---
-#                         logger.debug(f"Attempting to retrieve group symbol settings from cache for user {user_id}, group '{group_name}', symbol 'ALL'.")
-#                         # This call should now correctly return a dictionary of settings due to the fix in cache.py
-#                         user_group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-#                         logger.debug(f"Retrieved group symbol settings from cache for user {user_id}: Type={type(user_group_symbol_settings)}. Value preview: {str(user_group_symbol_settings)[:500]}...") # Limit value preview
-
-
-#                         if not user_data:
-#                              logger.warning(f"User data not found in cache for user {user_id}. Skipping market data update for this user.")
-#                              continue # Skip this user if data is not cached
-
-
-#                         # --- Calculate Personalized Data ---
-#                         # Apply group settings (spread, pips, commission etc.) to raw market data (processed_data)
-#                         # to get adjusted_market_prices for this user.
-#                         adjusted_market_prices_filtered: Dict[str, Any] = {} # Use a new dictionary for filtered data
-
-#                         # Fix: Ensure processed_data is a dictionary before iterating
-#                         if isinstance(processed_data, dict):
-#                              for symbol, market_data in processed_data.items():
-#                                  # Explicitly skip the _timestamp key if it was somehow not filtered earlier
-#                                  if symbol == '_timestamp':
-#                                      continue # Skip the timestamp entry
-
-#                                  # Ensure market_data for the symbol is a dictionary
-#                                  if isinstance(market_data, dict):
-#                                       # Use .get() with a default of None for safety
-#                                       raw_ask_price = market_data.get('o') # 'o' for Ask
-#                                       raw_bid_price = market_data.get('b') # 'b' for Bid
-
-#                                       # Get group settings for this symbol (case-insensitive lookup for symbol)
-#                                       # Ensure user_group_symbol_settings is a dictionary before accessing
-#                                       symbol_settings = None
-#                                       if isinstance(user_group_symbol_settings, dict):
-#                                           symbol_settings = user_group_symbol_settings.get(symbol.upper())
-#                                       else:
-#                                            # Log if group settings are not a dictionary (shouldn't happen after cache.py fix, but good for debugging)
-#                                            # This warning should now be less frequent/eliminated if the cache fix works
-#                                            logger.warning(f"User {user_id}: user_group_symbol_settings is not a dictionary (Type: {type(user_group_symbol_settings)}). Cannot apply group settings for symbol {symbol}.")
-
-
-#                                       # Perform spread calculation if we have raw prices and symbol settings
-#                                       if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
-#                                            try:
-#                                                 # Ensure spread and spread_pip are Decimal types for accurate calculation
-#                                                 # Convert from string or other types if necessary (caching should handle this)
-#                                                 # Use Decimal() with str() for safe conversion
-#                                                 spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0)))
-#                                                 spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
-#                                                 ask_decimal = decimal.Decimal(str(raw_ask_price))
-#                                                 bid_decimal = decimal.Decimal(str(raw_bid_price))
-
-#                                                 # Apply the spread formula
-#                                                 spread_value = spread_setting * spread_pip_setting
-#                                                 half_spread = spread_value / decimal.Decimal(2) # Use Decimal(2) for accurate division
-
-#                                                 # Calculate adjusted prices
-#                                                 adjusted_sell_price = bid_decimal - half_spread
-#                                                 adjusted_buy_price = ask_decimal + half_spread
-
-#                                                 # Store only the requested fields: 'buy', 'sell', and 'spread_value'
-#                                                 # Convert Decimal to float for JSON serialization if not using a custom encoder
-#                                                 adjusted_market_prices_filtered[symbol.upper()] = {
-#                                                      'buy': float(adjusted_buy_price), # Adjusted BUY price for the user
-#                                                      'sell': float(adjusted_sell_price), # Adjusted SELL price for the user
-#                                                      'spread_value': float(spread_value), # Include calculated spread value
-#                                                 }
-#                                            except Exception as calc_e:
-#                                                 logger.error(f"Error calculating spread for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
-#                                                 # If calculation fails, send the raw prices if available as a fallback (but only the requested fields)
-#                                                 if raw_ask_price is not None and raw_bid_price is not None:
-#                                                     adjusted_market_prices_filtered[symbol.upper()] = {
-#                                                         'buy': float(raw_ask_price), # Fallback to raw ask if calculation fails
-#                                                         'sell': float(raw_bid_price) # Fallback to raw bid if calculation fails
-#                                                         # No spread_value if calculation failed
-#                                                     }
-#                                                 logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol} due to calculation error.")
-#                                       elif raw_ask_price is not None and raw_bid_price is not None:
-#                                            # If no group settings found for this symbol, send raw prices as a fallback (only requested fields)
-#                                             adjusted_market_prices_filtered[symbol.upper()] = {
-#                                                 'buy': float(raw_ask_price), # Fallback to raw ask
-#                                                 'sell': float(raw_bid_price) # Fallback to raw bid
-#                                                 # No spread_value if no settings
-#                                             }
-#                                             # Log this specific fallback reason
-#                                             logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol} in the retrieved group settings dictionary. Sending raw prices (buy/sell) for this symbol.")
-#                                       else:
-#                                            logger.warning(f"Incomplete market data for user {user_id}, symbol {symbol}. Skipping.")
-#                                  else:
-#                                       # This warning is now specifically for entries that are not dictionaries and are not _timestamp
-#                                       logger.warning(f"Market data for symbol {symbol} is not in expected dictionary format for user {user_id}. Type: {type(market_data)}. Data: {market_data}")
-#                         elif not isinstance(processed_data, dict):
-#                              logger.warning(f"Processed data from Redis is not a dictionary for user {user_id}. Type: {type(processed_data)}")
-#                         # The case where user_group_symbol_settings is not a dictionary is now handled inside the symbol loop
-
-
-#                         # 2. Use the user's portfolio (user_portfolio) and current market prices (processed_data or adjusted_market_prices)
-#                         #    to calculate account stats (PnL, margin, equity, free_margin etc.) for calculated_account_data.
-#                         #    You NEED to implement the calculation logic for account data here
-#                         calculated_account_data: Dict[str, Any] = {
-#                              "balance": user_portfolio.get("balance", 0.0), # Use cached balance (ensure float)
-#                              "equity": user_portfolio.get("equity", 0.0), # Use cached equity or calculate (ensure float)
-#                              "margin": user_portfolio.get("margin", 0.0), # Use cached margin or calculate (ensure float)
-#                              "free_margin": user_portfolio.get("free_margin", 0.0), # Use cached free_margin or calculate (ensure float)
-#                              "profit_loss": user_portfolio.get("profit_loss", 0.0), # Use cached PnL or calculate (ensure float)
-#                              "positions": user_portfolio.get("positions", []) # Use cached positions or fetch/calculate
-#                              # You MUST implement the calculation of equity, margin, free_margin, and profit_loss
-#                              # based on the user's open positions (from user_portfolio['positions']) and the
-#                              # current *adjusted* market prices (adjusted_market_prices_filtered).
-#                              # This requires significant trading logic based on position entry price, size, type (buy/sell), etc.
-#                              # Refer to trading documentation or examples for calculating PnL, margin, and equity.
-#                         }
-
-
-#                         # --- DEBUG LOGS SHOULD BE HERE ---
-#                         # These logs will show the data before we check if it's non-empty
-#                         logger.debug(f"User {user_id}: adjusted_market_prices_filtered before check: {adjusted_market_prices_filtered}")
-#                         logger.debug(f"User {user_id}: calculated_account_data before check: {calculated_account_data}")
-#                         # --- END DEBUG LOGS ---
-
-#                         # Check if there is data to send (either filtered market prices or account data)
-#                         # Only send if there are adjusted market prices OR calculated account data
-#                         if adjusted_market_prices_filtered or calculated_account_data:
-#                             data_to_send = {
-#                                 "type": "market_data_update",
-#                                 "data": adjusted_market_prices_filtered, # Sending the filtered market data
-#                                 "account": calculated_account_data # Sending calculated account data (personal details)
-#                             }
-
-#                             # --- NEW DEBUG LOGS BEFORE SEND ---
-#                             try:
-#                                  # Attempt to serialize to JSON manually using DecimalEncoder
-#                                  # Ensure all Decimal values are converted to float or handled by the encoder
-#                                  data_to_send_json_string = json.dumps(data_to_send, cls=DecimalEncoder)
-#                                  logger.debug(f"User {user_id}: Preparing to send data. Data size (approx): {len(data_to_send_json_string)} bytes.")
-#                                  # Log a preview of the data being sent (be mindful of logging sensitive info)
-#                                  # logger.debug(f"User {user_id}: Data to send preview: {data_to_send_json_string[:500]}...") # Log first 500 chars
-
-#                             except Exception as json_e:
-#                                  # This catches serialization errors *before* attempting to send
-#                                  logger.error(f"User {user_id}: Failed to serialize data_to_send to JSON: {json_e}", exc_info=True)
-#                                  # If data cannot be serialized, we cannot send it, continue to the next client or message
-#                                  continue # Skip sending to this client for this message
-
-
-#                             # Use send_text after manual JSON dumping to handle Decimal values
-#                             await websocket.send_text(data_to_send_json_string)
-#                             logger.info(f"Sending personalized data to user {user_id}.") # This log should now appear if send is successful
-
-#                         else:
-#                              # This log appears if both adjusted_market_prices_filtered and calculated_account_data are empty/falsey
-#                              logger.info(f"No market prices or account data to send for user {user_id} on this tick.")
-
-
-#                     except WebSocketDisconnect:
-#                         logger.info(f"User {user_id} disconnected.")
-#                         # Clean up connection: remove from active_websocket_connections (thread-safe)
-#                         with active_connections_lock:
-#                             if user_id in active_websocket_connections:
-#                                 del active_websocket_connections[user_id]
-#                                 # Fix: Call len() on the dictionary, not the lock
-#                                 logger.info(f"User {user_id} connection removed. Total active connections: {len(active_websocket_connections)}")
-#                     # --- ADD THIS EXCEPTION CATCH FOR ERRORS WITHIN THE LOOP ---
-#                     except Exception as e:
-#                         # This catches any other exception during processing *for a single client*
-#                         logger.error(f"Error processing or sending data to user {user_id} in broadcaster loop: {e}", exc_info=True)
-#                         # Consider closing the websocket or marking it for removal on error
-#                         try:
-#                             # Attempt to close the websocket gracefully
-#                             # Check if websocket is still in a state that can be closed
-#                             if websocket.client_state != WebSocketState.DISCONNECTED:
-#                                 await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
-#                                 logger.info(f"Closed websocket for user {user_id} after processing error.")
-#                         except Exception as close_e:
-#                             # Log errors during the websocket closing attempt
-#                             logger.error(f"Error during WebSocket close for user {user_id} after processing error: {close_e}", exc_info=True)
-#                         # Ensure connection is removed from active connections (thread-safe)
-#                         with active_connections_lock:
-#                              if user_id in active_websocket_connections:
-#                                 del active_websocket_connections[user_id]
-#                                 # Fix: Call len() on the dictionary, not the lock
-#                                 logger.info(f"User {user_id} connection removed after processing error. Total active connections: {len(active_websocket_connections)}")
-#                     # --- END ADD TRY...EXCEPT BLOCK HERE ---
-
-
-#     except asyncio.CancelledError:
-#         logger.info("Redis market data broadcaster task cancelled.")
-#     except Exception as e:
-#         # This catches errors from pubsub.listen() or unexpected issues in the outer async for loop
-#         # These are typically critical errors for the broadcaster task itself
-#         logger.critical(f"FATAL ERROR: Redis market data broadcaster task failed: {e}", exc_info=True)
-
-#     finally:
-#         # Cleanup when the broadcaster task finishes
-#         logger.info("Redis market data broadcaster task finished.")
-#         # Unsubscribe from the channel on task finish
-#         try:
-#              # Fix: Check if redis_client is not None instead of using .closed
-#              if redis_client:
-#                 # Ensure pubsub object exists before unsubscribing
-#                 if 'pubsub' in locals() and pubsub:
-#                     await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
-#                     logger.info("Successfully unsubscribed from Redis channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
-#                 else:
-#                      logger.warning("Pubsub object not available during unsubscribe attempt.")
-#         except Exception as unsub_e:
-#              logger.error(f"Error during Redis unsubscribe: {unsub_e}", exc_info=True)
-#         # Close the pubsub connection
-#         try:
-#             # Fix: Check if pubsub is not None instead of using .closed
-#             if 'pubsub' in locals() and pubsub:
-#                  await pubsub.close()
-#                  logger.info("Redis pubsub connection closed.")
-#             else:
-#                  logger.warning("Pubsub object not available during close attempt.")
-#         except Exception as close_e:
-#              logger.error(f"Error during Redis pubsub close: {close_e}", exc_info=True)
-
-
-# --- Redis Market Data Broadcaster Task ---
-async def redis_market_data_broadcaster(redis_client: Redis):
-    """
-    Subscribes to Redis Pub/Sub for market data and broadcasts personalized data to connected WebSocket clients.
-    Also caches adjusted prices per group+symbol for use in margin calculations.
-    """
-    logger.info("Redis market data broadcaster task started. Subscribing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
-
-    if not redis_client:
-        logger.critical("Redis client not provided for broadcaster task. Exiting.")
-        return
-
-    try:
-        pubsub = redis_client.pubsub()
-        await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
-        logger.info("Successfully subscribed to Redis channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
-
-        async for message in pubsub.listen():
-            if message['type'] != 'message':
-                continue
-
-            try:
-                processed_data = json.loads(message['data'], object_hook=decode_decimal)
-            except Exception as e:
-                logger.error(f"Failed to decode market data: {e}", exc_info=True)
-                continue
-
-            connections_snapshot = list(active_websocket_connections.items())
-
-            for user_id, websocket_info in connections_snapshot:
-                try:
-                    websocket = websocket_info['websocket']
-                    group_name = websocket_info['group_name']
-                    user_data = await get_user_data_cache(redis_client, user_id)
-                    user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
-                    group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-
-                    if not user_data or not group_settings:
-                        continue
-
-                    adjusted_market_prices_filtered = {}
-
-                    for symbol, market_data in processed_data.items():
-                        if not isinstance(market_data, dict):
-                            continue
-
-                        raw_ask_price = market_data.get("o")
-                        raw_bid_price = market_data.get("b")
-
-                        symbol_settings = group_settings.get(symbol.upper())
-                        if not (raw_ask_price and raw_bid_price and symbol_settings):
-                            continue
-
-                        try:
-                            spread = decimal.Decimal(str(symbol_settings.get('spread', 0)))
-                            spread_pip = decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
-                            ask = decimal.Decimal(str(raw_ask_price))
-                            bid = decimal.Decimal(str(raw_bid_price))
-                            spread_value = spread * spread_pip
-                            half_spread = spread_value / decimal.Decimal(2)
-                            adjusted_buy_price = ask + half_spread
-                            adjusted_sell_price = bid - half_spread
-
-                            adjusted_market_prices_filtered[symbol.upper()] = {
-                                'buy': float(adjusted_buy_price),
-                                'sell': float(adjusted_sell_price),
-                                'spread_value': float(spread_value)
-                            }
-
-                            ### NEW: Cache adjusted prices for use in margin conversion ###
-                            await set_adjusted_market_price_cache(
-                                redis_client=redis_client,
-                                group_name=group_name,
-                                symbol=symbol.upper(),
-                                buy_price=adjusted_buy_price,
-                                sell_price=adjusted_sell_price,
-                                spread_value=spread_value
-                            )
-                        except Exception as calc_error:
-                            logger.error(f"Adjustment error for user {user_id}, symbol {symbol}: {calc_error}", exc_info=True)
-
-                    calculated_account_data = {
-                        "balance": user_portfolio.get("balance", 0.0),
-                        "equity": user_portfolio.get("equity", 0.0),
-                        "margin": user_portfolio.get("margin", 0.0),
-                        "free_margin": user_portfolio.get("free_margin", 0.0),
-                        "profit_loss": user_portfolio.get("profit_loss", 0.0),
-                        "positions": user_portfolio.get("positions", [])
-                    }
-
-                    payload = {
-                        "market_data": adjusted_market_prices_filtered,
-                        "account_data": calculated_account_data
-                    }
-
-                    if websocket.client_state == WebSocketState.CONNECTED:
-                        await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
-
-                except Exception as e:
-                    logger.warning(f"Failed to send market data to user {user_id}: {e}", exc_info=True)
-
-    except asyncio.CancelledError:
-        logger.info("Redis market data broadcaster task cancelled.")
-    except Exception as e:
-        logger.critical(f"Broadcaster task failed: {e}", exc_info=True)
-
-
-
-# --- The update_group_symbol_settings helper function remains as is ---
-# Its implementation is included in the original file you provided.
-# I have kept it below for completeness, assuming it was already there.
 
 async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_client: Redis):
     """
@@ -782,13 +266,15 @@ async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_
                     "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)),
                     "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)),
                     "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)),
-                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)),
+                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), # Base margin for calculation
                     "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)),
                     "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)),
                     "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)),
                     "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)),
-                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)),
-                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)),
+                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Pips value
+                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Spread pip value
+                    # Assuming contract_size is also part of group settings per symbol
+                    "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), # Default standard lot size
                 }
                 all_group_settings[symbol.upper()] = settings
 
@@ -800,4 +286,276 @@ async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_
     except Exception as e:
         logger.error(f"Error fetching or caching initial group-symbol settings for group '{group_name}': {e}", exc_info=True)
 
+
+# --- Redis Publisher Task (No changes needed here) ---
+async def redis_publisher_task(redis_client: Redis):
+    """
+    Asynchronously consumes market data from the shared queue and publishes it to Redis Pub/Sub.
+    Runs as an asyncio background task.
+    Filters out the _timestamp key.
+    """
+    logger.info("Redis publisher task started. Publishing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
+
+    if not redis_client:
+        logger.critical("Redis client not provided for publisher task. Exiting.")
+        return
+
+    try:
+        while True:
+            raw_market_data_message = await redis_publish_queue.get()
+
+            if raw_market_data_message is None:
+                logger.info("Publisher task received shutdown signal (None). Exiting.")
+                break
+
+            try:
+                message_to_publish_data = {k: v for k, v in raw_market_data_message.items() if k != '_timestamp'}
+
+                if message_to_publish_data:
+                     # Use DecimalEncoder to safely serialize Decimal values to strings
+                     message_to_publish = json.dumps(message_to_publish_data, cls=DecimalEncoder)
+                else:
+                     logger.debug("Publisher: Message contained only _timestamp, skipping publishing.")
+                     redis_publish_queue.task_done()
+                     continue
+
+            except Exception as e:
+                logger.error(f"Publisher failed to serialize message to JSON: {e}. Skipping message.", exc_info=True)
+                redis_publish_queue.task_done()
+                continue
+
+            try:
+                await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, message_to_publish)
+            except Exception as e:
+                logger.error(f"Publisher failed to publish message to Redis: {e}. Message: {message_to_publish[:100]}... Skipping.", exc_info=True)
+
+            redis_publish_queue.task_done()
+
+    except asyncio.CancelledError:
+        logger.info("Redis publisher task cancelled.")
+    except Exception as e:
+        logger.critical(f"FATAL ERROR: Redis publisher task failed: {e}", exc_info=True)
+
+    finally:
+        logger.info("Redis publisher task finished.")
+
+
+# --- Redis Market Data Broadcaster Task (Modified) ---
+async def redis_market_data_broadcaster(redis_client: Redis):
+    """
+    Subscribes to Redis Pub/Sub for market data and broadcasts personalized data
+    and calculated account updates to connected WebSocket clients.
+    Caches adjusted prices and uses cached user data/portfolio for calculations.
+    """
+    logger.info("Redis market data broadcaster task started. Subscribing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
+
+    if not redis_client:
+        logger.critical("Redis client not provided for broadcaster task. Exiting.")
+        return
+
+    try:
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
+        logger.info("Successfully subscribed to Redis channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
+
+        async for message in pubsub.listen():
+            if message['type'] != 'message':
+                continue
+
+            try:
+                # Decode the market data message from Redis (handles Decimal strings)
+                market_data_update = json.loads(message['data'], object_hook=decode_decimal)
+                # market_data_update is now a dictionary like {'SYMBOL': {'o': Decimal, 'b': Decimal}, ...}
+                logger.debug(f"Broadcaster received and decoded market data update. Symbols: {list(market_data_update.keys())}")
+
+            except Exception as e:
+                logger.error(f"Broadcaster failed to decode market data message: {e}. Skipping message.", exc_info=True)
+                continue
+
+            # Get a snapshot of currently active connections to iterate over
+            connections_snapshot = list(active_websocket_connections.items())
+            logger.debug(f"Broadcaster processing message for {len(connections_snapshot)} active connections.")
+
+
+            # Iterate through all active connections and send personalized data
+            for user_id, websocket_info in connections_snapshot:
+                try:
+                    websocket = websocket_info['websocket']
+                    group_name = websocket_info['group_name']
+
+                    # Retrieve cached user data, portfolio, and group settings
+                    # These are awaited as they are async Redis calls
+                    user_data = await get_user_data_cache(redis_client, user_id)
+                    user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
+                    # Fetch ALL group settings for the user's group
+                    group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+
+                    if not user_data:
+                         logger.warning(f"User data not found in cache for user {user_id}. Skipping market data update for this user.")
+                         continue # Skip this user if data is not cached
+
+                    # Although portfolio and group settings might be None if cache expired,
+                    # the portfolio_calculator service handles missing data gracefully.
+
+                    # --- Process Market Data Update and Cache Adjusted Prices ---
+                    adjusted_market_prices_for_user: Dict[str, Dict[str, float]] = {}
+                    # Iterate through the symbols present in the latest market data update
+                    if isinstance(market_data_update, dict):
+                         for symbol, prices in market_data_update.items():
+                             if not isinstance(prices, dict):
+                                 continue # Skip if data for a symbol is not a dictionary
+
+                             raw_ask_price = prices.get('o') # 'o' for Ask
+                             raw_bid_price = prices.get('b') # 'b' for Bid
+
+                             # Get group settings for this specific symbol
+                             symbol_settings = group_settings.get(symbol.upper()) if isinstance(group_settings, dict) else None
+
+                             if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
+                                 try:
+                                     # Ensure Decimal types for calculations
+                                     spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0)))
+                                     spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
+                                     ask_decimal = decimal.Decimal(str(raw_ask_price))
+                                     bid_decimal = decimal.Decimal(str(raw_bid_price))
+
+                                     # Apply the spread formula
+                                     spread_value = spread_setting * spread_pip_setting
+                                     half_spread = spread_value / decimal.Decimal(2)
+
+                                     # Calculate adjusted prices
+                                     adjusted_buy_price = ask_decimal + half_spread
+                                     adjusted_sell_price = bid_decimal - half_spread
+
+                                     # Store adjusted prices for this user's message (as float for JSON)
+                                     adjusted_market_prices_for_user[symbol.upper()] = {
+                                          'buy': float(adjusted_buy_price),
+                                          'sell': float(adjusted_sell_price),
+                                          'spread_value': float(spread_value),
+                                     }
+
+                                     # Cache the adjusted prices for this group and symbol
+                                     # This is used by the portfolio calculator service for margin conversion
+                                     await set_adjusted_market_price_cache(
+                                         redis_client=redis_client,
+                                         group_name=group_name,
+                                         symbol=symbol.upper(),
+                                         buy_price=adjusted_buy_price,
+                                         sell_price=adjusted_sell_price,
+                                         spread_value=spread_value # Cache spread value too
+                                     )
+                                     logger.debug(f"Cached adjusted prices for user {user_id}, group '{group_name}', symbol {symbol.upper()}")
+
+                                 except Exception as calc_e:
+                                     logger.error(f"Error calculating/caching adjusted prices for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
+                                     # If calculation fails, send raw prices as fallback if available
+                                     if raw_ask_price is not None and raw_bid_price is not None:
+                                          adjusted_market_prices_for_user[symbol.upper()] = {
+                                              'buy': float(raw_ask_price),
+                                              'sell': float(raw_bid_price),
+                                          }
+                                          logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol} due to calculation error.")
+                                     else:
+                                          logger.warning(f"Incomplete raw market data for user {user_id}, symbol {symbol}. Cannot send price update.")
+
+                             elif raw_ask_price is not None and raw_bid_price is not None:
+                                  # If no group settings found for this symbol, send raw prices as a fallback
+                                  adjusted_market_prices_for_user[symbol.upper()] = {
+                                      'buy': float(raw_ask_price),
+                                      'sell': float(raw_bid_price),
+                                  }
+                                  logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol}. Sending raw prices (buy/sell).")
+                             else:
+                                  logger.warning(f"Incomplete market data for user {user_id}, symbol {symbol}. Skipping price update.")
+                    else:
+                         logger.warning(f"Market data update from Redis is not a dictionary for user {user_id}. Type: {type(market_data_update)}")
+
+
+                    # --- Calculate Dynamic Account Data ---
+                    # Use the portfolio_calculator service to calculate dynamic metrics
+                    # Pass cached user_data, cached open_positions, adjusted_market_prices, and group_settings
+                    # Ensure user_portfolio['positions'] is a list of dicts (decode_decimal should handle this)
+                    open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
+
+                    calculated_account_data = await calculate_user_portfolio(
+                        user_data=user_data, # Contains balance, leverage
+                        open_positions=open_positions_from_cache, # Contains entry_price, quantity, type etc.
+                        adjusted_market_prices=adjusted_market_prices_for_user, # Contains current buy/sell prices
+                        group_symbol_settings=group_settings # Contains margin, pips, contract_size etc.
+                    )
+
+                    # --- Prepare and Send Data to WebSocket ---
+                    # Only send if there is market data or calculated account data
+                    if adjusted_market_prices_for_user or calculated_account_data:
+                        payload = {
+                            "type": "market_data_update", # Or a more generic type like "user_data_update"
+                            "market_data": adjusted_market_prices_for_user, # Sending the filtered/adjusted market data
+                            "account_data": calculated_account_data # Sending calculated account data (personal details)
+                        }
+
+                        # Check if the websocket is still connected before sending
+                        if websocket.client_state == WebSocketState.CONNECTED:
+                            # Use send_text after manual JSON dumping with DecimalEncoder
+                            await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
+                            logger.debug(f"Sent personalized data to user {user_id}.")
+                        else:
+                            logger.warning(f"WebSocket for user {user_id} is not connected. Skipping send.")
+
+                    else:
+                         logger.debug(f"No market prices or account data to send for user {user_id} on this tick.")
+
+
+                except WebSocketDisconnect:
+                    logger.info(f"User {user_id} disconnected.")
+                    # Clean up connection: remove from active_websocket_connections (thread-safe)
+                    with active_connections_lock:
+                        if user_id in active_websocket_connections:
+                            del active_websocket_connections[user_id]
+                            logger.info(f"User {user_id} connection removed. Total active connections: {len(active_websocket_connections)}")
+                except Exception as e:
+                    # This catches any other exception during processing *for a single client*
+                    logger.error(f"Error processing or sending data to user {user_id} in broadcaster loop: {e}", exc_info=True)
+                    # Consider closing the websocket or marking it for removal on error
+                    try:
+                        # Attempt to close the websocket gracefully if it's still open
+                        if websocket.client_state == WebSocketState.CONNECTED:
+                             await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+                             logger.info(f"Closed websocket for user {user_id} after processing error.")
+                    except Exception as close_e:
+                         logger.error(f"Error during WebSocket close for user {user_id} after processing error: {close_e}", exc_info=True)
+                    # Ensure connection is removed from active connections (thread-safe)
+                    with active_connections_lock:
+                         if user_id in active_websocket_connections:
+                            del active_websocket_connections[user_id]
+                            logger.info(f"User {user_id} connection removed after processing error. Total active connections: {len(active_websocket_connections)}")
+
+
+    except asyncio.CancelledError:
+        logger.info("Redis market data broadcaster task cancelled.")
+    except Exception as e:
+        # This catches errors from pubsub.listen() or unexpected issues in the outer async for loop
+        logger.critical(f"FATAL ERROR: Redis market data broadcaster task failed: {e}", exc_info=True)
+
+    finally:
+        # Cleanup when the broadcaster task finishes
+        logger.info("Redis market data broadcaster task finished.")
+        # Unsubscribe from the channel on task finish
+        try:
+             if redis_client:
+                if 'pubsub' in locals() and pubsub:
+                    await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
+                    logger.info("Successfully unsubscribed from Redis channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
+                else:
+                     logger.warning("Pubsub object not available during unsubscribe attempt.")
+        except Exception as unsub_e:
+             logger.error(f"Error during Redis unsubscribe: {unsub_e}", exc_info=True)
+        # Close the pubsub connection
+        try:
+            if 'pubsub' in locals() and pubsub:
+                 await pubsub.close()
+                 logger.info("Redis pubsub connection closed.")
+            else:
+                 logger.warning("Pubsub object not available during close attempt.")
+        except Exception as close_e:
+             logger.error(f"Error during Redis pubsub close: {close_e}", exc_info=True)
 

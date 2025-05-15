@@ -17,6 +17,7 @@ from sqlalchemy import (
 )
 # Import DECIMAL from sqlalchemy.types and alias it as SQLDecimal
 from sqlalchemy.types import DECIMAL as SQLDecimal
+import uuid # Import uuid for handling UUID strings if storing the 'id'
 
 from sqlalchemy.orm import relationship # Import relationship for defining relationships
 
@@ -155,6 +156,14 @@ class Group(Base):
     pips = Column(SQLDecimal(10, 4), nullable=False)
     spread_pip = Column(SQLDecimal(10, 4), nullable=True) # Nullable as requested
 
+    # --- NEW COLUMNS ---
+    # Column to store where orders are sent (e.g., 'Barclays', 'Rock')
+    sending_orders = Column(String(255), nullable=True) # Assuming nullable, adjust if required
+    # Column to store the book type (e.g., 'A', 'B')
+    book = Column(String(10), nullable=True) # Assuming nullable, adjust if required
+    # --- END NEW COLUMNS ---
+
+
     # Timestamps (Using SQLAlchemy's func.now() for database-side default)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -220,6 +229,11 @@ class Wallet(Base):
     is_approved = Column(Integer, default=0, nullable=False) # Using Integer as requested, default 0 (pending/not approved)
     order_type = Column(String(50), nullable=True) # e.g., 'buy', 'sell' - Nullable as requested
     transaction_amount = Column(SQLDecimal(18, 8), nullable=False) # Amount of the transaction, assuming required
+
+    # --- NEW COLUMN ---
+    description = Column(String(500), nullable=True) # Optional description for the transaction
+    # --- END NEW COLUMN ---
+
 
     # transaction_time - Timestamp when is_approved changes (Logic handled in CRUD/Service)
     # We store the timestamp here. Application logic will update this field.

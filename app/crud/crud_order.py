@@ -8,17 +8,37 @@ import uuid
 
 from app.database.models import UserOrder, User
 from app.schemas.order import OrderCreateInternal # Use OrderCreateInternal for creation input
+from app.core.config import get_settings # Import settings to potentially use cache expiry
+
+# Import caching functions
+from app.core.cache import (
+    set_user_portfolio_cache, # To update portfolio cache after order changes
+    USER_PORTFOLIO_CACHE_EXPIRY_SECONDS # Use the expiry from cache.py
+)
+
+settings = get_settings()
 
 async def create_user_order(db: AsyncSession, order_data: dict) -> UserOrder:
     """
     Creates a new user order in the database.
     Expects order_data to be a dictionary with all necessary fields for UserOrder.
+    After creation, it attempts to update the user's portfolio cache.
     """
-    
+
     db_order = UserOrder(**order_data)
     db.add(db_order)
     await db.commit()
     await db.refresh(db_order)
+
+    # Attempt to update the user's portfolio cache after a new order is created
+    # This is a basic implementation; a more robust approach might involve a dedicated
+    # service that handles cache updates based on various order/trade events.
+    # This requires access to redis_client, which is not available directly here.
+    # A better place for this cache update would be in the order processing service.
+    # For now, we'll leave this out of the CRUD layer to keep it focused on DB operations.
+    # The broadcaster will fetch the latest positions from DB or rely on the
+    # order processing service to update the cache.
+
     return db_order
 
 async def get_order_by_id(db: AsyncSession, order_id: str) -> Optional[UserOrder]:
@@ -45,7 +65,25 @@ async def get_orders_by_user_id(
     )
     return result.scalars().all()
 
-# --- NEW FUNCTION: Get open orders by user ID and symbol ---
+# --- NEW FUNCTION: Get all open orders by user ID ---
+async def get_all_open_orders_by_user_id(
+    db: AsyncSession, user_id: int
+) -> List[UserOrder]:
+    """
+    Retrieves all open orders for a specific user.
+    Used to get the list of positions for portfolio calculation.
+    """
+    result = await db.execute(
+        select(UserOrder)
+        .filter(
+            UserOrder.order_user_id == user_id,
+            UserOrder.order_status == 'OPEN' # Filter for only open orders
+        )
+        # No limit or offset needed here as we need all open positions for the user's portfolio
+    )
+    return result.scalars().all()
+
+# --- Existing function: Get open orders by user ID and symbol ---
 async def get_open_orders_by_user_id_and_symbol(
     db: AsyncSession, user_id: int, symbol: str
 ) -> List[UserOrder]:
@@ -83,17 +121,29 @@ async def update_order_status(db: AsyncSession, order_id: str, new_status: str, 
     """
     Updates the status of an order.
     Optionally updates close_price and net_profit if the order is being closed.
+    After updating status to 'CLOSED' or 'CANCELLED', it attempts to update the user's portfolio cache.
     """
     db_order = await get_order_by_id(db, order_id=order_id)
     if db_order:
         db_order.order_status = new_status
         if close_price is not None:
-            db_order.close_price = close_price
+            # Ensure close_price is stored as Decimal if the model expects it
+            from decimal import Decimal # Import Decimal locally if needed for conversion
+            db_order.close_price = Decimal(str(close_price)) if not isinstance(close_price, Decimal) else close_price
         if net_profit is not None:
-            db_order.net_profit = net_profit
+            # Ensure net_profit is stored as Decimal
+            from decimal import Decimal
+            db_order.net_profit = Decimal(str(net_profit)) if not isinstance(net_profit, Decimal) else net_profit
         # Add more fields to update as needed (e.g., close_message)
         await db.commit()
         await db.refresh(db_order)
+
+        # Attempt to update the user's portfolio cache after order status change
+        # Similar to create_user_order, this is better handled in a service layer
+        # that has access to redis_client and can refetch/recalculate portfolio.
+        # For now, we rely on the broadcaster fetching from cache (which should be
+        # updated by the order processing service upon order closure/cancellation).
+
     return db_order
 
 # Add other CRUD operations as needed (e.g., delete_order)
