@@ -70,10 +70,11 @@ async def get_groups(
     if search:
         # Use or_ to search in either name or symbol
         # Ensure Group.symbol is not None before applying ilike to avoid potential errors
+        # Added a check for Group.symbol is not None before using ilike
         query = query.filter(
             or_(
                 Group.name.ilike(f"%{search}%"), # Case-insensitive search in name
-                Group.symbol.ilike(f"%{search}%") if Group.symbol is not None else False
+                Group.symbol.ilike(f"%{search}%") if hasattr(Group, 'symbol') and Group.symbol is not None else False # Ensure symbol exists and is not None
             )
         )
 
@@ -82,6 +83,22 @@ async def get_groups(
 
     result = await db.execute(query)
     return result.scalars().all()
+
+# --- NEW FUNCTION: Get all unique symbols for a given group name ---
+async def get_all_symbols_for_group(db: AsyncSession, group_name: str) -> List[str]:
+    """
+    Fetches all unique symbols associated with a given group name from the database.
+    Returns a list of symbol strings.
+    """
+    # Select distinct symbol values from the Group table where the name matches
+    result = await db.execute(
+        select(Group.symbol)
+        .where(Group.name == group_name)
+        .distinct() # Get unique symbols
+    )
+    # Fetch all results and extract symbols, filtering out None values
+    symbols = [row[0] for row in result.all() if row[0] is not None]
+    return symbols
 
 # Function to create a new group
 async def create_group(db: AsyncSession, group_create: GroupCreate) -> Group:
