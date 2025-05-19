@@ -1,0 +1,185 @@
+2025-05-18 23:33:02,047 - app.main.setup - INFO - main.py:383 - Logging setup complete from setup_logging(). Application starting...
+2025-05-18 23:33:02,699 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:33:03,266 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:33:03,266 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:33:03,446 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'SafeConfigParser': <class 'configparser.ConfigParser'>
+2025-05-18 23:33:03,446 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'NativeStringIO': <class '_io.StringIO'>
+2025-05-18 23:33:03,448 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'BytesIO': <class '_io.BytesIO'>
+2025-05-18 23:33:03,548 - passlib.registry - DEBUG - registry.py:296 - registered 'bcrypt' handler: <class 'passlib.handlers.bcrypt.bcrypt'>
+2025-05-18 23:33:03,602 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:33:03,679 - app.main - DEBUG - main.py:420 - DEBUG: API_V1_STR is set to: /api/v1
+2025-05-18 23:33:03,739 - app.main - INFO - main.py:442 - Application startup event triggered.
+2025-05-18 23:33:03,824 - app.main - INFO - main.py:456 - Firebase Admin SDK initialized successfully.
+2025-05-18 23:33:03,824 - app.dependencies.redis_client - WARNING - redis_client.py:15 - Redis client not initialized, attempting late connection.
+2025-05-18 23:33:03,825 - app.core.security - INFO - security.py:102 - Attempting to connect to Redis...
+2025-05-18 23:33:03,825 - app.core.security - INFO - security.py:104 - Redis connection parameters: host=127.0.0.1, port=6379, db=0, password=<not set>
+2025-05-18 23:33:03,830 - app.core.security - INFO - security.py:116 - Connected to Redis successfully.
+2025-05-18 23:33:03,830 - app.main - INFO - main.py:468 - Redis client initialized successfully.
+2025-05-18 23:33:03,866 - aiomysql - DEBUG - connection.py:951 - caching sha2: succeeded by fast path.
+2025-05-18 23:33:03,872 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT DATABASE()
+2025-05-18 23:33:03,874 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,879 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT @@sql_mode
+2025-05-18 23:33:03,880 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,881 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT @@lower_case_table_names
+2025-05-18 23:33:03,883 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,887 - sqlalchemy.engine.Engine - INFO - base.py:2699 - BEGIN (implicit)
+2025-05-18 23:33:03,888 - app.database.session - INFO - session.py:80 - Running Base.metadata.create_all...
+2025-05-18 23:33:03,888 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`users`
+2025-05-18 23:33:03,889 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,903 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`groups`
+2025-05-18 23:33:03,905 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,913 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`symbols`
+2025-05-18 23:33:03,914 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,920 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`wallets`
+2025-05-18 23:33:03,922 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,929 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`user_orders`
+2025-05-18 23:33:03,930 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,936 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`otps`
+2025-05-18 23:33:03,938 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,942 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`external_symbol_info`
+2025-05-18 23:33:03,943 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:33:03,951 - app.database.session - INFO - session.py:82 - Base.metadata.create_all finished.
+2025-05-18 23:33:03,953 - sqlalchemy.engine.Engine - INFO - base.py:2705 - COMMIT
+2025-05-18 23:33:03,956 - app.main - INFO - main.py:478 - Database tables ensured/created.
+2025-05-18 23:33:03,957 - app.main - INFO - main.py:488 - Firebase stream processing task scheduled.
+2025-05-18 23:33:03,957 - app.main - INFO - main.py:494 - Redis publisher task scheduled.
+2025-05-18 23:33:03,957 - app.main - INFO - main.py:500 - Redis market data broadcaster task scheduled.
+2025-05-18 23:33:03,958 - app.main - INFO - main.py:509 - Application startup event finished.
+2025-05-18 23:33:03,959 - app.firebase_stream - INFO - firebase_stream.py:57 - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-05-18 23:33:03,960 - app.firebase_stream - DEBUG - firebase_stream.py:66 - Successfully got running event loop in process_firebase_events task.
+2025-05-18 23:33:03,961 - urllib3.util.retry - DEBUG - retry.py:286 - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2025-05-18 23:33:03,961 - app.firebase_stream - INFO - firebase_stream.py:225 - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-05-18 23:33:03,962 - urllib3.util.retry - DEBUG - retry.py:286 - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2025-05-18 23:33:03,971 - urllib3.connectionpool - DEBUG - connectionpool.py:1049 - Starting new HTTPS connection (1): oauth2.googleapis.com:443
+2025-05-18 23:33:04,405 - urllib3.connectionpool - DEBUG - connectionpool.py:544 - https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2025-05-18 23:33:04,439 - urllib3.connectionpool - DEBUG - connectionpool.py:1049 - Starting new HTTPS connection (1): livefxhub-cb49c-default-rtdb.firebaseio.com:443
+2025-05-18 23:33:05,731 - urllib3.connectionpool - DEBUG - connectionpool.py:544 - https://livefxhub-cb49c-default-rtdb.firebaseio.com:443 "GET /datafeeds.json HTTP/1.1" 200 None
+2025-05-18 23:34:56,599 - app.main.setup - INFO - main.py:383 - Logging setup complete from setup_logging(). Application starting...
+2025-05-18 23:34:57,196 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:34:57,689 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:34:57,690 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:34:57,800 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'SafeConfigParser': <class 'configparser.ConfigParser'>
+2025-05-18 23:34:57,800 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'NativeStringIO': <class '_io.StringIO'>
+2025-05-18 23:34:57,800 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'BytesIO': <class '_io.BytesIO'>
+2025-05-18 23:34:57,887 - passlib.registry - DEBUG - registry.py:296 - registered 'bcrypt' handler: <class 'passlib.handlers.bcrypt.bcrypt'>
+2025-05-18 23:34:57,967 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:34:58,044 - app.main - DEBUG - main.py:420 - DEBUG: API_V1_STR is set to: /api/v1
+2025-05-18 23:34:58,074 - app.main - INFO - main.py:442 - Application startup event triggered.
+2025-05-18 23:34:58,154 - app.main - INFO - main.py:456 - Firebase Admin SDK initialized successfully.
+2025-05-18 23:34:58,155 - app.dependencies.redis_client - WARNING - redis_client.py:15 - Redis client not initialized, attempting late connection.
+2025-05-18 23:34:58,155 - app.core.security - INFO - security.py:102 - Attempting to connect to Redis...
+2025-05-18 23:34:58,155 - app.core.security - INFO - security.py:104 - Redis connection parameters: host=127.0.0.1, port=6379, db=0, password=<not set>
+2025-05-18 23:34:58,160 - app.core.security - INFO - security.py:116 - Connected to Redis successfully.
+2025-05-18 23:34:58,160 - app.main - INFO - main.py:468 - Redis client initialized successfully.
+2025-05-18 23:34:58,164 - aiomysql - DEBUG - connection.py:951 - caching sha2: succeeded by fast path.
+2025-05-18 23:34:58,168 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT DATABASE()
+2025-05-18 23:34:58,168 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,173 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT @@sql_mode
+2025-05-18 23:34:58,174 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,176 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT @@lower_case_table_names
+2025-05-18 23:34:58,177 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,181 - sqlalchemy.engine.Engine - INFO - base.py:2699 - BEGIN (implicit)
+2025-05-18 23:34:58,182 - app.database.session - INFO - session.py:80 - Running Base.metadata.create_all...
+2025-05-18 23:34:58,183 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`users`
+2025-05-18 23:34:58,184 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,226 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`groups`
+2025-05-18 23:34:58,227 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,233 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`symbols`
+2025-05-18 23:34:58,234 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,239 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`wallets`
+2025-05-18 23:34:58,240 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,245 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`user_orders`
+2025-05-18 23:34:58,246 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,252 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`otps`
+2025-05-18 23:34:58,252 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,257 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`external_symbol_info`
+2025-05-18 23:34:58,258 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:34:58,262 - app.database.session - INFO - session.py:82 - Base.metadata.create_all finished.
+2025-05-18 23:34:58,262 - sqlalchemy.engine.Engine - INFO - base.py:2705 - COMMIT
+2025-05-18 23:34:58,266 - app.main - INFO - main.py:478 - Database tables ensured/created.
+2025-05-18 23:34:58,266 - app.main - INFO - main.py:488 - Firebase stream processing task scheduled.
+2025-05-18 23:34:58,266 - app.main - INFO - main.py:494 - Redis publisher task scheduled.
+2025-05-18 23:34:58,267 - app.main - INFO - main.py:500 - Redis market data broadcaster task scheduled.
+2025-05-18 23:34:58,267 - app.main - INFO - main.py:509 - Application startup event finished.
+2025-05-18 23:34:58,267 - app.firebase_stream - INFO - firebase_stream.py:57 - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-05-18 23:34:58,268 - app.firebase_stream - DEBUG - firebase_stream.py:66 - Successfully got running event loop in process_firebase_events task.
+2025-05-18 23:34:58,268 - urllib3.util.retry - DEBUG - retry.py:286 - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2025-05-18 23:34:58,269 - app.firebase_stream - INFO - firebase_stream.py:225 - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-05-18 23:34:58,269 - urllib3.util.retry - DEBUG - retry.py:286 - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2025-05-18 23:34:58,277 - urllib3.connectionpool - DEBUG - connectionpool.py:1049 - Starting new HTTPS connection (1): oauth2.googleapis.com:443
+2025-05-18 23:34:58,775 - urllib3.connectionpool - DEBUG - connectionpool.py:544 - https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2025-05-18 23:34:58,778 - urllib3.connectionpool - DEBUG - connectionpool.py:1049 - Starting new HTTPS connection (1): livefxhub-cb49c-default-rtdb.firebaseio.com:443
+2025-05-18 23:34:59,658 - urllib3.connectionpool - DEBUG - connectionpool.py:544 - https://livefxhub-cb49c-default-rtdb.firebaseio.com:443 "GET /datafeeds.json HTTP/1.1" 200 None
+2025-05-18 23:38:27,845 - app.main - INFO - main.py:99 - Logging setup complete from setup_logging().
+2025-05-18 23:38:28,446 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:38:28,469 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:38:28,469 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:38:28,598 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'SafeConfigParser': <class 'configparser.ConfigParser'>
+2025-05-18 23:38:28,598 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'NativeStringIO': <class '_io.StringIO'>
+2025-05-18 23:38:28,598 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'BytesIO': <class '_io.BytesIO'>
+2025-05-18 23:38:28,675 - passlib.registry - DEBUG - registry.py:296 - registered 'bcrypt' handler: <class 'passlib.handlers.bcrypt.bcrypt'>
+2025-05-18 23:38:28,734 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:38:30,358 - app.main - INFO - main.py:99 - Logging setup complete from setup_logging().
+2025-05-18 23:38:30,989 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:38:31,001 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:38:31,002 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:38:31,112 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'SafeConfigParser': <class 'configparser.ConfigParser'>
+2025-05-18 23:38:31,112 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'NativeStringIO': <class '_io.StringIO'>
+2025-05-18 23:38:31,112 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'BytesIO': <class '_io.BytesIO'>
+2025-05-18 23:38:31,169 - passlib.registry - DEBUG - registry.py:296 - registered 'bcrypt' handler: <class 'passlib.handlers.bcrypt.bcrypt'>
+2025-05-18 23:38:31,221 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:38:53,724 - app.main - INFO - main.py:99 - Logging setup complete from setup_logging().
+2025-05-18 23:38:54,288 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:38:54,302 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:38:54,302 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:38:54,430 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'SafeConfigParser': <class 'configparser.ConfigParser'>
+2025-05-18 23:38:54,431 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'NativeStringIO': <class '_io.StringIO'>
+2025-05-18 23:38:54,431 - passlib.utils.compat - DEBUG - __init__.py:449 - loaded lazy attr 'BytesIO': <class '_io.BytesIO'>
+2025-05-18 23:38:54,531 - passlib.registry - DEBUG - registry.py:296 - registered 'bcrypt' handler: <class 'passlib.handlers.bcrypt.bcrypt'>
+2025-05-18 23:38:54,587 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:38:54,694 - app.main - INFO - main.py:151 - Application startup event triggered.
+2025-05-18 23:38:54,777 - app.main - INFO - main.py:168 - Firebase Admin SDK initialized successfully.
+2025-05-18 23:38:54,777 - app.dependencies.redis_client - WARNING - redis_client.py:15 - Redis client not initialized, attempting late connection.
+2025-05-18 23:38:54,777 - app.core.security - INFO - security.py:102 - Attempting to connect to Redis...
+2025-05-18 23:38:54,778 - app.core.security - INFO - security.py:104 - Redis connection parameters: host=127.0.0.1, port=6379, db=0, password=<not set>
+2025-05-18 23:38:54,782 - app.core.security - INFO - security.py:116 - Connected to Redis successfully.
+2025-05-18 23:38:54,782 - app.main - INFO - main.py:187 - Redis client initialized successfully.
+2025-05-18 23:38:54,785 - aiomysql - DEBUG - connection.py:951 - caching sha2: succeeded by fast path.
+2025-05-18 23:38:54,788 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT DATABASE()
+2025-05-18 23:38:54,789 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,792 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT @@sql_mode
+2025-05-18 23:38:54,793 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,794 - sqlalchemy.engine.Engine - INFO - base.py:1843 - SELECT @@lower_case_table_names
+2025-05-18 23:38:54,794 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,796 - sqlalchemy.engine.Engine - INFO - base.py:2699 - BEGIN (implicit)
+2025-05-18 23:38:54,797 - app.database.session - INFO - session.py:80 - Running Base.metadata.create_all...
+2025-05-18 23:38:54,797 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`users`
+2025-05-18 23:38:54,798 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,834 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`groups`
+2025-05-18 23:38:54,835 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,840 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`symbols`
+2025-05-18 23:38:54,841 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,846 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`wallets`
+2025-05-18 23:38:54,847 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,852 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`user_orders`
+2025-05-18 23:38:54,853 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,860 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`otps`
+2025-05-18 23:38:54,860 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,865 - sqlalchemy.engine.Engine - INFO - base.py:1843 - DESCRIBE `u436589492_forex`.`external_symbol_info`
+2025-05-18 23:38:54,866 - sqlalchemy.engine.Engine - INFO - base.py:1843 - [raw sql] ()
+2025-05-18 23:38:54,872 - app.database.session - INFO - session.py:82 - Base.metadata.create_all finished.
+2025-05-18 23:38:54,873 - sqlalchemy.engine.Engine - INFO - base.py:2705 - COMMIT
+2025-05-18 23:38:54,876 - app.main - INFO - main.py:200 - Database tables ensured/created.
+2025-05-18 23:38:54,877 - app.main - INFO - main.py:214 - Firebase stream processing task scheduled.
+2025-05-18 23:38:54,877 - app.main - INFO - main.py:222 - Redis publisher task scheduled.
+2025-05-18 23:38:54,878 - app.main - INFO - main.py:230 - Redis market data broadcaster task scheduled.
+2025-05-18 23:38:54,879 - app.main - INFO - main.py:241 - Application startup event finished.
+2025-05-18 23:38:54,880 - app.firebase_stream - INFO - firebase_stream.py:57 - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-05-18 23:38:54,881 - app.firebase_stream - DEBUG - firebase_stream.py:66 - Successfully got running event loop in process_firebase_events task.
+2025-05-18 23:38:54,882 - urllib3.util.retry - DEBUG - retry.py:286 - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2025-05-18 23:38:54,883 - app.firebase_stream - INFO - firebase_stream.py:225 - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-05-18 23:38:54,883 - urllib3.util.retry - DEBUG - retry.py:286 - Converted retries value: 3 -> Retry(total=3, connect=None, read=None, redirect=None, status=None)
+2025-05-18 23:38:54,891 - urllib3.connectionpool - DEBUG - connectionpool.py:1049 - Starting new HTTPS connection (1): oauth2.googleapis.com:443
+2025-05-18 23:38:55,194 - urllib3.connectionpool - DEBUG - connectionpool.py:544 - https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+2025-05-18 23:38:55,196 - urllib3.connectionpool - DEBUG - connectionpool.py:1049 - Starting new HTTPS connection (1): livefxhub-cb49c-default-rtdb.firebaseio.com:443
+2025-05-18 23:38:55,994 - urllib3.connectionpool - DEBUG - connectionpool.py:544 - https://livefxhub-cb49c-default-rtdb.firebaseio.com:443 "GET /datafeeds.json HTTP/1.1" 200 None

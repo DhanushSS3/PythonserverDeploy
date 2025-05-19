@@ -238,54 +238,160 @@ async def websocket_endpoint(
 # It requires database access (AsyncSession) and Redis client (Redis).
 # Ensure crud_group and caching functions are imported at the top.
 
+# async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_client: Redis):
+#     """
+#     Fetches group-symbol settings from the database and caches them in Redis.
+#     Called during WebSocket connection setup and potentially on admin updates.
+#     """
+#     if not group_name:
+#         logger.warning("Cannot update group-symbol settings: group_name is missing.")
+#         return
+
+#     try:
+#         # Assuming crud_group.get_groups can filter by name and return list of Group models
+#         # Also assuming Group model has a 'symbol' attribute and other setting attributes
+#         group_settings_list = await crud_group.get_groups(db, search=group_name)
+
+#         if not group_settings_list:
+#              logger.warning(f"No group settings found in DB for group '{group_name}'. Cannot cache settings.")
+#              return
+
+#         # Cache settings per symbol for this group
+#         for group_setting in group_settings_list:
+#             symbol = getattr(group_setting, 'symbol', None)
+#             if symbol:
+#                 settings = {
+#                     "commision_type": getattr(group_setting, 'commision_type', None),
+#                     "commision_value_type": getattr(group_setting, 'commision_value_type', None),
+#                     "type": getattr(group_setting, 'type', None),
+#                     "pip_currency": getattr(group_setting, 'pip_currency', None),
+#                     "show_points": getattr(group_setting, 'show_points', None),
+#                     "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)),
+#                     "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)),
+#                     "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)),
+#                     "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), # Base margin for calculation
+#                     "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)),
+#                     "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)),
+#                     "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)),
+#                     "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)),
+#                     "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Pips value
+#                     "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Spread pip value
+#                     # Assuming contract_size is also part of group settings per symbol
+#                     "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), # Default standard lot size
+#                 }
+#                 await set_group_symbol_settings_cache(redis_client, group_name, symbol.upper(), settings)
+
+#         logger.debug(f"Initially cached group-symbol settings for group '{group_name}'.")
+
+#     except Exception as e:
+#         logger.error(f"Error fetching or caching initial group-symbol settings for group '{group_name}': {e}", exc_info=True)
+
+
+# app/api/v1/endpoints/market_data_ws.py
+
+import logging
+import json
+import threading
+from typing import Dict, Any, List, Optional
+import decimal # Import decimal
+# ... (existing imports) ...
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database.session import get_db
+from app.crud import user as crud_user
+from app.crud import group as crud_group
+from app.crud import crud_order
+
+from app.core.security import decode_token
+from redis.asyncio import Redis
+from app.core.cache import (
+    set_user_data_cache,
+    get_user_data_cache,
+    set_user_portfolio_cache,
+    get_user_portfolio_cache,
+    get_user_positions_from_cache,
+    set_adjusted_market_price_cache,
+    get_adjusted_market_price_cache,
+    set_group_symbol_settings_cache,
+    get_group_symbol_settings_cache,
+    DecimalEncoder,
+    decode_decimal
+)
+from app.dependencies.redis_client import get_redis_client
+from app.shared_state import redis_publish_queue
+from app.services.portfolio_calculator import calculate_user_portfolio
+
+# Import the Symbol model
+from app.database.models import Symbol #
+from sqlalchemy.future import select # Import select for querying
+
+logger = logging.getLogger(__name__)
+
+# ... (rest of the file) ...
+
 async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_client: Redis):
     """
     Fetches group-symbol settings from the database and caches them in Redis.
-    Called during WebSocket connection setup and potentially on admin updates.
+    Now also fetches profit_currency from the Symbol model.
     """
     if not group_name:
         logger.warning("Cannot update group-symbol settings: group_name is missing.")
         return
 
     try:
-        # Assuming crud_group.get_groups can filter by name and return list of Group models
-        # Also assuming Group model has a 'symbol' attribute and other setting attributes
-        group_settings_list = await crud_group.get_groups(db, search=group_name)
+        group_settings_list = await crud_group.get_groups(db, search=group_name) #
 
         if not group_settings_list:
              logger.warning(f"No group settings found in DB for group '{group_name}'. Cannot cache settings.")
              return
 
-        # Cache settings per symbol for this group
-        for group_setting in group_settings_list:
-            symbol = getattr(group_setting, 'symbol', None)
+        for group_setting in group_settings_list: #
+            symbol = getattr(group_setting, 'symbol', None) #
             if symbol:
                 settings = {
-                    "commision_type": getattr(group_setting, 'commision_type', None),
-                    "commision_value_type": getattr(group_setting, 'commision_value_type', None),
-                    "type": getattr(group_setting, 'type', None),
-                    "pip_currency": getattr(group_setting, 'pip_currency', None),
-                    "show_points": getattr(group_setting, 'show_points', None),
-                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)),
-                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)),
-                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)),
-                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), # Base margin for calculation
-                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)),
-                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)),
-                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)),
-                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)),
-                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Pips value
-                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Spread pip value
-                    # Assuming contract_size is also part of group settings per symbol
-                    "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), # Default standard lot size
+                    "commision_type": getattr(group_setting, 'commision_type', None), #
+                    "commision_value_type": getattr(group_setting, 'commision_value_type', None), #
+                    "type": getattr(group_setting, 'type', None), #
+                    "pip_currency": getattr(group_setting, 'pip_currency', "USD"), # # Keep for other potential uses
+                    "show_points": getattr(group_setting, 'show_points', None), #
+                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)), #
+                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)), #
+                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)), #
+                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), #
+                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)), #
+                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)), #
+                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)), #
+                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)), #
+                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), #
+                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), #
+                    "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), #
                 }
-                await set_group_symbol_settings_cache(redis_client, group_name, symbol.upper(), settings)
+
+                # Fetch profit_currency from the Symbol model
+                # Assuming Symbol.name corresponds to the group_setting.symbol
+                symbol_obj_stmt = select(Symbol).filter_by(name=symbol.upper()) #
+                symbol_obj_result = await db.execute(symbol_obj_stmt)
+                symbol_obj = symbol_obj_result.scalars().first()
+
+                if symbol_obj and symbol_obj.profit_currency: #
+                    # Overwrite/set the 'profit_currency' key that portfolio_calculator expects
+                    settings["profit_currency"] = symbol_obj.profit_currency
+                    logger.debug(f"User group settings: Fetched profit_currency '{symbol_obj.profit_currency}' from Symbol model for '{symbol}'.")
+                else:
+                    # Fallback to Group's pip_currency if Symbol model data is missing or profit_currency is not set
+                    settings["profit_currency"] = getattr(group_setting, 'pip_currency', 'USD')
+                    logger.warning(f"User group settings: Could not fetch profit_currency from Symbol model for '{symbol}'. Falling back to Group's pip_currency: {settings['profit_currency']}.")
+
+                await set_group_symbol_settings_cache(redis_client, group_name, symbol.upper(), settings) #
+
+            else:
+                 logger.warning(f"Group setting symbol is None for group '{group_name}'. Skipping caching for this entry.")
+
 
         logger.debug(f"Initially cached group-symbol settings for group '{group_name}'.")
 
     except Exception as e:
         logger.error(f"Error fetching or caching initial group-symbol settings for group '{group_name}': {e}", exc_info=True)
-
 
 # --- Redis Publisher Task (No changes needed here) ---
 async def redis_publisher_task(redis_client: Redis):

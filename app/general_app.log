@@ -1,0 +1,609 @@
+2025-05-18 23:49:15,613 - app.main.setup - INFO - main.py:326 - Logging setup finalized. Check console, portfolio_calc.log, and general_app.log.
+2025-05-18 23:49:15,614 - app.api.v1.endpoints.market_data_ws - DEBUG - main.py:329 - TEST: market_data_ws DEBUG - should be in general_app.log, NOT console.
+2025-05-18 23:49:15,614 - app.api.v1.endpoints.market_data_ws - INFO - main.py:330 - TEST: market_data_ws INFO - should be in general_app.log AND console.
+2025-05-18 23:49:15,932 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:49:16,241 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:49:16,245 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:49:16,365 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:49:16,393 - app.main - DEBUG - main.py:367 - API_V1_STR is set to: /api/v1
+2025-05-18 23:49:16,410 - app.main - INFO - main.py:384 - Application startup event triggered.
+2025-05-18 23:49:16,443 - app.main - INFO - main.py:398 - Firebase Admin SDK initialized successfully.
+2025-05-18 23:49:16,443 - app.dependencies.redis_client - WARNING - redis_client.py:15 - Redis client not initialized, attempting late connection.
+2025-05-18 23:49:16,443 - app.core.security - INFO - security.py:102 - Attempting to connect to Redis...
+2025-05-18 23:49:16,443 - app.core.security - INFO - security.py:104 - Redis connection parameters: host=127.0.0.1, port=6379, db=0, password=<not set>
+2025-05-18 23:49:16,446 - app.core.security - INFO - security.py:116 - Connected to Redis successfully.
+2025-05-18 23:49:16,447 - app.main - INFO - main.py:410 - Redis client initialized successfully.
+2025-05-18 23:49:16,470 - app.database.session - INFO - session.py:80 - Running Base.metadata.create_all...
+2025-05-18 23:49:16,483 - app.database.session - INFO - session.py:82 - Base.metadata.create_all finished.
+2025-05-18 23:49:16,484 - app.main - INFO - main.py:420 - Database tables ensured/created.
+2025-05-18 23:49:16,485 - app.main - INFO - main.py:430 - Firebase stream processing task scheduled.
+2025-05-18 23:49:16,485 - app.main - INFO - main.py:436 - Redis publisher task scheduled.
+2025-05-18 23:49:16,485 - app.main - INFO - main.py:442 - Redis market data broadcaster task scheduled.
+2025-05-18 23:49:16,485 - app.main - INFO - main.py:450 - Application startup event finished.
+2025-05-18 23:49:16,485 - app.firebase_stream - INFO - firebase_stream.py:57 - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-05-18 23:49:16,485 - app.firebase_stream - DEBUG - firebase_stream.py:66 - Successfully got running event loop in process_firebase_events task.
+2025-05-18 23:49:16,486 - app.firebase_stream - INFO - firebase_stream.py:225 - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-05-18 23:49:16,493 - app.firebase_stream - CRITICAL - firebase_stream.py:243 - FATAL ERROR: Firebase event processing task failed during setup or main loop for path 'datafeeds': HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000025AC4A5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+        (self._dns_host, self.port),
+    ...<2 lines>...
+        socket_options=self.socket_options,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\util\connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\socket.py", line 977, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 11001] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+        conn,
+    ...<10 lines>...
+        **response_kw,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x0000025AC4A5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\adapters.py", line 667, in send
+    resp = conn.urlopen(
+        method=request.method,
+    ...<9 lines>...
+        chunked=chunked,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\util\retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000025AC4A5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 187, in __call__
+    response = self.session.request(
+        method, url, data=body, headers=headers, timeout=timeout, **kwargs
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000025AC4A5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\firebase_stream.py", line 226, in process_firebase_events
+    _listener_handle = ref.listen(listener)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\db.py", line 375, in listen
+    return self._listen_with_session(callback)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\db.py", line 470, in _listen_with_session
+    sse = _sseclient.SSEClient(url, session, **{"params": self._client.params})
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\_sseclient.py", line 97, in __init__
+    self._connect()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\_sseclient.py", line 110, in _connect
+    self.resp = self.session.get(self.url, stream=True, **self.requests_kwargs)
+                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 535, in request
+    self.credentials.before_request(auth_request, method, url, request_headers)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\credentials.py", line 239, in before_request
+    self._blocking_refresh(request)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\credentials.py", line 202, in _blocking_refresh
+    self.refresh(request)
+    ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\service_account.py", line 448, in refresh
+    access_token, expiry, _ = _client.jwt_grant(
+                              ~~~~~~~~~~~~~~~~~^
+        request, self._token_uri, assertion
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 299, in jwt_grant
+    response_data = _token_endpoint_request(
+        request,
+    ...<5 lines>...
+        },
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 259, in _token_endpoint_request
+    response_status_ok, response_data, retryable_error = _token_endpoint_request_no_throw(
+                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<6 lines>...
+        **kwargs
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 192, in _token_endpoint_request_no_throw
+    response = request(
+        method="POST", url=token_uri, headers=headers_to_use, body=body, **kwargs
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 194, in __call__
+    raise new_exc from caught_exc
+google.auth.exceptions.TransportError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000025AC4A5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+2025-05-18 23:49:16,500 - app.firebase_stream - INFO - firebase_stream.py:246 - Firebase Admin event processing task finished.
+2025-05-18 23:49:16,501 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:297 - Redis publisher task started. Publishing to channel 'market_data_updates'.
+2025-05-18 23:49:16,501 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:351 - Redis market data broadcaster task started. Subscribing to channel 'market_data_updates'.
+2025-05-18 23:49:16,501 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:360 - Successfully subscribed to Redis channel 'market_data_updates'.
+2025-05-18 23:50:01,437 - app.main - INFO - main.py:455 - Application shutdown event triggered.
+2025-05-18 23:50:01,437 - app.main - INFO - main.py:457 - Cancelling 2 background tasks...
+2025-05-18 23:50:01,438 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:567 - Redis market data broadcaster task cancelled.
+2025-05-18 23:50:01,438 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:574 - Redis market data broadcaster task finished.
+2025-05-18 23:50:01,438 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:580 - Successfully unsubscribed from Redis channel 'market_data_updates'.
+2025-05-18 23:50:01,440 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:589 - Redis pubsub connection closed.
+2025-05-18 23:50:01,440 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:335 - Redis publisher task cancelled.
+2025-05-18 23:50:01,440 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:340 - Redis publisher task finished.
+2025-05-18 23:50:01,440 - app.core.security - INFO - security.py:135 - Closing Redis connection...
+2025-05-18 23:50:01,441 - app.core.security - INFO - security.py:138 - Redis connection closed.
+2025-05-18 23:50:01,441 - app.main - INFO - main.py:472 - Redis client connection closed.
+2025-05-18 23:50:01,441 - app.main - INFO - main.py:482 - Firebase resources cleanup called.
+2025-05-18 23:50:01,441 - app.main - INFO - main.py:485 - Application shutdown event finished.
+2025-05-18 23:50:02,107 - app.main.setup - INFO - main.py:326 - Logging setup finalized. Check console, portfolio_calc.log, and general_app.log.
+2025-05-18 23:50:02,108 - app.api.v1.endpoints.market_data_ws - DEBUG - main.py:329 - TEST: market_data_ws DEBUG - should be in general_app.log, NOT console.
+2025-05-18 23:50:02,108 - app.api.v1.endpoints.market_data_ws - INFO - main.py:330 - TEST: market_data_ws INFO - should be in general_app.log AND console.
+2025-05-18 23:50:02,431 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:50:02,703 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:50:02,704 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:50:02,846 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:50:02,875 - app.main - DEBUG - main.py:367 - API_V1_STR is set to: /api/v1
+2025-05-18 23:50:02,899 - app.main - INFO - main.py:384 - Application startup event triggered.
+2025-05-18 23:50:02,933 - app.main - INFO - main.py:398 - Firebase Admin SDK initialized successfully.
+2025-05-18 23:50:02,934 - app.dependencies.redis_client - WARNING - redis_client.py:15 - Redis client not initialized, attempting late connection.
+2025-05-18 23:50:02,934 - app.core.security - INFO - security.py:102 - Attempting to connect to Redis...
+2025-05-18 23:50:02,934 - app.core.security - INFO - security.py:104 - Redis connection parameters: host=127.0.0.1, port=6379, db=0, password=<not set>
+2025-05-18 23:50:02,938 - app.core.security - INFO - security.py:116 - Connected to Redis successfully.
+2025-05-18 23:50:02,938 - app.main - INFO - main.py:410 - Redis client initialized successfully.
+2025-05-18 23:50:02,949 - app.database.session - INFO - session.py:80 - Running Base.metadata.create_all...
+2025-05-18 23:50:02,966 - app.database.session - INFO - session.py:82 - Base.metadata.create_all finished.
+2025-05-18 23:50:02,967 - app.main - INFO - main.py:420 - Database tables ensured/created.
+2025-05-18 23:50:02,967 - app.main - INFO - main.py:430 - Firebase stream processing task scheduled.
+2025-05-18 23:50:02,968 - app.main - INFO - main.py:436 - Redis publisher task scheduled.
+2025-05-18 23:50:02,968 - app.main - INFO - main.py:442 - Redis market data broadcaster task scheduled.
+2025-05-18 23:50:02,968 - app.main - INFO - main.py:450 - Application startup event finished.
+2025-05-18 23:50:02,968 - app.firebase_stream - INFO - firebase_stream.py:57 - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-05-18 23:50:02,968 - app.firebase_stream - DEBUG - firebase_stream.py:66 - Successfully got running event loop in process_firebase_events task.
+2025-05-18 23:50:02,969 - app.firebase_stream - INFO - firebase_stream.py:225 - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-05-18 23:50:02,977 - app.firebase_stream - CRITICAL - firebase_stream.py:243 - FATAL ERROR: Firebase event processing task failed during setup or main loop for path 'datafeeds': HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000190E9E5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+        (self._dns_host, self.port),
+    ...<2 lines>...
+        socket_options=self.socket_options,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\util\connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\socket.py", line 977, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 11001] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+        conn,
+    ...<10 lines>...
+        **response_kw,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x00000190E9E5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\adapters.py", line 667, in send
+    resp = conn.urlopen(
+        method=request.method,
+    ...<9 lines>...
+        chunked=chunked,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\util\retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000190E9E5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 187, in __call__
+    response = self.session.request(
+        method, url, data=body, headers=headers, timeout=timeout, **kwargs
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000190E9E5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\firebase_stream.py", line 226, in process_firebase_events
+    _listener_handle = ref.listen(listener)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\db.py", line 375, in listen
+    return self._listen_with_session(callback)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\db.py", line 470, in _listen_with_session
+    sse = _sseclient.SSEClient(url, session, **{"params": self._client.params})
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\_sseclient.py", line 97, in __init__
+    self._connect()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\_sseclient.py", line 110, in _connect
+    self.resp = self.session.get(self.url, stream=True, **self.requests_kwargs)
+                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 535, in request
+    self.credentials.before_request(auth_request, method, url, request_headers)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\credentials.py", line 239, in before_request
+    self._blocking_refresh(request)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\credentials.py", line 202, in _blocking_refresh
+    self.refresh(request)
+    ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\service_account.py", line 448, in refresh
+    access_token, expiry, _ = _client.jwt_grant(
+                              ~~~~~~~~~~~~~~~~~^
+        request, self._token_uri, assertion
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 299, in jwt_grant
+    response_data = _token_endpoint_request(
+        request,
+    ...<5 lines>...
+        },
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 259, in _token_endpoint_request
+    response_status_ok, response_data, retryable_error = _token_endpoint_request_no_throw(
+                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<6 lines>...
+        **kwargs
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 192, in _token_endpoint_request_no_throw
+    response = request(
+        method="POST", url=token_uri, headers=headers_to_use, body=body, **kwargs
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 194, in __call__
+    raise new_exc from caught_exc
+google.auth.exceptions.TransportError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000190E9E5BED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+2025-05-18 23:50:02,988 - app.firebase_stream - INFO - firebase_stream.py:246 - Firebase Admin event processing task finished.
+2025-05-18 23:50:02,988 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:297 - Redis publisher task started. Publishing to channel 'market_data_updates'.
+2025-05-18 23:50:02,989 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:351 - Redis market data broadcaster task started. Subscribing to channel 'market_data_updates'.
+2025-05-18 23:50:02,989 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:360 - Successfully subscribed to Redis channel 'market_data_updates'.
+2025-05-18 23:50:08,360 - app.main - INFO - main.py:455 - Application shutdown event triggered.
+2025-05-18 23:50:08,361 - app.main - INFO - main.py:457 - Cancelling 2 background tasks...
+2025-05-18 23:50:08,361 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:567 - Redis market data broadcaster task cancelled.
+2025-05-18 23:50:08,361 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:574 - Redis market data broadcaster task finished.
+2025-05-18 23:50:08,361 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:580 - Successfully unsubscribed from Redis channel 'market_data_updates'.
+2025-05-18 23:50:08,362 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:589 - Redis pubsub connection closed.
+2025-05-18 23:50:08,363 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:335 - Redis publisher task cancelled.
+2025-05-18 23:50:08,363 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:340 - Redis publisher task finished.
+2025-05-18 23:50:08,363 - app.core.security - INFO - security.py:135 - Closing Redis connection...
+2025-05-18 23:50:08,363 - app.core.security - INFO - security.py:138 - Redis connection closed.
+2025-05-18 23:50:08,364 - app.main - INFO - main.py:472 - Redis client connection closed.
+2025-05-18 23:50:08,364 - app.main - INFO - main.py:482 - Firebase resources cleanup called.
+2025-05-18 23:50:08,364 - app.main - INFO - main.py:485 - Application shutdown event finished.
+2025-05-18 23:50:12,993 - app.main.setup - INFO - main.py:326 - Logging setup finalized. Check console, portfolio_calc.log, and general_app.log.
+2025-05-18 23:50:12,996 - app.api.v1.endpoints.market_data_ws - DEBUG - main.py:329 - TEST: market_data_ws DEBUG - should be in general_app.log, NOT console.
+2025-05-18 23:50:12,996 - app.api.v1.endpoints.market_data_ws - INFO - main.py:330 - TEST: market_data_ws INFO - should be in general_app.log AND console.
+2025-05-18 23:50:13,274 - app.core.config - INFO - config.py:18 - .env file loaded successfully.
+2025-05-18 23:50:13,503 - app.core.config - INFO - config.py:106 - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-05-18 23:50:13,504 - app.database.session - INFO - session.py:27 - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-05-18 23:50:13,653 - app.shared_state - INFO - shared_state.py:17 - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-05-18 23:50:13,683 - app.main - DEBUG - main.py:367 - API_V1_STR is set to: /api/v1
+2025-05-18 23:50:13,706 - app.main - INFO - main.py:384 - Application startup event triggered.
+2025-05-18 23:50:13,743 - app.main - INFO - main.py:398 - Firebase Admin SDK initialized successfully.
+2025-05-18 23:50:13,744 - app.dependencies.redis_client - WARNING - redis_client.py:15 - Redis client not initialized, attempting late connection.
+2025-05-18 23:50:13,744 - app.core.security - INFO - security.py:102 - Attempting to connect to Redis...
+2025-05-18 23:50:13,744 - app.core.security - INFO - security.py:104 - Redis connection parameters: host=127.0.0.1, port=6379, db=0, password=<not set>
+2025-05-18 23:50:13,746 - app.core.security - INFO - security.py:116 - Connected to Redis successfully.
+2025-05-18 23:50:13,746 - app.main - INFO - main.py:410 - Redis client initialized successfully.
+2025-05-18 23:50:13,758 - app.database.session - INFO - session.py:80 - Running Base.metadata.create_all...
+2025-05-18 23:50:13,774 - app.database.session - INFO - session.py:82 - Base.metadata.create_all finished.
+2025-05-18 23:50:13,776 - app.main - INFO - main.py:420 - Database tables ensured/created.
+2025-05-18 23:50:13,776 - app.main - INFO - main.py:430 - Firebase stream processing task scheduled.
+2025-05-18 23:50:13,776 - app.main - INFO - main.py:436 - Redis publisher task scheduled.
+2025-05-18 23:50:13,777 - app.main - INFO - main.py:442 - Redis market data broadcaster task scheduled.
+2025-05-18 23:50:13,777 - app.main - INFO - main.py:450 - Application startup event finished.
+2025-05-18 23:50:13,777 - app.firebase_stream - INFO - firebase_stream.py:57 - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-05-18 23:50:13,777 - app.firebase_stream - DEBUG - firebase_stream.py:66 - Successfully got running event loop in process_firebase_events task.
+2025-05-18 23:50:13,778 - app.firebase_stream - INFO - firebase_stream.py:225 - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-05-18 23:50:13,786 - app.firebase_stream - CRITICAL - firebase_stream.py:243 - FATAL ERROR: Firebase event processing task failed during setup or main loop for path 'datafeeds': HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000015C209BBED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 198, in _new_conn
+    sock = connection.create_connection(
+        (self._dns_host, self.port),
+    ...<2 lines>...
+        socket_options=self.socket_options,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\util\connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\socket.py", line 977, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 11001] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+        conn,
+    ...<10 lines>...
+        **response_kw,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 704, in connect
+    self.sock = sock = self._new_conn()
+                       ~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connection.py", line 205, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x0000015C209BBED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\adapters.py", line 667, in send
+    resp = conn.urlopen(
+        method=request.method,
+    ...<9 lines>...
+        chunked=chunked,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<13 lines>...
+        **response_kw,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\urllib3\util\retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000015C209BBED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 187, in __call__
+    response = self.session.request(
+        method, url, data=body, headers=headers, timeout=timeout, **kwargs
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\adapters.py", line 700, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000015C209BBED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\firebase_stream.py", line 226, in process_firebase_events
+    _listener_handle = ref.listen(listener)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\db.py", line 375, in listen
+    return self._listen_with_session(callback)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\db.py", line 470, in _listen_with_session
+    sse = _sseclient.SSEClient(url, session, **{"params": self._client.params})
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\_sseclient.py", line 97, in __init__
+    self._connect()
+    ~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\firebase_admin\_sseclient.py", line 110, in _connect
+    self.resp = self.session.get(self.url, stream=True, **self.requests_kwargs)
+                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\requests\sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 535, in request
+    self.credentials.before_request(auth_request, method, url, request_headers)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\credentials.py", line 239, in before_request
+    self._blocking_refresh(request)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\credentials.py", line 202, in _blocking_refresh
+    self.refresh(request)
+    ~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\service_account.py", line 448, in refresh
+    access_token, expiry, _ = _client.jwt_grant(
+                              ~~~~~~~~~~~~~~~~~^
+        request, self._token_uri, assertion
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 299, in jwt_grant
+    response_data = _token_endpoint_request(
+        request,
+    ...<5 lines>...
+        },
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 259, in _token_endpoint_request
+    response_status_ok, response_data, retryable_error = _token_endpoint_request_no_throw(
+                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<6 lines>...
+        **kwargs
+        ^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\oauth2\_client.py", line 192, in _token_endpoint_request_no_throw
+    response = request(
+        method="POST", url=token_uri, headers=headers_to_use, body=body, **kwargs
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\google\auth\transport\requests.py", line 194, in __call__
+    raise new_exc from caught_exc
+google.auth.exceptions.TransportError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000015C209BBED0>: Failed to resolve 'oauth2.googleapis.com' ([Errno 11001] getaddrinfo failed)"))
+2025-05-18 23:50:13,796 - app.firebase_stream - INFO - firebase_stream.py:246 - Firebase Admin event processing task finished.
+2025-05-18 23:50:13,796 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:297 - Redis publisher task started. Publishing to channel 'market_data_updates'.
+2025-05-18 23:50:13,796 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:351 - Redis market data broadcaster task started. Subscribing to channel 'market_data_updates'.
+2025-05-18 23:50:13,797 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:360 - Successfully subscribed to Redis channel 'market_data_updates'.
+2025-05-18 23:50:15,139 - app.main - INFO - main.py:455 - Application shutdown event triggered.
+2025-05-18 23:50:15,140 - app.main - INFO - main.py:457 - Cancelling 2 background tasks...
+2025-05-18 23:50:15,140 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:567 - Redis market data broadcaster task cancelled.
+2025-05-18 23:50:15,141 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:574 - Redis market data broadcaster task finished.
+2025-05-18 23:50:15,141 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:580 - Successfully unsubscribed from Redis channel 'market_data_updates'.
+2025-05-18 23:50:15,142 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:589 - Redis pubsub connection closed.
+2025-05-18 23:50:15,143 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:335 - Redis publisher task cancelled.
+2025-05-18 23:50:15,143 - app.api.v1.endpoints.market_data_ws - INFO - market_data_ws.py:340 - Redis publisher task finished.
+2025-05-18 23:50:15,144 - app.core.security - INFO - security.py:135 - Closing Redis connection...
+2025-05-18 23:50:15,144 - app.core.security - INFO - security.py:138 - Redis connection closed.
+2025-05-18 23:50:15,144 - app.main - INFO - main.py:472 - Redis client connection closed.
+2025-05-18 23:50:15,145 - app.main - INFO - main.py:482 - Firebase resources cleanup called.
+2025-05-18 23:50:15,145 - app.main - INFO - main.py:485 - Application shutdown event finished.
