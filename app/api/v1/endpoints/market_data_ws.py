@@ -9,6 +9,8 @@ from typing import Dict, Any, List, Optional
 import decimal # Import decimal for Decimal type and encoder
 # Import WebSocketState for checking WebSocket client state
 from starlette.websockets import WebSocketState
+from decimal import Decimal
+
 
 
 # Import necessary components for DB interaction and authentication
@@ -49,6 +51,10 @@ from app.shared_state import redis_publish_queue # This queue is consumed by the
 
 # Import the new portfolio calculation service
 from app.services.portfolio_calculator import calculate_user_portfolio
+
+# Import the Symbol and ExternalSymbolInfo models
+from app.database.models import Symbol, ExternalSymbolInfo #
+from sqlalchemy.future import select # Import select for querying
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -103,20 +109,22 @@ async def websocket_endpoint(
              logger.warning(f"Authentication failed for user ID {user_id} from {websocket.client.host}:{websocket.client.port}: User not found or inactive.")
              raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="User not found or inactive")
 
-        # Get user's group name
+        # Get user's group name and overall margin
         group_name = getattr(db_user, 'group_name', 'default') # Use default group if not specified
+        user_overall_margin = getattr(db_user, 'margin', Decimal("0.0")) # Get overall margin from DB
 
-        # Cache user data (including group_name, balance, leverage)
+        # Cache user data (including group_name, balance, leverage, and OVERALL MARGIN)
         user_data_to_cache = {
             "id": user_id,
             "group_name": group_name,
             # Ensure these are Decimal types for consistent calculations later
             "leverage": decimal.Decimal(str(getattr(db_user, 'leverage', 1.0))),
-            "wallet_balance": decimal.Decimal(str(getattr(db_user, 'wallet_balance', 0.0)))
+            "wallet_balance": decimal.Decimal(str(getattr(db_user, 'wallet_balance', 0.0))),
+            "margin": decimal.Decimal(str(user_overall_margin)) # Cache the user's overall margin
             # Add other user attributes needed for market data/account calculation
         }
         await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-        logger.debug(f"Cached user data (including group_name, balance, leverage) for user ID {user_id}")
+        logger.debug(f"Cached user data (including group_name, balance, leverage, overall margin) for user ID {user_id}")
 
         # Fetch and cache initial user portfolio (specifically open positions)
         # Use the new CRUD function to get all open orders for this user
@@ -140,19 +148,19 @@ async def websocket_endpoint(
 
 
         # Initial portfolio data structure (balance and positions are fetched/cached)
-        # Equity, margin, free_margin, profit_loss will be CALCULATED dynamically
+        # Equity, free_margin, profit_loss will be CALCULATED dynamically
+        # Margin here will be the *overall user margin* from the User table
         user_portfolio_data = {
-             # Balance is part of user_data cache now, but include here for the portfolio structure
              "balance": str(user_data_to_cache["wallet_balance"]), # Store balance as string in portfolio cache
              "equity": "0.0", # Placeholder - will be calculated
-             "margin": "0.0", # Placeholder - will be calculated (total used margin)
+             "margin": str(user_data_to_cache["margin"]), # Store OVERALL user margin as string
              "free_margin": "0.0", # Placeholder - will be calculated
              "profit_loss": "0.0", # Placeholder - will be calculated (total PnL)
              "positions": initial_positions_data # List of open positions (from DB)
         }
         # Cache the initial portfolio data
         await set_user_portfolio_cache(redis_client, user_id, user_portfolio_data)
-        logger.debug(f"Cached initial user portfolio (with {len(initial_positions_data)} open positions) for user ID {user_id}")
+        logger.debug(f"Cached initial user portfolio (with {len(initial_positions_data)} open positions and overall margin) for user ID {user_id}")
 
         # Cache Group-Symbol Settings (Initial Load)
         # Fetch and cache all settings for the user's group
@@ -238,151 +246,68 @@ async def websocket_endpoint(
 # It requires database access (AsyncSession) and Redis client (Redis).
 # Ensure crud_group and caching functions are imported at the top.
 
-# async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_client: Redis):
-#     """
-#     Fetches group-symbol settings from the database and caches them in Redis.
-#     Called during WebSocket connection setup and potentially on admin updates.
-#     """
-#     if not group_name:
-#         logger.warning("Cannot update group-symbol settings: group_name is missing.")
-#         return
-
-#     try:
-#         # Assuming crud_group.get_groups can filter by name and return list of Group models
-#         # Also assuming Group model has a 'symbol' attribute and other setting attributes
-#         group_settings_list = await crud_group.get_groups(db, search=group_name)
-
-#         if not group_settings_list:
-#              logger.warning(f"No group settings found in DB for group '{group_name}'. Cannot cache settings.")
-#              return
-
-#         # Cache settings per symbol for this group
-#         for group_setting in group_settings_list:
-#             symbol = getattr(group_setting, 'symbol', None)
-#             if symbol:
-#                 settings = {
-#                     "commision_type": getattr(group_setting, 'commision_type', None),
-#                     "commision_value_type": getattr(group_setting, 'commision_value_type', None),
-#                     "type": getattr(group_setting, 'type', None),
-#                     "pip_currency": getattr(group_setting, 'pip_currency', None),
-#                     "show_points": getattr(group_setting, 'show_points', None),
-#                     "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)),
-#                     "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)),
-#                     "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)),
-#                     "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), # Base margin for calculation
-#                     "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)),
-#                     "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)),
-#                     "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)),
-#                     "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)),
-#                     "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Pips value
-#                     "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Spread pip value
-#                     # Assuming contract_size is also part of group settings per symbol
-#                     "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), # Default standard lot size
-#                 }
-#                 await set_group_symbol_settings_cache(redis_client, group_name, symbol.upper(), settings)
-
-#         logger.debug(f"Initially cached group-symbol settings for group '{group_name}'.")
-
-#     except Exception as e:
-#         logger.error(f"Error fetching or caching initial group-symbol settings for group '{group_name}': {e}", exc_info=True)
-
-
-# app/api/v1/endpoints/market_data_ws.py
-
-import logging
-import json
-import threading
-from typing import Dict, Any, List, Optional
-import decimal # Import decimal
-# ... (existing imports) ...
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.database.session import get_db
-from app.crud import user as crud_user
-from app.crud import group as crud_group
-from app.crud import crud_order
-
-from app.core.security import decode_token
-from redis.asyncio import Redis
-from app.core.cache import (
-    set_user_data_cache,
-    get_user_data_cache,
-    set_user_portfolio_cache,
-    get_user_portfolio_cache,
-    get_user_positions_from_cache,
-    set_adjusted_market_price_cache,
-    get_adjusted_market_price_cache,
-    set_group_symbol_settings_cache,
-    get_group_symbol_settings_cache,
-    DecimalEncoder,
-    decode_decimal
-)
-from app.dependencies.redis_client import get_redis_client
-from app.shared_state import redis_publish_queue
-from app.services.portfolio_calculator import calculate_user_portfolio
-
-# Import the Symbol model
-from app.database.models import Symbol #
-from sqlalchemy.future import select # Import select for querying
-
-logger = logging.getLogger(__name__)
-
-# ... (rest of the file) ...
-
 async def update_group_symbol_settings(group_name: str, db: AsyncSession, redis_client: Redis):
     """
     Fetches group-symbol settings from the database and caches them in Redis.
-    Now also fetches profit_currency from the Symbol model.
+    Now also fetches profit_currency from the Symbol model and contract_size from ExternalSymbolInfo.
     """
     if not group_name:
         logger.warning("Cannot update group-symbol settings: group_name is missing.")
         return
 
     try:
-        group_settings_list = await crud_group.get_groups(db, search=group_name) #
+        group_settings_list = await crud_group.get_groups(db, search=group_name)
 
         if not group_settings_list:
              logger.warning(f"No group settings found in DB for group '{group_name}'. Cannot cache settings.")
              return
 
-        for group_setting in group_settings_list: #
-            symbol = getattr(group_setting, 'symbol', None) #
+        for group_setting in group_settings_list:
+            symbol = getattr(group_setting, 'symbol', None)
             if symbol:
                 settings = {
-                    "commision_type": getattr(group_setting, 'commision_type', None), #
-                    "commision_value_type": getattr(group_setting, 'commision_value_type', None), #
-                    "type": getattr(group_setting, 'type', None), #
-                    "pip_currency": getattr(group_setting, 'pip_currency', "USD"), # # Keep for other potential uses
-                    "show_points": getattr(group_setting, 'show_points', None), #
-                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)), #
-                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)), #
-                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)), #
-                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)), #
-                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)), #
-                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)), #
-                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)), #
-                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)), #
-                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), #
-                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), #
-                    "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), #
+                    "commision_type": getattr(group_setting, 'commision_type', None),
+                    "commision_value_type": getattr(group_setting, 'commision_value_type', None),
+                    "type": getattr(group_setting, 'type', None),
+                    "pip_currency": getattr(group_setting, 'pip_currency', "USD"), # Keep this for other potential uses
+                    "show_points": getattr(group_setting, 'show_points', None),
+                    "swap_buy": getattr(group_setting, 'swap_buy', decimal.Decimal(0.0)),
+                    "swap_sell": getattr(group_setting, 'swap_sell', decimal.Decimal(0.0)),
+                    "commision": getattr(group_setting, 'commision', decimal.Decimal(0.0)),
+                    "margin": getattr(group_setting, 'margin', decimal.Decimal(0.0)),
+                    "spread": getattr(group_setting, 'spread', decimal.Decimal(0.0)),
+                    "deviation": getattr(group_setting, 'deviation', decimal.Decimal(0.0)),
+                    "min_lot": getattr(group_setting, 'min_lot', decimal.Decimal(0.0)),
+                    "max_lot": getattr(group_setting, 'max_lot', decimal.Decimal(0.0)),
+                    "pips": getattr(group_setting, 'pips', decimal.Decimal(0.0)), # Pips value
+                    "spread_pip": getattr(group_setting, 'spread_pip', decimal.Decimal(0.0)), # Spread pip value
+                    "contract_size": getattr(group_setting, 'contract_size', decimal.Decimal("100000")), # Initial value from Group model or default
                 }
 
-                # Fetch profit_currency from the Symbol model
-                # Assuming Symbol.name corresponds to the group_setting.symbol
+                # Fetch profit_currency from the Symbol model for this symbol
                 symbol_obj_stmt = select(Symbol).filter_by(name=symbol.upper()) #
-                symbol_obj_result = await db.execute(symbol_obj_stmt)
-                symbol_obj = symbol_obj_result.scalars().first()
+                symbol_obj_result = await db.execute(symbol_obj_stmt) #
+                symbol_obj = symbol_obj_result.scalars().first() #
 
                 if symbol_obj and symbol_obj.profit_currency: #
-                    # Overwrite/set the 'profit_currency' key that portfolio_calculator expects
-                    settings["profit_currency"] = symbol_obj.profit_currency
+                    settings["profit_currency"] = symbol_obj.profit_currency #
                     logger.debug(f"User group settings: Fetched profit_currency '{symbol_obj.profit_currency}' from Symbol model for '{symbol}'.")
                 else:
-                    # Fallback to Group's pip_currency if Symbol model data is missing or profit_currency is not set
                     settings["profit_currency"] = getattr(group_setting, 'pip_currency', 'USD')
                     logger.warning(f"User group settings: Could not fetch profit_currency from Symbol model for '{symbol}'. Falling back to Group's pip_currency: {settings['profit_currency']}.")
 
-                await set_group_symbol_settings_cache(redis_client, group_name, symbol.upper(), settings) #
+                # Fetch contract_size from the ExternalSymbolInfo model for this symbol
+                external_symbol_obj_stmt = select(ExternalSymbolInfo).filter_by(fix_symbol=symbol) #
+                external_symbol_obj_result = await db.execute(external_symbol_obj_stmt) #
+                external_symbol_obj = external_symbol_obj_result.scalars().first() #
+
+                if external_symbol_obj and external_symbol_obj.contract_size is not None: #
+                    settings["contract_size"] = external_symbol_obj.contract_size #
+                    logger.debug(f"User group settings: Fetched contract_size '{external_symbol_obj.contract_size}' from ExternalSymbolInfo for '{symbol}'.")
+                else:
+                    logger.warning(f"User group settings: Could not fetch contract_size from ExternalSymbolInfo for '{symbol}'. Keeping existing value (from Group or default).")
+
+                await set_group_symbol_settings_cache(redis_client, group_name, symbol.upper(), settings)
 
             else:
                  logger.warning(f"Group setting symbol is None for group '{group_name}'. Skipping caching for this entry.")
@@ -453,6 +378,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
     and calculated account updates to connected WebSocket clients.
     Retrieves full set of relevant symbols from cache, applies latest updates,
     and uses cached user data/portfolio/group settings for calculations.
+    Includes the user's overall margin from the User table in account_data.
     """
     logger.info("Redis market data broadcaster task started. Subscribing to channel '%s'.", REDIS_MARKET_DATA_CHANNEL)
 
@@ -492,6 +418,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                     group_name = websocket_info['group_name']
 
                     # Retrieve cached user data, portfolio, and group settings
+                    # user_data now includes the user's overall margin from the User table
                     user_data = await get_user_data_cache(redis_client, user_id)
                     user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
                     # Fetch ALL group settings for the user's group from cache
@@ -504,13 +431,6 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                     # Identify relevant symbols for this user's group
                     # Assuming group_settings is a dict like {SYMBOL: {settings}, ...}
                     relevant_symbols = set(group_settings.keys()) if isinstance(group_settings, dict) else set()
-
-                    if not relevant_symbols:
-                        logger.debug(f"No relevant symbols found for group '{group_name}' for user {user_id}. Skipping market data send.")
-                        # Still attempt to send account data if available? Maybe send a message
-                        # indicating no symbols are configured for their group.
-                        # For now, let's skip sending anything if no symbols.
-                        continue
 
                     # Dictionary to hold the market data payload for this specific user
                     # This will contain the latest price for each relevant symbol
@@ -612,8 +532,10 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                     open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
 
                     # Pass the complete set of market data prices (updated + cached) for calculation
-                    calculated_account_data = await calculate_user_portfolio(
-                        user_data=user_data, # Contains balance, leverage
+                    # The calculate_user_portfolio function will still calculate total_margin_used_usd
+                    # internally for the free_margin calculation.
+                    calculated_portfolio_metrics = await calculate_user_portfolio(
+                        user_data=user_data, # Contains balance, leverage, and OVERALL margin
                         open_positions=open_positions_from_cache, # Contains entry_price, quantity, type etc.
                         adjusted_market_prices=user_market_data_payload, # Use the combined updated/cached prices
                         group_symbol_settings=group_settings # Contains margin, pips, contract_size etc.
@@ -621,11 +543,23 @@ async def redis_market_data_broadcaster(redis_client: Redis):
 
                     # --- Prepare and Send Data to WebSocket ---
                     # Only send if there is market data or calculated account data
-                    if user_market_data_payload or calculated_account_data:
+                    if user_market_data_payload or calculated_portfolio_metrics:
+                        # Construct the account_data payload
+                        account_data_payload = {
+                            "balance": calculated_portfolio_metrics.get("balance", 0.0),
+                            "equity": calculated_portfolio_metrics.get("equity", 0.0),
+                            # Use the user's OVERALL margin from the cached user_data
+                            "margin": float(user_data.get("margin", 0.0)), # Ensure it's float for JSON
+                            "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0),
+                            "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0),
+                            "positions": calculated_portfolio_metrics.get("positions", []) # Include updated positions with PnL
+                        }
+
+
                         payload = {
                             "type": "market_data_update",
                             "market_data": user_market_data_payload, # Sending the complete set of relevant market data
-                            "account_data": calculated_account_data # Sending calculated account data (personal details)
+                            "account_data": account_data_payload # Sending constructed account data
                         }
 
                         # Check if the websocket is still connected before sending
@@ -633,7 +567,7 @@ async def redis_market_data_broadcaster(redis_client: Redis):
                             try:
                                 # Use send_text after manual JSON dumping with DecimalEncoder
                                 await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
-                                logger.debug(f"Sent personalized data to user {user_id}. Symbols sent: {list(user_market_data_payload.keys())}")
+                                logger.debug(f"Sent personalized data to user {user_id}. Symbols sent: {list(user_market_data_payload.keys())}. Account data sent: {account_data_payload}")
                             except Exception as send_e:
                                 # Log sending errors but don't necessarily disconnect immediately
                                 logger.error(f"Error sending data to user {user_id}: {send_e}", exc_info=True)

@@ -617,7 +617,7 @@ async def calculate_single_order_margin(
         if order_price is None or order_price <= 0: # Ensure order_price is not None and positive
              logger.error(f"Order price ({order_price}) is missing, zero, or negative for symbol {symbol}. Cannot calculate margin.")
              return None, None, None
-        contract_value_for_order = order_quantity * contract_size * order_price # Use the original order price
+        contract_value_for_order = order_quantity * contract_size # Use the original order price
 
 
         # 6. Adjust order_price based on order_type (Will be original price if half_spread is 0)

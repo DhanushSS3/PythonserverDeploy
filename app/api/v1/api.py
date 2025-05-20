@@ -15,7 +15,7 @@ api_router = APIRouter()
 # Include individual routers
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(groups.router, prefix="/groups", tags=["groups"])
-api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
+api_router.include_router(orders.router, tags=["orders"])
 
 
 # Include the market data WebSocket router
