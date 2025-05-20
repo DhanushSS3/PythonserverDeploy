@@ -75,24 +75,22 @@ async def calculate_total_symbol_margin_contribution(
 async def process_new_order(
     db: AsyncSession,
     redis_client: Redis,
-    user: User, # Pass the user ORM object
+    user: User,
     order_request: OrderPlacementRequest
 ) -> UserOrder:
     """
-    Processes a new order request, calculates the margin to add to the user's total margin
-    based on the "Highest Margin per Net Quantity Increase" hedging model,
-    updates user's overall margin, and creates the order in the database.
-    Uses database locking for user financial data.
+    Processes a new order request, calculates the margin, updates the user's margin,
+    and creates a new order in the database, considering commission and hedging logic.
     """
     logger.info(f"Processing new order for user {user.id}, symbol {order_request.symbol}, type {order_request.order_type}, quantity {order_request.order_quantity}")
 
     new_order_quantity = Decimal(str(order_request.order_quantity))
     new_order_type = order_request.order_type.upper()
-    order_symbol = order_request.symbol.upper() # Use upper for consistency
+    order_symbol = order_request.symbol.upper()
 
-
-    # --- Step 1: Calculate the full, non-hedged margin and contract value for the new order ---
-    full_calculated_margin_usd, adjusted_order_price, contract_value = await calculate_single_order_margin(
+    # Step 1: Calculate full margin and contract value
+    from app.services.margin_calculator import calculate_single_order_margin
+    full_margin_usd, adjusted_order_price, contract_value = await calculate_single_order_margin(
         db=db,
         redis_client=redis_client,
         user_id=user.id,
@@ -102,120 +100,91 @@ async def process_new_order(
         order_type=new_order_type
     )
 
-    if full_calculated_margin_usd is None or adjusted_order_price is None or contract_value is None:
-         logger.error(f"Failed to calculate full order margin, adjusted price, or contract value for user {user.id}, symbol {order_symbol}.")
-         raise OrderProcessingError("Failed to calculate order details.")
+    if full_margin_usd is None or adjusted_order_price is None or contract_value is None:
+        logger.error(f"Failed to calculate margin or adjusted price for user {user.id}, symbol {order_symbol}")
+        raise OrderProcessingError("Margin calculation failed.")
 
-    logger.debug(f"Calculated full order margin (non-hedged, for order record): {full_calculated_margin_usd}, Adjusted price: {adjusted_order_price}, Contract value: {contract_value}")
-
-    # Ensure new order quantity is positive before calculating margin per lot for it
     if new_order_quantity <= 0:
-        logger.error(f"New order quantity is zero or negative for user {user.id}, symbol {order_symbol}.")
         raise OrderProcessingError("Invalid order quantity.")
 
-    # --- Step 2: Calculate user's *current total margin* (before new order) for this symbol ---
-    # Fetch ALL open orders for the user for this symbol *before* adding the new one
-    existing_open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
+    # Step 2: Calculate margin before and after new order for hedging
+    existing_open_orders = await crud_order.get_open_orders_by_user_id_and_symbol(
         db=db,
         user_id=user.id,
         symbol=order_symbol
     )
-    margin_attributed_to_symbol_before_new_order = await calculate_total_symbol_margin_contribution(
+
+    margin_before = await calculate_total_symbol_margin_contribution(
         db=db,
         redis_client=redis_client,
         user_id=user.id,
         symbol=order_symbol,
-        open_positions_for_symbol=existing_open_orders_for_symbol
+        open_positions_for_symbol=existing_open_orders
     )
-    logger.debug(f"User {user.id}, Symbol {order_symbol}: Margin attributed to symbol BEFORE new order: {margin_attributed_to_symbol_before_new_order}")
 
-
-    # --- Step 3: Simulate user's *new total margin* (after new order) for this symbol ---
-    # Create a dummy order object for the new order to include it in the calculation
-    # Only need relevant fields for margin calculation: order_quantity, order_type, margin (full, non-hedged)
-    new_order_dummy_for_calc = UserOrder(
+    dummy_order = UserOrder(
         order_quantity=new_order_quantity,
         order_type=new_order_type,
-        margin=full_calculated_margin_usd # Use the full calculated margin
+        margin=full_margin_usd
     )
-    # Combine existing orders with the new dummy order for the calculation
-    all_open_orders_for_symbol_after_new_order = existing_open_orders_for_symbol + [new_order_dummy_for_calc]
+    orders_after = existing_open_orders + [dummy_order]
 
-    margin_attributed_to_symbol_after_new_order = await calculate_total_symbol_margin_contribution(
+    margin_after = await calculate_total_symbol_margin_contribution(
         db=db,
         redis_client=redis_client,
         user_id=user.id,
         symbol=order_symbol,
-        open_positions_for_symbol=all_open_orders_for_symbol_after_new_order
+        open_positions_for_symbol=orders_after
     )
-    logger.debug(f"User {user.id}, Symbol {order_symbol}: Margin attributed to symbol AFTER new order: {margin_attributed_to_symbol_after_new_order}")
 
+    additional_margin = margin_after - margin_before
+    additional_margin = max(Decimal("0.0"), additional_margin)
 
-    # --- Step 4: Calculate the ADDITIONAL margin required for this NEW order based on hedging ---
-    # This is the increase in margin attributed to this symbol due to the new order
-    additional_margin_required = margin_attributed_to_symbol_after_new_order - margin_attributed_to_symbol_before_new_order
-    # If the net quantity decreases or remains the same but highest margin per lot decreases,
-    # this could be negative or zero, meaning no *additional* margin is required.
-    additional_margin_required = max(Decimal(0), additional_margin_required) # Ensure it's not negative
-    logger.info(f"Calculated additional margin required (based on total symbol margin change): {additional_margin_required}")
-
-
-    # --- Step 5: Fetch user with lock and perform margin check and update ---
+    # Step 3: Lock user and update margin
     db_user_locked = await crud_user.get_user_by_id_with_lock(db, user.id)
-
     if db_user_locked is None:
-        logger.error(f"Could not retrieve user {user.id} with lock during order placement processing.")
-        raise OrderProcessingError("Could not retrieve user data securely.")
+        raise OrderProcessingError("Could not lock user record.")
 
-    user_overall_margin_before = Decimal(str(db_user_locked.margin))
-    user_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
+    db_user_locked.margin = (Decimal(str(db_user_locked.margin)) + additional_margin).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    available_free_margin = user_wallet_balance - user_overall_margin_before
+    # Step 4: Calculate commission if applicable
+    from app.core.cache import get_group_symbol_settings_cache
+    commission = Decimal("0.0")
 
-    logger.debug(f"User {user.id}: Wallet Balance (from DB): {user_wallet_balance}, Overall Margin BEFORE update (from DB): {user_overall_margin_before}, Available Free Margin: {available_free_margin}")
-    logger.debug(f"Additional margin to ADD to user's overall margin: {additional_margin_required}")
+    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, getattr(user, 'group_name', 'default'), order_symbol)
+    if group_symbol_settings:
+        commission_type = int(group_symbol_settings.get('commision_type', 0))
+        commission_value_type = int(group_symbol_settings.get('commision_value_type', 0))
+        commission_rate = Decimal(str(group_symbol_settings.get('commision', 0)))
 
-    if available_free_margin < additional_margin_required:
-        logger.warning(f"Insufficient funds for user {user.id} to place order. Additional margin required: {additional_margin_required}, Available free margin: {available_free_margin}")
-        additional_margin_required_display = additional_margin_required.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-        available_free_margin_display = available_free_margin.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-        raise InsufficientFundsError(f"Insufficient funds. Required additional margin: {additional_margin_required_display:.8f} USD. Available free margin: {available_free_margin_display:.8f} USD.")
+        if commission_type in [0, 1]:  # "Every Trade" or "In"
+            if commission_value_type == 0:  # Per lot
+                commission = new_order_quantity * commission_rate
+            elif commission_value_type == 1:  # Percent of price
+                commission = ((commission_rate * adjusted_order_price) / Decimal("100")) * new_order_quantity
 
-    db_user_locked.margin += additional_margin_required
-    logger.info(f"User {user.id}: Updated overall margin to {db_user_locked.margin} by adding {additional_margin_required}.")
+        commission = commission.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    # --- Step 6: Prepare data for creating the UserOrder record and save ---
-    unique_order_id = str(uuid.uuid4())
-    order_status = "OPEN"
-
+    # Step 5: Create order record
+    from app.schemas.order import OrderCreateInternal
     order_data_internal = OrderCreateInternal(
-        order_id=unique_order_id, # Generate new UUID for the order being placed
-        order_status=order_status,
+        order_id=order_request.order_id,
+        order_status="OPEN",
         order_user_id=user.id,
         order_company_name=order_symbol,
         order_type=new_order_type,
         order_price=adjusted_order_price,
         order_quantity=new_order_quantity,
         contract_value=contract_value,
-        margin=full_calculated_margin_usd, # Store the FULL, non-hedged margin
+        margin=full_margin_usd,
+        commission=commission,
         stop_loss=order_request.stop_loss,
-        take_profit=order_request.take_profit,
-        net_profit=None, close_price=None, swap=None, commission=None, cancel_message=None, close_message=None, status=1
+        take_profit=order_request.take_profit
     )
 
-    new_db_order = UserOrder(**order_data_internal.model_dump())
-    db.add(new_db_order)
+    new_order = await crud_order.create_user_order(db=db, order_data=order_data_internal.dict())
 
-    try:
-        await db.commit()
-        await db.refresh(db_user_locked)
-        await db.refresh(new_db_order)
+    await db.commit()
+    await db.refresh(new_order)
 
-        logger.info(f"Order {new_db_order.order_id} placed successfully for user ID {user.id}. Full order margin: {full_calculated_margin_usd} USD. User overall margin updated to {db_user_locked.margin}.")
-
-        return new_db_order
-
-    except Exception as e:
-        await db.rollback()
-        logger.error(f"Database error during order placement commit for user ID {user.id}: {e}", exc_info=True)
-        raise OrderProcessingError("Database error during order placement.")
+    return new_order
