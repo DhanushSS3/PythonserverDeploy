@@ -6,37 +6,40 @@ from redis.asyncio import Redis
 import logging
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, Any, List, Dict
-import uuid # Import uuid for generating transaction IDs
-import datetime # Import datetime for transaction time
+import uuid
+import datetime
 from pydantic import BaseModel, Field
-
+import json # Import json for publishing
 
 from app.database.session import get_db
 from app.dependencies.redis_client import get_redis_client
-# Import Wallet model
 from app.database.models import User, UserOrder, ExternalSymbolInfo, Wallet
-# Import WalletCreate schema
 from app.schemas.order import OrderPlacementRequest, OrderResponse, CloseOrderRequest
 from app.schemas.user import StatusResponse
-from app.schemas.wallet import WalletCreate # Import WalletCreate schema
+from app.schemas.wallet import WalletCreate
 
 from app.services.order_processing import (
     process_new_order,
     OrderProcessingError,
     InsufficientFundsError,
-    calculate_total_symbol_margin_contribution # Corrected import location
+    calculate_total_symbol_margin_contribution
 )
 from app.services.portfolio_calculator import _convert_to_usd
-# Removed the incorrect import from margin_calculator
-# from app.services.margin_calculator import calculate_total_symbol_margin_contribution # Ensure this is imported
 
 from app.crud import crud_order
 from app.crud import user as crud_user
 
 from sqlalchemy.future import select
-from app.core.cache import get_adjusted_market_price_cache, get_group_symbol_settings_cache
+from app.core.cache import (
+    get_adjusted_market_price_cache,
+    get_group_symbol_settings_cache,
+    set_user_data_cache, # Import for cache update
+    set_user_portfolio_cache, # Import for cache update
+    DecimalEncoder # Import for JSON serialization
+)
 
-from app.core.security import get_current_user # Ensure get_current_user is imported
+from app.core.security import get_current_user
+from app.api.v1.endpoints.market_data_ws import REDIS_MARKET_DATA_CHANNEL # Import the channel name
 
 
 logger = logging.getLogger(__name__)
@@ -46,10 +49,6 @@ router = APIRouter(
     tags=["orders"]
 )
 
-# CloseOrderRequest schema is now defined in app.schemas.order
-
-
-# Endpoint to place a new order (kept as is)
 @router.post(
     "/",
     response_model=OrderResponse,
@@ -79,11 +78,66 @@ async def place_order(
         new_db_order = await process_new_order(
             db=db,
             redis_client=redis_client,
-            user=current_user, # Pass the current_user object
+            user=current_user,
             order_request=order_request
         )
 
         logger.info(f"Order {new_db_order.order_id} successfully processed by service.")
+
+        # --- START: New logic for WebSocket responsiveness ---
+
+        # Refresh the user object to get the latest balance and margin after order processing
+        await db.refresh(current_user)
+
+        # 1. Update user_data in Redis cache
+        # This includes wallet_balance, leverage, and overall margin
+        user_data_to_cache = {
+            "id": current_user.id,
+            "group_name": getattr(current_user, 'group_name', 'default'),
+            "leverage": current_user.leverage,
+            "wallet_balance": current_user.wallet_balance,
+            "margin": current_user.margin
+        }
+        await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
+        logger.debug(f"Updated user data cache for user {current_user.id} after order placement.")
+
+        # 2. Fetch all current open positions for this user (including the new one)
+        open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, current_user.id)
+        updated_positions_data = []
+        for pos in open_positions_orm:
+            pos_dict = {}
+            for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']:
+                value = getattr(pos, attr, None)
+                if isinstance(value, Decimal):
+                    pos_dict[attr] = str(value) # Store Decimal as string for JSON safety
+                else:
+                    pos_dict[attr] = value
+            pos_dict['profit_loss'] = "0.0" # Placeholder, will be calculated by broadcaster
+            updated_positions_data.append(pos_dict)
+
+        # 3. Update user_portfolio in Redis cache
+        # This includes balance, overall margin, and the latest list of positions
+        user_portfolio_data = {
+            "balance": str(current_user.wallet_balance),
+            "equity": "0.0", # Will be recalculated by broadcaster
+            "margin": str(current_user.margin), # Overall user margin
+            "free_margin": "0.0", # Will be recalculated by broadcaster
+            "profit_loss": "0.0", # Will be recalculated by broadcaster (total PnL)
+            "positions": updated_positions_data
+        }
+        await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
+        logger.debug(f"Updated user portfolio cache for user {current_user.id} after order placement.")
+
+        # 4. Signal the broadcaster to send account updates for this specific user
+        # Publish a message to the market data channel, but with a special type.
+        account_update_signal = {
+            "type": "account_update_signal", # New message type
+            "user_id": current_user.id
+        }
+        await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps(account_update_signal))
+        logger.info(f"Published account update signal for user {current_user.id} after order placement.")
+
+        # --- END: New logic for WebSocket responsiveness ---
 
         return OrderResponse.model_validate(new_db_order)
 
@@ -105,7 +159,6 @@ async def place_order(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred."
         )
-
 
 # Endpoint to get order by ID (kept as is)
 @router.get("/{order_id}", response_model=OrderResponse)
@@ -157,6 +210,59 @@ async def read_user_closed_orders(
     return [OrderResponse.model_validate(order) for order in closed_orders[skip:skip+limit]]
 
 
+# app/api/v1/endpoints/orders.py
+
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
+import logging
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Optional, Any, List, Dict
+import uuid
+import datetime
+from pydantic import BaseModel, Field
+import json # Import json for publishing
+
+
+from app.database.session import get_db
+from app.dependencies.redis_client import get_redis_client
+# Import Wallet model
+from app.database.models import User, UserOrder, ExternalSymbolInfo, Wallet
+# Import WalletCreate schema
+from app.schemas.order import OrderPlacementRequest, OrderResponse, CloseOrderRequest
+from app.schemas.user import StatusResponse
+from app.schemas.wallet import WalletCreate # Import WalletCreate schema
+
+from app.services.order_processing import (
+    process_new_order,
+    OrderProcessingError,
+    InsufficientFundsError,
+    calculate_total_symbol_margin_contribution
+)
+from app.services.portfolio_calculator import _convert_to_usd
+
+from app.crud import crud_order
+from app.crud import user as crud_user
+
+from sqlalchemy.future import select
+from app.core.cache import (
+    get_adjusted_market_price_cache,
+    get_group_symbol_settings_cache,
+    set_user_data_cache, # Import for cache update
+    set_user_portfolio_cache, # Import for cache update
+    DecimalEncoder # Import for JSON serialization
+)
+
+from app.core.security import get_current_user
+from app.api.v1.endpoints.market_data_ws import REDIS_MARKET_DATA_CHANNEL # Import the channel name
+
+
+logger = logging.getLogger(__name__)
+
+
+# CloseOrderRequest schema is now defined in app.schemas.order
+
+
 @router.post(
     "/close",
     response_model=OrderResponse,
@@ -171,7 +277,6 @@ async def close_order(
 ):
     from app.core.cache import get_group_symbol_settings_cache, get_adjusted_market_price_cache
     from app.services.portfolio_calculator import _convert_to_usd
-    # Corrected import location for calculate_total_symbol_margin_contribution
     from app.services.order_processing import calculate_total_symbol_margin_contribution
 
     order_id = close_request.order_id
@@ -192,7 +297,6 @@ async def close_order(
     quantity = Decimal(str(db_order.order_quantity))
     entry_price = Decimal(str(db_order.order_price))
     order_type = db_order.order_type.upper()
-    # Correctly get user_group_name here
     user_group_name = getattr(current_user, 'group_name', 'default')
 
     # 2. Lock user record
@@ -223,7 +327,6 @@ async def close_order(
         symbol=order_symbol,
         open_positions_for_symbol=remaining_orders
     )
-    # Apply quantization to the final margin value
     db_user_locked.margin = max(Decimal(0), (non_symbol_margin + margin_after).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
@@ -240,8 +343,6 @@ async def close_order(
     group_settings = await get_group_symbol_settings_cache(redis_client, user_group_name, order_symbol)
     if not group_settings:
         logger.error(f"Group settings not found for group '{user_group_name}', symbol '{order_symbol}'. Cannot calculate commission.")
-        # Even if settings are missing, we might proceed without commission or raise an error.
-        # Raising an error here to prevent unexpected behavior if commission is critical.
         raise HTTPException(status_code=500, detail="Group settings not found for commission calculation.")
 
     commission_type = int(group_settings.get('commision_type', 0))
@@ -261,12 +362,10 @@ async def close_order(
         if commission_value_type == 0: # Per lot
             exit_commission = quantity * commission_rate
         elif commission_value_type == 1: # Percent
-            # Re-calculate contract_value based on close price for exit commission
             calculated_exit_contract_value = quantity * contract_size * close_price
-            # Ensure calculated_exit_contract_value is not zero before division
             if calculated_exit_contract_value <= Decimal("0.0"):
                  logger.warning(f"Calculated exit contract value is zero or negative ({calculated_exit_contract_value}) for order {order_id}. Cannot calculate percentage exit commission.")
-                 exit_commission = Decimal("0.0") # Set exit commission to zero if calculation is impossible
+                 exit_commission = Decimal("0.0")
             else:
                  exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
 
@@ -281,18 +380,12 @@ async def close_order(
     else:
         raise HTTPException(status_code=500, detail="Invalid order type.")
 
-    # 7. Convert profit to USD - Corrected section
-    # The _convert_to_usd function in portfolio_calculator.py expects a dictionary
-    # containing all potentially relevant conversion rates.
-    # It tries both direct (PROFIT_CURR_USD) and indirect (USD_PROFIT_CURR) pairs.
-
+    # 7. Convert profit to USD
     adjusted_market_prices_for_conversion: Dict[str, Dict[str, float]] = {}
 
-    # Define the two possible conversion symbols
-    direct_pair = f"{profit_currency}USD"  # e.g., AUDUSD
-    indirect_pair = f"USD{profit_currency}"  # e.g., USDCAD
+    direct_pair = f"{profit_currency}USD"
+    indirect_pair = f"USD{profit_currency}"
 
-    # Fetch data for the direct pair, passing all required arguments
     direct_pair_data = await get_adjusted_market_price_cache(redis_client, user_group_name, direct_pair)
     if direct_pair_data:
         adjusted_market_prices_for_conversion[direct_pair] = {
@@ -303,7 +396,6 @@ async def close_order(
     else:
         logger.warning(f"No cached adjusted market price found for direct conversion pair: {direct_pair} for group {user_group_name}.")
 
-    # Fetch data for the indirect pair, passing all required arguments
     indirect_pair_data = await get_adjusted_market_price_cache(redis_client, user_group_name, indirect_pair)
     if indirect_pair_data:
         adjusted_market_prices_for_conversion[indirect_pair] = {
@@ -314,19 +406,14 @@ async def close_order(
     else:
         logger.warning(f"No cached adjusted market price found for indirect conversion pair: {indirect_pair} for group {user_group_name}.")
 
-    # Check if any conversion data was found at all if profit currency is not USD
     if not adjusted_market_prices_for_conversion and profit_currency != "USD":
         logger.error(f"Could not find any conversion rates for profit currency {profit_currency} to USD for group {user_group_name}. Cannot convert PnL.")
-        # Decide whether to raise an error or proceed with 0 PnL/Commission
-        # Raising an error is safer to indicate a data issue
         raise HTTPException(status_code=500, detail=f"No conversion rates found for {profit_currency} to USD.")
 
-
-    # Perform the PnL conversion using the fetched market prices
     profit_usd = await _convert_to_usd(
         amount=profit,
         from_currency=profit_currency,
-        adjusted_market_prices=adjusted_market_prices_for_conversion, # Pass the dictionary
+        adjusted_market_prices=adjusted_market_prices_for_conversion,
         user_id=current_user.id,
         position_id=db_order.order_id,
         value_description="PnL"
@@ -335,69 +422,48 @@ async def close_order(
     # 8. Final updates to order and user balance
     db_order.order_status = "CLOSED"
     db_order.close_price = close_price
-    # Quantize net_profit to 2 decimal places for storing in the order record
     db_order.net_profit = profit_usd.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    db_order.swap = db_order.swap or Decimal("0.0") # Ensure swap is Decimal
-    db_order.commission = total_commission # total_commission is already quantized
+    db_order.swap = db_order.swap or Decimal("0.0")
+    db_order.commission = total_commission
 
-    # Update user's wallet balance with net profit/loss and commission
-    # Ensure all Decimal operations are performed correctly and the final balance is quantized
     db_user_locked.wallet_balance = (
-        Decimal(str(db_user_locked.wallet_balance)) + db_order.net_profit - db_order.commission # Use quantized net_profit and total_commission
+        Decimal(str(db_user_locked.wallet_balance)) + db_order.net_profit - db_order.commission
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
     # 9. Create Wallet Transaction Records
-
-    # Record for Net Profit/Loss
-    # Only create if there is a non-zero profit or loss
     if db_order.net_profit is not None and db_order.net_profit != Decimal("0.0"):
         profit_loss_wallet_entry_data = WalletCreate(
             user_id=current_user.id,
             symbol=order_symbol,
-            order_quantity=quantity, # Include quantity for context
+            order_quantity=quantity,
             transaction_type="Profit/Loss",
-            is_approved=1, # Automatically approved transaction
-            order_type=order_type, # Include order type for context
-            transaction_amount=db_order.net_profit, # Can be positive or negative
+            is_approved=1,
+            order_type=order_type,
+            transaction_amount=db_order.net_profit,
             description=f"P/L for closing order {db_order.order_id}",
-            # transaction_id is required by the model, will be set below explicitly
-            # transaction_id=str(uuid.uuid4()) # Removed from here
-            # transaction_time will likely be set by the database default
         )
-        # Create the Wallet model instance from Pydantic data
-        # Use model_dump() for Pydantic V2+
         wallet_profit_loss = Wallet(**profit_loss_wallet_entry_data.model_dump())
-        # Explicitly set the transaction_id on the SQLAlchemy model instance
         wallet_profit_loss.transaction_id = str(uuid.uuid4())
         db.add(wallet_profit_loss)
         logger.info(f"Prepared Wallet record for Profit/Loss for order {db_order.order_id}, amount {db_order.net_profit}, transaction_id {wallet_profit_loss.transaction_id}.")
 
 
-    # Record for Commission
-    # Only create if there is a positive commission
     if db_order.commission is not None and db_order.commission > Decimal("0.0"):
          commission_wallet_entry_data = WalletCreate(
             user_id=current_user.id,
             symbol=order_symbol,
-            order_quantity=quantity, # Include quantity for context
+            order_quantity=quantity,
             transaction_type="Commission",
-            is_approved=1, # Automatically approved transaction
-            order_type=order_type, # Include order type for context
-            transaction_amount=-db_order.commission, # Commission is a deduction, store as negative
+            is_approved=1,
+            order_type=order_type,
+            transaction_amount=-db_order.commission,
             description=f"Commission for closing order {db_order.order_id}",
-            # transaction_id is required by the model, will be set below explicitly
-            # transaction_id=str(uuid.uuid4()) # Removed from here
-            # transaction_time will likely be set by the database default
         )
-         # Create the Wallet model instance from Pydantic data
-         # Use model_dump() for Pydantic V2+
          wallet_commission = Wallet(**commission_wallet_entry_data.model_dump())
-         # Explicitly set the transaction_id on the SQLAlchemy model instance
          wallet_commission.transaction_id = str(uuid.uuid4())
          db.add(wallet_commission)
          logger.info(f"Prepared Wallet record for Commission for order {db_order.order_id}, amount {db_order.commission}, transaction_id {wallet_commission.transaction_id}.")
-
 
     # Commit the transaction (order update, user balance update, and new wallet records)
     await db.commit()
@@ -406,9 +472,56 @@ async def close_order(
     await db.refresh(db_order)
     await db.refresh(db_user_locked)
 
-    # Wallet records are committed, but no need to refresh them here unless they were needed later in this function.
-
     logger.info(f"Order {db_order.order_id} closed successfully for user {current_user.id}. Wallet balance updated to {db_user_locked.wallet_balance}.")
+
+    # --- START: New logic for WebSocket responsiveness ---
+
+    # 1. Update user_data in Redis cache with the latest balance and margin
+    user_data_to_cache = {
+        "id": db_user_locked.id,
+        "group_name": getattr(db_user_locked, 'group_name', 'default'),
+        "leverage": db_user_locked.leverage,
+        "wallet_balance": db_user_locked.wallet_balance,
+        "margin": db_user_locked.margin
+    }
+    await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
+    logger.debug(f"Updated user data cache for user {db_user_locked.id} after order closing.")
+
+    # 2. Fetch all current open positions for this user (excluding the one just closed)
+    open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, db_user_locked.id)
+    updated_positions_data = []
+    for pos in open_positions_orm:
+         pos_dict = {}
+         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']:
+              value = getattr(pos, attr, None)
+              if isinstance(value, Decimal):
+                   pos_dict[attr] = str(value) # Store Decimal as string for JSON safety
+              else:
+                   pos_dict[attr] = value
+         pos_dict['profit_loss'] = "0.0" # Placeholder, will be calculated by broadcaster
+         updated_positions_data.append(pos_dict)
+
+    # 3. Update user_portfolio in Redis cache
+    user_portfolio_data = {
+         "balance": str(db_user_locked.wallet_balance),
+         "equity": "0.0", # Will be recalculated by broadcaster
+         "margin": str(db_user_locked.margin), # Overall user margin
+         "free_margin": "0.0", # Will be recalculated by broadcaster
+         "profit_loss": "0.0", # Will be recalculated by broadcaster (total PnL)
+         "positions": updated_positions_data
+    }
+    await set_user_portfolio_cache(redis_client, db_user_locked.id, user_portfolio_data)
+    logger.debug(f"Updated user portfolio cache for user {db_user_locked.id} after order closing.")
+
+    # 4. Signal the broadcaster to send account updates for this specific user
+    account_update_signal = {
+        "type": "account_update_signal", # New message type
+        "user_id": db_user_locked.id
+    }
+    await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps(account_update_signal))
+    logger.info(f"Published account update signal for user {db_user_locked.id} after order closing.")
+
+    # --- END: New logic for WebSocket responsiveness ---
 
     return OrderResponse.model_validate(db_order)
 

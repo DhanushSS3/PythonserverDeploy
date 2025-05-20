@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Data WebSocket Viewer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .input-group input[type="text"] { width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; }
+        .input-group button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        .input-group button:hover { background-color: #0056b3; }
+        .status { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .status.connected { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .data-section { display: flex; gap: 20px; margin-top: 20px; }
+        .data-box { flex: 1; background-color: #e9ecef; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+        .market-data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .market-data-table th, .market-data-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .market-data-table th { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Market Data WebSocket Viewer</h1>
+
+        <div class="input-group">
+            <label for="websocketUrl">WebSocket URL:</label>
+            <input type="text" id="websocketUrl" value="ws://localhost:8000/api/v1/ws/market-data">
+        </div>
+        <div class="input-group">
+            <label for="token">JWT Token:</label>
+            <input type="text" id="token" placeholder="Enter your JWT token here...">
+            <button onclick="connectWebSocket()">Connect</button>
+            <button onclick="disconnectWebSocket()" style="background-color: #dc3545;">Disconnect</button>
+        </div>
+        <div id="connectionStatus" class="status disconnected">Disconnected</div>
+
+        <div class="data-section">
+            <div class="data-box">
+                <h2>Market Data</h2>
+                <table id="marketDataTable" class="market-data-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Buy</th>
+                            <th>Sell</th>
+                            <th>Spread</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+            <div class="data-box">
+                <h2>Account Data</h2>
+                <pre id="accountDataJson">Waiting for data...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        const websocketUrlInput = document.getElementById('websocketUrl');
+        const tokenInput = document.getElementById('token');
+        const connectionStatusDiv = document.getElementById('connectionStatus');
+        const marketDataTableBody = document.querySelector('#marketDataTable tbody');
+        const accountDataJsonPre = document.getElementById('accountDataJson');
+
+        // Define the desired order of symbols
+        const orderedSymbols = [
+            "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDSGD", "AUDUSD",
+            "AUS200", "BTCUSD", "CADCHF", "CADJPY", "CHFJPY", "CHFSGD",
+            "CN50", "UD30", "DE30", "EURCAD", "EURCHF", "EURCZK", "EURGBP",
+            "EURJPY", "EURNOK", "EURNZD", "EURPLN", "EURSEK", "EURSGD",
+            "EURTRY", "EURUSD", "EURZAR", "FR40", "GBPAUD", "GBPCAD",
+            "GBPCHF", "GBPJPY", "GBPNOK", "GBPNZD", "GBPSEK", "GBPSGD",
+            "GBPTRY", "GBPUSD", "GER30-1", "HKG50", "IND50", "JP225",
+            "NGas", "NOKJPY", "NOKSEK", "NZDCAD", "NZDCHF", "NZDJPY",
+            "NZDUSD", "SEKJPY", "SGDJPY", "UK100", "UKOil", "US100",
+            "US2000", "US2000-1", "US30", "US500", "USDCAD", "USDCHF",
+            "USDCNH", "USDCZK", "USDJPY", "USDMXN", "USDNOK", "USDPLN",
+            "USDSEK", "USDSGD", "USDTHB", "USDTRY", "USDTUSD", "USDZAR",
+            "USOil", "W20", "XAGUSD", "XAUUSD", "ZARJPY"
+        ];
+
+        function connectWebSocket() {
+            const baseUrl = websocketUrlInput.value;
+            const token = tokenInput.value;
+
+            if (!token) {
+                alert("Please enter a JWT token.");
+                return;
+            }
+
+            const fullWsUrl = `${baseUrl}?token=${token}`;
+
+            if (ws) {
+                ws.close();
+            }
+
+            ws = new WebSocket(fullWsUrl);
+
+            ws.onopen = (event) => {
+                console.log("WebSocket Connected:", event);
+                connectionStatusDiv.textContent = "Connected";
+                connectionStatusDiv.className = "status connected";
+                marketDataTableBody.innerHTML = '<tr><td colspan="4">Connected, waiting for market data...</td></tr>';
+                accountDataJsonPre.textContent = "Connected, waiting for account data...";
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log("Received data:", data);
+
+                if (data.type === "market_data_update") {
+                    if (data.market_data) {
+                        updateMarketDataDisplay(data.market_data);
+                    }
+                    if (data.account_data) {
+                        accountDataJsonPre.textContent = JSON.stringify(data.account_data, null, 2);
+                    }
+                }
+            };
+
+            ws.onclose = (event) => {
+                console.log("WebSocket Disconnected:", event);
+                connectionStatusDiv.textContent = `Disconnected (Code: ${event.code}, Reason: ${event.reason || 'N/A'})`;
+                connectionStatusDiv.className = "status disconnected";
+                marketDataTableBody.innerHTML = '<tr><td colspan="4">Disconnected.</td></tr>';
+                accountDataJsonPre.textContent = "Disconnected.";
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+                connectionStatusDiv.textContent = "Error occurred, check console.";
+                connectionStatusDiv.className = "status disconnected";
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        function updateMarketDataDisplay(marketData) {
+            let tableRowsHtml = '';
+            orderedSymbols.forEach(symbol => {
+                const symbolData = marketData[symbol];
+                if (symbolData) {
+                    const buy = symbolData.buy !== undefined ? symbolData.buy.toFixed(5) : 'N/A';
+                    const sell = symbolData.sell !== undefined ? symbolData.sell.toFixed(5) : 'N/A';
+                    // Check for spread_value first, then calculate if needed
+                    const spread = symbolData.spread_value !== undefined ? symbolData.spread_value.toFixed(5) :
+                                   (symbolData.buy !== undefined && symbolData.sell !== undefined ? (symbolData.buy - symbolData.sell).toFixed(5) : 'N/A');
+
+                    tableRowsHtml += `
+                        <tr>
+                            <td>${symbol}</td>
+                            <td>${buy}</td>
+                            <td>${sell}</td>
+                            <td>${spread}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            if (tableRowsHtml === '') {
+                marketDataTableBody.innerHTML = '<tr><td colspan="4">No relevant market data received yet for specified symbols.</td></tr>';
+            } else {
+                marketDataTableBody.innerHTML = tableRowsHtml;
+            }
+        }
+    </script>
+</body>
+</html>
