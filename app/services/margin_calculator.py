@@ -400,20 +400,17 @@ async def calculate_base_margin_per_lot(
 
 # app/services/margin_calculator.py
 
-import asyncio
-import json
+import asyncio # Added if not present
+import json # Added if not present
 import logging
-import threading
+import threading # Added if not present
 import decimal # Import decimal
-import time # Import time for timestamping
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation # Import InvalidOperation
-
-from firebase_admin import db
-from firebase_admin.db import Event
+import time # Import time for timestamping # Added if not present
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload # Added if not present
 from redis.asyncio import Redis
 from typing import Optional, Tuple, Dict, Any
 
@@ -423,299 +420,205 @@ from app.core.cache import (
     set_user_data_cache,
     get_group_symbol_settings_cache,
     set_group_symbol_settings_cache,
-    DecimalEncoder,
-    decode_decimal,
-    get_adjusted_market_price_cache
+    DecimalEncoder, # Added if not present
+    decode_decimal, # Added if not present
+    get_adjusted_market_price_cache # Added if not present
 )
-from app.firebase_stream import get_latest_market_data
+from app.firebase_stream import get_latest_market_data # Added if not present
+
+# Import the refactored _convert_to_usd that uses raw prices
+from app.services.portfolio_calculator import _convert_to_usd as convert_currency_to_usd_raw_prices
+
 
 logger = logging.getLogger(__name__)
 
-# ... (Keep existing helper functions get_live_adjusted_buy_price_for_pair and get_live_adjusted_sell_price_for_pair) ...
-
+# Keep existing helper functions like get_live_adjusted_buy_price_for_pair, etc., if they are used elsewhere
+# For this function, currency conversion will use convert_currency_to_usd_raw_prices
 
 async def calculate_single_order_margin(
     db: AsyncSession,
     redis_client: Redis,
     user_id: int,
     order_quantity: Decimal,
-    order_price: Decimal, # Original price from user or market
+    order_price: Decimal, # For market orders, this is current market. For pending, this is the limit/stop price.
     symbol: str,
-    order_type: str, # "BUY" or "SELL"
+    order_type: str, # e.g., "BUY", "SELL", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"
 ) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[Decimal]]:
     """
-    Calculates the margin, adjusted price, and contract value for a single order,
-    calculating margin in the symbol's profit currency and converting to USD.
-
-    Returns:
-        A tuple: (calculated_margin_usd, adjusted_order_price, contract_value_for_order)
-        Returns (None, None, None) if calculation fails at any critical step.
+    Calculates the margin, adjusted price (or target price for pending), and contract value for an order.
+    Uses the order_price directly for pending orders when determining the price basis for margin.
+    Converts margin to USD using raw market rates.
     """
     try:
-        # 1. Fetch User data (leverage, group_name) - Try cache first, fallback to DB
+        # Step 1: Fetch User data (leverage, group_name)
         user_data_from_cache = await get_user_data_cache(redis_client, user_id)
         user_leverage: Optional[Decimal] = None
         user_group_name: Optional[str] = None
 
         if user_data_from_cache:
-            logger.debug(f"User data found in cache for user_id {user_id}")
             cached_leverage_raw = user_data_from_cache.get('leverage')
-            cached_group_name = user_data_from_cache.get('group_name')
-
+            user_group_name = user_data_from_cache.get('group_name')
             if cached_leverage_raw is not None:
                 try:
                     user_leverage = Decimal(str(cached_leverage_raw))
-                    # Check if leverage is non-positive even if parsed
-                    if user_leverage <= 0:
-                         user_leverage = None # Treat non-positive leverage from cache as invalid
-                         logger.warning(f"Cached leverage for user {user_id} is zero or negative ({cached_leverage_raw}). Will fetch from DB.")
+                    if user_leverage <= 0: # Leverage must be positive
+                        logger.warning(f"User {user_id} cached leverage {user_leverage} is not positive. Will try DB.")
+                        user_leverage = None 
                 except (InvalidOperation, TypeError):
-                    logger.warning(f"Could not parse leverage '{cached_leverage_raw}' from cached user data for user {user_id}. Will fetch from DB.")
-
-            user_group_name = cached_group_name # Get group_name from cache
-
-        # Fallback to DB if leverage is missing/invalid or group_name is missing
+                    logger.warning(f"User {user_id} could not parse cached leverage '{cached_leverage_raw}'. Will try DB.")
+                    user_leverage = None
+        
         if user_leverage is None or user_group_name is None:
-             logger.debug(f"Leverage missing/invalid ({user_leverage}) or group_name missing ({user_group_name}) from cache for user_id {user_id}. Fetching user data from DB.")
+            logger.debug(f"Fetching user {user_id} data from DB for margin calculation.")
+            user_db = await db.get(User, user_id)
+            if not user_db:
+                logger.error(f"User not found in DB for ID: {user_id}")
+                return None, None, None
+            user_leverage = user_db.leverage
+            user_group_name = user_db.group_name
+            # Optionally re-cache user data here if fetched from DB
+            await set_user_data_cache(redis_client, user_id, {
+                 "id": user_id, "group_name": user_group_name, "leverage": str(user_leverage),
+                 "margin": str(user_db.margin), "wallet_balance": str(user_db.wallet_balance) # Add other relevant fields
+            })
 
-             user_db = await db.get(User, user_id)
-             if not user_db:
-                 logger.error(f"User not found in DB for ID: {user_id}")
-                 return None, None, None
-
-             user_leverage = user_db.leverage # Decimal directly from DB
-             user_group_name = user_db.group_name # String directly from DB
-
-             # Re-cache the user data from DB (ensure Decimal values are strings)
-             await set_user_data_cache(redis_client, user_id, {
-                 "id": user_id,
-                 "group_name": user_group_name,
-                 "leverage": str(user_leverage) if user_leverage is not None else None,
-                 "margin": str(user_db.margin) if user_db.margin is not None else None,
-                 "wallet_balance": str(user_db.wallet_balance) if user_db.wallet_balance is not None else None,
-                 "status": user_db.status,
-                 "isActive": user_db.isActive,
-                 "user_type": user_db.user_type,
-                 "account_number": user_db.account_number,
-             })
-             logger.debug(f"User data for {user_id} fetched from DB and re-cached.")
-        else:
-             logger.debug(f"User data (leverage={user_leverage}, group_name='{user_group_name}') used from cache for user_id {user_id}.")
-
-        # Final Check for required user data AFTER attempting fetch from cache/DB
         if user_leverage is None or user_leverage <= 0:
-             logger.error(f"Invalid, zero, or negative leverage ({user_leverage}) for user ID {user_id} after attempting fetch from cache/DB.")
-             return None, None, None
+            logger.error(f"Invalid leverage ({user_leverage}) for user ID {user_id}.")
+            return None, None, None
         if user_group_name is None:
-             logger.error(f"User {user_id} does not have an assigned group name after attempting fetch from cache/DB.")
-             return None, None, None
+            logger.error(f"User {user_id} does not have an assigned group name.")
+            return None, None, None
 
-
-        # 2. Fetch Group settings (spread, spread_pip) - Try cache first, fallback to DB
-        group_symbol_settings_cache_key = symbol.upper()
-        group_settings_from_cache = await get_group_symbol_settings_cache(redis_client, user_group_name, group_symbol_settings_cache_key)
-
+        # Step 2: Fetch Group settings (spread, spread_pip)
+        group_symbol_settings_from_cache = await get_group_symbol_settings_cache(redis_client, user_group_name, symbol.upper())
         spread: Optional[Decimal] = None
         spread_pip: Optional[Decimal] = None
 
-        if group_settings_from_cache and isinstance(group_settings_from_cache, dict):
-            logger.debug(f"Group settings for group '{user_group_name}', symbol '{symbol}' found in cache.")
-            cached_spread_raw = group_settings_from_cache.get('spread')
-            cached_spread_pip_raw = group_settings_from_cache.get('spread_pip')
-
-            if cached_spread_raw is not None and cached_spread_pip_raw is not None:
-                 try:
-                     spread = Decimal(str(cached_spread_raw))
-                     spread_pip = Decimal(str(cached_spread_pip_raw))
-                 except (InvalidOperation, TypeError) as e:
-                     logger.warning(f"Could not parse spread/spread_pip from cached group settings for {user_group_name}/{symbol}: {e}. Will fetch from DB.")
-                     spread = None # Reset to None to force DB fetch
-                     spread_pip = None # Reset to None to force DB fetch
-            else:
-                 logger.warning(f"Spread/Spread_pip missing in cached group settings for {user_group_name}/{symbol}. Data: {group_settings_from_cache}. Will fetch from DB.")
-
-        if spread is None or spread_pip is None: # Not successfully retrieved/parsed from cache
-            logger.debug(f"Group settings for '{user_group_name}/{symbol}' not in cache, cache parse failed, or missing fields. Fetching from DB.")
-            group_stmt = select(Group).filter_by(name=user_group_name, symbol=symbol)
+        if group_symbol_settings_from_cache:
+            # ... (parsing logic as in your uploaded file, ensure spread/spread_pip are Decimals or None)
+            raw_spread = group_symbol_settings_from_cache.get('spread')
+            raw_spread_pip = group_symbol_settings_from_cache.get('spread_pip')
+            try:
+                if raw_spread is not None: spread = Decimal(str(raw_spread))
+                if raw_spread_pip is not None: spread_pip = Decimal(str(raw_spread_pip))
+            except (InvalidOperation, TypeError):
+                 logger.warning(f"Could not parse spread/spread_pip from cache for {user_group_name}/{symbol}. Will try DB.")
+                 spread = spread_pip = None
+        
+        if spread is None or spread_pip is None: # Or if parsing failed
+            logger.debug(f"Fetching group settings for '{user_group_name}/{symbol}' from DB.")
+            group_stmt = select(Group).filter_by(name=user_group_name, symbol=symbol) # Assuming symbol in Group table is specific enough
             group_result = await db.execute(group_stmt)
             group_settings_db = group_result.scalars().first()
-
             if not group_settings_db:
-                logger.error(f"No group settings found in DB for group '{user_group_name}' and symbol '{symbol}'. Cannot calculate margin.")
+                logger.error(f"No group settings found in DB for group '{user_group_name}' and symbol '{symbol}'.")
                 return None, None, None
+            spread = group_settings_db.spread
+            spread_pip = group_settings_db.spread_pip
+            # Optionally re-cache here
+            await set_group_symbol_settings_cache(redis_client, user_group_name, symbol.upper(), {
+                "spread": str(spread), "spread_pip": str(spread_pip) # Add all other relevant group settings
+            })
 
-            spread = group_settings_db.spread # Decimal directly from DB
-            spread_pip = group_settings_db.spread_pip # Decimal directly from DB
+        if spread is None or spread < 0 or spread_pip is None or spread_pip < 0: # Allow zero, but not negative
+            logger.error(f"Invalid spread ({spread}) or spread_pip ({spread_pip}) for group '{user_group_name}', symbol '{symbol}'.")
+            return None, None, None
 
-            # Re-cache group settings from DB (ensure Decimal values are strings)
-            settings_to_cache = {
-                "spread": str(spread) if spread is not None else None,
-                "spread_pip": str(spread_pip) if spread_pip is not None else None,
-                "commision_type": group_settings_db.commision_type,
-                "commision_value_type": group_settings_db.commision_value_type,
-                "type": group_settings_db.type,
-                "pip_currency": group_settings_db.pip_currency,
-                "show_points": group_settings_db.show_points,
-                "swap_buy": str(group_settings_db.swap_buy) if group_settings_db.swap_buy is not None else None,
-                "swap_sell": str(group_settings_db.swap_sell) if group_settings_db.swap_sell is not None else None,
-                "commision": str(group_settings_db.commision) if group_settings_db.commision is not None else None,
-                "margin": str(group_settings_db.margin) if group_settings_db.margin is not None else None,
-                "deviation": str(group_settings_db.deviation) if group_settings_db.deviation is not None else None,
-                "min_lot": str(group_settings_db.min_lot) if group_settings_db.min_lot is not None else None,
-                "max_lot": str(group_settings_db.max_lot) if group_settings_db.max_lot is not None else None,
-                "pips": str(group_settings_db.pips) if group_settings_db.pips is not None else None,
-                 # spread_pip is already handled above
-            }
-            await set_group_symbol_settings_cache(redis_client, user_group_name, symbol.upper(), settings_to_cache)
-            logger.debug(f"Group settings for '{user_group_name}/{symbol}' fetched from DB and cached.")
-        else:
-             logger.debug(f"Group settings (spread={spread}, spread_pip={spread_pip}) used from cache for group '{user_group_name}', symbol '{symbol}'.")
-
-        # Final check for required group settings AFTER attempting fetch from cache/DB
-        # Allow zero, but not None or negative
-        if spread is None:
-             logger.error(f"Group setting 'spread' is missing (None) for group '{user_group_name}' and symbol '{symbol}'. Cannot calculate margin.")
-             return None, None, None
-        if spread < 0: # Changed from <= 0 to < 0
-             logger.error(f"Group setting 'spread' ({spread}) is negative for group '{user_group_name}' and symbol '{symbol}'. Cannot calculate margin.")
-             return None, None, None
-
-        if spread_pip is None:
-             logger.error(f"Group setting 'spread_pip' is missing (None) for group '{user_group_name}' and symbol '{symbol}'. Cannot calculate margin.")
-             return None, None, None
-        if spread_pip < 0: # Changed from <= 0 to < 0
-             logger.error(f"Group setting 'spread_pip' ({spread_pip}) is negative for group '{user_group_name}' and symbol '{symbol}'. Cannot calculate margin.")
-             return None, None, None
-
-
-        # 3. Fetch ExternalSymbolInfo (contract_size, profit_currency, digit) - From DB
-        # ... (Existing logic - This part seems correct) ...
+        # Step 3: Fetch ExternalSymbolInfo (contract_size, profit_currency, digit)
         symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(symbol))
         symbol_info_result = await db.execute(symbol_info_stmt)
         ext_symbol_info = symbol_info_result.scalars().first()
 
-        if not ext_symbol_info or not ext_symbol_info.contract_size or not ext_symbol_info.profit:
-            logger.error(f"ExternalSymbolInfo, contract_size, or profit currency not found/valid for symbol: {symbol}. Cannot calculate margin.")
+        if not ext_symbol_info or ext_symbol_info.contract_size is None or ext_symbol_info.profit is None or ext_symbol_info.contract_size <= 0:
+            logger.error(f"ExternalSymbolInfo, contract_size, or profit currency not found/valid for symbol: {symbol}.")
             return None, None, None
         contract_size = ext_symbol_info.contract_size
-        if contract_size is None or contract_size <= 0: # Contract size must be positive
-             logger.error(f"Contract size ({contract_size}) is missing, zero, or negative for symbol: {symbol}. Cannot calculate margin.")
-             return None, None, None
-
         profit_currency = ext_symbol_info.profit.upper()
-        symbol_digits = ext_symbol_info.digit # This can be None
+        symbol_digits = ext_symbol_info.digit
 
 
-        # 4. Calculate half_spread (Will be 0 if spread or spread_pip is 0)
-        spread_value = spread * spread_pip
-        half_spread = spread_value / Decimal(2)
-
-        # 5. Calculate contract_value for the order (Matches your description, uses original price)
-        if order_quantity <= 0:
-             logger.error(f"Order quantity ({order_quantity}) is zero or negative for symbol {symbol}. Cannot calculate margin.")
-             return None, None, None
-        if order_price is None or order_price <= 0: # Ensure order_price is not None and positive
-             logger.error(f"Order price ({order_price}) is missing, zero, or negative for symbol {symbol}. Cannot calculate margin.")
-             return None, None, None
-        contract_value_for_order = order_quantity * contract_size # Use the original order price
-
-
-        # 6. Adjust order_price based on order_type (Will be original price if half_spread is 0)
-        # This is the price stored with the order record.
+        # Step 4: Calculate adjusted_order_price and contract_value
+        half_spread = (spread * spread_pip) / Decimal(2)
         adjusted_order_price: Decimal
-        if order_type.upper() == "BUY":
-             adjusted_order_price = order_price + half_spread
-        elif order_type.upper() == "SELL":
-             adjusted_order_price = order_price - half_spread
+        order_type_upper = order_type.upper()
+
+        if order_type_upper == "BUY":
+            adjusted_order_price = order_price + half_spread
+        elif order_type_upper == "SELL":
+            adjusted_order_price = order_price - half_spread
+        elif order_type_upper in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]:
+            # For pending orders, the 'order_price' from the request is the target price.
+            # Margin is calculated based on this target price.
+            # Spreads are typically applied at the time of execution by the broker against the market feed,
+            # not by adjusting the user's specified limit/stop price itself for the pending order's margin.
+            adjusted_order_price = order_price 
+            logger.debug(f"Pending order type {order_type_upper}: using request order_price {order_price} as the basis for margin calculation price.")
         else:
-            logger.error(f"Invalid order_type: {order_type}. Cannot calculate margin.")
+            logger.error(f"Invalid order_type: {order_type} in calculate_single_order_margin")
             return None, None, None
-        logger.debug(f"Original Order Price: {order_price}, Calculated Half Spread: {half_spread}, Adjusted Order Price ({order_type}): {adjusted_order_price}")
 
-        # Add check for adjusted_order_price <= 0 if that's invalid after adjustment
-        # This check remains important even if half_spread is 0 if the original price was close to 0
-        if adjusted_order_price is None or adjusted_order_price <= 0:
-             logger.error(f"Adjusted order price ({adjusted_order_price}) is zero or negative for symbol {symbol}. Cannot calculate margin.")
+        if adjusted_order_price <= 0:
+            logger.error(f"Adjusted order price ({adjusted_order_price}) is not positive for symbol {symbol}, order_type {order_type}.")
+            return None, None, None
+
+        # Contract value (total units of base currency for the trade, as per your existing formula structure)
+        # This `contract_value_for_order` seems to represent total units (e.g. 1 lot * 100,000 units/lot = 100,000 units)
+        # The monetary value for margin calc is based on `order_price` from request.
+        contract_value_for_order = order_quantity * contract_size 
+
+        # Step 5: Calculate margin in the symbol's profit currency
+        # Margin calculation uses the `order_price` from the request (market price for market orders, limit/stop price for pending)
+        if order_price <= 0: # This is the price from the original request
+             logger.error(f"Request order price ({order_price}) is zero or negative for symbol {symbol}. Cannot calculate margin.")
              return None, None, None
-
-
-        # 7. Calculate margin in the symbol's profit currency (Matches your description, uses original price)
-        # Formula: (Quantity * Contract Size * Order Price) / Leverage
-        # Leverage, quantity, contract_size, order_price checks added above.
         margin_amount_in_profit_currency = (order_quantity * contract_size * order_price) / user_leverage
-        logger.debug(f"Calculated margin amount in profit currency ({profit_currency}): {margin_amount_in_profit_currency}")
+        logger.debug(f"MarginCalc: Margin in {profit_currency}: {margin_amount_in_profit_currency} for symbol {symbol}, order_type {order_type_upper}")
 
-
-        # 8. Convert margin to USD if profit_currency is not USD (Matches your description, uses live adjusted price)
+        # Step 6: Convert margin to USD using raw rates
         calculated_margin_usd: Decimal
         if profit_currency == "USD":
             calculated_margin_usd = margin_amount_in_profit_currency
-            logger.debug("Profit currency is USD, no conversion needed for margin.")
         else:
-            # ... (Existing conversion logic using get_live_adjusted_buy_price_for_pair) ...
-            conversion_pair_option1 = f"USD{profit_currency}"
-            conversion_pair_option2 = f"{profit_currency}USD"
-            live_buy_price_conversion_pair: Optional[Decimal] = None
-            is_usd_base = False
+            logger.debug(f"MarginCalc: Calling convert_currency_to_usd_raw_prices for margin. Amount: {margin_amount_in_profit_currency}, From: {profit_currency}")
+            calculated_margin_usd = await convert_currency_to_usd_raw_prices(
+                amount=margin_amount_in_profit_currency,
+                from_currency=profit_currency,
+                user_id=user_id,
+                position_id=f"margin_calc_for_{symbol}_{order_type_upper}",
+                value_description="Order Margin"
+            )
+            # Check if conversion failed (returned original amount for non-USD currency)
+            if calculated_margin_usd == margin_amount_in_profit_currency and profit_currency != "USD":
+                logger.error(f"MarginCalc: Critical failure to convert margin from {profit_currency} to USD for user {user_id}, symbol {symbol}, order {order_type_upper}. Raw rates likely missing.")
+                return None, None, None 
 
-            live_buy_price_conversion_pair = await get_live_adjusted_buy_price_for_pair(redis_client, conversion_pair_option1, user_group_name)
-            if live_buy_price_conversion_pair is not None and live_buy_price_conversion_pair > 0: # Check None and positive
-                is_usd_base = True
-                logger.debug(f"Found conversion pair {conversion_pair_option1} with price {live_buy_price_conversion_pair} for group '{user_group_name}'.")
-            else:
-                live_buy_price_conversion_pair = await get_live_adjusted_buy_price_for_pair(redis_client, conversion_pair_option2, user_group_name)
-                if not (live_buy_price_conversion_pair is not None and live_buy_price_conversion_pair > 0) : # Check None and positive
-                    logger.error(f"Could not find live ADJUSTED buy price for conversion pairs: {conversion_pair_option1} or {conversion_pair_option2} for group '{user_group_name}'. Cannot convert margin to USD.")
-                    return None, None, None
-                logger.debug(f"Found conversion pair {conversion_pair_option2} with price {live_buy_price_conversion_pair} for group '{user_group_name}'.")
+        if calculated_margin_usd <= Decimal("0.0"): # Margin must be positive
+            logger.error(f"MarginCalc: Calculated USD margin is not positive ({calculated_margin_usd}) for user {user_id}, symbol {symbol}, order {order_type_upper}.")
+            return None, None, None
 
-            if is_usd_base:
-                # Prevent division by zero if the price is somehow zero (though get_live_adjusted_buy_price_for_pair checks > 0)
-                if live_buy_price_conversion_pair <= 0:
-                    logger.error(f"Conversion price ({live_buy_price_conversion_pair}) for pair {conversion_pair_option1} is non-positive. Cannot convert margin to USD.")
-                    return None, None, None
-                calculated_margin_usd = margin_amount_in_profit_currency / live_buy_price_conversion_pair
-                logger.debug(f"Converting from {profit_currency} to USD using division by {conversion_pair_option1} price.")
-            else:
-                calculated_margin_usd = margin_amount_in_profit_currency * live_buy_price_conversion_pair
-                logger.debug(f"Converting from {profit_currency} to USD using multiplication by {conversion_pair_option2} price.")
+        # Step 7: Quantize results
+        price_precision_str = '1e-' + str(int(symbol_digits)) if symbol_digits is not None and symbol_digits >= 0 else '0.00001'
+        price_precision = Decimal(price_precision_str)
+        usd_precision = Decimal('0.01') # Margin in USD is typically 2 decimal places
 
-        # Add check for calculated_margin_usd <= 0 if that's invalid
-        if calculated_margin_usd is None or calculated_margin_usd <= 0: # Margin should ideally be positive for an open position
-             logger.error(f"Calculated USD margin ({calculated_margin_usd}) is missing, zero, or negative for user {user_id}, symbol {symbol}. Cannot calculate margin.")
-             return None, None, None
+        final_calculated_margin_usd = calculated_margin_usd.quantize(usd_precision, rounding=ROUND_HALF_UP)
+        # For pending orders, `adjusted_order_price` is the user's specified limit/stop price.
+        # For market orders, it's the execution price including spread.
+        final_adjusted_order_price = adjusted_order_price.quantize(price_precision, rounding=ROUND_HALF_UP)
+        # `contract_value_for_order` (total units)
+        final_contract_value_for_order = contract_value_for_order.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
 
 
-        # 9. Quantize results
-        # ... (Existing quantization logic) ...
-        if symbol_digits is not None and symbol_digits >= 0:
-            price_precision_str = '1e-' + str(int(symbol_digits))
-            price_precision = Decimal(price_precision_str)
-        else:
-            price_precision = Decimal('0.00001')
-            logger.warning(f"Symbol digits is missing or invalid for symbol {symbol}. Using default price precision {price_precision}.")
-
-        usd_precision = Decimal('0.00000001') # 8 decimal places for USD
-
-        calculated_margin_usd = calculated_margin_usd.quantize(usd_precision, rounding=ROUND_HALF_UP)
-        adjusted_order_price = adjusted_order_price.quantize(price_precision, rounding=ROUND_HALF_UP)
-        contract_value_precision = Decimal('0.00000001')
-        contract_value_for_order = contract_value_for_order.quantize(contract_value_precision, rounding=ROUND_HALF_UP)
-
-        # Final check for calculated values not being None - should be redundant with earlier checks but kept for safety
-        if calculated_margin_usd is None or adjusted_order_price is None or contract_value_for_order is None:
-             logger.error(f"Final calculated values are None after quantization for user {user_id}, symbol {symbol}. This indicates a calculation error.")
-             return None, None, None
-
-        logger.info(f"Margin calculated successfully for user {user_id}, symbol {symbol}, order_type {order_type}: "
-                    f"Margin_USD={calculated_margin_usd}, Adj_Price={adjusted_order_price}, Contract_Val={contract_value_for_order}, "
-                    f"User_Leverage={user_leverage}, User_Group='{user_group_name}', Spread_Val={spread_value}, Half_Spread={half_spread}, "
-                    f"Contract_Size={contract_size}, Profit_Currency={profit_currency}, Symbol_Digits={symbol_digits}")
-        return calculated_margin_usd, adjusted_order_price, contract_value_for_order
+        logger.info(
+            f"Margin calculated for user {user_id}, symbol {symbol}, order_type {order_type_upper}: "
+            f"Margin_USD={final_calculated_margin_usd}, PriceBasisForMargin={order_price}, "
+            f"AdjustedExecPrice/LimitPrice={final_adjusted_order_price}, Contract_Units={final_contract_value_for_order}"
+        )
+        return final_calculated_margin_usd, final_adjusted_order_price, final_contract_value_for_order
 
     except InvalidOperation as e:
-        logger.error(f"Decimal operation error during margin calculation for user {user_id}, symbol {symbol}: {e}", exc_info=True)
+        logger.error(f"Decimal operation error during margin calculation for user {user_id}, symbol {symbol}, order_type {order_type}: {e}", exc_info=True)
         return None, None, None
     except Exception as e:
-        logger.error(f"Unexpected error during margin calculation for user {user_id}, symbol {symbol}: {e}", exc_info=True)
+        logger.error(f"Unexpected error during margin calculation for user {user_id}, symbol {symbol}, order_type {order_type}: {e}", exc_info=True)
         return None, None, None

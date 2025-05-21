@@ -290,6 +290,11 @@ class UserOrder(Base):
     stop_loss = Column(SQLDecimal(18, 8), nullable=True) # Nullable Decimal
     take_profit = Column(SQLDecimal(18, 8), nullable=True) # Nullable Decimal
 
+    # --- NEW FIELDS FOR TP/SL ORDER IDs ---
+    takeprofit_id = Column(String(255), nullable=True)  # ID of the associated Take Profit order
+    stoploss_id = Column(String(255), nullable=True)    # ID of the associated Stop Loss order
+    # --- END NEW FIELDS ---
+
     # Message fields
     cancel_message = Column(String(255), nullable=True) # Nullable String
     close_message = Column(String(255), nullable=True) # Nullable String

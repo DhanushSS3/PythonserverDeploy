@@ -55,6 +55,10 @@ class OrderCreateInternal(BaseModel):
     close_message: Optional[str] = None
     status: Optional[int] = 1 # Assuming a default status, e.g., 1 for active/open
 
+    # New fields for Take Profit and Stop Loss Order IDs
+    takeprofit_id: Optional[str] = None
+    stoploss_id: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -79,4 +83,3 @@ class CloseOrderRequest(BaseModel):
 
     class Config:
         from_attributes = True
-

@@ -6,7 +6,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 import uuid
 
-from app.database.models import UserOrder, User
+from app.database.models import UserOrder, User #
 from app.schemas.order import OrderCreateInternal # Use OrderCreateInternal for creation input
 from app.core.config import get_settings # Import settings to potentially use cache expiry
 
@@ -25,7 +25,7 @@ async def create_user_order(db: AsyncSession, order_data: dict) -> UserOrder:
     After creation, it attempts to update the user's portfolio cache.
     """
 
-    db_order = UserOrder(**order_data)
+    db_order = UserOrder(**order_data) #
     db.add(db_order)
     await db.commit()
     await db.refresh(db_order)
@@ -46,7 +46,7 @@ async def get_order_by_id(db: AsyncSession, order_id: str) -> Optional[UserOrder
     Retrieves an order by its unique order_id.
     """
     result = await db.execute(
-        select(UserOrder).filter(UserOrder.order_id == order_id)
+        select(UserOrder).filter(UserOrder.order_id == order_id) #
     )
     return result.scalars().first()
 
@@ -57,8 +57,8 @@ async def get_orders_by_user_id(
     Retrieves all orders for a specific user with pagination.
     """
     result = await db.execute(
-        select(UserOrder)
-        .filter(UserOrder.order_user_id == user_id)
+        select(UserOrder) #
+        .filter(UserOrder.order_user_id == user_id) #
         .offset(skip)
         .limit(limit)
         .order_by(UserOrder.created_at.desc()) # Optional: order by creation time
@@ -74,9 +74,9 @@ async def get_all_open_orders_by_user_id(
     Used to get the list of positions for portfolio calculation.
     """
     result = await db.execute(
-        select(UserOrder)
+        select(UserOrder) #
         .filter(
-            UserOrder.order_user_id == user_id,
+            UserOrder.order_user_id == user_id, #
             UserOrder.order_status == 'OPEN' # Filter for only open orders
         )
         # No limit or offset needed here as we need all open positions for the user's portfolio
@@ -92,9 +92,9 @@ async def get_open_orders_by_user_id_and_symbol(
     This is used for hedging logic to find existing opposing positions efficiently.
     """
     result = await db.execute(
-        select(UserOrder)
+        select(UserOrder) #
         .filter(
-            UserOrder.order_user_id == user_id,
+            UserOrder.order_user_id == user_id, #
             UserOrder.order_company_name == symbol, # Assuming order_company_name stores the symbol
             UserOrder.order_status == 'OPEN' # Filter for only open orders
         )
@@ -110,7 +110,7 @@ async def get_all_orders(
     Retrieves all orders with pagination (admin use).
     """
     result = await db.execute(
-        select(UserOrder)
+        select(UserOrder) #
         .offset(skip)
         .limit(limit)
         .order_by(UserOrder.created_at.desc()) # Optional: order by creation time
@@ -125,15 +125,15 @@ async def update_order_status(db: AsyncSession, order_id: str, new_status: str, 
     """
     db_order = await get_order_by_id(db, order_id=order_id)
     if db_order:
-        db_order.order_status = new_status
+        db_order.order_status = new_status #
         if close_price is not None:
             # Ensure close_price is stored as Decimal if the model expects it
             from decimal import Decimal # Import Decimal locally if needed for conversion
-            db_order.close_price = Decimal(str(close_price)) if not isinstance(close_price, Decimal) else close_price
+            db_order.close_price = Decimal(str(close_price)) if not isinstance(close_price, Decimal) else close_price #
         if net_profit is not None:
             # Ensure net_profit is stored as Decimal
             from decimal import Decimal
-            db_order.net_profit = Decimal(str(net_profit)) if not isinstance(net_profit, Decimal) else net_profit
+            db_order.net_profit = Decimal(str(net_profit)) if not isinstance(net_profit, Decimal) else net_profit #
         # Add more fields to update as needed (e.g., close_message)
         await db.commit()
         await db.refresh(db_order)
