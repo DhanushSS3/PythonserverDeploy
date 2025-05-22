@@ -6,7 +6,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 import uuid
 from decimal import Decimal
-from app.database.models import UserOrder, User #
+from app.database.models import UserOrder, User # Ensure User is imported
 from app.schemas.order import OrderCreateInternal # Use OrderCreateInternal for creation input
 from app.core.config import get_settings # Import settings to potentially use cache expiry
 
@@ -180,3 +180,16 @@ async def update_tp_sl_for_order(
     await db.commit()
     await db.refresh(order)
     return order
+
+# --- NEW FUNCTION: Get all system-wide open orders ---
+async def get_all_system_open_orders(db: AsyncSession) -> List[UserOrder]:
+    """
+    Retrieves all orders with 'OPEN' status across all users.
+    Eager loads the related User object to access user.group_name efficiently.
+    """
+    result = await db.execute(
+        select(UserOrder)
+        .filter(UserOrder.order_status == 'OPEN')
+        .options(selectinload(UserOrder.user)) # Eager load the 'user' relationship
+    )
+    return result.scalars().all()

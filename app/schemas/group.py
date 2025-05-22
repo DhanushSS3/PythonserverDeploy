@@ -26,8 +26,8 @@ class GroupCreate(BaseModel):
     show_points: Optional[int] = Field(None, description="Show points setting (optional).")
 
     # Decimal fields (required as per model, with default values handled by the model)
-    swap_buy: Decimal = Field(..., max_digits=10, decimal_places=4, description="Swap buy value.") # Required
-    swap_sell: Decimal = Field(..., max_digits=10, decimal_places=4, description="Swap sell value.") # Required
+    swap_buy: Decimal = Field(..., max_digits=10, decimal_places=5, description="Swap buy value.") # Required
+    swap_sell: Decimal = Field(..., max_digits=10, decimal_places=5, description="Swap sell value.") # Required
     commision: Decimal = Field(..., max_digits=10, decimal_places=4, description="Commission value.") # Required
     margin: Decimal = Field(..., max_digits=10, decimal_places=4, description="Base margin value.") # Required
     spread: Decimal = Field(..., max_digits=10, decimal_places=4, description="Spread value.") # Required

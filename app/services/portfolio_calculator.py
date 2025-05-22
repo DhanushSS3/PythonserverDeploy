@@ -215,6 +215,8 @@ async def calculate_user_portfolio(
 
 
     equity = balance + total_pnl_usd
+
+    
     # The 'total_margin_used_usd' is the sum of margins of individual open positions.
     # For "hedged" margin display, if required at the account level, further logic might be needed
     # based on the overall portfolio, but individual position margins are summed up here.
