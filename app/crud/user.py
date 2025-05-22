@@ -277,3 +277,22 @@ async def get_user_margin_by_id(db: AsyncSession, user_id: int) -> Optional[Deci
     )
     # Use scalar_one_or_none() to get the single margin value or None
     return result.scalar_one_or_none()
+
+
+import random
+import string
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database.models import User
+
+async def generate_unique_account_number(db: AsyncSession) -> str:
+    """
+    Generate a unique 5-character alphanumeric account number.
+    Retries until a unique one is found (rare collisions).
+    """
+    while True:
+        account_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        existing = await db.execute(
+            select(User).filter(User.account_number == account_number)
+        )
+        if not existing.scalars().first():
+            return account_number

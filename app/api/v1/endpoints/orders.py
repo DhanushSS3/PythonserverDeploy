@@ -15,7 +15,7 @@ from app.dependencies.redis_client import get_redis_client
 # Import Wallet model
 from app.database.models import User, UserOrder, ExternalSymbolInfo, Wallet
 # Import WalletCreate schema
-from app.schemas.order import OrderPlacementRequest, OrderResponse, CloseOrderRequest
+from app.schemas.order import OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate # Import WalletCreate schema
 
@@ -106,32 +106,68 @@ async def place_order(
         await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
         logger.debug(f"Updated user data cache for user {current_user.id} after order placement.")
 
-        # 2. Fetch all current open positions for this user (including the new one)
+        # # 2. Fetch all current open positions for this user (including the new one)
+        # open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, current_user.id)
+        # updated_positions_data = []
+        # for pos in open_positions_orm:
+        #     pos_dict = {}
+        #     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']:
+        #         value = getattr(pos, attr, None)
+        #         if isinstance(value, Decimal):
+        #             pos_dict[attr] = str(value) # Store Decimal as string for JSON safety
+        #         else:
+        #             pos_dict[attr] = value
+        #     pos_dict['profit_loss'] = "0.0" # Placeholder, will be calculated by broadcaster
+        #     updated_positions_data.append(pos_dict)
+
+        # 2. Fetch all current open positions and pending positions
         open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, current_user.id)
-        updated_positions_data = []
-        for pos in open_positions_orm:
+        all_orders = await crud_order.get_orders_by_user_id(db, user_id=current_user.id)
+
+        updated_open_positions = []
+        updated_pending_positions = []
+        total_margin = Decimal("0.0")
+
+        for pos in all_orders:
             pos_dict = {}
             for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']:
                 value = getattr(pos, attr, None)
-                if isinstance(value, Decimal):
-                    pos_dict[attr] = str(value) # Store Decimal as string for JSON safety
-                else:
-                    pos_dict[attr] = value
-            pos_dict['profit_loss'] = "0.0" # Placeholder, will be calculated by broadcaster
-            updated_positions_data.append(pos_dict)
+                pos_dict[attr] = str(value) if isinstance(value, Decimal) else value
+            pos_dict['profit_loss'] = "0.0"
 
-        # 3. Update user_portfolio in Redis cache
-        # This includes balance, overall margin, and the latest list of positions
+            if pos.order_status == "OPEN":
+                updated_open_positions.append(pos_dict)
+            elif pos.order_status == "PENDING":
+                updated_pending_positions.append(pos_dict)
+
+            total_margin += Decimal(str(pos.margin or 0.0))
+
+        # 3. Update user_portfolio in Redis cache with separate pending_positions
         user_portfolio_data = {
             "balance": str(current_user.wallet_balance),
-            "equity": "0.0", # Will be recalculated by broadcaster
-            "margin": str(current_user.margin), # Overall user margin
-            "free_margin": "0.0", # Will be recalculated by broadcaster
-            "profit_loss": "0.0", # Will be recalculated by broadcaster (total PnL)
-            "positions": updated_positions_data
+            "equity": "0.0",
+            "margin": str(total_margin),
+            "free_margin": str(current_user.wallet_balance - total_margin),
+            "profit_loss": "0.0",
+            "positions": updated_open_positions,
+            "pending_positions": updated_pending_positions
         }
         await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
-        logger.debug(f"Updated user portfolio cache for user {current_user.id} after order placement.")
+        logger.debug(f"Updated user portfolio cache with pending orders for user {current_user.id} after order placement.")
+
+
+        # # 3. Update user_portfolio in Redis cache
+        # # This includes balance, overall margin, and the latest list of positions
+        # user_portfolio_data = {
+        #     "balance": str(current_user.wallet_balance),
+        #     "equity": "0.0", # Will be recalculated by broadcaster
+        #     "margin": str(current_user.margin), # Overall user margin
+        #     "free_margin": "0.0", # Will be recalculated by broadcaster
+        #     "profit_loss": "0.0", # Will be recalculated by broadcaster (total PnL)
+        #     "positions": updated_positions_data
+        # }
+        # await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
+        # logger.debug(f"Updated user portfolio cache for user {current_user.id} after order placement.")
 
         # 4. Signal the broadcaster to send account updates for this specific user
         # Publish a message to the market data channel, but with a special type.
@@ -604,3 +640,489 @@ async def close_order(
     # --- END: WebSocket responsiveness logic ---
 
     return OrderResponse.model_validate(db_order)
+
+# --- NEW Cancel Pending Order Endpoint ---
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
+import logging
+from decimal import Decimal, InvalidOperation
+from typing import Optional
+from pydantic import BaseModel
+
+from app.database.session import get_db
+from app.dependencies.redis_client import get_redis_client
+from app.database.models import User, UserOrder
+from app.schemas.user import StatusResponse
+from app.core.security import get_current_user
+from app.crud import crud_order, user as crud_user
+from app.services.order_processing import calculate_total_symbol_margin_contribution
+from app.api.v1.endpoints.market_data_ws import REDIS_MARKET_DATA_CHANNEL
+import json
+
+logger = logging.getLogger(__name__)
+
+class CancelOrderRequest(BaseModel):
+    order_id: str
+    cancel_message: Optional[str] = None
+
+@router.post(
+    "/cancel",
+    response_model=StatusResponse,
+    summary="Cancel a pending order",
+    description="Cancels a PENDING order, sets its status to 'CANCELED', updates margin accordingly."
+)
+async def cancel_pending_order(
+    cancel_request: CancelOrderRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User = Depends(get_current_user)
+):
+    order_id = cancel_request.order_id
+    cancel_message = cancel_request.cancel_message or "Cancelled by user"
+
+    db_order = await crud_order.get_order_by_id(db, order_id)
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if db_order.order_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized to cancel this order")
+    if db_order.order_status not in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]:
+        raise HTTPException(status_code=400, detail="Only pending orders (BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP) can be cancelled")
+
+    try:
+        async with db.begin_nested():
+            symbol = db_order.order_company_name
+            existing_orders = await crud_order.get_open_and_pending_orders_by_user_id_and_symbol(
+                db, current_user.id, symbol
+            )
+
+            margin_before = await calculate_total_symbol_margin_contribution(
+                db, redis_client, current_user.id, symbol, existing_orders
+            )
+
+            updated_orders = [o for o in existing_orders if o.order_id != order_id]
+            margin_after = await calculate_total_symbol_margin_contribution(
+                db, redis_client, current_user.id, symbol, updated_orders
+            )
+
+            margin_released = max(Decimal("0.0"), margin_before - margin_after)
+            logger.info(f"User {current_user.id}: Cancelled pending order {order_id}, margin released: {margin_released}")
+
+            db_user_locked = await crud_user.get_user_by_id_with_lock(db, current_user.id)
+            if db_user_locked.margin >= margin_released:
+                db_user_locked.margin -= margin_released
+            else:
+                db_user_locked.margin = Decimal("0.0")
+
+            db_order.order_status = "CANCELED"
+            db_order.cancel_message = cancel_message
+
+        # Update Redis cache
+        await db.refresh(db_user_locked)
+        user_data_to_cache = {
+            "id": current_user.id,
+            "group_name": db_user_locked.group_name,
+            "leverage": db_user_locked.leverage,
+            "wallet_balance": db_user_locked.wallet_balance,
+            "margin": db_user_locked.margin
+        }
+        await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
+
+        all_orders = await crud_order.get_orders_by_user_id(db, user_id=current_user.id)
+        open_positions = []
+        pending_positions = []
+        total_margin = Decimal("0.0")
+        for pos in all_orders:
+            pos_dict = {k: str(getattr(pos, k)) if isinstance(getattr(pos, k), Decimal) else getattr(pos, k)
+                        for k in ["order_id", "order_company_name", "order_type", "order_quantity",
+                                  "order_price", "margin", "contract_value", "stop_loss", "take_profit"]}
+            pos_dict["profit_loss"] = "0.0"
+            if pos.order_status == "OPEN":
+                open_positions.append(pos_dict)
+            elif pos.order_status in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]:
+                pending_positions.append(pos_dict)
+            total_margin += Decimal(str(pos.margin or 0.0)) if pos.order_status == "OPEN" or pos.order_status in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"] else Decimal("0.0")
+
+        user_portfolio_data = {
+            "balance": str(db_user_locked.wallet_balance),
+            "equity": "0.0",
+            "margin": str(total_margin),
+            "free_margin": str(db_user_locked.wallet_balance - total_margin),
+            "profit_loss": "0.0",
+            "positions": open_positions,
+            "pending_positions": pending_positions
+        }
+        await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
+
+        # Signal frontend
+        account_update_signal = {
+            "type": "account_update_signal",
+            "user_id": current_user.id
+        }
+        await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps(account_update_signal))
+
+        return StatusResponse(status="success", message="Pending order canceled successfully")
+
+    except Exception as e:
+        logger.error(f"Failed to cancel pending order {order_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error canceling the pending order")
+
+# --- Modify Pending Order Endpoint ---
+from app.schemas.user import StatusResponse
+
+class ModifyOrderRequest(BaseModel):
+    order_id: str
+    new_price: Decimal
+    new_quantity: Decimal
+
+@router.post(
+    "/modify",
+    response_model=StatusResponse,
+    summary="Modify a pending order",
+    description="Modifies a PENDING order (BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP), recalculates margin and updates user state."
+)
+async def modify_pending_order(
+    request: ModifyOrderRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User = Depends(get_current_user)
+):
+    db_order = await crud_order.get_order_by_id(db, request.order_id)
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if db_order.order_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    if db_order.order_status not in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]:
+        raise HTTPException(status_code=400, detail="Only pending orders can be modified")
+
+    try:
+        async with db.begin_nested():
+            symbol = db_order.order_company_name
+            existing_orders = await crud_order.get_open_and_pending_orders_by_user_id_and_symbol(db, current_user.id, symbol)
+
+            # Margin before update
+            margin_before = await calculate_total_symbol_margin_contribution(
+                db, redis_client, current_user.id, symbol, existing_orders
+            )
+
+            # Temporarily update order values for margin-after simulation
+            dummy_updated_order = UserOrder(
+                order_quantity=request.new_quantity,
+                order_type=db_order.order_type,
+                margin=Decimal("0.0")  # Will be replaced
+            )
+
+            # Recalculate margin and contract value
+            from app.services.margin_calculator import calculate_single_order_margin
+            margin_usd, adjusted_price, contract_value = await calculate_single_order_margin(
+                db=db,
+                redis_client=redis_client,
+                user_id=current_user.id,
+                order_quantity=request.new_quantity,
+                order_price=request.new_price,
+                symbol=symbol,
+                order_type=db_order.order_type
+            )
+
+            if margin_usd is None or adjusted_price is None or contract_value is None:
+                raise HTTPException(status_code=400, detail="Failed to recalculate margin or price")
+
+            dummy_updated_order.margin = margin_usd
+            updated_orders = [o if o.order_id != request.order_id else dummy_updated_order for o in existing_orders]
+
+            margin_after = await calculate_total_symbol_margin_contribution(
+                db, redis_client, current_user.id, symbol, updated_orders
+            )
+
+            delta_margin = margin_after - margin_before
+            delta_margin = delta_margin.quantize(Decimal("0.00000001"))
+
+            db_user_locked = await crud_user.get_user_by_id_with_lock(db, current_user.id)
+            if delta_margin > 0:
+                if db_user_locked.wallet_balance < db_user_locked.margin + delta_margin:
+                    raise HTTPException(status_code=400, detail="Insufficient free margin for modification")
+                db_user_locked.margin += delta_margin
+            else:
+                db_user_locked.margin += delta_margin  # negative value releases margin
+                if db_user_locked.margin < 0:
+                    db_user_locked.margin = Decimal("0.0")
+
+            # Update the DB order
+            db_order.order_price = adjusted_price
+            db_order.order_quantity = request.new_quantity
+            db_order.contract_value = contract_value
+            db_order.margin = margin_usd
+
+        # Update Redis
+        await db.refresh(db_user_locked)
+        user_data_to_cache = {
+            "id": current_user.id,
+            "group_name": db_user_locked.group_name,
+            "leverage": db_user_locked.leverage,
+            "wallet_balance": db_user_locked.wallet_balance,
+            "margin": db_user_locked.margin
+        }
+        await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
+
+        all_orders = await crud_order.get_orders_by_user_id(db, user_id=current_user.id)
+        open_positions = []
+        pending_positions = []
+        total_margin = Decimal("0.0")
+
+        for pos in all_orders:
+            pos_dict = {k: str(getattr(pos, k)) if isinstance(getattr(pos, k), Decimal) else getattr(pos, k)
+                        for k in ["order_id", "order_company_name", "order_type", "order_quantity",
+                                  "order_price", "margin", "contract_value", "stop_loss", "take_profit"]}
+            pos_dict["profit_loss"] = "0.0"
+            if pos.order_status == "OPEN":
+                open_positions.append(pos_dict)
+            elif pos.order_status in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]:
+                pending_positions.append(pos_dict)
+            total_margin += Decimal(str(pos.margin or 0.0)) if pos.order_status == "OPEN" or pos.order_status in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"] else Decimal("0.0")
+
+        user_portfolio_data = {
+            "balance": str(db_user_locked.wallet_balance),
+            "equity": "0.0",
+            "margin": str(total_margin),
+            "free_margin": str(db_user_locked.wallet_balance - total_margin),
+            "profit_loss": "0.0",
+            "positions": open_positions,
+            "pending_positions": pending_positions
+        }
+        await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
+
+        await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps({
+            "type": "account_update_signal",
+            "user_id": current_user.id
+        }))
+
+        return StatusResponse(status="success", message="Pending order modified successfully")
+
+    except Exception as e:
+        logger.error(f"Error modifying pending order {request.order_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error modifying the pending order")
+
+
+# app/api/v1/endpoints/orders.py
+
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
+import logging
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Optional, Any, List, Dict
+import uuid
+import datetime
+from pydantic import BaseModel, Field
+import json # Import json for publishing
+
+
+from app.database.session import get_db
+from app.dependencies.redis_client import get_redis_client
+# Import Wallet model
+from app.database.models import User, UserOrder, ExternalSymbolInfo, Wallet
+# Import WalletCreate schema
+from app.schemas.order import OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest
+from app.schemas.user import StatusResponse
+from app.schemas.wallet import WalletCreate # Import WalletCreate schema
+
+from app.services.order_processing import (
+    process_new_order,
+    OrderProcessingError,
+    InsufficientFundsError,
+    calculate_total_symbol_margin_contribution
+)
+from app.services.portfolio_calculator import _convert_to_usd
+
+from app.crud import crud_order
+from app.crud import user as crud_user
+
+from sqlalchemy.future import select
+from app.core.cache import (
+    get_adjusted_market_price_cache,
+    get_group_symbol_settings_cache,
+    set_user_data_cache, # Import for cache update
+    set_user_portfolio_cache, # Import for cache update
+    DecimalEncoder # Import for JSON serialization
+)
+
+from app.core.security import get_current_user
+from app.api.v1.endpoints.market_data_ws import REDIS_MARKET_DATA_CHANNEL # Import the channel name
+
+
+logger = logging.getLogger(__name__)
+
+
+
+# ... (other existing endpoints) ...
+
+@router.patch(
+    "/update-tp-sl",
+    response_model=OrderResponse,
+    summary="Update Stop Loss / Take Profit for an Order",
+    description="Updates stop loss and take profit values and their respective IDs for a specific order."
+)
+async def update_stoploss_takeprofit(
+    request: UpdateStopLossTakeProfitRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client), # Inject Redis client
+    current_user: User = Depends(get_current_user)
+):
+    # Retrieve the order
+    db_order = await crud_order.get_order_by_id(db, request.order_id)
+    if db_order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found.")
+
+    # Authorization check
+    if db_order.order_user_id != current_user.id and not getattr(current_user, 'is_admin', False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this order.")
+
+    # Call the CRUD function to update TP/SL
+    updated_order = await crud_order.update_tp_sl_for_order(
+        db=db,
+        order_id=request.order_id,
+        stop_loss=request.stop_loss,
+        take_profit=request.take_profit,
+        stoploss_id=request.stoploss_id,
+        takeprofit_id=request.takeprofit_id
+    )
+
+    # Check if the update was successful
+    if updated_order is None:
+        # This case handles scenarios where the CRUD function might return None
+        # even after the order was initially found (e.g., if there's an internal DB error during update)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update order's Stop Loss/Take Profit.")
+
+    # Ensure to refresh the current_user object to get the latest margin/wallet_balance
+    await db.refresh(current_user)
+
+    # After successful update, update user portfolio/data cache
+    # and publish a signal for real-time updates via WebSocket.
+
+    # 1. Update user_data in Redis cache
+    user_data_to_cache = {
+        "id": current_user.id,
+        "group_name": getattr(current_user, 'group_name', 'default'),
+        "leverage": current_user.leverage,
+        "wallet_balance": current_user.wallet_balance,
+        "margin": current_user.margin
+    }
+    await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
+    logger.debug(f"Updated user data cache for user {current_user.id} after TP/SL update.")
+
+    # 2. Fetch all current open and pending positions for this user
+    all_orders = await crud_order.get_orders_by_user_id(db, user_id=current_user.id)
+    updated_open_positions = []
+    updated_pending_positions = []
+    total_margin = Decimal("0.0")
+
+    for pos in all_orders:
+        pos_dict = {}
+        # Ensure all fields expected by OrderResponse are included,
+        # converting Decimals to string for JSON serialization
+        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price',
+                     'contract_value', 'margin', 'net_profit', 'close_price', 'swap', 'commission',
+                     'stop_loss', 'take_profit', 'cancel_message', 'close_message', 'status',
+                     'takeprofit_id', 'stoploss_id', 'order_user_id', 'order_status', 'created_at', 'updated_at', 'id']:
+            value = getattr(pos, attr, None)
+            if isinstance(value, Decimal):
+                pos_dict[attr] = str(value)
+            elif isinstance(value, datetime.datetime):
+                pos_dict[attr] = value.isoformat()
+            else:
+                pos_dict[attr] = value
+
+        # 'profit_loss' is typically a calculated field and might not be stored directly
+        # You'd calculate it based on current market price vs. order.order_price if needed for display.
+        # For cached positions, it's often dynamically calculated on the frontend or a separate service.
+        # For simplicity, if not directly from DB, set to '0.0' or calculate if logic is available.
+        pos_dict['profit_loss'] = "0.0" # Placeholder, calculate if needed
+
+        if pos.order_status == "OPEN":
+            updated_open_positions.append(pos_dict)
+        elif pos.order_status == "PENDING":
+            updated_pending_positions.append(pos_dict)
+
+        total_margin += Decimal(str(pos.margin or 0.0))
+
+    # 3. Update user_portfolio in Redis cache
+    user_portfolio_data = {
+        "balance": str(current_user.wallet_balance),
+        "equity": "0.0", # This should be calculated real-time or updated by a dedicated service
+        "margin": str(total_margin),
+        "free_margin": str(current_user.wallet_balance - total_margin),
+        "profit_loss": "0.0", # This should be calculated real-time or updated by a dedicated service
+        "positions": updated_open_positions,
+        "pending_positions": updated_pending_positions
+    }
+    await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
+    logger.debug(f"Updated user portfolio cache for user {current_user.id} after TP/SL update.")
+
+    # 4. Signal the broadcaster to send account updates for this specific user
+    account_update_signal = {
+        "type": "account_update_signal",
+        "user_id": current_user.id
+    }
+    await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps(account_update_signal))
+    logger.info(f"Published account update signal for user {current_user.id} after TP/SL update.")
+
+    # Return the updated order as a response
+    return OrderResponse.model_validate(updated_order)
+
+
+from app.services.margin_calculator import (
+    get_live_adjusted_buy_price_for_pair,
+    get_live_adjusted_sell_price_for_pair
+)
+from app.schemas.order import CloseOrderRequest
+
+@router.post("/close-all", response_model=List[OrderResponse], summary="Close all open orders with live prices")
+async def close_all_orders_with_live_prices(
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Closes all open orders for the authenticated user using real live prices.
+    Each order is closed with the proper buy/sell adjusted price.
+    """
+    open_orders = await crud_order.get_all_open_orders_by_user_id(db, current_user.id)
+    if not open_orders:
+        raise HTTPException(status_code=404, detail="No open orders found to close.")
+
+    closed_orders = []
+
+    for order in open_orders:
+        symbol = order.order_company_name.upper()
+        user_group = getattr(current_user, "group_name", "default")
+
+        # Determine correct live close price based on order type
+        if order.order_type.upper() == "BUY":
+            close_price = await get_live_adjusted_sell_price_for_pair(redis_client, symbol, user_group)
+        elif order.order_type.upper() == "SELL":
+            close_price = await get_live_adjusted_buy_price_for_pair(redis_client, symbol, user_group)
+        else:
+            continue  # Skip unknown order types
+
+        if not close_price or close_price <= 0:
+            logger.warning(f"Skipping order {order.order_id}: no valid live price found for {symbol}")
+            continue
+
+        close_request = CloseOrderRequest(
+            order_id=order.order_id,
+            close_price=close_price
+        )
+
+        try:
+            closed_order = await close_order(
+                close_request=close_request,
+                db=db,
+                redis_client=redis_client,
+                current_user=current_user
+            )
+            closed_orders.append(closed_order)
+        except Exception as e:
+            logger.error(f"Error closing order {order.order_id}: {e}")
+
+    return closed_orders
+

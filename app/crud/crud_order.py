@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 import uuid
-
+from decimal import Decimal
 from app.database.models import UserOrder, User #
 from app.schemas.order import OrderCreateInternal # Use OrderCreateInternal for creation input
 from app.core.config import get_settings # Import settings to potentially use cache expiry
@@ -147,3 +147,36 @@ async def update_order_status(db: AsyncSession, order_id: str, new_status: str, 
     return db_order
 
 # Add other CRUD operations as needed (e.g., delete_order)
+
+async def get_open_and_pending_orders_by_user_id_and_symbol(
+    db: AsyncSession, user_id: int, symbol: str
+) -> List[UserOrder]:
+    result = await db.execute(
+        select(UserOrder).filter(
+            UserOrder.order_user_id == user_id,
+            UserOrder.order_company_name == symbol,
+            UserOrder.order_status.in_(["OPEN", "PENDING"])  # Include both
+        )
+    )
+    return result.scalars().all()
+
+async def update_tp_sl_for_order(
+    db: AsyncSession,
+    order_id: str,
+    stop_loss: Decimal,
+    take_profit: Decimal,
+    stoploss_id: str,
+    takeprofit_id: str
+) -> Optional[UserOrder]:
+    order = await get_order_by_id(db, order_id)
+    if not order:
+        return None
+
+    order.stop_loss = stop_loss
+    order.take_profit = take_profit
+    order.stoploss_id = stoploss_id
+    order.takeprofit_id = takeprofit_id
+
+    await db.commit()
+    await db.refresh(order)
+    return order

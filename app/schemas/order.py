@@ -83,3 +83,30 @@ class CloseOrderRequest(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+from pydantic import BaseModel, Field, model_validator
+from decimal import Decimal
+from typing import Optional
+
+class UpdateStopLossTakeProfitRequest(BaseModel):
+    order_id: str
+    stop_loss: Optional[Decimal] = None
+    take_profit: Optional[Decimal] = None
+    stoploss_id: Optional[str] = None
+    takeprofit_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_tp_sl(self) -> 'UpdateStopLossTakeProfitRequest':
+        if not self.stop_loss and not self.take_profit:
+            raise ValueError("Either stop_loss or take_profit must be provided.")
+        if self.stop_loss and not self.stoploss_id:
+            raise ValueError("stoploss_id is required when stop_loss is provided.")
+        if self.take_profit and not self.takeprofit_id:
+            raise ValueError("takeprofit_id is required when take_profit is provided.")
+        return self
+
+    class Config:
+        from_attributes = True
+
+

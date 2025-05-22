@@ -33,6 +33,7 @@ from app.schemas.user import (
 )
 from app.crud import user as crud_user
 from app.crud import otp as crud_otp
+from app.crud.user import generate_unique_account_number
 # Assuming you have an email service module
 from app.services import email as email_service
 from app.core.security import (
@@ -192,7 +193,7 @@ async def register_user_with_proofs(
          "margin": 0.0, # Initialize margin
          "status": 0, # Initialize status (e.g., 0 for pending verification)
          "isActive": 0, # Initialize isActive (e.g., 0 for inactive)
-         "account_number": str(uuid.uuid4()).replace('-', '')[:10], # Generate a simple account number
+         "account_number": await generate_unique_account_number(db),  # New unique 5-char alphanumeric
     }
 
     hashed_password = get_password_hash(password)
