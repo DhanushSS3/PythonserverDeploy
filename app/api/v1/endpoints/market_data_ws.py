@@ -136,6 +136,7 @@ async def websocket_endpoint(
              "margin": str(user_data_to_cache["margin"]),
              "free_margin": "0.0",
              "profit_loss": "0.0",
+             "margin_level": "0.0", # Initialize margin_level here
              "positions": initial_positions_data
         }
         await set_user_portfolio_cache(redis_client, user_id, user_portfolio_data)
@@ -327,171 +328,6 @@ async def redis_publisher_task(redis_client: Redis):
         logger.info("Redis publisher task finished.")
 
 
-# # --- Helper Function for processing and sending updates to a single user ---
-# async def process_single_user_update(
-#     user_id: int,
-#     websocket_info: Dict[str, Any],
-#     redis_client: Redis,
-#     market_data_update: Dict[str, Any], # Contains updated market prices, could be empty if only account update
-#     force_account_recalc: bool = False # Flag to force recalculation even without market_data_update
-# ):
-#     """
-#     Processes and sends personalized data to a single WebSocket client.
-#     """
-#     websocket = websocket_info['websocket']
-#     group_name = websocket_info['group_name']
-
-#     # Retrieve cached user data, portfolio, and group settings
-#     user_data = await get_user_data_cache(redis_client, user_id)
-#     user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
-#     group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-
-#     if not user_data:
-#         logger.warning(f"User data not found in cache for user {user_id}. Skipping data update for this user.")
-#         return
-
-#     relevant_symbols = set(group_settings.keys()) if isinstance(group_settings, dict) else set()
-#     user_market_data_payload: Dict[str, Dict[str, float]] = {}
-
-#     # --- Populate with Latest Prices (Updated or Cached) ---
-#     # Prioritize prices from the market_data_update if present
-#     if market_data_update:
-#         symbols_processed_from_update = set()
-#         if isinstance(market_data_update, dict):
-#             for symbol, prices in market_data_update.items():
-#                 symbol_upper = symbol.upper()
-#                 symbols_processed_from_update.add(symbol_upper)
-
-#                 # Only process updated symbols that are relevant to this user's group
-#                 if symbol_upper in relevant_symbols and isinstance(prices, dict):
-#                     raw_ask_price = prices.get('o')
-#                     raw_bid_price = prices.get('b')
-#                     symbol_settings = group_settings.get(symbol_upper)
-
-#                     if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
-#                         try:
-#                             # Ensure Decimal types for calculations
-#                             spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0)))
-#                             spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
-#                             ask_decimal = decimal.Decimal(str(raw_ask_price))
-#                             bid_decimal = decimal.Decimal(str(raw_bid_price))
-
-#                             # Apply the spread formula
-#                             spread_value = spread_setting * spread_pip_setting
-#                             half_spread = spread_value / decimal.Decimal(2)
-
-#                             # Calculate adjusted prices
-#                             adjusted_buy_price = ask_decimal + half_spread
-#                             adjusted_sell_price = bid_decimal - half_spread
-
-#                             try:
-#                                 current_spread_value = (Decimal(str(adjusted_buy_price)) - Decimal(str(adjusted_sell_price))).quantize(Decimal("0.00001")) # Adjust precision as needed
-#                             except Exception as e:
-#                                 logger.error(f"Error calculating spread for symbol {symbol}: {e}")
-#                                 current_spread_value = Decimal("0.0")
-
-#                             # Add to user's payload (as float for JSON)
-#                             user_market_data_payload[symbol_upper] = {
-#                                 'buy': float(adjusted_buy_price),
-#                                 'sell': float(adjusted_sell_price),
-#                                 'spread': float(current_spread_value),
-#                             }
-
-#                             # Cache the newly calculated adjusted prices for this group and symbol
-#                             await set_adjusted_market_price_cache(
-#                                 redis_client=redis_client,
-#                                 group_name=group_name,
-#                                 symbol=symbol_upper,
-#                                 buy_price=adjusted_buy_price,
-#                                 sell_price=adjusted_sell_price,
-#                                 spread_value=spread_value
-#                             )
-#                             logger.debug(f"Cached and added newly adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from update)")
-
-#                         except Exception as calc_e:
-#                             logger.error(f"Error calculating/caching adjusted prices for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
-#                             # Fallback to raw prices if calculation fails
-#                             if raw_ask_price is not None and raw_bid_price is not None:
-#                                  user_market_data_payload[symbol_upper] = {
-#                                     'buy': float(raw_ask_price),
-#                                     'sell': float(raw_bid_price),
-#                                  }
-#                                  logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol_upper} due to calculation error.")
-#                             else:
-#                                  logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Cannot send price update.")
-
-#                     elif raw_ask_price is not None and raw_bid_price is not None:
-#                          # If no group settings found for this symbol, send raw prices as a fallback
-#                          user_market_data_payload[symbol_upper] = {
-#                              'buy': float(raw_ask_price),
-#                              'sell': float(raw_bid_price),
-#                          }
-#                          logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol_upper}. Sending raw prices (buy/sell) for updated symbol.")
-#                     else:
-#                          logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Skipping price update.")
-
-#     # Always populate with cached prices for relevant symbols if not already in payload
-#     # This covers symbols not in the current market_data_update OR when force_account_recalc is true
-#     for symbol_upper in relevant_symbols:
-#         if symbol_upper not in user_market_data_payload: # Only add if not already added from current update
-#              cached_adjusted_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper)
-#              if cached_adjusted_price:
-#                  user_market_data_payload[symbol_upper] = {
-#                      'buy': float(cached_adjusted_price.get('buy', 0.0)),
-#                      'sell': float(cached_adjusted_price.get('sell', 0.0)),
-#                      'spread_value': float(cached_adjusted_price.get('spread_value', 0.0)),
-#                  }
-#                  logger.debug(f"Added cached adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from cache)")
-#              else:
-#                   logger.warning(f"No cached market price available for {symbol_upper} for user {user_id} during forced account recalculation (or if not in update).")
-
-
-#     # --- Calculate Dynamic Account Data ---
-#     open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
-
-#     calculated_portfolio_metrics = await calculate_user_portfolio(
-#         user_data=user_data,
-#         open_positions=open_positions_from_cache,
-#         adjusted_market_prices=user_market_data_payload,
-#         group_symbol_settings=group_settings
-#     )
-
-#     # --- Prepare and Send Data to WebSocket ---
-#     if user_market_data_payload or calculated_portfolio_metrics:
-#         account_data_payload = {
-#             "balance": calculated_portfolio_metrics.get("balance", 0.0),
-#             "equity": calculated_portfolio_metrics.get("equity", 0.0),
-#             "margin": float(user_data.get("margin", 0.0)), # User's OVERALL margin from cached user_data
-#             "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0),
-#             "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0),
-#             "positions": calculated_portfolio_metrics.get("positions", [])
-#         }
-
-#         payload = {
-#             "type": "market_data_update", # Use same type for now, client can distinguish by presence of market_data or account_data
-#             "market_data": user_market_data_payload,
-#             "account_data": account_data_payload
-#         }
-
-#         # Check if the websocket is still connected before sending
-#         if websocket.client_state == WebSocketState.CONNECTED:
-#             try:
-#                 await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
-#                 logger.debug(f"Sent personalized data to user {user_id}. Symbols sent: {list(user_market_data_payload.keys())}. Account data sent: {account_data_payload}")
-#             except Exception as send_e:
-#                 # Log sending errors but don't necessarily disconnect immediately
-#                 logger.error(f"Error sending data to user {user_id}: {send_e}", exc_info=True)
-#         else:
-#             logger.warning(f"WebSocket for user {user_id} is not connected. Skipping send.")
-
-#     else:
-#          logger.debug(f"No relevant market prices or account data to send for user {user_id} on this tick.")
-
-
-# app/api/v1/endpoints/market_data_ws.py
-
-# ... (Keep all existing imports at the top of the file) ...
-
 # --- Helper Function for processing and sending updates to a single user ---
 async def process_single_user_update(
     user_id: int,
@@ -666,6 +502,7 @@ async def process_single_user_update(
             "margin": float(user_data.get("margin", 0.0)), # User's OVERALL margin from cached user_data
             "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0),
             "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0),
+            "margin_level": calculated_portfolio_metrics.get("margin_level", 0.0), # Add margin_level here
             "positions": calculated_portfolio_metrics.get("positions", [])
         }
 
