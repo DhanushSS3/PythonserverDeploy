@@ -6,27 +6,26 @@ from decimal import Decimal
 
 # Schema for receiving order placement requests
 class OrderPlacementRequest(BaseModel):
-    """
-    Pydantic schema for the data required from the user to place a new order.
-    Margin and contract_value will be calculated on the backend.
-    order_company_name will be the symbol.
-    """
-    # order_status: str # Status will be set by the backend, e.g., "PENDING" or "OPEN"
-    # order_user_id: int # Will be taken from the authenticated user
-    order_id: str # Assuming this is a client-generated or unique request ID for the placement
-    symbol: str = Field(..., alias="order_company_name") # User provides symbol, maps to order_company_name
-    order_type: str # e.g., "BUY", "SELL"
-    order_price: Decimal # The price at which the user wants to place the order (or market price if market order)
-    order_quantity: Decimal # Number of units/lots
-
-    # Optional fields that the user might set
+    order_id: str
+    symbol: str = Field(..., alias="order_company_name")
+    order_type: str
+    order_price: Decimal
+    order_quantity: Decimal
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
+    user_id: Optional[int] = None  # <-- Service account user targeting
 
     class Config:
-        from_attributes = True # For Pydantic V2+
-        populate_by_name = True # To allow alias usage
+        from_attributes = True
+        populate_by_name = True
 
+class CloseOrderRequest(BaseModel):
+    order_id: str = Field(..., description="The ID of the order to be closed.")
+    close_price: Decimal = Field(..., description="The price at which the order is being closed.")
+    user_id: Optional[int] = None  # <-- Service account user targeting
+
+    class Config:
+        from_attributes = True
 
 # Schema for creating an order in the database (internal use, after calculations)
 class OrderCreateInternal(BaseModel):
@@ -73,16 +72,7 @@ class OrderResponse(OrderCreateInternal): # Inherits all fields from OrderCreate
         from_attributes = True
 
 # --- NEW Schema for Close Order Request Body ---
-class CloseOrderRequest(BaseModel):
-    """
-    Pydantic schema for the request body to close an existing order.
-    Includes the order ID and the close price provided by the user/client.
-    """
-    order_id: str = Field(..., description="The ID of the order to be closed.")
-    close_price: Decimal = Field(..., description="The price at which the order is being closed.")
 
-    class Config:
-        from_attributes = True
 
 
 from pydantic import BaseModel, Field, model_validator

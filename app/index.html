@@ -47,9 +47,7 @@
                     <thead>
                         <tr>
                             <th>Symbol</th>
-                            <th>Buy</th>
-                            <th>Sell</th>
-                            <th>Spread</th>
+                            <th>Offer (o)</th> <th>Bid (b)</th>   <th>Spread (o-b)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -71,21 +69,9 @@
         const marketDataTableBody = document.querySelector('#marketDataTable tbody');
         const accountDataJsonPre = document.getElementById('accountDataJson');
 
-        // Define the desired order of symbols
+        // Only AUDJPY will be displayed
         const orderedSymbols = [
-            "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDSGD", "AUDUSD",
-            "AUS200", "BTCUSD", "CADCHF", "CADJPY", "CHFJPY", "CHFSGD",
-            "CN50", "UD30", "DE30", "EURCAD", "EURCHF", "EURCZK", "EURGBP",
-            "EURJPY", "EURNOK", "EURNZD", "EURPLN", "EURSEK", "EURSGD",
-            "EURTRY", "EURUSD", "EURZAR", "FR40", "GBPAUD", "GBPCAD",
-            "GBPCHF", "GBPJPY", "GBPNOK", "GBPNZD", "GBPSEK", "GBPSGD",
-            "GBPTRY", "GBPUSD", "GER30-1", "HKG50", "IND50", "JP225",
-            "NGas", "NOKJPY", "NOKSEK", "NZDCAD", "NZDCHF", "NZDJPY",
-            "NZDUSD", "SEKJPY", "SGDJPY", "UK100", "UKOil", "US100",
-            "US2000", "US2000-1", "US30", "US500", "USDCAD", "USDCHF",
-            "USDCNH", "USDCZK", "USDJPY", "USDMXN", "USDNOK", "USDPLN",
-            "USDSEK", "USDSGD", "USDTHB", "USDTRY", "USDTUSD", "USDZAR",
-            "USOil", "W20", "XAGUSD", "XAUUSD", "ZARJPY"
+            "AUDJPY"
         ];
 
         function connectWebSocket() {
@@ -96,13 +82,10 @@
                 alert("Please enter a JWT token.");
                 return;
             }
-
             const fullWsUrl = `${baseUrl}?token=${token}`;
-
             if (ws) {
                 ws.close();
             }
-
             ws = new WebSocket(fullWsUrl);
 
             ws.onopen = (event) => {
@@ -153,18 +136,32 @@
             orderedSymbols.forEach(symbol => {
                 const symbolData = marketData[symbol];
                 if (symbolData) {
-                    const buy = symbolData.buy !== undefined ? symbolData.buy.toFixed(5) : 'N/A';
-                    const sell = symbolData.sell !== undefined ? symbolData.sell.toFixed(5) : 'N/A';
-                    // Check for spread_value first, then calculate if needed
-                    const spread = symbolData.spread_value !== undefined ? symbolData.spread_value.toFixed(5) :
-                                   (symbolData.buy !== undefined && symbolData.sell !== undefined ? (symbolData.buy - symbolData.sell).toFixed(5) : 'N/A');
+                    const offerPrice = (typeof symbolData.o === 'number')
+                                       ? symbolData.o.toFixed(5)
+                                       : (typeof symbolData.buy === 'number' ? symbolData.buy.toFixed(5) + ' (buy)' : 'N/A');
+
+                    const bidPrice = (typeof symbolData.b === 'number')
+                                     ? symbolData.b.toFixed(5)
+                                     : (typeof symbolData.sell === 'number' ? symbolData.sell.toFixed(5) + ' (sell)' : 'N/A');
+
+                    let spreadDisplay = 'N/A';
+                    if (typeof symbolData.o === 'number' && typeof symbolData.b === 'number') {
+                        spreadDisplay = (symbolData.o - symbolData.b).toFixed(5);
+                    }
+                    else if (typeof symbolData.buy === 'number' && typeof symbolData.sell === 'number') {
+                         spreadDisplay = (symbolData.buy - symbolData.sell).toFixed(5);
+                    }
+                    else if (typeof symbolData.spread === 'number' && spreadDisplay === 'N/A') {
+                         spreadDisplay = symbolData.spread.toFixed(1) + " pips";
+                    }
+
 
                     tableRowsHtml += `
                         <tr>
                             <td>${symbol}</td>
-                            <td>${buy}</td>
-                            <td>${sell}</td>
-                            <td>${spread}</td>
+                            <td>${offerPrice}</td>
+                            <td>${bidPrice}</td>
+                            <td>${spreadDisplay}</td>
                         </tr>
                     `;
                 }

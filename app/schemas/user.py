@@ -154,25 +154,21 @@ class SendOTPRequest(BaseModel):
     email: EmailStr = Field(..., description="Email address to send the OTP to.")
 
 class VerifyOTPRequest(BaseModel):
-    """
-    Pydantic model for the request body to verify an OTP (for verification or password reset).
-    """
     email: EmailStr = Field(..., description="Email address associated with the OTP.")
     otp_code: str = Field(..., description="The OTP code received by the user.")
+    user_type: str = Field(..., description="User type (e.g., 'live', 'demo').")
+
 
 class RequestPasswordReset(BaseModel):
-    """
-    Pydantic model for requesting a password reset (sends OTP).
-    """
     email: EmailStr = Field(..., description="Email address to send the password reset OTP to.")
+    user_type: str = Field(..., description="User type (e.g., 'live', 'demo').")
+
 
 class ResetPasswordConfirm(BaseModel):
-    """
-    Pydantic model for confirming password reset and setting a new password.
-    """
     email: EmailStr = Field(..., description="Email address associated with the OTP.")
-    otp_code: str = Field(..., description="The OTP code received by the user.")
+    user_type: str = Field(..., description="User type (e.g., 'live', 'demo').")
     new_password: str = Field(..., min_length=8, description="The new password for the user account.")
+
 
 class StatusResponse(BaseModel):
     """
@@ -182,14 +178,13 @@ class StatusResponse(BaseModel):
 
 
 # --- Authentication Schemas (Keep Existing) ---
+# in app/schemas/user.py
 
 class UserLogin(BaseModel):
-    """
-    Pydantic model for user login request data.
-    Users can log in using either email or phone number.
-    """
-    email_or_phone: str = Field(..., description="User's email address or phone number.")
-    password: str = Field(..., description="User's password.")
+    username: str  # could be email or phone
+    password: str
+    user_type: str  # e.g., "live" or "demo"
+
 
 class Token(BaseModel):
     """
@@ -204,3 +199,17 @@ class TokenRefresh(BaseModel):
     Pydantic model for refreshing an access token using a refresh token.
     """
     refresh_token: str = Field(..., description="The JWT refresh token.")
+
+from pydantic import BaseModel, EmailStr, Field
+
+# In app/schemas/user.py (or inline for this example)
+# from pydantic import BaseModel, EmailStr, Field
+
+class SignupSendOTPRequest(BaseModel):
+    email: EmailStr
+    user_type: str # Added user_type
+
+class SignupVerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(..., min_length=4, max_length=8)
+    user_type: str # Added user_type

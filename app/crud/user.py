@@ -23,35 +23,7 @@ async def get_user(db: AsyncSession, user_id: int) -> Optional[User]:
     result = await db.execute(select(User).filter(User.id == user_id))
     return result.scalars().first()
 
-# Function to get a user by email
-async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
-    """
-    Retrieves a user from the database by their email address.
 
-    Args:
-        db: The asynchronous database session.
-        email: The email address to search for.
-
-    Returns:
-        The User SQLAlchemy model instance if found, otherwise None.
-    """
-    result = await db.execute(select(User).filter(User.email == email))
-    return result.scalars().first()
-
-# Function to get a user by phone number
-async def get_user_by_phone_number(db: AsyncSession, phone_number: str) -> User | None:
-    """
-    Retrieves a user from the database by their phone number.
-
-    Args:
-        db: The asynchronous database session.
-        phone_number: The phone number to search for.
-
-    Returns:
-        The User SQLAlchemy model instance if found, otherwise None.
-    """
-    result = await db.execute(select(User).filter(User.phone_number == phone_number))
-    return result.scalars().first()
 
 
 # Function to get a user by ID (useful for authentication dependency and update/delete)
@@ -296,3 +268,52 @@ async def generate_unique_account_number(db: AsyncSession) -> str:
         )
         if not existing.scalars().first():
             return account_number
+
+# app/crud/user.py
+
+# ... other imports ...
+
+# Existing get_user_by_email (can be kept for other purposes or deprecated for registration checks)
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    result = await db.execute(select(User).filter(User.email == email))
+    return result.scalars().first() # Returns the first match, irrespective of type
+
+# New function for type-specific email check
+async def get_user_by_email_and_type(db: AsyncSession, email: str, user_type: str) -> User | None:
+    """
+    Retrieves a user from the database by their email address and user_type.
+    """
+    result = await db.execute(
+        select(User).filter(User.email == email, User.user_type == user_type)
+    )
+    return result.scalars().first()
+
+# Existing get_user_by_phone_number (can be kept or deprecated for registration checks)
+async def get_user_by_phone_number(db: AsyncSession, phone_number: str) -> User | None:
+    result = await db.execute(select(User).filter(User.phone_number == phone_number))
+    return result.scalars().first() # Returns the first match, irrespective of type
+
+# New function for type-specific phone number check
+async def get_user_by_phone_number_and_type(db: AsyncSession, phone_number: str, user_type: str) -> User | None:
+    """
+    Retrieves a user from the database by their phone number and user_type.
+    """
+    result = await db.execute(
+        select(User).filter(User.phone_number == phone_number, User.user_type == user_type)
+    )
+    return result.scalars().first()
+
+# ... rest of crud/user.py ...
+# The create_user function itself doesn't need to change,
+# as the IntegrityError from the DB will handle uniqueness violations.
+
+
+async def get_user_by_email_phone_type(db: AsyncSession, email: str, phone_number: str, user_type: str) -> Optional[User]:
+    result = await db.execute(
+        select(User).filter(
+            User.email == email,
+            User.phone_number == phone_number,
+            User.user_type == user_type
+        )
+    )
+    return result.scalars().first()

@@ -299,3 +299,56 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
     return current_user
 
 # You might add other dependencies here, e.g., get_active_user, verify_2fa etc.
+
+
+# --- security.py ---
+
+from fastapi import Request, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from jose import JWTError
+from app.database.models import User
+from app.database.session import get_db
+from app.core.config import get_settings
+from app.core.security import decode_token, get_current_user
+
+settings = get_settings()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# NEW FUNCTION TO SUPPORT SERVICE ACCOUNT JWT
+def create_service_account_token(service_name: str, expires_minutes: int = 60):
+    import datetime
+    from app.core.security import create_access_token
+    data = {"sub": "service", "service_name": service_name}
+    return create_access_token(data=data, expires_delta=datetime.timedelta(minutes=expires_minutes))
+
+# NEW DEPENDENCY FUNCTION
+async def get_user_from_service_or_user_token(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+) -> User:
+    try:
+        payload = decode_token(token)
+        if payload.get("sub") == "service":
+            # Extract user_id from request body or query params
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+            user_id = body.get("user_id") or request.query_params.get("user_id")
+            if not user_id:
+                raise HTTPException(status_code=400, detail="Missing user_id for service account.")
+            stmt = select(User).where(User.id == int(user_id))
+            result = await db.execute(stmt)
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found.")
+            return user
+        else:
+            return await get_current_user(db=db, token=token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -41,8 +41,8 @@ class User(Base):
 
     # Required Fields
     name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    phone_number = Column(String(20), unique=True, index=True, nullable=False)
+    email = Column(String(255), index=True, nullable=False) # No longer globally unique
+    phone_number = Column(String(20), index=True, nullable=False) # 
     hashed_password = Column(String(255), nullable=False) # Store hashed password
 
     # Other Fields
@@ -99,6 +99,11 @@ class User(Base):
     # Timestamps (Using SQLAlchemy's func.now() for database-side default)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('email', 'phone_number', 'user_type', name='_email_phone_user_type_uc'),
+    )
+
 
     # Relationships (Define relationships to other models)
     # referred_by_user = relationship("User", remote_side=[id]) # Self-referential relationship

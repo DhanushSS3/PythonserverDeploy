@@ -328,203 +328,739 @@ async def redis_publisher_task(redis_client: Redis):
         logger.info("Redis publisher task finished.")
 
 
+# # --- Helper Function for processing and sending updates to a single user ---
+# async def process_single_user_update(
+#     user_id: int,
+#     websocket_info: Dict[str, Any],
+#     redis_client: Redis,
+#     market_data_update: Dict[str, Any], # Contains updated market prices, could be empty if only account update
+#     force_account_recalc: bool = False # Flag to force recalculation even without market_data_update
+# ):
+#     """
+#     Processes and sends personalized data to a single WebSocket client.
+#     Now sends only buy, sell, and effective_spread_in_pips (as 'spread').
+#     """
+#     websocket = websocket_info['websocket']
+#     group_name = websocket_info['group_name']
+
+#     # Retrieve cached user data, portfolio, and group settings
+#     user_data = await get_user_data_cache(redis_client, user_id)
+#     user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
+#     group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+
+#     if not user_data:
+#         logger.warning(f"User data not found in cache for user {user_id}. Skipping data update for this user.")
+#         return
+
+#     relevant_symbols = set(group_settings.keys()) if isinstance(group_settings, dict) else set()
+#     user_market_data_payload: Dict[str, Dict[str, float]] = {}
+
+#     # --- Populate with Latest Prices (Updated or Cached) ---
+#     # Prioritize prices from the market_data_update if present
+#     if market_data_update:
+#         symbols_processed_from_update = set()
+#         if isinstance(market_data_update, dict):
+#             for symbol, prices in market_data_update.items():
+#                 symbol_upper = symbol.upper()
+#                 symbols_processed_from_update.add(symbol_upper)
+
+#                 # Only process updated symbols that are relevant to this user's group
+#                 if symbol_upper in relevant_symbols and isinstance(prices, dict):
+#                     raw_ask_price = prices.get('o')
+#                     raw_bid_price = prices.get('b')
+#                     symbol_settings = group_settings.get(symbol_upper)
+
+#                     if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
+#                         try:
+#                             # Ensure Decimal types for calculations
+#                             spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0))) # e.g., 2 (number of pips)
+#                             spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0))) # e.g., 0.0001 (value of 1 pip)
+#                             ask_decimal = decimal.Decimal(str(raw_ask_price))
+#                             bid_decimal = decimal.Decimal(str(raw_bid_price))
+
+#                             # Configured spread amount in price units (e.g., 0.0002 for 2 pips EURUSD)
+#                             configured_spread_amount = spread_setting * spread_pip_setting
+#                             half_spread = configured_spread_amount / decimal.Decimal(2)
+
+#                             # Adjusted buy/sell prices that are sent to the frontend
+#                             adjusted_buy_price = ask_decimal + half_spread
+#                             adjusted_sell_price = bid_decimal - half_spread
+
+#                             # --- CALCULATE SPREAD FOR FRONTEND DISPLAY ---
+
+#                             # Effective Spread in Price Units (e.g., 0.0002 for EURUSD)
+#                             effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+
+#                             # Effective Spread in Pips (e.g., 2.0 pips for EURUSD)
+#                             effective_spread_in_pips = Decimal("0.0")
+#                             if spread_pip_setting > Decimal("0.0"):
+#                                 effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
+#                             else:
+#                                 logger.warning(f"spread_pip_setting is zero for {symbol_upper}. Cannot calculate effective spread in pips.")
+
+
+#                             # --- Update the user_market_data_payload with requested fields ---
+#                             user_market_data_payload[symbol_upper] = {
+#                                 'buy': float(adjusted_buy_price),
+#                                 'sell': float(adjusted_sell_price),
+#                                 'spread': float(effective_spread_in_pips), # Renamed to 'spread' as requested
+
+#                             }
+
+#                             await set_adjusted_market_price_cache(
+#                                 redis_client=redis_client,
+#                                 group_name=group_name,
+#                                 symbol=symbol_upper,
+#                                 buy_price=adjusted_buy_price,
+#                                 sell_price=adjusted_sell_price,
+#                                 spread_value=configured_spread_amount # Still caching the configured spread amount
+#                             )
+#                             logger.debug(f"Cached and added newly adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from update)")
+
+#                         except Exception as calc_e:
+#                             logger.error(f"Error calculating/caching adjusted prices for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
+#                             # Fallback to raw prices if calculation fails
+#                             if raw_ask_price is not None and raw_bid_price is not None:
+#                                  # Calculate raw spread for fallback
+#                                  raw_effective_spread_price_units = Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price))
+#                                  raw_effective_spread_in_pips = Decimal("0.0")
+#                                  if spread_pip_setting > Decimal("0.0"):
+#                                      raw_effective_spread_in_pips = raw_effective_spread_price_units / spread_pip_setting
+
+#                                  user_market_data_payload[symbol_upper] = {
+#                                     'buy': float(raw_ask_price),
+#                                     'sell': float(raw_bid_price),
+#                                     'spread': float(raw_effective_spread_in_pips), # Fallback spread in pips
+#                                  }
+#                                  logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol_upper} due to calculation error.")
+#                             else:
+#                                  logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Cannot send price update.")
+
+#                     elif raw_ask_price is not None and raw_bid_price is not None:
+#                          # If no group settings found for this symbol, send raw prices as a fallback
+#                          raw_effective_spread_price_units = Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price))
+#                          raw_effective_spread_in_pips = Decimal("0.0")
+#                          # Try to get spread_pip_setting from group_settings if symbol_settings was None
+#                          # This might be tricky if symbol_settings is None, but let's try to get it if available
+#                          if group_settings.get(symbol_upper) and decimal.Decimal(str(group_settings.get(symbol_upper).get('spread_pip', 0))) > Decimal("0.0"):
+#                              raw_spread_pip_setting_for_fallback = decimal.Decimal(str(group_settings.get(symbol_upper).get('spread_pip', 0)))
+#                              raw_effective_spread_in_pips = raw_effective_spread_price_units / raw_spread_pip_setting_for_fallback
+
+#                          user_market_data_payload[symbol_upper] = {
+#                              'buy': float(raw_ask_price),
+#                              'sell': float(raw_bid_price),
+#                              'spread': float(raw_effective_spread_in_pips), # Fallback spread in pips
+#                          }
+#                          logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol_upper}. Sending raw prices (buy/sell) and calculated raw spreads.")
+#                     else:
+#                          logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Skipping price update.")
+
+#     # Always populate with cached prices for relevant symbols if not already in payload
+#     # This covers symbols not in the current market_data_update OR when force_account_recalc is true
+#     for symbol_upper in relevant_symbols:
+#         if symbol_upper not in user_market_data_payload: # Only add if not already added from current update
+#              cached_adjusted_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper)
+#              symbol_settings = group_settings.get(symbol_upper) # Re-fetch symbol settings for cached symbol
+
+#              if cached_adjusted_price:
+#                  adjusted_buy_price = decimal.Decimal(str(cached_adjusted_price.get('buy', 0.0)))
+#                  adjusted_sell_price = decimal.Decimal(str(cached_adjusted_price.get('sell', 0.0)))
+#                  configured_spread_amount = decimal.Decimal(str(cached_adjusted_price.get('spread_value', 0.0))) # This was cached configured spread
+
+#                  # Calculate effective spreads from cached adjusted prices
+#                  effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+#                  effective_spread_in_pips = Decimal("0.0")
+#                  if symbol_settings and decimal.Decimal(str(symbol_settings.get('spread_pip', 0))) > Decimal("0.0"):
+#                      effective_spread_in_pips = effective_spread_price_units / decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
+
+#                  user_market_data_payload[symbol_upper] = {
+#                      'buy': float(raw_ask_price),
+#                      'sell': float(raw_bid_price),
+#                      'spread': float(effective_spread_in_pips), # Renamed to 'spread'
+                     
+#                  }
+#                  logger.debug(f"Added cached adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from cache)")
+#              else:
+#                   logger.warning(f"No cached market price available for {symbol_upper} for user {user_id} during forced account recalculation (or if not in update).")
+
+
+#     # --- Calculate Dynamic Account Data ---
+#     open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
+
+#     calculated_portfolio_metrics = await calculate_user_portfolio(
+#         user_data=user_data,
+#         open_positions=open_positions_from_cache,
+#         adjusted_market_prices=user_market_data_payload, # Use the combined updated/cached prices
+#         group_symbol_settings=group_settings
+#     )
+
+#     # --- Prepare and Send Data to WebSocket ---
+#     if user_market_data_payload or calculated_portfolio_metrics:
+#         account_data_payload = {
+#             "balance": calculated_portfolio_metrics.get("balance", 0.0),
+#             "equity": calculated_portfolio_metrics.get("equity", 0.0),
+#             "margin": float(user_data.get("margin", 0.0)), # User's OVERALL margin from cached user_data
+#             "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0),
+#             "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0),
+#             "margin_level": calculated_portfolio_metrics.get("margin_level", 0.0), # Add margin_level here
+#             "positions": calculated_portfolio_metrics.get("positions", [])
+#         }
+
+#         payload = {
+#             "type": "market_data_update", # Use same type for now, client can distinguish content
+#             "market_data": user_market_data_payload,
+#             "account_data": account_data_payload
+#         }
+
+#         # Check if the websocket is still connected before sending
+#         if websocket.client_state == WebSocketState.CONNECTED:
+#             try:
+#                 await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
+#                 logger.debug(f"Sent personalized data to user {user_id}. Symbols sent: {list(user_market_data_payload.keys())}. Account data sent: {account_data_payload}")
+#             except Exception as send_e:
+#                 # Log sending errors but don't necessarily disconnect immediately
+#                 logger.error(f"Error sending data to user {user_id}: {send_e}", exc_info=True)
+#         else:
+#             logger.warning(f"WebSocket for user {user_id} is not connected. Skipping send.")
+
+#     else:
+#          logger.debug(f"No relevant market prices or account data to send for user {user_id} on this tick.")
+
+# app/api/v1/endpoints/market_data_ws.py
+
+# ... (other imports and code from the file) ...
+import decimal # Ensure decimal is imported if not already at the top level of the file
+from decimal import Decimal # Ensure Decimal is imported
+# ...
+
 # --- Helper Function for processing and sending updates to a single user ---
+# async def process_single_user_update(
+#     user_id: int,
+#     websocket_info: Dict[str, Any],
+#     redis_client: Redis,
+#     market_data_update: Dict[str, Any], # Contains updated market prices, could be empty if only account update
+#     force_account_recalc: bool = False # Flag to force recalculation even without market_data_update
+# ):
+#     """
+#     Processes and sends personalized data to a single WebSocket client.
+#     Now sends only buy, sell, and effective_spread_in_pips (as 'spread').
+#     """
+#     websocket = websocket_info['websocket']
+#     group_name = websocket_info['group_name']
+
+#     # Retrieve cached user data, portfolio, and group settings
+#     user_data = await get_user_data_cache(redis_client, user_id)
+#     user_portfolio = await get_user_portfolio_cache(redis_client, user_id) #
+#     group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+
+#     if not user_data:
+#         logger.warning(f"User data not found in cache for user {user_id}. Skipping data update for this user.")
+#         return
+
+#     relevant_symbols = set(group_settings.keys()) if isinstance(group_settings, dict) else set()
+#     user_market_data_payload: Dict[str, Dict[str, float]] = {}
+
+#     # --- Populate with Latest Prices (Updated or Cached) ---
+#     # Prioritize prices from the market_data_update if present
+#     if market_data_update: #
+#         symbols_processed_from_update = set()
+#         if isinstance(market_data_update, dict):
+#             for symbol, prices in market_data_update.items():
+#                 symbol_upper = symbol.upper()
+#                 symbols_processed_from_update.add(symbol_upper)
+
+#                 # Only process updated symbols that are relevant to this user's group
+#                 if symbol_upper in relevant_symbols and isinstance(prices, dict):
+#                     raw_ask_price = prices.get('o') #
+#                     raw_bid_price = prices.get('b') #
+#                     symbol_settings = group_settings.get(symbol_upper)
+
+#                     if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
+#                         try:
+#                             # Ensure Decimal types for calculations
+#                             spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0))) # e.g., 2 (number of pips) #
+#                             spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0))) # e.g., 0.0001 (value of 1 pip) #
+#                             ask_decimal = decimal.Decimal(str(raw_ask_price))
+#                             bid_decimal = decimal.Decimal(str(raw_bid_price))
+
+#                             # Configured spread amount in price units (e.g., 0.0002 for 2 pips EURUSD)
+#                             configured_spread_amount = spread_setting * spread_pip_setting #
+#                             half_spread = configured_spread_amount / decimal.Decimal(2)
+
+#                             # Adjusted buy/sell prices that are sent to the frontend
+#                             adjusted_buy_price = ask_decimal + half_spread #
+#                             adjusted_sell_price = bid_decimal - half_spread #
+
+#                             # --- CALCULATE SPREAD FOR FRONTEND DISPLAY ---
+
+#                             # Effective Spread in Price Units (e.g., 0.0002 for EURUSD)
+#                             effective_spread_price_units = adjusted_buy_price - adjusted_sell_price #
+
+#                             # Effective Spread in Pips (e.g., 2.0 pips for EURUSD)
+#                             effective_spread_in_pips = Decimal("0.0") #
+#                             if spread_pip_setting > Decimal("0.0"): #
+#                                 effective_spread_in_pips = effective_spread_price_units / spread_pip_setting #
+#                             else:
+#                                 logger.warning(f"spread_pip_setting is zero for {symbol_upper}. Cannot calculate effective spread in pips.")
+
+
+#                             # --- Update the user_market_data_payload with requested fields ---
+#                             user_market_data_payload[symbol_upper] = { #
+#                                 'buy': float(adjusted_buy_price), #
+#                                 'sell': float(adjusted_sell_price), #
+#                                 'spread': float(effective_spread_in_pips), # Renamed to 'spread' as requested #
+
+#                             }
+
+#                             await set_adjusted_market_price_cache( #
+#                                 redis_client=redis_client,
+#                                 group_name=group_name,
+#                                 symbol=symbol_upper,
+#                                 buy_price=adjusted_buy_price,
+#                                 sell_price=adjusted_sell_price,
+#                                 spread_value=configured_spread_amount # Still caching the configured spread amount #
+#                             )
+#                             logger.debug(f"Cached and added newly adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from update)")
+
+#                         except Exception as calc_e:
+#                             logger.error(f"Error calculating/caching adjusted prices for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
+#                             # Fallback to raw prices if calculation fails
+#                             if raw_ask_price is not None and raw_bid_price is not None:
+#                                  # Calculate raw spread for fallback
+#                                  raw_effective_spread_price_units = Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price)) #
+#                                  raw_effective_spread_in_pips = Decimal("0.0") #
+#                                  if spread_pip_setting > Decimal("0.0"): #
+#                                      raw_effective_spread_in_pips = raw_effective_spread_price_units / spread_pip_setting #
+
+#                                  user_market_data_payload[symbol_upper] = { #
+#                                     'buy': float(raw_ask_price), #
+#                                     'sell': float(raw_bid_price), #
+#                                     'spread': float(raw_effective_spread_in_pips), # Fallback spread in pips #
+#                                  }
+#                                  logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol_upper} due to calculation error.")
+#                             else:
+#                                  logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Cannot send price update.")
+
+#                     elif raw_ask_price is not None and raw_bid_price is not None:
+#                          # If no group settings found for this symbol, send raw prices as a fallback
+#                          raw_effective_spread_price_units = Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price)) #
+#                          raw_effective_spread_in_pips = Decimal("0.0") #
+#                          # Try to get spread_pip_setting from group_settings if symbol_settings was None
+#                          # This might be tricky if symbol_settings is None, but let's try to get it if available
+#                          if group_settings.get(symbol_upper) and decimal.Decimal(str(group_settings.get(symbol_upper).get('spread_pip', 0))) > Decimal("0.0"): #
+#                              raw_spread_pip_setting_for_fallback = decimal.Decimal(str(group_settings.get(symbol_upper).get('spread_pip', 0))) #
+#                              raw_effective_spread_in_pips = raw_effective_spread_price_units / raw_spread_pip_setting_for_fallback #
+
+#                          user_market_data_payload[symbol_upper] = { #
+#                              'buy': float(raw_ask_price), #
+#                              'sell': float(raw_bid_price), #
+#                              'spread': float(raw_effective_spread_in_pips), # Fallback spread in pips #
+#                          }
+#                          logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol_upper}. Sending raw prices (buy/sell) and calculated raw spreads.")
+#                     else:
+#                          logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Skipping price update.")
+
+#     # Always populate with cached prices for relevant symbols if not already in payload
+#     # This covers symbols not in the current market_data_update OR when force_account_recalc is true
+#     for symbol_upper in relevant_symbols:
+#         if symbol_upper not in user_market_data_payload: # Only add if not already added from current update
+#              cached_adjusted_price_data = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper) #
+#              symbol_settings = group_settings.get(symbol_upper) # Re-fetch symbol settings for cached symbol
+
+#              if cached_adjusted_price_data:
+#                  # Use prices from the cache for this specific symbol
+#                  buy_price_from_cache = decimal.Decimal(str(cached_adjusted_price_data.get('buy', 0.0)))
+#                  sell_price_from_cache = decimal.Decimal(str(cached_adjusted_price_data.get('sell', 0.0)))
+#                  # The 'spread_value' in cache is configured_spread_amount, not effective_spread_in_pips
+#                  # We need to recalculate effective_spread_in_pips for the cached prices
+
+#                  effective_spread_price_units_cache = buy_price_from_cache - sell_price_from_cache
+#                  effective_spread_in_pips_cache = Decimal("0.0")
+#                  if symbol_settings and decimal.Decimal(str(symbol_settings.get('spread_pip', 0))) > Decimal("0.0"):
+#                      spread_pip_for_cache_calc = decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
+#                      effective_spread_in_pips_cache = effective_spread_price_units_cache / spread_pip_for_cache_calc
+
+#                  user_market_data_payload[symbol_upper] = {
+#                      'buy': float(buy_price_from_cache),    # CORRECTED
+#                      'sell': float(sell_price_from_cache),  # CORRECTED
+#                      'spread': float(effective_spread_in_pips_cache), # Use spread calculated from these cached prices
+#                  }
+#                  logger.debug(f"Added cached adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from cache using its own cached buy/sell)")
+#              else:
+#                   logger.warning(f"No cached market price available for {symbol_upper} for user {user_id} during forced account recalculation (or if not in update).")
+
+
+#     # --- Calculate Dynamic Account Data ---
+#     open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else [] #
+
+#     calculated_portfolio_metrics = await calculate_user_portfolio( #
+#         user_data=user_data,
+#         open_positions=open_positions_from_cache,
+#         adjusted_market_prices=user_market_data_payload, # Use the combined updated/cached prices
+#         group_symbol_settings=group_settings
+#     )
+
+#     # --- Prepare and Send Data to WebSocket ---
+#     if user_market_data_payload or calculated_portfolio_metrics:
+#         account_data_payload = {
+#             "balance": calculated_portfolio_metrics.get("balance", 0.0), #
+#             "equity": calculated_portfolio_metrics.get("equity", 0.0), #
+#             "margin": float(user_data.get("margin", 0.0)), # User's OVERALL margin from cached user_data #
+#             "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0), #
+#             "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0), #
+#             "margin_level": calculated_portfolio_metrics.get("margin_level", 0.0), # Add margin_level here #
+#             "positions": calculated_portfolio_metrics.get("positions", []) #
+#         }
+
+#         payload = {
+#             "type": "market_data_update", # Use same type for now, client can distinguish content #
+#             "market_data": user_market_data_payload,
+#             "account_data": account_data_payload
+#         }
+
+#         # Check if the websocket is still connected before sending
+#         if websocket.client_state == WebSocketState.CONNECTED: #
+#             try:
+#                 await websocket.send_text(json.dumps(payload, cls=DecimalEncoder)) #
+#                 logger.debug(f"Sent personalized data to user {user_id}. Symbols sent: {list(user_market_data_payload.keys())}. Account data sent: {account_data_payload}")
+#             except Exception as send_e:
+#                 # Log sending errors but don't necessarily disconnect immediately
+#                 logger.error(f"Error sending data to user {user_id}: {send_e}", exc_info=True)
+#         else:
+#             logger.warning(f"WebSocket for user {user_id} is not connected. Skipping send.")
+
+#     else:
+#          logger.debug(f"No relevant market prices or account data to send for user {user_id} on this tick.")
+
+# # ... (rest of the market_data_ws.py file) ...
+
+
+# app/api/v1/endpoints/market_data_ws.py
+
+# ... (other imports and existing code from the file remain unchanged) ...
+import decimal # Ensure decimal is imported
+from decimal import Decimal # Ensure Decimal is imported
+
+# --- Helper Function for processing and sending updates to a single user (TESTING VERSION MODIFIED) ---
+# async def process_single_user_update(
+#     user_id: int,
+#     websocket_info: Dict[str, Any],
+#     redis_client: Redis,
+#     market_data_update: Dict[str, Any], # Contains updated market prices, could be empty if only account update
+#     force_account_recalc: bool = False # Flag to force recalculation even without market_data_update
+# ):
+#     """
+#     Processes and sends personalized data to a single WebSocket client.
+#     MODIFIED TESTING: Assumes Firebase 'b' is Ask and 'o' is Bid. Sends these potentially swapped raw prices.
+#     Spread calculation is adjusted accordingly. Caching still uses adjusted prices based on this assumption.
+#     """
+#     websocket = websocket_info['websocket']
+#     group_name = websocket_info['group_name']
+
+#     user_data = await get_user_data_cache(redis_client, user_id)
+#     user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
+#     group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+
+#     if not user_data:
+#         logger.warning(f"User data not found in cache for user {user_id}. Skipping data update for this user.")
+#         return
+
+#     relevant_symbols = set(group_settings.keys()) if isinstance(group_settings, dict) else set()
+#     user_market_data_payload: Dict[str, Dict[str, Any]] = {}
+
+#     if market_data_update:
+#         if isinstance(market_data_update, dict):
+#             for symbol, prices in market_data_update.items():
+#                 symbol_upper = symbol.upper()
+#                 if symbol_upper in relevant_symbols and isinstance(prices, dict):
+                    
+#                     raw_ask_price_from_firebase = prices.get('b') # Swapped: Use Firebase 'b' as Ask
+#                     raw_bid_price_from_firebase = prices.get('o') # Swapped: Use Firebase 'o' as Bid
+                    
+#                     logger.info(f"PRICE SWAP LOGIC APPLIED for {symbol_upper}: Firebase 'o' raw = {prices.get('o')}, 'b' raw = {prices.get('b')}. Interpreted Ask (from 'b') = {raw_ask_price_from_firebase}, Bid (from 'o') = {raw_bid_price_from_firebase}")
+
+#                     symbol_settings = group_settings.get(symbol_upper)
+
+#                     if raw_ask_price_from_firebase is not None and raw_bid_price_from_firebase is not None and symbol_settings:
+#                         try:
+#                             raw_ask_decimal = Decimal(str(raw_ask_price_from_firebase))
+#                             raw_bid_decimal = Decimal(str(raw_bid_price_from_firebase))
+
+#                             spread_setting = Decimal(str(symbol_settings.get('spread', 0)))
+#                             spread_pip_setting = Decimal(str(symbol_settings.get('spread_pip', 0)))
+                            
+#                             configured_spread_amount = spread_setting * spread_pip_setting
+#                             half_spread = configured_spread_amount / Decimal(2)
+                            
+#                             adjusted_buy_price_for_cache = raw_ask_decimal + half_spread
+#                             adjusted_sell_price_for_cache = raw_bid_decimal - half_spread
+
+#                             await set_adjusted_market_price_cache(
+#                                 redis_client=redis_client,
+#                                 group_name=group_name,
+#                                 symbol=symbol_upper,
+#                                 buy_price=adjusted_buy_price_for_cache,
+#                                 sell_price=adjusted_sell_price_for_cache,
+#                                 spread_value=configured_spread_amount 
+#                             )
+#                             logger.debug(f"MODIFIED TEST MODE: Cached ADJUSTED price for user {user_id}, symbol {symbol_upper} (buy: {adjusted_buy_price_for_cache}, sell: {adjusted_sell_price_for_cache})")
+
+#                             raw_effective_spread_price_units = raw_ask_decimal - raw_bid_decimal
+#                             raw_effective_spread_in_pips = Decimal("0.0")
+#                             if spread_pip_setting > Decimal("0.0"):
+#                                 raw_effective_spread_in_pips = raw_effective_spread_price_units / spread_pip_setting
+#                             else:
+#                                 logger.warning(f"spread_pip_setting is zero for {symbol_upper}. Cannot calculate raw spread in pips.")
+                            
+#                             user_market_data_payload[symbol_upper] = {
+#                                 'o': float(raw_ask_decimal),
+#                                 'b': float(raw_bid_decimal),
+#                                 'spread': float(raw_effective_spread_in_pips),
+#                             }
+#                             logger.debug(f"MODIFIED TEST MODE: Added interpreted RAW price for user {user_id}, symbol {symbol_upper} (o: {raw_ask_decimal}, b: {raw_bid_decimal})")
+
+#                         except Exception as calc_e:
+#                             logger.error(f"Error during MODIFIED TEST MODE price processing for user {user_id}, symbol {symbol_upper}: {calc_e}", exc_info=True)
+#                             if raw_ask_price_from_firebase is not None and raw_bid_price_from_firebase is not None:
+#                                 raw_ask_fallback = Decimal(str(raw_ask_price_from_firebase))
+#                                 raw_bid_fallback = Decimal(str(raw_bid_price_from_firebase))
+#                                 spread_val_fallback = Decimal("0.0")
+#                                 if symbol_settings and Decimal(str(symbol_settings.get('spread_pip', 0))) > Decimal("0.0"):
+#                                      spread_pip_val = Decimal(str(symbol_settings.get('spread_pip', 0)))
+#                                      spread_val_fallback = (raw_ask_fallback - raw_bid_fallback) / spread_pip_val
+                                
+#                                 user_market_data_payload[symbol_upper] = {
+#                                     'o': float(raw_ask_fallback),
+#                                     'b': float(raw_bid_fallback),
+#                                     'spread': float(spread_val_fallback), 
+#                                 }
+#                             else:
+#                                  logger.warning(f"MODIFIED TEST MODE: Incomplete raw market data for {symbol_upper} in fallback.")
+                    
+#                     elif raw_ask_price_from_firebase is not None and raw_bid_price_from_firebase is not None: # No symbol_settings
+#                         raw_ask_no_settings = Decimal(str(raw_ask_price_from_firebase))
+#                         raw_bid_no_settings = Decimal(str(raw_bid_price_from_firebase))
+#                         spread_no_settings_pips = Decimal("0.0")
+#                         gs_for_symbol = group_settings.get(symbol_upper)
+#                         if gs_for_symbol and Decimal(str(gs_for_symbol.get('spread_pip', "0"))) > Decimal("0.0"):
+#                             spread_pip_no_settings = Decimal(str(gs_for_symbol.get('spread_pip')))
+#                             spread_no_settings_pips = (raw_ask_no_settings - raw_bid_no_settings) / spread_pip_no_settings
+#                         else:
+#                             spread_no_settings_pips = raw_ask_no_settings - raw_bid_no_settings 
+#                             logger.warning(f"MODIFIED TEST MODE: spread_pip_setting not found or zero for {symbol_upper} (no settings branch). Spread will be price difference.")
+
+#                         user_market_data_payload[symbol_upper] = {
+#                             'o': float(raw_ask_no_settings),
+#                             'b': float(raw_bid_no_settings),
+#                             'spread': float(spread_no_settings_pips), 
+#                         }
+#                         logger.warning(f"MODIFIED TEST MODE: No specific symbol settings for {symbol_upper}. Sending interpreted RAW prices.")
+#                     else:
+#                          logger.warning(f"MODIFIED TEST MODE: Incomplete interpreted raw data for {symbol_upper}. Skipping.")
+
+#     for symbol_upper in relevant_symbols:
+#         if symbol_upper not in user_market_data_payload: 
+#              cached_adjusted_price_data = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper)
+#              symbol_settings_for_cache = group_settings.get(symbol_upper)
+
+#              if cached_adjusted_price_data:
+#                  buy_price_from_cache = Decimal(str(cached_adjusted_price_data.get('buy', 0.0)))
+#                  sell_price_from_cache = Decimal(str(cached_adjusted_price_data.get('sell', 0.0)))
+                 
+#                  effective_spread_price_units_cache = buy_price_from_cache - sell_price_from_cache
+#                  effective_spread_in_pips_cache = Decimal("0.0")
+#                  if symbol_settings_for_cache and Decimal(str(symbol_settings_for_cache.get('spread_pip', 0))) > Decimal("0.0"):
+#                      spread_pip_for_cache_calc = Decimal(str(symbol_settings_for_cache.get('spread_pip', 0)))
+#                      effective_spread_in_pips_cache = effective_spread_price_units_cache / spread_pip_for_cache_calc
+#                  else: 
+#                      effective_spread_in_pips_cache = effective_spread_price_units_cache 
+#                      logger.warning(f"MODIFIED TEST MODE: spread_pip_setting zero/missing for cached {symbol_upper}. Spread is price diff.")
+
+#                  # For cached data, we send what was cached (adjusted 'buy'/'sell')
+#                  # To align with index.html expecting 'o' and 'b' for raw data:
+#                  # If you want index.html to *always* use 'o' and 'b', then cache should store 'o' and 'b'
+#                  # or this part needs to decide if it sends 'buy'/'sell' or 'o'/'b'.
+#                  # For now, sending as 'o' and 'b' but they are the cached adjusted prices.
+#                  # This could be confusing. A better approach might be to ensure frontend handles
+#                  # the presence of 'o'/'b' OR 'buy'/'sell' keys. # Corrected Comment
+#                  # However, current frontend logic prioritizes 'o'/'b'.
+#                  user_market_data_payload[symbol_upper] = {
+#                      'o': float(buy_price_from_cache), 
+#                      'b': float(sell_price_from_cache),  
+#                      'spread': float(effective_spread_in_pips_cache), 
+#                  }
+#                  logger.debug(f"MODIFIED TEST MODE: Added CACHED (ADJUSTED as o/b) price for user {user_id}, symbol {symbol_upper}")
+#              else:
+#                   logger.warning(f"MODIFIED TEST MODE: No cached market price for {symbol_upper}.")
+
+#     open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
+#     prices_for_portfolio_calc = {}
+#     for sym, data_val in user_market_data_payload.items():
+#         prices_for_portfolio_calc[sym] = {
+#             'buy': data_val.get('o'), 
+#             'sell': data_val.get('b') 
+#         }
+
+#     calculated_portfolio_metrics = await calculate_user_portfolio(
+#         user_data=user_data,
+#         open_positions=open_positions_from_cache,
+#         adjusted_market_prices=prices_for_portfolio_calc, 
+#         group_symbol_settings=group_settings
+#     )
+
+#     if user_market_data_payload or calculated_portfolio_metrics: 
+#         account_data_payload = {
+#             "balance": calculated_portfolio_metrics.get("balance", 0.0),
+#             "equity": calculated_portfolio_metrics.get("equity", 0.0),
+#             "margin": float(user_data.get("margin", 0.0)), 
+#             "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0),
+#             "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0),
+#             "margin_level": calculated_portfolio_metrics.get("margin_level", 0.0), 
+#             "positions": calculated_portfolio_metrics.get("positions", [])
+#         }
+
+#         payload = {
+#             "type": "market_data_update", 
+#             "market_data": user_market_data_payload, 
+#             "account_data": account_data_payload
+#         }
+
+#         if websocket.client_state == WebSocketState.CONNECTED:
+#             try:
+#                 await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
+#                 logger.debug(f"MODIFIED TEST MODE: Sent data to user {user_id}. Market keys: {list(user_market_data_payload.keys())}")
+#             except Exception as send_e:
+#                 logger.error(f"MODIFIED TEST MODE: Error sending data to user {user_id}: {send_e}", exc_info=True)
+#         else:
+#             logger.warning(f"MODIFIED TEST MODE: WebSocket for user {user_id} not connected.")
+#     else:
+#          logger.debug(f"MODIFIED TEST MODE: No relevant data to send for user {user_id}.")
+
+# # ... (the rest of your market_data_ws.py file, including redis_market_data_broadcaster, etc.)
+
 async def process_single_user_update(
     user_id: int,
     websocket_info: Dict[str, Any],
     redis_client: Redis,
-    market_data_update: Dict[str, Any], # Contains updated market prices, could be empty if only account update
-    force_account_recalc: bool = False # Flag to force recalculation even without market_data_update
+    market_data_update: Dict[str, Any],
+    force_account_recalc: bool = False
 ):
-    """
-    Processes and sends personalized data to a single WebSocket client.
-    Now sends only buy, sell, and effective_spread_in_pips (as 'spread').
-    """
     websocket = websocket_info['websocket']
     group_name = websocket_info['group_name']
 
-    # Retrieve cached user data, portfolio, and group settings
     user_data = await get_user_data_cache(redis_client, user_id)
     user_portfolio = await get_user_portfolio_cache(redis_client, user_id)
     group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
 
     if not user_data:
-        logger.warning(f"User data not found in cache for user {user_id}. Skipping data update for this user.")
+        logger.warning(f"User data not found in cache for user {user_id}. Skipping data update.")
         return
 
     relevant_symbols = set(group_settings.keys()) if isinstance(group_settings, dict) else set()
     user_market_data_payload: Dict[str, Dict[str, float]] = {}
 
-    # --- Populate with Latest Prices (Updated or Cached) ---
-    # Prioritize prices from the market_data_update if present
     if market_data_update:
-        symbols_processed_from_update = set()
-        if isinstance(market_data_update, dict):
-            for symbol, prices in market_data_update.items():
-                symbol_upper = symbol.upper()
-                symbols_processed_from_update.add(symbol_upper)
+        for symbol, prices in market_data_update.items():
+            symbol_upper = symbol.upper()
+            if symbol_upper in relevant_symbols and isinstance(prices, dict):
+                raw_ask = prices.get('b')  # Firebase: 'b' is ask
+                raw_bid = prices.get('o')  # Firebase: 'o' is bid
+                symbol_settings = group_settings.get(symbol_upper)
 
-                # Only process updated symbols that are relevant to this user's group
-                if symbol_upper in relevant_symbols and isinstance(prices, dict):
-                    raw_ask_price = prices.get('o')
-                    raw_bid_price = prices.get('b')
-                    symbol_settings = group_settings.get(symbol_upper)
+                if raw_ask is not None and raw_bid is not None and symbol_settings:
+                    try:
+                        ask_decimal = Decimal(str(raw_ask))
+                        bid_decimal = Decimal(str(raw_bid))
+                        spread_setting = Decimal(str(symbol_settings.get('spread', 0)))
+                        spread_pip_setting = Decimal(str(symbol_settings.get('spread_pip', 0)))
 
-                    if raw_ask_price is not None and raw_bid_price is not None and symbol_settings:
-                        try:
-                            # Ensure Decimal types for calculations
-                            spread_setting = decimal.Decimal(str(symbol_settings.get('spread', 0))) # e.g., 2 (number of pips)
-                            spread_pip_setting = decimal.Decimal(str(symbol_settings.get('spread_pip', 0))) # e.g., 0.0001 (value of 1 pip)
-                            ask_decimal = decimal.Decimal(str(raw_ask_price))
-                            bid_decimal = decimal.Decimal(str(raw_bid_price))
+                        configured_spread_amount = spread_setting * spread_pip_setting
+                        half_spread = configured_spread_amount / Decimal(2)
 
-                            # Configured spread amount in price units (e.g., 0.0002 for 2 pips EURUSD)
-                            configured_spread_amount = spread_setting * spread_pip_setting
-                            half_spread = configured_spread_amount / decimal.Decimal(2)
+                        adjusted_buy_price = ask_decimal + half_spread
+                        adjusted_sell_price = bid_decimal - half_spread
 
-                            # Adjusted buy/sell prices that are sent to the frontend
-                            adjusted_buy_price = ask_decimal + half_spread
-                            adjusted_sell_price = bid_decimal - half_spread
+                        effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+                        effective_spread_in_pips = Decimal("0.0")
+                        if spread_pip_setting > Decimal("0.0"):
+                            effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
 
-                            # --- CALCULATE SPREAD FOR FRONTEND DISPLAY ---
+                        user_market_data_payload[symbol_upper] = {
+                            'buy': float(adjusted_buy_price),
+                            'sell': float(adjusted_sell_price),
+                            'spread': float(effective_spread_in_pips),
+                        }
 
-                            # Effective Spread in Price Units (e.g., 0.0002 for EURUSD)
-                            effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+                        await set_adjusted_market_price_cache(
+                            redis_client=redis_client,
+                            group_name=group_name,
+                            symbol=symbol_upper,
+                            buy_price=adjusted_buy_price,
+                            sell_price=adjusted_sell_price,
+                            spread_value=configured_spread_amount
+                        )
 
-                            # Effective Spread in Pips (e.g., 2.0 pips for EURUSD)
-                            effective_spread_in_pips = Decimal("0.0")
-                            if spread_pip_setting > Decimal("0.0"):
-                                effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
-                            else:
-                                logger.warning(f"spread_pip_setting is zero for {symbol_upper}. Cannot calculate effective spread in pips.")
+                    except Exception as e:
+                        logger.error(f"Error processing adjusted prices for {symbol_upper}: {e}", exc_info=True)
 
-
-                            # --- Update the user_market_data_payload with requested fields ---
-                            user_market_data_payload[symbol_upper] = {
-                                'buy': float(adjusted_buy_price),
-                                'sell': float(adjusted_sell_price),
-                                'spread': float(effective_spread_in_pips), # Renamed to 'spread' as requested
-
-                            }
-
-                            await set_adjusted_market_price_cache(
-                                redis_client=redis_client,
-                                group_name=group_name,
-                                symbol=symbol_upper,
-                                buy_price=adjusted_buy_price,
-                                sell_price=adjusted_sell_price,
-                                spread_value=configured_spread_amount # Still caching the configured spread amount
-                            )
-                            logger.debug(f"Cached and added newly adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from update)")
-
-                        except Exception as calc_e:
-                            logger.error(f"Error calculating/caching adjusted prices for user {user_id}, group '{group_name}', symbol {symbol}: {calc_e}", exc_info=True)
-                            # Fallback to raw prices if calculation fails
-                            if raw_ask_price is not None and raw_bid_price is not None:
-                                 # Calculate raw spread for fallback
-                                 raw_effective_spread_price_units = Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price))
-                                 raw_effective_spread_in_pips = Decimal("0.0")
-                                 if spread_pip_setting > Decimal("0.0"):
-                                     raw_effective_spread_in_pips = raw_effective_spread_price_units / spread_pip_setting
-
-                                 user_market_data_payload[symbol_upper] = {
-                                    'buy': float(raw_ask_price),
-                                    'sell': float(raw_bid_price),
-                                    'spread': float(raw_effective_spread_in_pips), # Fallback spread in pips
-                                 }
-                                 logger.warning(f"Falling back to raw prices (buy/sell) for user {user_id}, symbol {symbol_upper} due to calculation error.")
-                            else:
-                                 logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Cannot send price update.")
-
-                    elif raw_ask_price is not None and raw_bid_price is not None:
-                         # If no group settings found for this symbol, send raw prices as a fallback
-                         raw_effective_spread_price_units = Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price))
-                         raw_effective_spread_in_pips = Decimal("0.0")
-                         # Try to get spread_pip_setting from group_settings if symbol_settings was None
-                         # This might be tricky if symbol_settings is None, but let's try to get it if available
-                         if group_settings.get(symbol_upper) and decimal.Decimal(str(group_settings.get(symbol_upper).get('spread_pip', 0))) > Decimal("0.0"):
-                             raw_spread_pip_setting_for_fallback = decimal.Decimal(str(group_settings.get(symbol_upper).get('spread_pip', 0)))
-                             raw_effective_spread_in_pips = raw_effective_spread_price_units / raw_spread_pip_setting_for_fallback
-
-                         user_market_data_payload[symbol_upper] = {
-                             'buy': float(raw_ask_price),
-                             'sell': float(raw_bid_price),
-                             'spread': float(raw_effective_spread_in_pips), # Fallback spread in pips
-                         }
-                         logger.warning(f"No group settings found for user {user_id}, group '{group_name}', symbol {symbol_upper}. Sending raw prices (buy/sell) and calculated raw spreads.")
-                    else:
-                         logger.warning(f"Incomplete raw market data for updated symbol {symbol_upper} for user {user_id}. Skipping price update.")
-
-    # Always populate with cached prices for relevant symbols if not already in payload
-    # This covers symbols not in the current market_data_update OR when force_account_recalc is true
     for symbol_upper in relevant_symbols:
-        if symbol_upper not in user_market_data_payload: # Only add if not already added from current update
-             cached_adjusted_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper)
-             symbol_settings = group_settings.get(symbol_upper) # Re-fetch symbol settings for cached symbol
+        if symbol_upper not in user_market_data_payload:
+            cached = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper)
+            symbol_settings = group_settings.get(symbol_upper)
 
-             if cached_adjusted_price:
-                 adjusted_buy_price = decimal.Decimal(str(cached_adjusted_price.get('buy', 0.0)))
-                 adjusted_sell_price = decimal.Decimal(str(cached_adjusted_price.get('sell', 0.0)))
-                 configured_spread_amount = decimal.Decimal(str(cached_adjusted_price.get('spread_value', 0.0))) # This was cached configured spread
+            if cached:
+                buy = Decimal(str(cached.get('buy', 0.0)))
+                sell = Decimal(str(cached.get('sell', 0.0)))
+                spread_pip = Decimal(str(symbol_settings.get('spread_pip', 0))) if symbol_settings else Decimal("0.0")
 
-                 # Calculate effective spreads from cached adjusted prices
-                 effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
-                 effective_spread_in_pips = Decimal("0.0")
-                 if symbol_settings and decimal.Decimal(str(symbol_settings.get('spread_pip', 0))) > Decimal("0.0"):
-                     effective_spread_in_pips = effective_spread_price_units / decimal.Decimal(str(symbol_settings.get('spread_pip', 0)))
+                effective_spread = (buy - sell) / spread_pip if spread_pip > Decimal("0.0") else (buy - sell)
 
-                 user_market_data_payload[symbol_upper] = {
-                     'buy': float(adjusted_buy_price),
-                     'sell': float(adjusted_sell_price),
-                     'spread': float(effective_spread_in_pips), # Renamed to 'spread'
-                     
-                 }
-                 logger.debug(f"Added cached adjusted price for user {user_id}, group '{group_name}', symbol {symbol_upper} (from cache)")
-             else:
-                  logger.warning(f"No cached market price available for {symbol_upper} for user {user_id} during forced account recalculation (or if not in update).")
+                user_market_data_payload[symbol_upper] = {
+                    'buy': float(buy),
+                    'sell': float(sell),
+                    'spread': float(effective_spread),
+                }
 
+    prices_for_portfolio_calc = {
+        sym: {
+            'buy': val.get('buy'),
+            'sell': val.get('sell')
+        }
+        for sym, val in user_market_data_payload.items()
+    }
 
-    # --- Calculate Dynamic Account Data ---
-    open_positions_from_cache = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
-
-    calculated_portfolio_metrics = await calculate_user_portfolio(
+    open_positions = user_portfolio.get('positions', []) if isinstance(user_portfolio, dict) else []
+    portfolio = await calculate_user_portfolio(
         user_data=user_data,
-        open_positions=open_positions_from_cache,
-        adjusted_market_prices=user_market_data_payload, # Use the combined updated/cached prices
+        open_positions=open_positions,
+        adjusted_market_prices=prices_for_portfolio_calc,
         group_symbol_settings=group_settings
     )
 
-    # --- Prepare and Send Data to WebSocket ---
-    if user_market_data_payload or calculated_portfolio_metrics:
+    if user_market_data_payload or portfolio:
         account_data_payload = {
-            "balance": calculated_portfolio_metrics.get("balance", 0.0),
-            "equity": calculated_portfolio_metrics.get("equity", 0.0),
-            "margin": float(user_data.get("margin", 0.0)), # User's OVERALL margin from cached user_data
-            "free_margin": calculated_portfolio_metrics.get("free_margin", 0.0),
-            "profit_loss": calculated_portfolio_metrics.get("profit_loss", 0.0),
-            "margin_level": calculated_portfolio_metrics.get("margin_level", 0.0), # Add margin_level here
-            "positions": calculated_portfolio_metrics.get("positions", [])
+            "balance": portfolio.get("balance", 0.0),
+            "equity": portfolio.get("equity", 0.0),
+            "margin": float(user_data.get("margin", 0.0)),
+            "free_margin": portfolio.get("free_margin", 0.0),
+            "profit_loss": portfolio.get("profit_loss", 0.0),
+            "margin_level": portfolio.get("margin_level", 0.0),
+            "positions": portfolio.get("positions", [])
         }
 
         payload = {
-            "type": "market_data_update", # Use same type for now, client can distinguish content
+            "type": "market_data_update",
             "market_data": user_market_data_payload,
             "account_data": account_data_payload
         }
 
-        # Check if the websocket is still connected before sending
         if websocket.client_state == WebSocketState.CONNECTED:
             try:
                 await websocket.send_text(json.dumps(payload, cls=DecimalEncoder))
-                logger.debug(f"Sent personalized data to user {user_id}. Symbols sent: {list(user_market_data_payload.keys())}. Account data sent: {account_data_payload}")
-            except Exception as send_e:
-                # Log sending errors but don't necessarily disconnect immediately
-                logger.error(f"Error sending data to user {user_id}: {send_e}", exc_info=True)
-        else:
-            logger.warning(f"WebSocket for user {user_id} is not connected. Skipping send.")
+                logger.debug(f"Sent adjusted price update to user {user_id}")
+            except Exception as e:
+                logger.error(f"Error sending WebSocket data to user {user_id}: {e}", exc_info=True)
 
-    else:
-         logger.debug(f"No relevant market prices or account data to send for user {user_id} on this tick.")
 
 # --- Redis Market Data Broadcaster Task (Modified) ---
 async def redis_market_data_broadcaster(redis_client: Redis):

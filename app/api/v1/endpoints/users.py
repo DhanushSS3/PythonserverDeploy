@@ -1,5 +1,3 @@
-# app/api/v1/endpoints/users.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,8 +22,8 @@ from app.schemas.user import (
     UserUpdate,
     SendOTPRequest,
     VerifyOTPRequest,
-    RequestPasswordReset,
-    ResetPasswordConfirm,
+    RequestPasswordReset, # Ensure this is imported
+    ResetPasswordConfirm, # Ensure this is imported
     StatusResponse,
     UserLogin,
     Token,
@@ -54,6 +52,7 @@ from app.core.config import get_settings
 from redis.asyncio import Redis # Import Redis type
 from app.dependencies.redis_client import get_redis_client # <--- CORRECTED IMPORT LOCATION
 
+from app.schemas.user import SignupVerifyOTPRequest, SignupSendOTPRequest
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -118,6 +117,7 @@ async def save_upload_file(upload_file: Optional[UploadFile]) -> Optional[str]:
     return static_path
 
 
+# app/api/v1/endpoints/users.py
 @router.post(
     "/register",
     response_model=UserResponse,
@@ -126,49 +126,37 @@ async def save_upload_file(upload_file: Optional[UploadFile]) -> Optional[str]:
     description="Creates a new user account with the provided details and uploads identity/address proofs."
 )
 async def register_user_with_proofs(
-    name: str = Form(..., description="Full name of the user."),
-    email: str = Form(..., description="User's email address (must be unique)."),
-    phone_number: str = Form(..., max_length=20, description="User's phone number (must be unique)."),
-    password: str = Form(..., min_length=8, description="User's password (will be hashed)."),
-    city: str = Form(..., description="City of the user."),
-    state: str = Form(..., description="State of the user."),
-    pincode: int = Form(..., description="Pincode of the user's location."),
-    user_type: str = Form(..., max_length=100, description="Type of user (e.g., 'trader', 'investor')."),
-    security_question: Optional[str] = Form(None, max_length=255, description="Security question for recovery."),
-    fund_manager: Optional[str] = Form(None, max_length=255, description="Name of the assigned fund manager."),
-    is_self_trading: Optional[int] = Form(1, description="Flag indicating if the user is self-trading (0 or 1). Defaults to 1."),
-    group_name: Optional[str] = Form(None, max_length=255, description="Name of the trading group the user belongs to."),
-    bank_ifsc_code: Optional[str] = Form(None, max_length=50, description="Bank IFSC code."),
-    bank_holder_name: Optional[str] = Form(None, max_length=255, description="Bank account holder name."),
-    bank_branch_name: Optional[str] = Form(None, max_length=255, description="Bank branch name."),
-    bank_account_number: Optional[str] = Form(None, max_length=100, description="Bank account number."),
-
-    id_proof: Optional[str] = Form(None, description="Type of ID proof (e.g., Aadhaar, Passport)."),
-    address_proof: Optional[str] = Form(None, description="Type of address proof (e.g., Utility Bill, Bank Statement)."),
-
-    id_proof_image: Optional[UploadFile] = File(None, description="ID proof image file."),
-    address_proof_image: Optional[UploadFile] = File(None, description="Address proof image file."),
-
+    name: str = Form(...),
+    email: str = Form(...),
+    phone_number: str = Form(..., max_length=20),
+    password: str = Form(..., min_length=8),
+    city: str = Form(...),
+    state: str = Form(...),
+    pincode: int = Form(...),
+    user_type: str = Form(..., max_length=100),
+    security_question: Optional[str] = Form(None),
+    fund_manager: Optional[str] = Form(None),
+    is_self_trading: Optional[int] = Form(1),
+    group_name: Optional[str] = Form(None),
+    bank_ifsc_code: Optional[str] = Form(None),
+    bank_holder_name: Optional[str] = Form(None),
+    bank_branch_name: Optional[str] = Form(None),
+    bank_account_number: Optional[str] = Form(None),
+    id_proof: Optional[str] = Form(None),
+    address_proof: Optional[str] = Form(None),
+    id_proof_image: Optional[UploadFile] = File(None),
+    address_proof_image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Handles new user registration with file uploads for proofs.
-    """
-    existing_user_email = await crud_user.get_user_by_email(db, email=email)
-    if existing_user_email:
+    # 🚫 New uniqueness check (email, phone, user_type)
+    existing_user = await crud_user.get_user_by_email_phone_type(db, email=email, phone_number=phone_number, user_type=user_type)
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail="User with this email and phone number already exists for this user type."
         )
 
-    existing_user_phone = await crud_user.get_user_by_phone_number(db, phone_number=phone_number)
-    if existing_user_phone:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Phone number already registered"
-        )
-
-    # Save uploaded files - errors are now raised in save_upload_file
+    # Save uploaded files
     id_proof_image_path = await save_upload_file(id_proof_image)
     address_proof_image_path = await save_upload_file(address_proof_image)
 
@@ -188,232 +176,371 @@ async def register_user_with_proofs(
         "bank_holder_name": bank_holder_name,
         "bank_branch_name": bank_branch_name,
         "bank_account_number": bank_account_number,
-         "wallet_balance": 0.0, # Initialize wallet balance
-         "leverage": 1.0, # Initialize leverage
-         "margin": 0.0, # Initialize margin
-         "status": 0, # Initialize status (e.g., 0 for pending verification)
-         "isActive": 0, # Initialize isActive (e.g., 0 for inactive)
-         "account_number": await generate_unique_account_number(db),  # New unique 5-char alphanumeric
+        "wallet_balance": 0.0,
+        "leverage": 1.0,
+        "margin": 0.0,
+        "status": 0,
+        "isActive": 0,
+        "account_number": await generate_unique_account_number(db),
     }
 
     hashed_password = get_password_hash(password)
 
-    # Try to create the user in the database
     try:
         new_user = await crud_user.create_user(
             db=db,
             user_data=user_data,
             hashed_password=hashed_password,
-            id_proof_path=id_proof, # Pass the string type
-            id_proof_image_path=id_proof_image_path, # Pass the file path
-            address_proof_path=address_proof, # Pass the string type
-            address_proof_image_path=address_proof_image_path # Pass the file path
+            id_proof_path=id_proof,
+            id_proof_image_path=id_proof_image_path,
+            address_proof_path=address_proof,
+            address_proof_image_path=address_proof_image_path
         )
-        logger.info(f"New user registered successfully with ID: {new_user.id}, email: {new_user.email}")
         return new_user
 
     except IntegrityError:
-        await db.rollback() # Rollback the transaction on integrity error
-        # Clean up uploaded files if DB creation fails due to integrity error
-        if id_proof_image_path and os.path.exists(os.path.join(UPLOAD_DIRECTORY, os.path.basename(id_proof_image_path))):
-             os.remove(os.path.join(UPLOAD_DIRECTORY, os.path.basename(id_proof_image_path)))
-        if address_proof_image_path and os.path.exists(os.path.join(UPLOAD_DIRECTORY, os.path.basename(address_proof_image_path))):
-             os.remove(os.path.join(UPLOAD_DIRECTORY, os.path.basename(address_proof_image_path)))
-        logger.error(f"Integrity error during user registration for email {email} or phone {phone_number}.")
+        await db.rollback()
+        if id_proof_image_path: os.remove(id_proof_image_path)
+        if address_proof_image_path: os.remove(address_proof_image_path)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email or phone number already exists."
         )
+
     except Exception as e:
-        await db.rollback() # Rollback on any other error during DB operation
-        # Clean up uploaded files on other errors
-        if id_proof_image_path and os.path.exists(os.path.join(UPLOAD_DIRECTORY, os.path.basename(id_proof_image_path))):
-             os.remove(os.path.join(UPLOAD_DIRECTORY, os.path.basename(id_proof_image_path)))
-        if address_proof_image_path and os.path.exists(os.path.join(UPLOAD_DIRECTORY, os.path.basename(address_proof_image_path))):
-             os.remove(os.path.join(UPLOAD_DIRECTORY, os.path.basename(address_proof_image_path)))
-        logger.error(f"Unexpected error during user registration: {e}", exc_info=True)
+        await db.rollback()
+        if id_proof_image_path: os.remove(id_proof_image_path)
+        if address_proof_image_path: os.remove(address_proof_image_path)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during registration."
         )
+    
+# # Remember to add the new Pydantic models (SignupSendOTPRequest, SignupVerifyOTPRequest)
+# # to app/schemas/user.py and import them at the top of users.py.
+# # Also, ensure crud_otp.generate_otp_code is accessible.
+# @router.post(
+#     "/send-otp",
+#     response_model=StatusResponse,
+#     summary="Send OTP for password reset",
+#     description="Generates and sends a one-time password (OTP) to the user's email for password reset."
+# )
+# async def send_otp_for_verification(
+#     otp_request: SendOTPRequest,
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     """
+#     Generates and sends an OTP to the user's email for initial verification or password reset.
+#     """
+#     user = await crud_user.get_user_by_email(db, email=otp_request.email)
+#     if not user:
+#         logger.warning(f"Attempted to send OTP to non-existent email: {otp_request.email}")
+#         # Return a generic success message even if user not found for security
+#         return StatusResponse(message="If a user with that email exists, an OTP has been sent.")
 
-@router.post(
-    "/send-otp",
-    response_model=StatusResponse,
-    summary="Send OTP for email verification or password reset",
-    description="Generates and sends a one-time password (OTP) to the user's email for verification or password reset."
-)
-async def send_otp_for_verification(
-    otp_request: SendOTPRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Generates and sends an OTP to the user's email for initial verification or password reset.
-    """
-    user = await crud_user.get_user_by_email(db, email=otp_request.email)
-    if not user:
-        logger.warning(f"Attempted to send OTP to non-existent email: {otp_request.email}")
-        # Return a generic success message even if user not found for security
-        return StatusResponse(message="If a user with that email exists, an OTP has been sent.")
+#     try:
+#         # Create a new OTP for the user (reusing the create_otp function)
+#         otp_record = await crud_otp.create_otp(db, user_id=user.id)
 
-    try:
-        # Create a new OTP for the user (reusing the create_otp function)
-        otp_record = await crud_otp.create_otp(db, user_id=user.id)
-
-        # Determine if this is for initial verification or password reset
-        subject = "Your Trading App OTP"
-        body = f"Your One-Time Password (OTP) is: {otp_record.otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes.\n\nUse this OTP for email verification or password reset." # Generic body
-
-
-        await email_service.send_email(
-            to_email=user.email,
-            subject=subject,
-            body=body
-        )
-        logger.info(f"OTP sent successfully to {user.email}.")
-
-        return StatusResponse(message="OTP sent successfully.")
-
-    except Exception as e:
-        # Log the error and return a generic error response
-        logger.error(f"Error sending OTP to {user.email}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send OTP. Please try again later."
-        )
+#         subject = "Your Trading App OTP"
+#         body = f"Your One-Time Password (OTP) is: {otp_record.otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes.\n\nUse this OTP for email verification or password reset." # Generic body
 
 
-@router.post(
-    "/verify-otp",
-    response_model=StatusResponse,
-    summary="Verify OTP for email verification",
-    description="Verifies the provided OTP code against the one sent to the user's email and activates the user account."
-)
-async def verify_user_otp(
-    verify_request: VerifyOTPRequest,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Verifies the user-provided OTP for initial email verification and activates the user.
-    """
-    # Find the user by email
-    user = await crud_user.get_user_by_email(db, email=verify_request.email)
-    if not user:
-        # Return a generic error message for security
-        logger.warning(f"Verification attempt for non-existent email: {verify_request.email}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email or OTP."
-        )
+#         await email_service.send_email(
+#             to_email=user.email,
+#             subject=subject,
+#             body=body
+#         )
+#         logger.info(f"OTP sent successfully to {user.email}.")
 
-    # Get the valid OTP record for the user
-    otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=verify_request.otp_code)
+#         return StatusResponse(message="OTP sent successfully.")
 
-    if not otp_record:
-        # If no valid OTP found (either incorrect or expired)
-        logger.warning(f"Invalid or expired OTP provided for email: {verify_request.email}")
-        # Consider adding rate limiting here to prevent brute-force attacks
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OTP."
-        )
+#     except Exception as e:
+#         # Log the error and return a generic error response
+#         logger.error(f"Error sending OTP to {user.email}: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to send OTP. Please try again later."
+#         )
 
-    # If OTP is valid, set user status to active
-    user.status = 1 # Assuming status 1 means verified/active
-    user.isActive = 1 # Assuming isActive 1 means active
-    try:
-        await db.commit() # Commit the status update
-        # await db.refresh(user) # Not needed unless you return the user object
 
-        # Delete the used OTP record
-        await crud_otp.delete_otp(db, otp_id=otp_record.id)
-        logger.info(f"Email verified and user account activated successfully for user ID: {user.id}")
+# @router.post(
+#     "/verify-otp",
+#     response_model=StatusResponse,
+#     summary="Verify OTP for email verification",
+#     description="Verifies the provided OTP code against the one sent to the user's email and activates the user account."
+# )
+# async def verify_user_otp(
+#     verify_request: VerifyOTPRequest,
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     """
+#     Verifies the user-provided OTP for initial email verification and activates the user.
+#     """
+#     # Find the user by email
+#     user = await crud_user.get_user_by_email(db, email=verify_request.email)
+#     if not user:
+#         # Return a generic error message for security
+#         logger.warning(f"Verification attempt for non-existent email: {verify_request.email}")
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Invalid email or OTP."
+#         )
 
-    except Exception as e:
-        await db.rollback() # Rollback on error during DB operations
-        logger.error(f"Error activating user ID {user.id} after OTP verification: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during verification."
-        )
+#     # Get the valid OTP record for the user
+#     otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=verify_request.otp_code)
 
-    return StatusResponse(message="Email verified and account activated successfully.")
+#     if not otp_record:
+#         # If no valid OTP found (either incorrect or expired)
+#         logger.warning(f"Invalid or expired OTP provided for email: {verify_request.email}")
+#         # Consider adding rate limiting here to prevent brute-force attacks
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Invalid or expired OTP."
+#         )
 
-# NOTE: The /request-password-reset and /reset-password endpoints
-# are already correctly implemented in your original file using crud_otp
-# for fetching/validating OTPs for password reset.
+#     # If OTP is valid, set user status to active
+#     user.status = 1 # Assuming status 1 means verified/active
+#     user.isActive = 1 # Assuming isActive 1 means active
+#     try:
+#         await db.commit() # Commit the status update
+#         # await db.refresh(user) # Not needed unless you return the user object
+
+#         # Delete the used OTP record
+#         await crud_otp.delete_otp(db, otp_id=otp_record.id)
+#         logger.info(f"Email verified and user account activated successfully for user ID: {user.id}")
+
+#     except Exception as e:
+#         await db.rollback() # Rollback on error during DB operations
+#         logger.error(f"Error activating user ID {user.id} after OTP verification: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="An error occurred during verification."
+#         )
+
+#     return StatusResponse(message="Email verified and account activated successfully.")
+
+# # --- Password Reset Endpoints ---
+
+# @router.post(
+#     "/request-password-reset",
+#     response_model=StatusResponse,
+#     summary="Request password reset",
+#     description="Initiates the password reset process by sending an OTP to the user's email."
+# )
+# async def request_password_reset(
+#     request: RequestPasswordReset,
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     """
+#     Handles the request to reset a user's password.
+#     Sends an OTP to the user's registered email.
+#     """
+#     user = await crud_user.get_user_by_email(db, email=request.email)
+#     if not user:
+#         logger.warning(f"Password reset requested for non-existent email: {request.email}")
+#         # Return a generic success message for security reasons
+#         return StatusResponse(message="If a user with that email exists, a password reset OTP has been sent.")
+
+#     try:
+#         # Create a new OTP for the user, specifically for password reset
+#         otp_record = await crud_otp.create_otp(db, user_id=user.id)
+
+#         subject = "Password Reset OTP for Your Trading App Account"
+#         body = (
+#             f"You have requested to reset your password for your Trading App account.\n\n"
+#             f"Your One-Time Password (OTP) is: {otp_record.otp_code}\n\n"
+#             f"This OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes.\n\n"
+#             f"If you did not request a password reset, please ignore this email."
+#         )
+
+#         await email_service.send_email(
+#             to_email=user.email,
+#             subject=subject,
+#             body=body
+#         )
+#         logger.info(f"Password reset OTP sent successfully to {user.email}.")
+#         return StatusResponse(message="Password reset OTP sent successfully. Please check your email.")
+
+#     except Exception as e:
+#         logger.error(f"Error sending password reset OTP to {user.email}: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to send password reset OTP. Please try again later."
+#         )
+
+# @router.post(
+#     "/reset-password-confirm",
+#     response_model=StatusResponse,
+#     summary="Confirm password reset",
+#     description="Confirms the password reset using an OTP and sets a new password for the user."
+# )
+# async def confirm_password_reset(
+#     reset_confirm: ResetPasswordConfirm,
+#     db: AsyncSession = Depends(get_db)
+# ):
+#     """
+#     Confirms the password reset request by verifying the OTP and setting a new password.
+#     """
+#     user = await crud_user.get_user_by_email(db, email=reset_confirm.email)
+#     if not user:
+#         logger.warning(f"Password reset confirmation attempt for non-existent email: {reset_confirm.email}")
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Invalid email or OTP."
+#         )
+
+#     # Verify the OTP
+#     otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=reset_confirm.otp_code)
+#     if not otp_record:
+#         logger.warning(f"Invalid or expired OTP for password reset for email: {reset_confirm.email}")
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Invalid or expired OTP."
+#         )
+
+#     try:
+#         # Hash the new password
+#         hashed_new_password = get_password_hash(reset_confirm.new_password)
+
+#         # Update the user's password
+#         user.hashed_password = hashed_new_password
+#         await db.commit()
+#         # await db.refresh(user) # Not needed unless you return the user object
+
+#         # Delete the used OTP record
+#         await crud_otp.delete_otp(db, otp_id=otp_record.id)
+#         logger.info(f"Password successfully reset for user ID: {user.id}")
+
+#         return StatusResponse(message="Password has been reset successfully.")
+
+#     except Exception as e:
+#         await db.rollback()
+#         logger.error(f"Error resetting password for user ID {user.id}: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="An error occurred while resetting the password."
+#         )
 
 # --- Authentication Endpoints ---
 
-@router.post("/login", response_model=Token, summary="User Login")
-async def login_for_access_tokens(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+# @router.post("/login", response_model=Token, summary="User Login")
+# async def login_for_access_tokens(
+#     form_data: OAuth2PasswordRequestForm = Depends(),
+#     db: AsyncSession = Depends(get_db),
+#     redis_client: Redis = Depends(get_redis_client) # <--- ADDED DEPENDENCY
+# ):
+#     """
+#     Authenticates a user and returns JWT access and refresh tokens.
+#     Uses OAuth2PasswordRequestForm for standard form-data login.
+#     """
+#     # Attempt to find the user by email or phone number
+#     user = await crud_user.get_user_by_email(db, email=form_data.username)
+#     if not user:
+#         # If not found by email, try phone number
+#         user = await crud_user.get_user_by_phone_number(db, phone_number=form_data.username)
+
+#     # If user is still not found
+#     if not user:
+#         logger.warning(f"Login attempt failed for username: {form_data.username} - User not found.")
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Incorrect email, phone number, or password",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
+
+#     # Verify password
+#     if not verify_password(form_data.password, user.hashed_password):
+#         logger.warning(f"Login attempt failed for username: {form_data.username} - Incorrect password.")
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Incorrect email, phone number, or password",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
+
+#     # Check if the user account is active (assuming 1 means active)
+#     # Use getattr for safety if 'isActive' might be missing or None
+#     if getattr(user, 'isActive', 0) != 1:
+#         logger.warning(f"Login attempt failed for username: {form_data.username} - Account not active.")
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="User account is not active or verified. Please verify your email."
+#         )
+
+#     # Generate tokens
+#     # Ensure settings are correctly loaded and have these attributes
+#     access_token_expires = datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+#     # Corrected: Use REFRESH_TOKEN_EXPIRE_MINUTES for timedelta's minutes parameter
+#     refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+
+#     access_token = create_access_token(
+#         data={"sub": str(user.id)}, # Ensure user.id is converted to string
+#         expires_delta=access_token_expires
+#     )
+#     refresh_token = create_refresh_token(
+#         data={"sub": str(user.id)}, # Ensure user.id is converted to string
+#         expires_delta=refresh_token_expires
+#     )
+
+#     # Store the refresh token in Redis, passing the redis_client
+#     # Ensure store_refresh_token is imported from app.core.security
+#     try:
+#         await store_refresh_token(client=redis_client, user_id=user.id, refresh_token=refresh_token) # <--- MODIFIED CALL
+#         logger.info(f"Login successful for user ID {user.id}. Tokens generated and refresh token stored in Redis.")
+#     except Exception as e:
+#         logger.error(f"Failed to store refresh token for user ID {user.id} in Redis: {e}", exc_info=True)
+#         # Decide if login should fail if refresh token storage fails.
+#         # For robustness, you might still return tokens but log the error.
+#         # For now, we'll log and continue to allow login.
+
+#     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+
+@router.post("/login/json", response_model=Token, summary="User Login (JSON)")
+async def login_with_user_type(
+    credentials: UserLogin,
     db: AsyncSession = Depends(get_db),
-    redis_client: Redis = Depends(get_redis_client) # <--- ADDED DEPENDENCY
+    redis_client: Redis = Depends(get_redis_client)
 ):
-    """
-    Authenticates a user and returns JWT access and refresh tokens.
-    Uses OAuth2PasswordRequestForm for standard form-data login.
-    """
-    # Attempt to find the user by email or phone number
-    user = await crud_user.get_user_by_email(db, email=form_data.username)
+    user = await crud_user.get_user_by_email_and_type(db, email=credentials.username, user_type=credentials.user_type)
     if not user:
-        # If not found by email, try phone number
-        user = await crud_user.get_user_by_phone_number(db, phone_number=form_data.username)
+        user = await crud_user.get_user_by_phone_and_type(db, phone_number=credentials.username, user_type=credentials.user_type)
 
-    # If user is still not found
     if not user:
-        logger.warning(f"Login attempt failed for username: {form_data.username} - User not found.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email, phone number, or password",
+            detail="Invalid username, user type, or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify password
-    if not verify_password(form_data.password, user.hashed_password):
-        logger.warning(f"Login attempt failed for username: {form_data.username} - Incorrect password.")
+    if not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email, phone number, or password",
+            detail="Incorrect password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Check if the user account is active (assuming 1 means active)
-    # Use getattr for safety if 'isActive' might be missing or None
     if getattr(user, 'isActive', 0) != 1:
-        logger.warning(f"Login attempt failed for username: {form_data.username} - Account not active.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is not active or verified. Please verify your email."
+            detail="User account is not active or verified."
         )
 
-    # Generate tokens
-    # Ensure settings are correctly loaded and have these attributes
     access_token_expires = datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires = datetime.timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
-        data={"sub": str(user.id)}, # Ensure user.id is converted to string
+        data={"sub": str(user.id)},
         expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(
-        data={"sub": str(user.id)}, # Ensure user.id is converted to string
+        data={"sub": str(user.id)},
         expires_delta=refresh_token_expires
     )
 
-    # Store the refresh token in Redis, passing the redis_client
-    # Ensure store_refresh_token is imported from app.core.security
-    try:
-        await store_refresh_token(client=redis_client, user_id=user.id, refresh_token=refresh_token) # <--- MODIFIED CALL
-        logger.info(f"Login successful for user ID {user.id}. Tokens generated and refresh token stored in Redis.")
-    except Exception as e:
-        logger.error(f"Failed to store refresh token for user ID {user.id} in Redis: {e}", exc_info=True)
-        # Decide if login should fail if refresh token storage fails.
-        # For robustness, you might still return tokens but log the error.
-        # For now, we'll log and continue to allow login.
+    await store_refresh_token(client=redis_client, user_id=user.id, refresh_token=refresh_token)
 
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+
 
 @router.post("/refresh-token", response_model=Token, summary="Refresh Access Token")
 async def refresh_access_token(
@@ -718,10 +845,162 @@ async def delete_user_by_id(
             detail="An error occurred while deleting the user."
         )
 
-# You might also need endpoints for:
-# - User profile view (for the user themselves) - '/me' covers this
-# - User profile update (for the user themselves) - You could adapt update_user_by_id or create a new endpoint
-# - Handling referrals (if 'referred_by_id' and 'reffered_code' are used)
-# - Endpoints related to bank details management (if not covered by update)
-# - Endpoints for managing user status (approval workflow) if needed
-# - Endpoints related to UserOrder or Wallet (trading history, deposit/withdrawal requests)
+
+@router.post(
+    "/signup/send-otp",
+    response_model=StatusResponse,
+    summary="Send OTP for new user email verification by account type",
+    # ... (description can be updated)
+)
+async def signup_send_otp(
+    request_data: SignupSendOTPRequest, # Schema now includes user_type
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    # Use the new type-specific check
+    user = await crud_user.get_user_by_email_and_type(db, email=request_data.email, user_type=request_data.user_type)
+
+    if user and getattr(user, 'isActive', 0) == 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already registered and active for this account type."
+        )
+
+    otp_code = crud_otp.generate_otp_code()
+    email_subject = f"Verify Your Email for {request_data.user_type.capitalize()} Account"
+    email_body = f"Your One-Time Password (OTP) for email verification for your {request_data.user_type} account is: {otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes."
+
+    if user and getattr(user, 'isActive', 0) == 0:
+        # Email and user_type match an existing inactive user
+        await crud_otp.create_otp(db, user_id=user.id, force_otp_code=otp_code)
+        logger.info(f"Sent OTP to existing inactive user {request_data.email} (type: {request_data.user_type}) for activation.")
+    else:
+        # New email for this user_type
+        redis_key = f"signup_otp:{request_data.email}:{request_data.user_type}" # Include user_type in Redis key
+        await redis_client.set(redis_key, otp_code, ex=int(settings.OTP_EXPIRATION_MINUTES * 60))
+        logger.info(f"Stored OTP in Redis for new email {request_data.email} (type: {request_data.user_type}).")
+
+    try:
+        await email_service.send_email(
+            to_email=request_data.email,
+            subject=email_subject,
+            body=email_body
+        )
+        logger.info(f"Signup OTP sent successfully to {request_data.email} for account type {request_data.user_type}.")
+    except Exception as e:
+        logger.error(f"Error sending signup OTP to {request_data.email} for type {request_data.user_type}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send OTP. Please try again later."
+        )
+    return StatusResponse(message="OTP sent successfully to your email.")
+
+
+@router.post(
+    "/signup/verify-otp",
+    response_model=StatusResponse,
+    summary="Verify OTP for new user email by account type or activate existing",
+    # ... (description can be updated)
+)
+async def signup_verify_otp(
+    request_data: SignupVerifyOTPRequest, # Schema now includes user_type
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    redis_key_signup_otp = f"signup_otp:{request_data.email}:{request_data.user_type}" # Include user_type
+    stored_otp_in_redis = await redis_client.get(redis_key_signup_otp)
+
+    if stored_otp_in_redis:
+        if stored_otp_in_redis == request_data.otp_code:
+            await redis_client.delete(redis_key_signup_otp)
+            redis_key_preverified = f"preverified_email:{request_data.email}:{request_data.user_type}" # Include user_type
+            await redis_client.set(redis_key_preverified, "1", ex=15 * 60)
+            logger.info(f"OTP for new email {request_data.email} (type: {request_data.user_type}) verified via Redis.")
+            return StatusResponse(message="Email verified successfully. Please complete your registration.")
+        else:
+            logger.warning(f"Invalid Redis OTP for {request_data.email} (type: {request_data.user_type}).")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
+    else:
+        user = await crud_user.get_user_by_email_and_type(db, email=request_data.email, user_type=request_data.user_type)
+        if user and getattr(user, 'isActive', 0) == 0:
+            otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=request_data.otp_code)
+            if not otp_record:
+                logger.warning(f"Invalid DB OTP for inactive user {request_data.email} (type: {request_data.user_type}).")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
+            user.status = 1
+            user.isActive = 1
+            try:
+                await db.commit()
+                await crud_otp.delete_otp(db, otp_id=otp_record.id)
+                logger.info(f"Existing inactive user {request_data.email} (type: {request_data.user_type}, ID: {user.id}) activated.")
+                return StatusResponse(message="Account activated successfully. You can now login.")
+            except Exception as e:
+                await db.rollback()
+                # ... (error logging and HTTPException) ...
+                logger.error(f"Error activating user ID {user.id} (type: {request_data.user_type}): {e}", exc_info=True)
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during account activation.")
+        else:
+            logger.warning(f"No OTP in Redis and no matching inactive user for {request_data.email} (type: {request_data.user_type}).")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP, or email not eligible for this verification process.")
+        
+
+# API Endpoints
+from app.crud.otp import get_user_by_email_and_type, create_otp, get_valid_otp, get_otp_flag_key, delete_all_user_otps
+
+
+@router.post("/request-password-reset", response_model=StatusResponse)
+async def request_password_reset(
+    payload: RequestPasswordReset,
+    db: AsyncSession = Depends(get_db),
+):
+    user = await get_user_by_email_and_type(db, payload.email, payload.user_type)
+    if not user:
+        return StatusResponse(message="If a user exists, an OTP has been sent.")
+
+    otp = await create_otp(db, user_id=user.id)
+    await email_service.send_email(
+        user.email,
+        "Password Reset OTP",
+        f"Your OTP is: {otp.otp_code}"
+    )
+    return StatusResponse(message="Password reset OTP sent successfully.")
+
+@router.post("/verify-password-reset-otp", response_model=StatusResponse)
+async def verify_password_reset_otp(
+    payload: VerifyOTPRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis_client)
+):
+    user = await get_user_by_email_and_type(db, payload.email, payload.user_type)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid credentials.")
+
+    otp = await get_valid_otp(db, user.id, payload.otp_code)
+    if not otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
+
+    await redis.setex(get_otp_flag_key(user.email, user.user_type), settings.OTP_EXPIRATION_MINUTES * 60, "1")
+    return StatusResponse(message="OTP verified successfully.")
+
+
+@router.post("/reset-password-confirm", response_model=StatusResponse)
+async def confirm_password_reset(
+    payload: ResetPasswordConfirm,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis_client)
+):
+    user = await get_user_by_email_and_type(db, payload.email, payload.user_type)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email or user type.")
+
+    redis_key = get_otp_flag_key(user.email, user.user_type)
+    otp_verified = await redis.get(redis_key)
+    if not otp_verified:
+        raise HTTPException(status_code=403, detail="OTP verification required before resetting password.")
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    await db.commit()
+    await delete_all_user_otps(db, user.id)
+    await redis.delete(redis_key)
+
+    return StatusResponse(message="Password reset successful.")
