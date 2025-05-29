@@ -1,75 +1,268 @@
+# # # app/crud/wallet.py
+
+# # import datetime
+# # import uuid
+# # from decimal import Decimal
+# # from sqlalchemy.ext.asyncio import AsyncSession
+# # from sqlalchemy.exc import SQLAlchemyError
+# # from app.database.models import Wallet  # Import the Wallet model from models.py
+# # from app.schemas.wallet import WalletCreate # Import the WalletCreate schema
+
+# # import logging
+# # from sqlalchemy import select
+# # from typing import List, Optional
+
+# # logger = logging.getLogger(__name__)
+
+# # async def create_wallet_record(
+# #     db: AsyncSession,
+# #     wallet_data: WalletCreate
+# # ) -> Wallet | None:
+# #     """
+# #     Creates a new wallet transaction record using data from a WalletCreate schema.
+# #     This function now supports associating the record with either a regular user
+# #     or a demo user.
+
+# #     Args:
+# #         db: The asynchronous database session.
+# #         wallet_data: A WalletCreate Pydantic schema object containing transaction details.
+# #                      It should contain either user_id or demo_user_id, but not both.
+
+# #     Returns:
+# #         The newly created Wallet object, or None on error.
+# #     """
+# #     try:
+# #         # Validate that only one of user_id or demo_user_id is provided
+# #         if wallet_data.user_id and wallet_data.demo_user_id:
+# #             raise ValueError("Wallet record cannot be associated with both a user and a demo user.")
+# #         if not wallet_data.user_id and not wallet_data.demo_user_id:
+# #             raise ValueError("Wallet record must be associated with either a user or a demo user.")
+
+# #         transaction_id = str(uuid.uuid4())
+# #         logger.debug(f"Generated transaction ID: {transaction_id}")
+
+# #         # Create the wallet transaction object, assigning to the correct foreign key
+# #         wallet_record = Wallet(
+# #             user_id=wallet_data.user_id,
+# #             demo_user_id=wallet_data.demo_user_id, # Assign demo_user_id if present
+# #             order_quantity=wallet_data.order_quantity,
+# #             symbol=wallet_data.symbol,
+# #             transaction_type=wallet_data.transaction_type,
+# #             is_approved=wallet_data.is_approved,
+# #             order_type=wallet_data.order_type,
+# #             transaction_amount=wallet_data.transaction_amount,
+# #             transaction_id=transaction_id,
+# #             description=wallet_data.description,
+# #         )
+
+# #         db.add(wallet_record)
+# #         await db.flush()
+# #         await db.refresh(wallet_record)
+
+# #         associated_id = wallet_data.user_id if wallet_data.user_id else wallet_data.demo_user_id
+# #         user_type_log = "user" if wallet_data.user_id else "demo user"
+# #         logger.info(
+# #             f"Wallet record created successfully for {user_type_log} {associated_id} "
+# #             f"with transaction ID {transaction_id}."
+# #         )
+# #         return wallet_record
+
+# #     except SQLAlchemyError as e:
+# #         logger.error(
+# #             f"Database error creating wallet record: {e}",
+# #             exc_info=True
+# #         )
+# #         await db.rollback()
+# #         return None
+# #     except ValueError as e:
+# #         logger.error(f"Validation error creating wallet record: {e}")
+# #         await db.rollback()
+# #         return None
+# #     except Exception as e:
+# #         logger.error(
+# #             f"Unexpected error creating wallet record: {e}",
+# #             exc_info=True
+# #         )
+# #         await db.rollback()
+# #         return None
+
+# # async def get_wallet_records_by_user_id(
+# #     db: AsyncSession, user_id: int, skip: int = 0, limit: int = 100
+# # ) -> List[Wallet]:
+# #     """
+# #     Retrieves wallet transaction records for a specific regular user with pagination.
+# #     """
+# #     result = await db.execute(
+# #         select(Wallet)
+# #         .filter(Wallet.user_id == user_id)
+# #         .offset(skip)
+# #         .limit(limit)
+# #         .order_by(Wallet.created_at.desc())
+# #     )
+# #     return result.scalars().all()
+
+# # async def get_wallet_records_by_demo_user_id(
+# #     db: AsyncSession, demo_user_id: int, skip: int = 0, limit: int = 100
+# # ) -> List[Wallet]:
+# #     """
+# #     Retrieves wallet transaction records for a specific demo user with pagination.
+# #     """
+# #     result = await db.execute(
+# #         select(Wallet)
+# #         .filter(Wallet.demo_user_id == demo_user_id)
+# #         .offset(skip)
+# #         .limit(limit)
+# #         .order_by(Wallet.created_at.desc())
+# #     )
+# #     return result.scalars().all()
+
+# # async def update_wallet_record_approval(
+# #     db: AsyncSession, transaction_id: str, is_approved: int
+# # ) -> Wallet | None:
+# #     """
+# #     Updates the approval status of a wallet transaction record and sets transaction_time if approved.
+# #     """
+# #     result = await db.execute(
+# #         select(Wallet).filter(Wallet.transaction_id == transaction_id)
+# #     )
+# #     wallet_record = result.scalars().first()
+
+# #     if wallet_record:
+# #         wallet_record.is_approved = is_approved
+# #         if is_approved == 1 and wallet_record.transaction_time is None:
+# #             wallet_record.transaction_time = datetime.datetime.now()
+
+# #         await db.commit()
+# #         await db.refresh(wallet_record)
+# #         logger.info(f"Wallet record {transaction_id} approval status updated to {is_approved}.")
+# #         return wallet_record
+# #     else:
+# #         logger.warning(f"Wallet record with transaction ID {transaction_id} not found for update.")
+# #         return None
+
+
+# # app/schemas/wallet.py
+
+# from typing import Optional
+# from datetime import datetime
+# from decimal import Decimal
+
+# from pydantic import BaseModel, Field
+
+# # Base schema for common wallet transaction attributes
+# class WalletBase(BaseModel):
+#     symbol: Optional[str] = None
+#     order_quantity: Optional[Decimal] = Field(None, decimal_places=8)
+#     transaction_type: str # e.g., 'deposit', 'withdrawal', 'trade_profit', 'trade_loss'
+#     is_approved: int = 0 # 0: pending/not approved, 1: approved
+#     order_type: Optional[str] = None # e.g., 'buy', 'sell'
+#     transaction_amount: Decimal = Field(..., decimal_places=8)
+#     description: Optional[str] = None
+
+#     class Config:
+#         from_attributes = True # For Pydantic V2+, use from_attributes instead of orm_mode = True
+
+# # Schema for creating a new wallet transaction record
+# # Allows association with either user_id or demo_user_id
+# class WalletCreate(WalletBase):
+#     user_id: Optional[int] = None
+#     demo_user_id: Optional[int] = None
+
+# # Schema for updating an existing wallet transaction record
+# class WalletUpdate(WalletBase):
+#     symbol: Optional[str] = None
+#     order_quantity: Optional[Decimal] = None
+#     transaction_type: Optional[str] = None
+#     is_approved: Optional[int] = None
+#     order_type: Optional[str] = None
+#     transaction_amount: Optional[Decimal] = None
+#     description: Optional[str] = None
+
+# # Schema for wallet transaction data as stored in the database (includes IDs and timestamps)
+# class WalletInDBBase(WalletBase):
+#     id: int
+#     transaction_id: str
+#     user_id: Optional[int] = None # Can be None if demo_user_id is set
+#     demo_user_id: Optional[int] = None # Can be None if user_id is set
+#     transaction_time: Optional[datetime] = None
+#     created_at: datetime
+#     updated_at: datetime
+
+# # Full schema for reading wallet transaction data (what you'd typically return from an API)
+# class Wallet(WalletInDBBase):
+#     pass
+
+# # Assuming these schemas are needed elsewhere for API requests/responses
+# class WalletTransactionRequest(BaseModel):
+#     amount: Decimal = Field(..., gt=0, decimal_places=8)
+#     description: Optional[str] = None
+
+# class WalletBalanceResponse(BaseModel):
+#     user_id: int
+#     new_balance: Decimal = Field(..., decimal_places=8)
+#     message: str
+#     transaction_id: Optional[str] = None
+
+
 # app/schemas/wallet.py
 
-import datetime
 from typing import Optional
+from datetime import datetime
+from decimal import Decimal
+
 from pydantic import BaseModel, Field
-from decimal import Decimal # Import Decimal
 
-# Schema for data used to create a wallet transaction record
-class WalletCreate(BaseModel):
-    """
-    Pydantic model for creating a new wallet transaction record.
-    Includes optional description field.
-    """
-    user_id: int = Field(..., description="The ID of the user associated with the transaction.")
-    # symbol, order_quantity, order_type are nullable in the model, make them optional here
-    symbol: Optional[str] = Field(None, description="The symbol of the asset involved (optional).")
-    order_quantity: Optional[Decimal] = Field(None, max_digits=18, decimal_places=8, description="The quantity of the order (optional).")
-    transaction_type: str = Field(..., description="The type of transaction (e.g., 'deposit', 'withdrawal', 'trade').")
-    is_approved: int = Field(0, description="Approval status (0 or 1), defaults to 0.") # Default handled by model, but good to show
-    order_type: Optional[str] = Field(None, description="The type of order (e.g., 'buy', 'sell') (optional).")
-    transaction_amount: Decimal = Field(..., max_digits=18, decimal_places=8, description="The amount of the transaction.")
-
-    # --- NEW FIELD ---
-    description: Optional[str] = Field(None, description="Optional description for the transaction.")
-    # --- END NEW FIELD ---
-
-    # transaction_time and transaction_id are generated by the backend
-    # created_at and updated_at are handled by database defaults
-
-
-# Schema for data returned when fetching wallet transaction records
-class WalletResponse(BaseModel):
-    """
-    Pydantic model for returning wallet transaction record data.
-    Includes all fields from the Wallet model.
-    """
-    id: int = Field(..., description="Unique identifier of the wallet transaction record.")
-    user_id: int = Field(..., description="The ID of the user associated with the transaction.")
-    symbol: Optional[str] = Field(None, description="The symbol of the asset involved (optional).")
-    order_quantity: Optional[Decimal] = Field(None, max_digits=18, decimal_places=8, description="The quantity of the order (optional).")
-    transaction_type: str = Field(..., description="The type of transaction.")
-    is_approved: int = Field(..., description="Approval status (0 or 1).")
-    order_type: Optional[str] = Field(None, description="The type of order (optional).")
-    transaction_amount: Decimal = Field(..., max_digits=18, decimal_places=8, description="The amount of the transaction.")
-
-    # --- NEW FIELD ---
-    description: Optional[str] = Field(None, description="Optional description for the transaction.")
-    # --- END NEW FIELD ---
-
-    transaction_time: Optional[datetime.datetime] = Field(None, description="Timestamp when the transaction was approved (optional).")
-    transaction_id: str = Field(..., description="Unique transaction ID.")
-    created_at: datetime.datetime = Field(..., description="Timestamp when the record was created.")
-    updated_at: datetime.datetime = Field(..., description="Timestamp when the record was last updated.")
+# Base schema for common wallet transaction attributes
+class WalletBase(BaseModel):
+    symbol: Optional[str] = None
+    order_quantity: Optional[Decimal] = Field(None, decimal_places=8)
+    transaction_type: str # e.g., 'deposit', 'withdrawal', 'trade_profit', 'trade_loss'
+    is_approved: int = 0 # 0: pending/not approved, 1: approved
+    order_type: Optional[str] = None # e.g., 'buy', 'sell'
+    transaction_amount: Decimal = Field(..., decimal_places=8)
+    description: Optional[str] = None
 
     class Config:
-        from_attributes = True # Allow mapping from SQLAlchemy models
+        from_attributes = True # For Pydantic V2+, use from_attributes instead of orm_mode = True
 
+# Schema for creating a new wallet transaction record
+# Allows association with either user_id or demo_user_id
+class WalletCreate(WalletBase):
+    user_id: Optional[int] = None
+    demo_user_id: Optional[int] = None
+
+# Schema for updating an existing wallet transaction record
+class WalletUpdate(WalletBase):
+    symbol: Optional[str] = None
+    order_quantity: Optional[Decimal] = None
+    transaction_type: Optional[str] = None
+    is_approved: Optional[int] = None
+    order_type: Optional[str] = None
+    transaction_amount: Optional[Decimal] = None
+    description: Optional[str] = None
+
+# Schema for wallet transaction data as stored in the database (includes IDs and timestamps)
+class WalletInDBBase(WalletBase):
+    id: int
+    transaction_id: str
+    user_id: Optional[int] = None # Can be None if demo_user_id is set
+    demo_user_id: Optional[int] = None # Can be None if user_id is set
+    transaction_time: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+# Full schema for reading wallet transaction data (what you'd typically return from an API)
+# Renamed from Wallet to WalletResponse to match the import in wallets.py endpoint
+class WalletResponse(WalletInDBBase):
+    pass
+
+# Assuming these schemas are needed elsewhere for API requests/responses
 class WalletTransactionRequest(BaseModel):
-    """
-    Pydantic model for the request body when adding or deducting funds from a wallet.
-    """
-    amount: Decimal = Field(..., gt=0, decimal_places=8, description="The amount to add or deduct. Must be a positive value.")
-    description: Optional[str] = Field(None, max_length=500, description="A description for the transaction.")
+    amount: Decimal = Field(..., gt=0, decimal_places=8)
+    description: Optional[str] = None
 
-
-# NEW: Schema for response after a wallet transaction (add/deduct)
 class WalletBalanceResponse(BaseModel):
-    """
-    Pydantic model for the response after a successful wallet balance update.
-    """
-    user_id: int = Field(..., description="The ID of the user whose wallet was updated.")
-    new_balance: Decimal = Field(..., decimal_places=8, description="The user's new wallet balance.")
-    message: str = Field(..., description="A confirmation message.")
-    transaction_id: Optional[str] = Field(None, description="The ID of the newly created wallet record for this transaction.")
-
+    user_id: int
+    new_balance: Decimal = Field(..., decimal_places=8)
+    message: str
+    transaction_id: Optional[str] = None

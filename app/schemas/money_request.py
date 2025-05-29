@@ -4,11 +4,8 @@ from typing import Optional
 import datetime
 
 class MoneyRequestBase(BaseModel):
-    """
-    Base schema for money request attributes.
-    """
-    amount: Decimal = Field(..., gt=0, description="Amount of the money request")
-    type: str = Field(..., pattern="^(deposit|withdraw)$", description="Type of request: 'deposit' or 'withdraw'")
+    amount: Decimal = Field(..., gt=0)
+    type: str = Field(..., pattern="^(deposit|withdraw)$")
 
 class MoneyRequestCreate(MoneyRequestBase):
     """
@@ -34,5 +31,5 @@ class MoneyRequestResponse(MoneyRequestBase):
     updated_at: datetime.datetime
 
     class Config:
-        orm_mode = True # For Pydantic V1
-        # from_attributes = True # Uncomment for Pydantic V2+
+        orm_mode = True  # For Pydantic V1
+        # from_attributes = True  # Uncomment for Pydantic V2+

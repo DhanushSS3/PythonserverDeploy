@@ -6,33 +6,41 @@ import datetime
 import shutil
 import os
 import uuid
-from typing import Optional, List, Dict, Any # Import Dict, Any for type hinting
+from typing import Optional, List, Dict, Any
 import logging
+from decimal import Decimal
 
-# Import select for database queries
 from sqlalchemy.future import select
-# Import JWTError for exception handling
 from jose import JWTError
 
 from app.database.session import get_db
-from app.database.models import User, UserOrder # Import User and UserOrder models if positions are handled here
+from app.database.models import User, UserOrder, DemoUser # Import DemoUser
 from app.schemas.user import (
     UserCreate,
     UserResponse,
     UserUpdate,
     SendOTPRequest,
     VerifyOTPRequest,
-    RequestPasswordReset, # Ensure this is imported
-    ResetPasswordConfirm, # Ensure this is imported
+    RequestPasswordReset,
+    ResetPasswordConfirm,
     StatusResponse,
     UserLogin,
     Token,
     TokenRefresh
 )
+from app.schemas.demo_user import ( # Import DemoUser schemas
+    DemoUserCreate,
+    DemoUserResponse,
+    DemoUserUpdate,
+    DemoUserLogin,
+    DemoSendOTPRequest,
+    DemoVerifyOTPRequest,
+    DemoRequestPasswordReset,
+    DemoResetPasswordConfirm
+)
 from app.crud import user as crud_user
 from app.crud import otp as crud_otp
-from app.crud.user import generate_unique_account_number
-# Assuming you have an email service module
+from app.crud.user import generate_unique_account_number, generate_unique_demo_account_number # Import demo account number generator
 from app.services import email as email_service
 from app.core.security import (
     get_password_hash,
@@ -41,83 +49,62 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     get_current_user,
-    get_current_admin_user, # Import the admin dependency
+    get_current_admin_user,
     store_refresh_token,
     get_refresh_token_data,
     delete_refresh_token
 )
 from app.core.config import get_settings
 
-# Import the Redis client type and the dependency function from the new location
-from redis.asyncio import Redis # Import Redis type
-from app.dependencies.redis_client import get_redis_client # <--- CORRECTED IMPORT LOCATION
+from redis.asyncio import Redis
+from app.dependencies.redis_client import get_redis_client
 
 from app.schemas.user import SignupVerifyOTPRequest, SignupSendOTPRequest
+from app.schemas.money_request import MoneyRequestResponse, MoneyRequestCreate
+from app.crud import money_request as crud_money_request
+from app.schemas.wallet import WalletTransactionRequest, WalletBalanceResponse # Import WalletBalanceResponse
 
-# Configure logging for this module
 logger = logging.getLogger(__name__)
 
-# Create an API router for user-related endpoints
 router = APIRouter(
     tags=["users"]
 )
 
-# Get application settings
 settings = get_settings()
 
-# Define the directory for storing uploaded files
-# Create the directory if it doesn't exist
 UPLOAD_DIRECTORY = "./uploads/proofs"
-os.makedirs(UPLOAD_DIRECTORY, exist_ok=True) # Create the directory if it doesn't exist
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
-# Helper function to save uploaded files
 async def save_upload_file(upload_file: Optional[UploadFile]) -> Optional[str]:
     """
     Saves an uploaded file to the UPLOAD_DIRECTORY with a unique filename.
-
-    Args:
-        upload_file: The UploadFile object, or None.
-
-    Returns:
-        The path to the saved file relative to a static serving directory, or None.
     """
     if not upload_file:
         return None
 
-    # Generate a unique filename while preserving the original extension
     file_extension = os.path.splitext(upload_file.filename)[1]
-    # Use a more descriptive filename prefix if possible, e.g., include user ID or proof type
     unique_filename = f"{uuid.uuid4()}{file_extension}"
-    # Construct the full path to save the file on the server
     full_file_path = os.path.join(UPLOAD_DIRECTORY, unique_filename)
 
-    # Ensure the upload directory exists
     os.makedirs(os.path.dirname(full_file_path), exist_ok=True)
 
-    # Save the file asynchronously
     try:
-        # Use async file writing for better performance with async frameworks
-        # Alternatively, you could use `await aiofiles.open(...)` if you install aiofiles
         contents = await upload_file.read()
         with open(full_file_path, "wb") as f:
             f.write(contents)
     except Exception as e:
         logger.error(f"Error saving uploaded file {upload_file.filename}: {e}", exc_info=True)
-        # Decide if you want to raise an exception here or return None
-        # For now, we'll re-raise after logging
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save uploaded file.")
     finally:
-        # Ensure the uploaded file object is closed
         await upload_file.close()
 
-    # Return the path that will be stored in the database (relative to static serving)
-    # Assuming UPLOAD_DIRECTORY is served under '/static/proofs/'
     static_path = os.path.join("/static/proofs", unique_filename)
     logger.info(f"Saved uploaded file {upload_file.filename} to {full_file_path}, storing path {static_path}")
     return static_path
 
 
-# app/api/v1/endpoints/users.py
+# --- User Endpoints ---
+
 @router.post(
     "/register",
     response_model=UserResponse,
@@ -130,6 +117,7 @@ async def register_user_with_proofs(
     email: str = Form(...),
     phone_number: str = Form(..., max_length=20),
     password: str = Form(..., min_length=8),
+    security_answer: Optional[str] = Form(None), # Added security_answer
     city: str = Form(...),
     state: str = Form(...),
     pincode: int = Form(...),
@@ -148,7 +136,6 @@ async def register_user_with_proofs(
     address_proof_image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db)
 ):
-    # 🚫 New uniqueness check (email, phone, user_type)
     existing_user = await crud_user.get_user_by_email_phone_type(db, email=email, phone_number=phone_number, user_type=user_type)
     if existing_user:
         raise HTTPException(
@@ -156,7 +143,6 @@ async def register_user_with_proofs(
             detail="User with this email and phone number already exists for this user type."
         )
 
-    # Save uploaded files
     id_proof_image_path = await save_upload_file(id_proof_image)
     address_proof_image_path = await save_upload_file(address_proof_image)
 
@@ -176,9 +162,9 @@ async def register_user_with_proofs(
         "bank_holder_name": bank_holder_name,
         "bank_branch_name": bank_branch_name,
         "bank_account_number": bank_account_number,
-        "wallet_balance": 0.0,
-        "leverage": 1.0,
-        "margin": 0.0,
+        "wallet_balance": Decimal("0.0"),
+        "leverage": Decimal("1.0"),
+        "margin": Decimal("0.0"),
         "status": 0,
         "isActive": 0,
         "account_number": await generate_unique_account_number(db),
@@ -191,6 +177,7 @@ async def register_user_with_proofs(
             db=db,
             user_data=user_data,
             hashed_password=hashed_password,
+            security_answer=security_answer, # Pass security_answer
             id_proof_path=id_proof,
             id_proof_image_path=id_proof_image_path,
             address_proof_path=address_proof,
@@ -215,8 +202,7 @@ async def register_user_with_proofs(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during registration."
         )
-    
-#
+
 @router.post("/login", response_model=Token, summary="User Login (JSON)")
 async def login_with_user_type(
     credentials: UserLogin,
@@ -225,7 +211,7 @@ async def login_with_user_type(
 ):
     user = await crud_user.get_user_by_email_and_type(db, email=credentials.username, user_type=credentials.user_type)
     if not user:
-        user = await crud_user.get_user_by_phone_and_type(db, phone_number=credentials.username, user_type=credentials.user_type)
+        user = await crud_user.get_user_by_phone_number_and_type(db, phone_number=credentials.username, user_type=credentials.user_type)
 
     if not user:
         raise HTTPException(
@@ -267,16 +253,14 @@ async def login_with_user_type(
 @router.post("/refresh-token", response_model=Token, summary="Refresh Access Token")
 async def refresh_access_token(
     token_refresh: TokenRefresh,
-    db: AsyncSession = Depends(get_db), # Assuming you need db here, though not used in logic below
-    redis_client: Redis = Depends(get_redis_client) # <--- ADDED DEPENDENCY
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
 ):
     """
     Refreshes an access token using a valid refresh token.
     """
     try:
-        # Decode the refresh token to get the user ID
         payload = decode_token(token_refresh.refresh_token)
-        # Use get() with None default for safer access
         user_id_from_payload_str: Optional[str] = payload.get("sub")
         if user_id_from_payload_str is None:
             logger.warning("Refresh token payload missing 'sub' claim.")
@@ -285,27 +269,16 @@ async def refresh_access_token(
                 detail="Invalid refresh token payload",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        # Convert to int for comparison or DB lookup later if needed
-        # Although comparing as strings is often safer if they were stored as strings
-        # user_id_from_payload = int(user_id_from_payload_str)
-
 
         logger.info(f"Refresh token decoded. User ID from token payload: {user_id_from_payload_str}")
 
-        # Check if the refresh token exists and is valid in Redis, passing the redis_client
-        # Ensure get_refresh_token_data is imported from app.core.security
-        redis_token_data = await get_refresh_token_data(client=redis_client, refresh_token=token_refresh.refresh_token) # <--- MODIFIED CALL
+        redis_token_data = await get_refresh_token_data(client=redis_client, refresh_token=token_refresh.refresh_token)
 
-        # Add debugging log before the comparison
         if redis_token_data:
              logger.debug(f"Comparing Redis user_id (type: {type(redis_token_data.get('user_id'))}, value: {redis_token_data.get('user_id')}) with decoded user_id (type: {type(user_id_from_payload_str)}, value: {user_id_from_payload_str})")
         else:
              logger.debug("redis_token_data is None. Cannot perform user_id comparison.")
 
-
-        # Check if redis_token_data is not None AND the user ID from Redis matches the user ID from the token payload
-        # Ensure consistent type comparison (both strings or both ints)
-        # Assuming user_id is stored as an int in Redis by store_refresh_token
         if not redis_token_data or (redis_token_data and str(redis_token_data.get("user_id")) != user_id_from_payload_str):
              logger.warning(f"Refresh token validation failed for user ID {user_id_from_payload_str}. Data found: {bool(redis_token_data)}, User ID match: {str(redis_token_data.get('user_id')) == user_id_from_payload_str if redis_token_data else False}")
              raise HTTPException(
@@ -316,13 +289,10 @@ async def refresh_access_token(
 
         logger.info(f"Refresh token validated successfully for user ID: {user_id_from_payload_str}")
 
-        # Fetch the user to ensure they still exist and are active
-        # Use the ID from the payload, converted to int
-        user = await crud_user.get_user_by_id(db, user_id=int(user_id_from_payload_str)) # Convert to int for DB lookup
+        user = await crud_user.get_user_by_id(db, user_id=int(user_id_from_payload_str))
 
-        if user is None or getattr(user, 'isActive', 0) != 1: # Use getattr for safety
+        if user is None or getattr(user, 'isActive', 0) != 1:
              logger.warning(f"Refresh token valid, but user ID {user_id_from_payload_str} not found or inactive.")
-             # Invalidate the refresh token in Redis if the user is no longer valid
              try:
                  await delete_refresh_token(client=redis_client, refresh_token=token_refresh.refresh_token)
                  logger.info(f"Invalidated refresh token for invalid user ID {user_id_from_payload_str}.")
@@ -334,15 +304,13 @@ async def refresh_access_token(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Create a new access token
         access_token_expires = datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         new_access_token = create_access_token(
-            data={"sub": str(user.id)}, # Ensure user.id is converted to string
+            data={"sub": str(user.id)},
             expires_delta=access_token_expires
         )
 
         logger.info(f"New access token generated for user ID {user.id} using refresh token.")
-        # Return the new access token along with the original refresh token
         return Token(access_token=new_access_token, refresh_token=token_refresh.refresh_token, token_type="bearer")
 
     except JWTError:
@@ -362,19 +330,15 @@ async def refresh_access_token(
 
 @router.post("/logout", response_model=StatusResponse, summary="User Logout")
 async def logout_user(
-    token_refresh: TokenRefresh, # Expect the refresh token in the request body
-    current_user: User = Depends(get_current_user), # Requires a valid access token to identify the user
-    redis_client: Redis = Depends(get_redis_client) # <--- ADDED DEPENDENCY
+    token_refresh: TokenRefresh,
+    current_user: User = Depends(get_current_user),
+    redis_client: Redis = Depends(get_redis_client)
 ):
     """
     Logs out a user by invalidating their refresh token in Redis.
-    Requires a valid access token for the user to be authenticated
-    and the refresh token to be provided in the request body.
     """
     try:
-        # Delete the refresh token from Redis, passing the redis_client
-        # Ensure delete_refresh_token is imported from app.core.security
-        await delete_refresh_token(client=redis_client, refresh_token=token_refresh.refresh_token) # <--- MODIFIED CALL
+        await delete_refresh_token(client=redis_client, refresh_token=token_refresh.refresh_token)
         logger.info(f"Logout successful for user ID {current_user.id} by invalidating refresh token.")
         return StatusResponse(message="Logout successful.")
     except Exception as e:
@@ -384,7 +348,6 @@ async def logout_user(
             detail="An error occurred during logout."
         )
 
-# Endpoint to get all users (Admin Only)
 @router.get(
     "/users",
     response_model=List[UserResponse],
@@ -395,20 +358,14 @@ async def read_users(
     skip: int = Query(0, description="Number of users to skip"),
     limit: int = Query(100, description="Maximum number of users to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user) # Use the admin dependency from security.py
+    current_user: User = Depends(get_current_admin_user)
 ):
-    """
-    Retrieves a paginated list of all users. Restricted to administrators.
-    """
-    # Admin check is now handled by Depends(get_current_admin_user)
-
     users = await crud_user.get_all_users(db, skip=skip, limit=limit)
     return users
 
-# Endpoint to get all demo users (Admin Only)
 @router.get(
     "/users/demo",
-    response_model=List[UserResponse],
+    response_model=List[DemoUserResponse], # Changed response model to DemoUserResponse
     summary="Get all demo users (Admin Only)",
     description="Retrieves a list of all registered demo users (requires admin authentication)."
 )
@@ -416,17 +373,11 @@ async def read_demo_users(
     skip: int = Query(0, description="Number of demo users to skip"),
     limit: int = Query(100, description="Maximum number of demo users to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user) # Use the admin dependency
+    current_user: User = Depends(get_current_admin_user)
 ):
-    """
-    Retrieves a paginated list of all demo users. Restricted to administrators.
-    """
-     # Admin check is now handled by Depends(get_current_admin_user)
+    demo_users = await crud_user.get_all_demo_users(db, skip=skip, limit=limit) # Changed to get_all_demo_users
+    return demo_users
 
-    users = await crud_user.get_demo_users(db, skip=skip, limit=limit)
-    return users
-
-# Endpoint to get all live users (Admin Only)
 @router.get(
     "/users/live",
     response_model=List[UserResponse],
@@ -437,13 +388,8 @@ async def read_live_users(
     skip: int = Query(0, description="Number of live users to skip"),
     limit: int = Query(100, description="Maximum number of live users to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user) # Use the admin dependency
+    current_user: User = Depends(get_current_admin_user)
 ):
-    """
-    Retrieves a paginated list of all live users. Restricted to administrators.
-    """
-    # Admin check is now handled by Depends(get_current_admin_user)
-
     users = await crud_user.get_live_users(db, skip=skip, limit=limit)
     return users
 
@@ -453,37 +399,25 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     """
     Retrieves the details of the currently authenticated user.
     """
-    # This endpoint is accessible to any authenticated user
     return current_user
 
-# Endpoint to update a user by ID (Admin Only)
 @router.patch(
-    "/users/{user_id}", # Using PATCH for partial updates
+    "/users/{user_id}",
     response_model=UserResponse,
     summary="Update a user by ID (Admin Only)",
     description="Updates the details of a specific user by ID (requires admin authentication)."
 )
 async def update_user_by_id(
-    user_id: int, # User ID from the path
-    user_update: UserUpdate, # Update data from the request body
+    user_id: int,
+    user_update: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user) # Use the admin dependency
+    current_user: User = Depends(get_current_admin_user)
 ):
-    """
-    Updates a user's information. Includes database locking if sensitive fields are updated. Restricted to administrators.
-    """
-    # Admin check is now handled by Depends(get_current_admin_user)
-
-
-    # Determine if sensitive financial fields are being updated to apply locking
-    # Use model_dump for Pydantic V2+ to get a dictionary of fields that are actually set in the update model
     update_data_dict = user_update.model_dump(exclude_unset=True)
-    sensitive_fields = ["wallet_balance", "leverage", "margin", "group_name", "status", "isActive"] # Add more if needed
+    sensitive_fields = ["wallet_balance", "leverage", "margin", "group_name", "status", "isActive", "security_answer"] # Added security_answer
     needs_locking = any(field in update_data_dict for field in sensitive_fields)
 
-    # Fetch the user, applying a lock if necessary
     if needs_locking:
-        # Assuming you have this CRUD function for row-level locking
         db_user = await crud_user.get_user_by_id_with_lock(db, user_id=user_id)
         if db_user is None:
              raise HTTPException(
@@ -492,7 +426,6 @@ async def update_user_by_id(
             )
         logger.info(f"Acquired lock for user ID {user_id} during update.")
     else:
-        # Use the standard CRUD function
         db_user = await crud_user.get_user_by_id(db, user_id=user_id)
         if db_user is None:
              raise HTTPException(
@@ -500,29 +433,19 @@ async def update_user_by_id(
                 detail="User not found"
             )
 
-
     try:
-        # Update the user using the CRUD function
         updated_user = await crud_user.update_user(db=db, db_user=db_user, user_update=user_update)
-
-        # TODO: If group_name, leverage, wallet_balance, status, or isActive change,
-        # you *might* need to update the user's cache entry in Redis if it's currently active.
-        # This depends on how critical it is for changes to apply immediately to the WS feed.
-        # await set_user_data_cache(redis_client, user_id, {'group_name': updated_user.group_name, 'leverage': updated_user.leverage, ...}) # Requires redis_client dependency here
-        # This endpoint would need the redis_client dependency if it updates cache.
-
         logger.info(f"User ID {user_id} updated successfully by admin {current_user.id}.")
         return updated_user
 
     except Exception as e:
-        await db.rollback() # Rollback on any error during update
+        await db.rollback()
         logger.error(f"Error updating user ID {user_id} by admin {current_user.id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while updating the user."
         )
 
-# Endpoint to delete a user by ID (Admin Only)
 @router.delete(
     "/users/{user_id}",
     response_model=StatusResponse,
@@ -530,16 +453,10 @@ async def update_user_by_id(
     description="Deletes a specific user by ID (requires admin authentication)."
 )
 async def delete_user_by_id(
-    user_id: int, # User ID from the path
+    user_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user) # Use the admin dependency
+    current_user: User = Depends(get_current_admin_user)
 ):
-    """
-    Deletes a user account. Restricted to administrators.
-    """
-    # Admin check is now handled by Depends(get_current_admin_user)
-
-    # Fetch the user to delete
     db_user = await crud_user.get_user_by_id(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(
@@ -548,19 +465,12 @@ async def delete_user_by_id(
         )
 
     try:
-        # Delete the user using the CRUD function
         await crud_user.delete_user(db=db, db_user=db_user)
-
-        # TODO: If the user was connected via WebSocket, their connection will eventually break.
-        # You might need a mechanism to explicitly remove them from active_websocket_connections
-        # and potentially clean up their cache entries if they won't reconnect.
-        # This is complex in a distributed system.
-
         logger.info(f"User ID {user_id} deleted successfully by admin {current_user.id}.")
         return StatusResponse(message=f"User with ID {user_id} deleted successfully.")
 
     except Exception as e:
-        await db.rollback() # Rollback on any error during delete
+        await db.rollback()
         logger.error(f"Error deleting user ID {user_id} by admin {current_user.id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -572,14 +482,12 @@ async def delete_user_by_id(
     "/signup/send-otp",
     response_model=StatusResponse,
     summary="Send OTP for new user email verification by account type",
-    # ... (description can be updated)
 )
 async def signup_send_otp(
-    request_data: SignupSendOTPRequest, # Schema now includes user_type
+    request_data: SignupSendOTPRequest,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
 ):
-    # Use the new type-specific check
     user = await crud_user.get_user_by_email_and_type(db, email=request_data.email, user_type=request_data.user_type)
 
     if user and getattr(user, 'isActive', 0) == 1:
@@ -593,12 +501,10 @@ async def signup_send_otp(
     email_body = f"Your One-Time Password (OTP) for email verification for your {request_data.user_type} account is: {otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes."
 
     if user and getattr(user, 'isActive', 0) == 0:
-        # Email and user_type match an existing inactive user
         await crud_otp.create_otp(db, user_id=user.id, force_otp_code=otp_code)
         logger.info(f"Sent OTP to existing inactive user {request_data.email} (type: {request_data.user_type}) for activation.")
     else:
-        # New email for this user_type
-        redis_key = f"signup_otp:{request_data.email}:{request_data.user_type}" # Include user_type in Redis key
+        redis_key = f"signup_otp:{request_data.email}:{request_data.user_type}"
         await redis_client.set(redis_key, otp_code, ex=int(settings.OTP_EXPIRATION_MINUTES * 60))
         logger.info(f"Stored OTP in Redis for new email {request_data.email} (type: {request_data.user_type}).")
 
@@ -622,20 +528,19 @@ async def signup_send_otp(
     "/signup/verify-otp",
     response_model=StatusResponse,
     summary="Verify OTP for new user email by account type or activate existing",
-    # ... (description can be updated)
 )
 async def signup_verify_otp(
-    request_data: SignupVerifyOTPRequest, # Schema now includes user_type
+    request_data: SignupVerifyOTPRequest,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
 ):
-    redis_key_signup_otp = f"signup_otp:{request_data.email}:{request_data.user_type}" # Include user_type
+    redis_key_signup_otp = f"signup_otp:{request_data.email}:{request_data.user_type}"
     stored_otp_in_redis = await redis_client.get(redis_key_signup_otp)
 
     if stored_otp_in_redis:
         if stored_otp_in_redis == request_data.otp_code:
             await redis_client.delete(redis_key_signup_otp)
-            redis_key_preverified = f"preverified_email:{request_data.email}:{request_data.user_type}" # Include user_type
+            redis_key_preverified = f"preverified_email:{request_data.email}:{request_data.user_type}"
             await redis_client.set(redis_key_preverified, "1", ex=15 * 60)
             logger.info(f"OTP for new email {request_data.email} (type: {request_data.user_type}) verified via Redis.")
             return StatusResponse(message="Email verified successfully. Please complete your registration.")
@@ -645,7 +550,7 @@ async def signup_verify_otp(
     else:
         user = await crud_user.get_user_by_email_and_type(db, email=request_data.email, user_type=request_data.user_type)
         if user and getattr(user, 'isActive', 0) == 0:
-            otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=request_data.otp_code)
+            otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=request_data.otp_code) # Pass user_id
             if not otp_record:
                 logger.warning(f"Invalid DB OTP for inactive user {request_data.email} (type: {request_data.user_type}).")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
@@ -658,16 +563,11 @@ async def signup_verify_otp(
                 return StatusResponse(message="Account activated successfully. You can now login.")
             except Exception as e:
                 await db.rollback()
-                # ... (error logging and HTTPException) ...
                 logger.error(f"Error activating user ID {user.id} (type: {request_data.user_type}): {e}", exc_info=True)
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during account activation.")
         else:
             logger.warning(f"No OTP in Redis and no matching inactive user for {request_data.email} (type: {request_data.user_type}).")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP, or email not eligible for this verification process.")
-        
-
-# API Endpoints
-from app.crud.otp import get_user_by_email_and_type, create_otp, get_valid_otp, get_otp_flag_key, delete_all_user_otps
 
 
 @router.post("/request-password-reset", response_model=StatusResponse)
@@ -675,11 +575,11 @@ async def request_password_reset(
     payload: RequestPasswordReset,
     db: AsyncSession = Depends(get_db),
 ):
-    user = await get_user_by_email_and_type(db, payload.email, payload.user_type)
+    user = await crud_user.get_user_by_email_and_type(db, payload.email, payload.user_type)
     if not user:
         return StatusResponse(message="If a user exists, an OTP has been sent.")
 
-    otp = await create_otp(db, user_id=user.id)
+    otp = await crud_otp.create_otp(db, user_id=user.id) # Pass user_id
     await email_service.send_email(
         user.email,
         "Password Reset OTP",
@@ -693,15 +593,15 @@ async def verify_password_reset_otp(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis_client)
 ):
-    user = await get_user_by_email_and_type(db, payload.email, payload.user_type)
+    user = await crud_user.get_user_by_email_and_type(db, payload.email, payload.user_type)
     if not user:
         raise HTTPException(status_code=400, detail="Invalid credentials.")
 
-    otp = await get_valid_otp(db, user.id, payload.otp_code)
+    otp = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=payload.otp_code) # Pass user_id
     if not otp:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
 
-    await redis.setex(get_otp_flag_key(user.email, user.user_type), settings.OTP_EXPIRATION_MINUTES * 60, "1")
+    await redis.setex(crud_otp.get_otp_flag_key(user.email, user.user_type), settings.OTP_EXPIRATION_MINUTES * 60, "1")
     return StatusResponse(message="OTP verified successfully.")
 
 
@@ -711,126 +611,26 @@ async def confirm_password_reset(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis_client)
 ):
-    user = await get_user_by_email_and_type(db, payload.email, payload.user_type)
+    user = await crud_user.get_user_by_email_and_type(db, payload.email, payload.user_type)
     if not user:
         raise HTTPException(status_code=400, detail="Invalid email or user type.")
 
-    redis_key = get_otp_flag_key(user.email, user.user_type)
+    redis_key = crud_otp.get_otp_flag_key(user.email, user.user_type)
     otp_verified = await redis.get(redis_key)
     if not otp_verified:
         raise HTTPException(status_code=403, detail="OTP verification required before resetting password.")
 
     user.hashed_password = get_password_hash(payload.new_password)
     await db.commit()
-    await delete_all_user_otps(db, user.id)
+    await crud_otp.delete_all_user_otps(db, user.id) # Pass user_id
     await redis.delete(redis_key)
 
     return StatusResponse(message="Password reset successful.")
 
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from decimal import Decimal # Import Decimal
-from typing import Optional
-
-from app.database.session import get_db
-from app.database.models import User
-from app.schemas.user import StatusResponse # Assuming StatusResponse is in user schema
-from app.schemas.wallet import WalletTransactionRequest, WalletBalanceResponse, WalletCreate # Import new wallet schemas
-from app.crud import user as crud_user
-from app.crud import wallet as crud_wallet # Import crud_wallet
-from app.core.security import get_current_user # For user authentication
-
-import logging
-
-logger = logging.getLogger(__name__)
-
-# Assuming 'router' is already defined as APIRouter() in users.py
-
-# NEW: Endpoint to add funds to user's wallet
-@router.post(
-    "/wallet/add",
-    response_model=WalletBalanceResponse,
-    summary="Add funds to user's wallet",
-    description="Adds a specified amount to the authenticated user's wallet balance and records the transaction."
-)
-async def add_funds_to_wallet(
+@router.post("/wallet/deposit", response_model=MoneyRequestResponse)
+async def request_deposit_funds(
     request: WalletTransactionRequest,
-    current_user: User = Depends(get_current_user), # Authenticate user
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Adds funds to the authenticated user's wallet balance.
-    Ensures atomicity using transactions and row-level locking.
-    """
-    if request.amount <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Amount to add must be positive."
-        )
-
-    try:
-        # Use the new CRUD function to update balance and create record
-        updated_user = await crud_user.update_user_wallet_balance(
-            db=db,
-            user_id=current_user.id,
-            amount=request.amount,
-            transaction_type="deposit",
-            description=request.description or "Funds added by user request"
-        )
-
-        # Assuming update_user_wallet_balance returns the updated user and handles wallet record creation
-        # We need the transaction_id from the created wallet record.
-        # This requires a slight modification to update_user_wallet_balance to return it,
-        # or fetch the latest record. For simplicity, let's assume update_user_wallet_balance
-        # can return the wallet_record as well, or we fetch it.
-        # For now, we'll just return a generic success message and the new balance.
-        # If transaction_id is critical for the response, update_user_wallet_balance needs to return it.
-
-        # To get the transaction_id, we need to fetch the latest wallet record for the user
-        # This is not ideal as it adds another query. A better approach is to return it from the CRUD.
-        # Let's modify update_user_wallet_balance to return both user and wallet_record.
-
-        # Re-fetch the latest wallet record to get its transaction_id
-        latest_wallet_record = await crud_wallet.get_wallet_records_by_user_id(
-            db, user_id=current_user.id, limit=1, skip=0
-        )
-        transaction_id = latest_wallet_record[0].transaction_id if latest_wallet_record else None
-
-
-        return WalletBalanceResponse(
-            user_id=current_user.id,
-            new_balance=updated_user.wallet_balance,
-            message=f"Successfully added {request.amount} to wallet.",
-            transaction_id=transaction_id
-        )
-
-    except ValueError as ve:
-        logger.warning(f"Wallet add funds failed for user {current_user.id}: {ve}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
-    except Exception as e:
-        logger.error(f"Error adding funds to wallet for user {current_user.id}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while adding funds."
-        )
-
-
-# --- Wallet Endpoints Modified for Money Request Flow ---
-from app.schemas.money_request import MoneyRequestResponse, MoneyRequestCreate
-from app.crud import money_request as crud_money_request
-
-@router.post(
-    "/wallet/deposit",  # Changed from /wallet/add
-    response_model=MoneyRequestResponse, # Returns the created money request
-    summary="Request to deposit funds to user's wallet",
-    description="Creates a money request for depositing funds. Admin approval is required to update the wallet."
-)
-async def request_deposit_funds( # Renamed function
-    request: WalletTransactionRequest, # Re-using this schema for amount and description
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -842,12 +642,8 @@ async def request_deposit_funds( # Renamed function
 
     money_request_data = MoneyRequestCreate(
         amount=request.amount,
-        type="deposit", # Explicitly set type
-        # description can be passed to money_request if schema is updated, or handled differently
+        type="deposit"
     )
-    # Note: The current MoneyRequestCreate schema doesn't have a description field.
-    # If description is needed for the money request itself, the schema and model should be updated.
-    # For now, the description from WalletTransactionRequest is not directly used in MoneyRequest.
 
     try:
         new_money_request = await crud_money_request.create_money_request(
@@ -855,24 +651,17 @@ async def request_deposit_funds( # Renamed function
             request_data=money_request_data,
             user_id=current_user.id
         )
-        logger.info(f"Deposit request created: ID {new_money_request.id} for user {current_user.id}, amount {request.amount}")
-        # If you want to include the description in the log or somewhere, you can access request.description
         return new_money_request
     except Exception as e:
-        logger.error(f"Error creating deposit request for user {current_user.id}: {e}", exc_info=True)
+        logger.error(f"Error creating deposit request: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while creating the deposit request."
         )
 
-@router.post(
-    "/wallet/withdraw", # Changed from /wallet/deduct
-    response_model=MoneyRequestResponse, # Returns the created money request
-    summary="Request to withdraw funds from user's wallet",
-    description="Creates a money request for withdrawing funds. Admin approval is required to update the wallet."
-)
-async def request_withdraw_funds( # Renamed function
-    request: WalletTransactionRequest, # Re-using this schema for amount and description
+@router.post("/wallet/withdraw", response_model=MoneyRequestResponse)
+async def request_withdraw_funds(
+    request: WalletTransactionRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -882,19 +671,9 @@ async def request_withdraw_funds( # Renamed function
             detail="Amount to withdraw must be positive."
         )
 
-    # Optional: Check if user has sufficient balance for withdrawal request here,
-    # though final check will be done upon approval.
-    # This is a soft check to prevent obviously impossible requests.
-    # user_wallet = await crud_user.get_user_by_id(db, current_user.id) # Fetch user to check balance
-    # if user_wallet and user_wallet.wallet_balance < request.amount:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Insufficient funds to request this withdrawal amount."
-    #     )
-
     money_request_data = MoneyRequestCreate(
         amount=request.amount,
-        type="withdraw", # Explicitly set type
+        type="withdraw"
     )
 
     try:
@@ -903,11 +682,372 @@ async def request_withdraw_funds( # Renamed function
             request_data=money_request_data,
             user_id=current_user.id
         )
-        logger.info(f"Withdrawal request created: ID {new_money_request.id} for user {current_user.id}, amount {request.amount}")
         return new_money_request
     except Exception as e:
-        logger.error(f"Error creating withdrawal request for user {current_user.id}: {e}", exc_info=True)
+        logger.error(f"Error creating withdrawal request: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while creating the withdrawal request."
+        )
+
+# --- Demo User Endpoints ---
+
+@router.post(
+    "/demo/register",
+    response_model=DemoUserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new demo user",
+    description="Creates a new demo user account with the provided details."
+)
+async def register_demo_user(
+    name: str = Form(...),
+    email: str = Form(...),
+    phone_number: str = Form(..., max_length=20),
+    password: str = Form(..., min_length=8),
+    security_answer: Optional[str] = Form(None), # Added security_answer
+    city: str = Form(None),
+    state: str = Form(None),
+    pincode: Optional[int] = Form(None),
+    user_type: str = Form("demo", max_length=100), # Default to "demo"
+    security_question: Optional[str] = Form(None),
+    group_name: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db)
+):
+    existing_user = await crud_user.get_user_by_email_phone_type(db, email=email, phone_number=phone_number, user_type=user_type)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Demo user with this email and phone number already exists."
+        )
+
+    demo_user_data = {
+        "name": name,
+        "email": email,
+        "phone_number": phone_number,
+        "city": city,
+        "state": state,
+        "pincode": pincode,
+        "user_type": user_type,
+        "security_question": security_question,
+        "group_name": group_name,
+        "wallet_balance": Decimal("100000.0"), # Starting balance for demo
+        "leverage": Decimal("100.0"), # Default leverage for demo
+        "margin": Decimal("0.0"),
+        "status": 1, # Active by default for demo
+        "isActive": 1, # Active by default for demo
+        "account_number": await generate_unique_demo_account_number(db),
+    }
+
+    hashed_password = get_password_hash(password)
+
+    try:
+        new_demo_user = await crud_user.create_demo_user(
+            db=db,
+            demo_user_data=demo_user_data,
+            hashed_password=hashed_password,
+            security_answer=security_answer, # Pass security_answer
+        )
+        return new_demo_user
+
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Demo user with this email or phone number already exists."
+        )
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error during demo user registration: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during demo user registration."
+        )
+
+@router.post("/demo/login", response_model=Token, summary="Demo User Login (JSON)")
+async def login_demo_user(
+    credentials: DemoUserLogin,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    demo_user = await crud_user.get_demo_user_by_email(db, email=credentials.username)
+    if not demo_user:
+        demo_user = await crud_user.get_demo_user_by_phone_number(db, phone_number=credentials.username)
+
+    if not demo_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password for demo user",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not verify_password(credentials.password, demo_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password for demo user",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if getattr(demo_user, 'isActive', 0) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo user account is not active."
+        )
+
+    access_token_expires = datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+
+    access_token = create_access_token(
+        data={"sub": str(demo_user.id), "user_type": "demo"}, # Include user_type in token
+        expires_delta=access_token_expires
+    )
+    refresh_token = create_refresh_token(
+        data={"sub": str(demo_user.id), "user_type": "demo"}, # Include user_type in token
+        expires_delta=refresh_token_expires
+    )
+
+    await store_refresh_token(client=redis_client, user_id=demo_user.id, refresh_token=refresh_token, user_type="demo") # Store user_type
+    return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+
+
+@router.post(
+    "/demo/signup/send-otp",
+    response_model=StatusResponse,
+    summary="Send OTP for new demo user email verification",
+)
+async def demo_signup_send_otp(
+    request_data: DemoSendOTPRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    demo_user = await crud_user.get_demo_user_by_email(db, email=request_data.email)
+
+    if demo_user and getattr(demo_user, 'isActive', 0) == 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already registered and active for a demo account."
+        )
+
+    otp_code = crud_otp.generate_otp_code()
+    email_subject = "Verify Your Email for Demo Account"
+    email_body = f"Your One-Time Password (OTP) for email verification for your demo account is: {otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes."
+
+    if demo_user and getattr(demo_user, 'isActive', 0) == 0:
+        await crud_otp.create_otp(db, demo_user_id=demo_user.id, force_otp_code=otp_code) # Pass demo_user_id
+        logger.info(f"Sent OTP to existing inactive demo user {request_data.email} for activation.")
+    else:
+        redis_key = f"signup_otp:{request_data.email}:demo" # Specific key for demo
+        await redis_client.set(redis_key, otp_code, ex=int(settings.OTP_EXPIRATION_MINUTES * 60))
+        logger.info(f"Stored OTP in Redis for new demo email {request_data.email}.")
+
+    try:
+        await email_service.send_email(
+            to_email=request_data.email,
+            subject=email_subject,
+            body=email_body
+        )
+        logger.info(f"Signup OTP sent successfully to {request_data.email} for demo account.")
+    except Exception as e:
+        logger.error(f"Error sending signup OTP to {request_data.email} for demo: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send OTP. Please try again later."
+        )
+    return StatusResponse(message="OTP sent successfully to your email.")
+
+
+@router.post(
+    "/demo/signup/verify-otp",
+    response_model=StatusResponse,
+    summary="Verify OTP for new demo user email or activate existing",
+)
+async def demo_signup_verify_otp(
+    request_data: DemoVerifyOTPRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    redis_key_signup_otp = f"signup_otp:{request_data.email}:demo"
+    stored_otp_in_redis = await redis_client.get(redis_key_signup_otp)
+
+    if stored_otp_in_redis:
+        if stored_otp_in_redis == request_data.otp_code:
+            await redis_client.delete(redis_key_signup_otp)
+            redis_key_preverified = f"preverified_email:{request_data.email}:demo"
+            await redis_client.set(redis_key_preverified, "1", ex=15 * 60)
+            logger.info(f"OTP for new demo email {request_data.email} verified via Redis.")
+            return StatusResponse(message="Email verified successfully. Please complete your registration.")
+        else:
+            logger.warning(f"Invalid Redis OTP for demo {request_data.email}.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
+    else:
+        demo_user = await crud_user.get_demo_user_by_email(db, email=request_data.email)
+        if demo_user and getattr(demo_user, 'isActive', 0) == 0:
+            otp_record = await crud_otp.get_valid_otp(db, demo_user_id=demo_user.id, otp_code=request_data.otp_code) # Pass demo_user_id
+            if not otp_record:
+                logger.warning(f"Invalid DB OTP for inactive demo user {request_data.email}.")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
+            demo_user.status = 1
+            demo_user.isActive = 1
+            try:
+                await db.commit()
+                await crud_otp.delete_otp(db, otp_id=otp_record.id)
+                logger.info(f"Existing inactive demo user {request_data.email} (ID: {demo_user.id}) activated.")
+                return StatusResponse(message="Demo account activated successfully. You can now login.")
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"Error activating demo user ID {demo_user.id}: {e}", exc_info=True)
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during demo account activation.")
+        else:
+            logger.warning(f"No OTP in Redis and no matching inactive demo user for {request_data.email}.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP, or email not eligible for this verification process.")
+
+
+@router.post("/demo/request-password-reset", response_model=StatusResponse)
+async def demo_request_password_reset(
+    payload: DemoRequestPasswordReset,
+    db: AsyncSession = Depends(get_db),
+):
+    demo_user = await crud_user.get_demo_user_by_email(db, payload.email)
+    if not demo_user:
+        return StatusResponse(message="If a demo user exists, an OTP has been sent.")
+
+    otp = await crud_otp.create_otp(db, demo_user_id=demo_user.id) # Pass demo_user_id
+    await email_service.send_email(
+        demo_user.email,
+        "Demo Account Password Reset OTP",
+        f"Your OTP is: {otp.otp_code}"
+    )
+    return StatusResponse(message="Demo account password reset OTP sent successfully.")
+
+@router.post("/demo/verify-password-reset-otp", response_model=StatusResponse)
+async def demo_verify_password_reset_otp(
+    payload: DemoVerifyOTPRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis_client)
+):
+    demo_user = await crud_user.get_demo_user_by_email(db, payload.email)
+    if not demo_user:
+        raise HTTPException(status_code=400, detail="Invalid credentials for demo user.")
+
+    otp = await crud_otp.get_valid_otp(db, demo_user_id=demo_user.id, otp_code=payload.otp_code) # Pass demo_user_id
+    if not otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
+
+    await redis.setex(crud_otp.get_otp_flag_key(demo_user.email, "demo"), settings.OTP_EXPIRATION_MINUTES * 60, "1")
+    return StatusResponse(message="Demo OTP verified successfully.")
+
+
+@router.post("/demo/reset-password-confirm", response_model=StatusResponse)
+async def demo_confirm_password_reset(
+    payload: DemoResetPasswordConfirm,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis_client)
+):
+    demo_user = await crud_user.get_demo_user_by_email(db, payload.email)
+    if not demo_user:
+        raise HTTPException(status_code=400, detail="Invalid email for demo user.")
+
+    redis_key = crud_otp.get_otp_flag_key(demo_user.email, "demo")
+    otp_verified = await redis.get(redis_key)
+    if not otp_verified:
+        raise HTTPException(status_code=403, detail="OTP verification required before resetting demo password.")
+
+    demo_user.hashed_password = get_password_hash(payload.new_password)
+    await db.commit()
+    await crud_otp.delete_all_demo_user_otps(db, demo_user.id) # Pass demo_user_id
+    await redis.delete(redis_key)
+
+    return StatusResponse(message="Demo password reset successful.")
+
+@router.post("/demo/wallet/deposit", response_model=MoneyRequestResponse)
+async def request_deposit_funds_demo(
+    request: WalletTransactionRequest,
+    current_user: DemoUser = Depends(get_current_user), # Assuming get_current_user can return DemoUser based on token
+    db: AsyncSession = Depends(get_db)
+):
+    if request.amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount to deposit must be positive."
+        )
+
+    money_request_data = MoneyRequestCreate(
+        amount=request.amount,
+        type="deposit"
+    )
+
+    try:
+        # For demo users, money requests are handled directly as wallet updates
+        # Assuming we don't need a separate MoneyRequest table for demo users,
+        # and instead directly update their wallet balance.
+        # If you DO need a MoneyRequest for demo users, you'd need to add a
+        # demo_user_id foreign key to the MoneyRequest model.
+        updated_demo_user = await crud_user.update_demo_user_wallet_balance(
+            db=db,
+            demo_user_id=current_user.id,
+            amount=request.amount,
+            transaction_type="deposit",
+            description=request.description or "Demo funds added by user request"
+        )
+        return MoneyRequestResponse(
+            id=0, # Placeholder ID as no MoneyRequest object is created
+            user_id=current_user.id,
+            amount=request.amount,
+            type="deposit",
+            status=1, # Approved immediately
+            created_at=datetime.datetime.utcnow(),
+            updated_at=datetime.datetime.utcnow()
+        )
+    except ValueError as ve:
+        logger.warning(f"Demo wallet deposit failed for user {current_user.id}: {ve}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        logger.error(f"Error creating demo deposit request: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the demo deposit request."
+        )
+
+@router.post("/demo/wallet/withdraw", response_model=MoneyRequestResponse)
+async def request_withdraw_funds_demo(
+    request: WalletTransactionRequest,
+    current_user: DemoUser = Depends(get_current_user), # Assuming get_current_user can return DemoUser based on token
+    db: AsyncSession = Depends(get_db)
+):
+    if request.amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount to withdraw must be positive."
+        )
+
+    try:
+        updated_demo_user = await crud_user.update_demo_user_wallet_balance(
+            db=db,
+            demo_user_id=current_user.id,
+            amount=-request.amount, # Negative amount for withdrawal
+            transaction_type="withdrawal",
+            description=request.description or "Demo funds withdrawn by user request"
+        )
+        return MoneyRequestResponse(
+            id=0, # Placeholder ID
+            user_id=current_user.id,
+            amount=request.amount,
+            type="withdraw",
+            status=1, # Approved immediately
+            created_at=datetime.datetime.utcnow(),
+            updated_at=datetime.datetime.utcnow()
+        )
+    except ValueError as ve:
+        logger.warning(f"Demo wallet withdrawal failed for user {current_user.id}: {ve}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        logger.error(f"Error creating demo withdrawal request: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the demo withdrawal request."
         )

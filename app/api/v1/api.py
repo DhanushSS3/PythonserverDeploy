@@ -22,3 +22,7 @@ api_router.include_router(orders.router, tags=["orders"])
 api_router.include_router(market_data_ws.router, tags=["market_data"])
 
 api_router.include_router(money_requests.router, prefix="", tags=["Money Requests"])
+
+from app.api.v1.endpoints import wallets
+
+api_router.include_router(wallets.router, tags=["Money Requests"])

@@ -49,6 +49,78 @@ from app.services.portfolio_calculator import calculate_user_portfolio
 
 router = APIRouter()
 
+@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+async def place_order(
+    order_request: OrderPlacementRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User = Depends(get_user_from_service_or_user_token)
+):
+    logger.info(f"Received order placement request for user {current_user.id}, symbol {order_request.symbol}")
+
+    if order_request.order_quantity <= 0:
+        raise HTTPException(status_code=400, detail="Order quantity must be positive.")
+
+    try:
+        new_db_order = await process_new_order(
+            db=db,
+            redis_client=redis_client,
+            user=current_user,
+            order_request=order_request
+        )
+
+        await db.refresh(current_user)
+
+        user_data_to_cache = {
+            "id": current_user.id,
+            "group_name": getattr(current_user, 'group_name', 'default'),
+            "leverage": current_user.leverage,
+            "wallet_balance": current_user.wallet_balance,
+            "margin": current_user.margin
+        }
+        await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
+
+        all_orders = await crud_order.get_orders_by_user_id(db, user_id=current_user.id)
+        updated_open_positions = []
+        updated_pending_positions = []
+        total_margin = Decimal("0.0")
+
+        for pos in all_orders:
+            pos_dict = {k: str(getattr(pos, k)) if isinstance(getattr(pos, k), Decimal) else getattr(pos, k)
+                        for k in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            pos_dict['profit_loss'] = "0.0"
+            if pos.order_status == "OPEN":
+                updated_open_positions.append(pos_dict)
+            elif pos.order_status == "PENDING":
+                updated_pending_positions.append(pos_dict)
+            total_margin += Decimal(str(pos.margin or 0.0))
+
+        user_portfolio_data = {
+            "balance": str(current_user.wallet_balance),
+            "equity": "0.0",
+            "margin": str(total_margin),
+            "free_margin": str(current_user.wallet_balance - total_margin),
+            "profit_loss": "0.0",
+            "positions": updated_open_positions,
+            "pending_positions": updated_pending_positions
+        }
+        await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
+
+        account_update_signal = {
+            "type": "account_update_signal",
+            "user_id": current_user.id
+        }
+        await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps(account_update_signal))
+
+        return OrderResponse.model_validate(new_db_order)
+
+    except InsufficientFundsError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except OrderProcessingError:
+        raise HTTPException(status_code=500, detail="An error occurred while processing the order.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
 class FirebaseOrderRequest(BaseModel):
     symbol: str
     order_type: str
@@ -132,77 +204,6 @@ async def prepare_order_for_firebase(
 
 
 
-@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-async def place_order(
-    order_request: OrderPlacementRequest,
-    db: AsyncSession = Depends(get_db),
-    redis_client: Redis = Depends(get_redis_client),
-    current_user: User = Depends(get_user_from_service_or_user_token)
-):
-    logger.info(f"Received order placement request for user {current_user.id}, symbol {order_request.symbol}")
-
-    if order_request.order_quantity <= 0:
-        raise HTTPException(status_code=400, detail="Order quantity must be positive.")
-
-    try:
-        new_db_order = await process_new_order(
-            db=db,
-            redis_client=redis_client,
-            user=current_user,
-            order_request=order_request
-        )
-
-        await db.refresh(current_user)
-
-        user_data_to_cache = {
-            "id": current_user.id,
-            "group_name": getattr(current_user, 'group_name', 'default'),
-            "leverage": current_user.leverage,
-            "wallet_balance": current_user.wallet_balance,
-            "margin": current_user.margin
-        }
-        await set_user_data_cache(redis_client, current_user.id, user_data_to_cache)
-
-        all_orders = await crud_order.get_orders_by_user_id(db, user_id=current_user.id)
-        updated_open_positions = []
-        updated_pending_positions = []
-        total_margin = Decimal("0.0")
-
-        for pos in all_orders:
-            pos_dict = {k: str(getattr(pos, k)) if isinstance(getattr(pos, k), Decimal) else getattr(pos, k)
-                        for k in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
-            pos_dict['profit_loss'] = "0.0"
-            if pos.order_status == "OPEN":
-                updated_open_positions.append(pos_dict)
-            elif pos.order_status == "PENDING":
-                updated_pending_positions.append(pos_dict)
-            total_margin += Decimal(str(pos.margin or 0.0))
-
-        user_portfolio_data = {
-            "balance": str(current_user.wallet_balance),
-            "equity": "0.0",
-            "margin": str(total_margin),
-            "free_margin": str(current_user.wallet_balance - total_margin),
-            "profit_loss": "0.0",
-            "positions": updated_open_positions,
-            "pending_positions": updated_pending_positions
-        }
-        await set_user_portfolio_cache(redis_client, current_user.id, user_portfolio_data)
-
-        account_update_signal = {
-            "type": "account_update_signal",
-            "user_id": current_user.id
-        }
-        await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, json.dumps(account_update_signal))
-
-        return OrderResponse.model_validate(new_db_order)
-
-    except InsufficientFundsError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except OrderProcessingError:
-        raise HTTPException(status_code=500, detail="An error occurred while processing the order.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 @router.get("/{order_id}", response_model=OrderResponse)
 async def read_order(

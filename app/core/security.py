@@ -140,30 +140,50 @@ async def close_redis_connection(client: Optional[aioredis.Redis]): # Accept cli
             logger.error(f"Error closing Redis connection: {e}", exc_info=True)
 
 
-# --- Redis Functions that now require passing the client ---
+import datetime
+import json
+import logging
+from typing import Optional
 
-async def store_refresh_token(client: aioredis.Redis, user_id: int, refresh_token: str): # Add client argument
+# Change this import
+import redis.asyncio as redis_client # <-- New import and alias
+
+async def store_refresh_token(
+    client: redis_client.Redis, # <-- Update the type hint here
+    user_id: int,
+    refresh_token: str,
+    user_type: Optional[str] = None
+):
     """
     Stores a refresh token in Redis associated with a user ID.
     Requires an active Redis client instance.
+    Now also accepts an optional user_type.
     """
-    if not client: # Check the passed client
+    if not client:
         logger.warning("Redis client not provided to store_refresh_token. Cannot store refresh token.")
         return
 
     redis_key = f"refresh_token:{refresh_token}"
     expiry_seconds = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-    token_data = {"user_id": user_id, "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(seconds=expiry_seconds)).isoformat()}
-    token_data_json = json.dumps(token_data)
+    
+    # Include user_type in token_data if it's provided
+    token_data = {
+        "user_id": user_id,
+        "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(seconds=expiry_seconds)).isoformat()
+    }
+    if user_type:
+        token_data["user_type"] = user_type # Add user_type to the data stored in Redis
 
-    logger.info(f"Storing refresh token for user ID {user_id}. Key: {redis_key}, Expiry (seconds): {expiry_seconds}") # Omit data in log for security
+    token_data_json = json.dumps(token_data)
+    
+    logger.info(f"Storing refresh token for user ID {user_id} (Type: {user_type or 'N/A'}). Key: {redis_key}, Expiry (seconds): {expiry_seconds}")
 
     try:
-        # Use the passed client instance
         await client.set(redis_key, token_data_json, ex=expiry_seconds)
         logger.info(f"Refresh token stored successfully for user ID: {user_id}")
     except Exception as e:
         logger.error(f"Error storing refresh token in Redis for user ID {user_id}: {e}", exc_info=True)
+
 
 async def get_refresh_token_data(client: aioredis.Redis, refresh_token: str) -> dict[str, Any] | None: # Add client argument
      """

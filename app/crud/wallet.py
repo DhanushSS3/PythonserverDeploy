@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__) # Get logger for this module
 # Changed function signature to accept WalletCreate schema
 async def create_wallet_record(
     db: AsyncSession,
-    wallet_data: WalletCreate # Accept the Pydantic schema object
-) -> Wallet | None: # Use Union[Wallet, None] or Wallet | None for type hinting
+    wallet_data: WalletCreate
+) -> Wallet | None:
     """
     Creates a new wallet transaction record using data from a WalletCreate schema.
 
@@ -39,59 +39,45 @@ async def create_wallet_record(
         transaction_id = str(uuid.uuid4())
         logger.debug(f"Generated transaction ID: {transaction_id}")
 
-        # Get the current time for the transaction (created_at will be set by DB)
-        # transaction_time is set when approved, so don't set it on creation here
-        # transaction_time = datetime.datetime.now() # Removed, handled on approval
-
-        # Create a new Wallet instance using data from the schema
-        # Access fields directly from the wallet_data object
+        # Create the wallet transaction object
         wallet_record = Wallet(
             user_id=wallet_data.user_id,
-            order_quantity=wallet_data.order_quantity, # Optional field, will be None if not sent
-            symbol=wallet_data.symbol, # Optional field, will be None if not sent
+            order_quantity=wallet_data.order_quantity,
+            symbol=wallet_data.symbol,
             transaction_type=wallet_data.transaction_type,
             is_approved=wallet_data.is_approved,
-            order_type=wallet_data.order_type, # Optional field, will be None if not sent
+            order_type=wallet_data.order_type,
             transaction_amount=wallet_data.transaction_amount,
             transaction_id=transaction_id,
-            # --- Include New Field ---
-            description=wallet_data.description, # Optional field, will be None if not sent
-            # --- End New Field ---
-            # created_at and updated_at will be set by database defaults
-            # transaction_time is set on approval
+            description=wallet_data.description,
         )
 
-        # Add the new record to the session
+        # Add and flush to prepare for refresh
         db.add(wallet_record)
+        await db.flush()                 # ✅ Safe flush instead of commit
+        await db.refresh(wallet_record)  # ✅ Still inside open transaction
 
-        # Commit the changes to the database
-        await db.commit() # Use await with async session
-
-        # Refresh the object to get any database-generated values (like the primary key, timestamps)
-        await db.refresh(wallet_record) # Use await with async session
-
-        logger.info(f"Wallet record created successfully for user {wallet_data.user_id} with transaction ID {transaction_id}.")
+        logger.info(
+            f"Wallet record created successfully for user {wallet_data.user_id} "
+            f"with transaction ID {transaction_id}."
+        )
         return wallet_record
 
     except SQLAlchemyError as e:
-        # Log the error to the console or a logging system
-        logger.error(f"Database error creating wallet record for user {wallet_data.user_id}: {e}", exc_info=True)
-        await db.rollback()  # Rollback the transaction to avoid partial writes (use await)
-        return None  # Explicitly return None on error
+        logger.error(
+            f"Database error creating wallet record for user {wallet_data.user_id}: {e}",
+            exc_info=True
+        )
+        await db.rollback()
+        return None
 
     except Exception as e:
-        # Handle other exceptions (e.g., input validation before reaching DB, though Pydantic handles this)
-        logger.error(f"Unexpected error creating wallet record for user {wallet_data.user_id}: {e}", exc_info=True)
-        await db.rollback() # Rollback the transaction (use await)
-        return None  # Explicitly return None on error
-
-    # Removed the finally block with db.close() as session is managed by the dependency
-    # finally:
-    #     # Close the database session
-    #     db.close() # Removed
-
-
-# Add other CRUD functions for Wallet as needed (e.g., get_wallet_records_by_user, update_wallet_record_status)
+        logger.error(
+            f"Unexpected error creating wallet record for user {wallet_data.user_id}: {e}",
+            exc_info=True
+        )
+        await db.rollback()
+        return None
 
 # Example function to get wallet records by user ID (Async)
 async def get_wallet_records_by_user_id(

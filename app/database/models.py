@@ -24,9 +24,6 @@ from sqlalchemy.orm import relationship # Import relationship for defining relat
 # Assuming you have a base declarative model defined in database/base.py
 from .base import Base # Assuming Base is defined in app/database/base.py
 
-# Import other models if they are in this file or imported here
-# from .models import User, Group, Symbol # Circular import if in this file, import directly below
-
 
 class User(Base):
     """
@@ -42,7 +39,7 @@ class User(Base):
     # Required Fields
     name = Column(String(255), nullable=False)
     email = Column(String(255), index=True, nullable=False) # No longer globally unique
-    phone_number = Column(String(20), index=True, nullable=False) # 
+    phone_number = Column(String(20), index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False) # Store hashed password
 
     # Other Fields
@@ -64,6 +61,7 @@ class User(Base):
     status = Column(Integer, default=0, nullable=False) # Default to 0 (inactive/pending)
 
     security_question = Column(String(255), nullable=True)
+    security_answer = Column(String(255), nullable=True) # New field for security question answer
 
     # Address/Location Fields
     city = Column(String(100), nullable=True)
@@ -104,24 +102,74 @@ class User(Base):
         UniqueConstraint('email', 'phone_number', 'user_type', name='_email_phone_user_type_uc'),
     )
 
-
     # Relationships (Define relationships to other models)
-    # referred_by_user = relationship("User", remote_side=[id]) # Self-referential relationship
-    # referred_users = relationship("User") # Users referred by this user
-
-    # Relationship to Refresh Tokens (Placeholder)
-    # refresh_tokens = relationship("RefreshToken", back_populates="user")
-
-    # Relationship to User Orders
     orders = relationship("UserOrder", back_populates="user")
-
-    # Relationship to Wallet transactions
     wallet_transactions = relationship("Wallet", back_populates="user")
-
-    # Relationship to OTPs
     otps = relationship("OTP", back_populates="user")
-
     money_requests = relationship("MoneyRequest", back_populates="user")
+
+
+class DemoUser(Base):
+    """
+    SQLAlchemy model for the 'demo_users' table.
+    Represents a DEMO user in the trading application.
+    This model excludes sensitive personal and financial details present in the main User model.
+    """
+    __tablename__ = "demo_users"
+
+    # Primary Key
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Required Fields (replicated from User model, excluding sensitive ones)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), index=True, nullable=False)
+    phone_number = Column(String(20), index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False) # Store hashed password
+
+    # Other Fields (replicated from User model)
+    user_type = Column(String(100), nullable=True) # Optional field, e.g., 'demo'
+
+    # Financial Fields (replicated from User model)
+    wallet_balance = Column(SQLDecimal(18, 8), default=Decimal("0.00"), nullable=False)
+    leverage = Column(SQLDecimal(10, 2), default=Decimal("1.0"), nullable=False)
+    margin = Column(SQLDecimal(18, 8), default=Decimal("0.00"), nullable=False)
+
+    # Unique Account Number (Platform Specific)
+    account_number = Column(String(100), unique=True, index=True, nullable=True)
+
+    # Group Name (replicated from User model)
+    group_name = Column(String(255), index=True, nullable=True)
+
+    # Status (replicated from User model)
+    status = Column(Integer, default=0, nullable=False) # Default to 0 (inactive/pending)
+
+    security_question = Column(String(255), nullable=True)
+    security_answer = Column(String(255), nullable=True) # New field for security question answer
+
+    # Address/Location Fields (replicated from User model)
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    pincode = Column(Integer, nullable=True) # Storing as Integer
+
+    # isActive (replicated from User model)
+    isActive = Column(Integer, default=0, nullable=False) # Default to 0 (not active)
+
+    # Referral Fields (replicated from User model)
+    referred_by_id = Column(Integer, ForeignKey("demo_users.id"), nullable=True) # Self-referential for demo users
+    reffered_code = Column(String(20), unique=True, index=True, nullable=True)
+
+    # Timestamps (replicated from User model)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('email', 'phone_number', 'user_type', name='_demo_email_phone_user_type_uc'),
+    )
+
+    # Relationships for DemoUser
+    orders = relationship("DemoUserOrder", back_populates="user")
+    wallet_transactions = relationship("Wallet", back_populates="demo_user") # Relationship to Wallet
+    otps = relationship("OTP", back_populates="demo_user") # Relationship to OTP
 
 
 class Group(Base):
@@ -136,7 +184,6 @@ class Group(Base):
 
     # String fields
     symbol = Column(String(255), nullable=True) # Nullable as requested
-    # REMOVED unique=True from name
     name = Column(String(255), index=True, nullable=False) # Name is required, but not unique on its own
 
     # Integer types
@@ -177,15 +224,6 @@ class Group(Base):
 
     # --- Add Unique Constraint for (symbol, name) combination ---
     __table_args__ = (UniqueConstraint('symbol', 'name', name='_symbol_name_uc'),)
-    # The name='_symbol_name_uc' is optional but good practice for clarity
-
-    # Relationships (Optional, but good practice)
-    # If you decide to link users directly to groups via a foreign key on the Group model,
-    # you would add a relationship here and potentially a foreign key column.
-    # Since you're storing group_name as a string in the User model,
-    # there isn't a direct foreign key relationship here by default.
-    # If you reintroduce a foreign key in the User model, you'd add:
-    # users = relationship("User", back_populates="group") # Assuming 'group' relationship in User model
 
 
 class Symbol(Base):
@@ -211,9 +249,6 @@ class Symbol(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    # Relationships (Add relationships to other models if needed, e.g., Orders)
-    # orders = relationship("UserOrder", back_populates="symbol") # Assuming an Order model exists
-
 
 class Wallet(Base):
     """
@@ -225,9 +260,13 @@ class Wallet(Base):
     # Primary Key
     id = Column(Integer, primary_key=True, index=True)
 
-    # Relationship with User model primary key
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    # Foreign keys to User and DemoUser tables (one should be populated)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True) # Made nullable
+    demo_user_id = Column(Integer, ForeignKey("demo_users.id"), index=True, nullable=True) # New foreign key for DemoUser
+
+    # Relationships back to User and DemoUser
     user = relationship("User", back_populates="wallet_transactions") # Define relationship back to User
+    demo_user = relationship("DemoUser", back_populates="wallet_transactions") # Define relationship back to DemoUser
 
     # Fields based on your list
     symbol = Column(String(255), nullable=True) # Nullable as requested
@@ -253,10 +292,6 @@ class Wallet(Base):
     # Timestamps (Using SQLAlchemy's func.now() for database-side default)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-
-    # Relationships (Add relationships to other models if needed, e.g., a specific Order)
-    # order_id = Column(Integer, ForeignKey("user_orders.id"), nullable=True) # Corrected ForeignKey table name
-    # order = relationship("UserOrder", back_populates="wallet_transactions") # If linking to a specific order
 
 
 class UserOrder(Base):
@@ -313,13 +348,60 @@ class UserOrder(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    # Relationships (Add relationships to other models if needed)
-    # Linking to Symbol model would be more robust than storing company name as string
-    # symbol_id = Column(Integer, ForeignKey("symbols.id"), nullable=True)
-    # symbol = relationship("Symbol", back_populates="orders") # Assuming 'orders' relationship in Symbol model
 
-    # If linking Wallet transactions to specific orders:
-    # wallet_transactions = relationship("Wallet", back_populates="order")
+class DemoUserOrder(Base):
+    """
+    SQLAlchemy model for the 'demo_user_orders' table.
+    Represents a trading order placed by a demo user.
+    This model mirrors UserOrder but links to DemoUser.
+    """
+    __tablename__ = "demo_user_orders"
+
+    # Primary Key
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Unique Order ID (Generated by the application)
+    order_id = Column(String(255), unique=True, index=True, nullable=False)
+
+    # Link to the DemoUser who placed the order
+    order_user_id = Column(Integer, ForeignKey("demo_users.id"), index=True, nullable=False)
+    # Relationship back to the DemoUser
+    user = relationship("DemoUser", back_populates="orders")
+
+    # Required Fields (replicated from UserOrder)
+    order_status = Column(String(255), nullable=False)
+    order_company_name = Column(String(255), nullable=False)
+    order_type = Column(String(255), nullable=False)
+
+    # Financial values - using Decimal for precision (replicated from UserOrder)
+    order_price = Column(SQLDecimal(18, 8), nullable=False)
+    order_quantity = Column(SQLDecimal(18, 8), nullable=False)
+    margin = Column(SQLDecimal(18, 8), nullable=False)
+    contract_value = Column(SQLDecimal(18, 8), nullable=False)
+
+    # Optional Financial values - using Decimal (replicated from UserOrder)
+    net_profit = Column(SQLDecimal(18, 8), nullable=True)
+    close_price = Column(SQLDecimal(18, 8), nullable=True)
+    swap = Column(SQLDecimal(18, 8), nullable=True)
+    commission = Column(SQLDecimal(18, 8), nullable=True)
+    stop_loss = Column(SQLDecimal(18, 8), nullable=True)
+    take_profit = Column(SQLDecimal(18, 8), nullable=True)
+
+    # TP/SL Order IDs (replicated from UserOrder)
+    takeprofit_id = Column(String(255), nullable=True)
+    stoploss_id = Column(String(255), nullable=True)
+
+    # Message fields (replicated from UserOrder)
+    cancel_message = Column(String(255), nullable=True)
+    close_message = Column(String(255), nullable=True)
+
+    # Status (replicated from UserOrder)
+    status = Column(Integer, default=1, nullable=True)
+
+    # Timestamps (replicated from UserOrder)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
 
 class OTP(Base):
     """
@@ -329,43 +411,18 @@ class OTP(Base):
     __tablename__ = "otps"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    # Foreign keys to User and DemoUser tables (one should be populated)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True) # Made nullable
+    demo_user_id = Column(Integer, ForeignKey("demo_users.id"), index=True, nullable=True) # New foreign key for DemoUser
+
     otp_code = Column(String(10), nullable=False) # Store the OTP code (e.g., 6 digits)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     expires_at = Column(DateTime, nullable=False) # When the OTP expires
 
-    # Relationship back to the User
+    # Relationships back to User and DemoUser
     user = relationship("User", back_populates="otps")
+    demo_user = relationship("DemoUser", back_populates="otps")
 
-
-# app/database/models.py
-
-# ... (existing imports like datetime, Decimal, List, Optional, etc.) ...
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    UniqueConstraint,
-    func, # Import func for default timestamps
-    Float # Import Float or use SQLDecimal for digit, contract_size, etc.
-)
-# Import DECIMAL from sqlalchemy.types and alias it as SQLDecimal
-from sqlalchemy.types import DECIMAL as SQLDecimal
-import uuid # Import uuid for handling UUID strings if storing the 'id'
-
-from sqlalchemy.orm import relationship # Import relationship for defining relationships
-
-# Assuming you have a base declarative model defined in database/base.py
-from .base import Base # Assuming Base is defined in app/database.base
-
-
-# ... (existing User, Group, Symbol, Wallet, UserOrder, OTP models) ...
-
-
-# --- New Model for External Symbol Information ---
 
 class ExternalSymbolInfo(Base):
     """
@@ -374,9 +431,6 @@ class ExternalSymbolInfo(Base):
     """
     __tablename__ = "external_symbol_info"
 
-    # Using a database-generated integer primary key is generally simpler
-    # if the external 'id' is not strictly needed for relationships within your DB.
-    # If you need to reference the external 'id', store it in a separate column.
     id = Column(Integer, primary_key=True, index=True) # Using integer primary key
 
     # Store the external API's ID if needed for reference
@@ -407,15 +461,9 @@ class ExternalSymbolInfo(Base):
     # Map 'type' to 'instrument_type' column
     instrument_type = Column(String(10), nullable=True) # Store as string ("1", "2", "3", "4")
 
-    # Optional: Add timestamps for when the data was inserted/updated in your DB
-    # created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    # updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-
     def __repr__(self):
         return f"<ExternalSymbolInfo(fix_symbol='{self.fix_symbol}', instrument_type='{self.instrument_type}', contract_size={self.contract_size})>"
 
-# Ensure this new model is imported or defined in app/database/models.py
-# so that it's discoverable by SQLAlchemy.
 
 class MoneyRequest(Base):
     """
