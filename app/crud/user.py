@@ -271,6 +271,8 @@ async def generate_unique_account_number(db: AsyncSession) -> str:
 
 # app/crud/user.py
 
+from app.schemas.wallet import WalletCreate
+
 # ... other imports ...
 
 # Existing get_user_by_email (can be kept for other purposes or deprecated for registration checks)
@@ -317,3 +319,78 @@ async def get_user_by_email_phone_type(db: AsyncSession, email: str, phone_numbe
         )
     )
     return result.scalars().first()
+
+async def update_user_wallet_balance(
+    db: AsyncSession,
+    user_id: int,
+    amount: Decimal, # Positive for add, negative for deduct
+    transaction_type: str, # e.g., "deposit", "withdrawal", "pnl_credit", "pnl_debit", "swap_charge"
+    description: Optional[str] = None,
+    symbol: Optional[str] = None,
+    order_quantity: Optional[Decimal] = None,
+    order_type: Optional[str] = None,
+) -> User:
+    """
+    Updates a user's wallet balance by adding or deducting an amount.
+    Applies row-level locking to ensure data consistency.
+    Also creates a corresponding wallet transaction record.
+
+    Args:
+        db: The asynchronous database session.
+        user_id: The ID of the user whose wallet to update.
+        amount: The amount to add (positive) or deduct (negative).
+        transaction_type: The type of transaction (e.g., 'deposit', 'withdrawal', 'pnl_credit').
+        description: Optional description for the transaction.
+        symbol: Optional symbol if the transaction is related to a trade.
+        order_quantity: Optional order quantity if the transaction is trade related.
+        order_type: Optional order type if the transaction is trade related.
+
+    Returns:
+        The updated User SQLAlchemy model instance.
+
+    Raises:
+        ValueError: If the deduction would result in a negative balance.
+        Exception: For other database or unexpected errors.
+    """
+    # Use a subtransaction for atomicity within the main session
+    async with db.begin_nested():
+        user = await get_user_by_id_with_lock(db, user_id)
+
+        if not user:
+            raise ValueError(f"User with ID {user_id} not found.")
+
+        # Ensure Decimal type for calculations
+        current_balance = user.wallet_balance
+        amount_decimal = Decimal(str(amount)) # Convert to Decimal to ensure precision
+
+        new_balance = current_balance + amount_decimal
+
+        if new_balance < 0:
+            raise ValueError("Insufficient funds for this deduction.")
+
+        user.wallet_balance = new_balance
+        db.add(user) # Mark user as modified
+
+        # Create a wallet record for this transaction
+        from app.crud.wallet import create_wallet_record # Import here to avoid circular dependency
+
+        wallet_data = WalletCreate(
+            user_id=user_id,
+            transaction_type=transaction_type,
+            transaction_amount=abs(amount_decimal), # Always store positive amount in wallet record
+            description=description,
+            is_approved=1, # Mark as approved immediately for these API-driven transactions
+            symbol=symbol,
+            order_quantity=order_quantity,
+            order_type=order_type
+        )
+        wallet_record = await create_wallet_record(db, wallet_data)
+
+        if not wallet_record:
+            raise Exception("Failed to create wallet transaction record.")
+
+        # No explicit commit here, as it's part of the outer transaction or session's commit
+        # await db.commit() # This would commit the whole session, better handled by FastAPI's Depends(get_db)
+        await db.refresh(user) # Refresh to get the latest balance
+
+        return user

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError # Import IntegrityError
 from typing import List, Optional
+from typing import Dict
 
 from app.database.session import get_db
 from app.database.models import Group, User # Import Group and User models
@@ -11,6 +12,10 @@ from app.schemas.group import GroupCreate, GroupUpdate, GroupResponse # Import G
 from app.schemas.user import StatusResponse # Import StatusResponse from user schema (assuming it's defined there)
 from app.crud import group as crud_group # Import crud_group
 from app.core.security import get_current_admin_user # Import the admin dependency
+from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
+from decimal import Decimal
+import datetime
+from typing import Any
 
 import logging
 
@@ -19,6 +24,138 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     tags=["groups"]
 )
+
+from app.core.security import get_current_user # Ensure this is correctly imported and used
+from app.crud.group import get_group_by_name
+
+# ... (router and other endpoints) ...
+
+# @router.get(
+#     "/my-group",
+#     response_model=GroupResponse,
+#     summary="Get details of the current user's group",
+#     description="Returns the group details of the authenticated user based on their group_name."
+# )
+# async def get_my_group(
+#     db: AsyncSession = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     print("🔥 Inside /my-group")
+#     if not current_user.group_name:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="User is not assigned to any group."
+#         )
+
+#     groups = await get_group_by_name(db, current_user.group_name)
+
+#     if not groups:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Group not found."
+#         )
+
+#     group = groups[0]
+
+#     # Fetch contract_size from ExternalSymbolInfo if a symbol exists for the group
+#     contract_size = None
+#     if group.symbol:
+#         external_info = await get_external_symbol_info_by_symbol(db, group.symbol)
+#         if external_info:
+#             contract_size = external_info.contract_size
+
+#     # Manually create the response dictionary to include contract_size
+#     # Pydantic's from_attributes=True can usually handle direct model conversion,
+#     # but since we are adding a field from another model, we construct it.
+#     group_response_data = {
+#         "id": group.id,
+#         "symbol": group.symbol,
+#         "name": group.name,
+#         "commision_type": group.commision_type,
+#         "commision_value_type": group.commision_value_type,
+#         "type": group.type,
+#         "pip_currency": group.pip_currency,
+#         "show_points": group.show_points,
+#         "swap_buy": group.swap_buy,
+#         "swap_sell": group.swap_sell,
+#         "commision": group.commision,
+#         "margin": group.margin,
+#         "spread": group.spread,
+#         "deviation": group.deviation,
+#         "min_lot": group.min_lot,
+#         "max_lot": group.max_lot,
+#         "pips": group.pips,
+#         "spread_pip": group.spread_pip,
+#         "sending_orders": group.sending_orders,
+#         "book": group.book,
+#         "created_at": group.created_at,
+#         "updated_at": group.updated_at,
+#         "contract_size": contract_size  # Include contract_size here
+#     }
+
+#     return GroupResponse(**group_response_data)
+
+
+@router.get(
+    "/my-group-all-symbols",
+    response_model=List[Dict[str, Any]],
+    summary="Get all group records for the current user's group_name",
+    description="Retrieves all group records with detailed info for the authenticated user's group name, including contract size."
+)
+async def get_all_group_records_with_contract_size(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.group_name:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User is not assigned to any group."
+        )
+
+    groups = await crud_group.get_groups_by_name(db, group_name=current_user.group_name)
+
+    if not groups:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No group entries found for the assigned group name."
+        )
+
+    group_data = []
+
+    for group in groups:
+        contract_size = None
+        if group.symbol:
+            external_info = await get_external_symbol_info_by_symbol(db, group.symbol)
+            if external_info and external_info.contract_size is not None:
+                contract_size = str(external_info.contract_size)
+
+        group_data.append({
+            "id": group.id,
+            "symbol": group.symbol,
+            "name": group.name,
+            "swap_buy": str(group.swap_buy),
+            "swap_sell": str(group.swap_sell),
+            "commision": str(group.commision),
+            "commision_type": group.commision_type,
+            "commision_value_type": group.commision_value_type,
+            "margin": str(group.margin),
+            "spread": str(group.spread),
+            "deviation": str(group.deviation),
+            "min_lot": str(group.min_lot),
+            "max_lot": str(group.max_lot),
+            "type": group.type,
+            "pips": str(group.pips),
+            "spread_pip": str(group.spread_pip),
+            "show_points": str(group.show_points),
+            "pip_currency": group.pip_currency,
+            "created_at": group.created_at.isoformat(),
+            "updated_at": group.updated_at.isoformat(),
+            "contract_size": contract_size
+        })
+
+    return group_data
+
+
 
 # Endpoint to create a new group (Admin Only)
 @router.post(

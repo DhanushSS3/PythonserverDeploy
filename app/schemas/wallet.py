@@ -54,3 +54,22 @@ class WalletResponse(BaseModel):
 
     class Config:
         from_attributes = True # Allow mapping from SQLAlchemy models
+
+class WalletTransactionRequest(BaseModel):
+    """
+    Pydantic model for the request body when adding or deducting funds from a wallet.
+    """
+    amount: Decimal = Field(..., gt=0, decimal_places=8, description="The amount to add or deduct. Must be a positive value.")
+    description: Optional[str] = Field(None, max_length=500, description="A description for the transaction.")
+
+
+# NEW: Schema for response after a wallet transaction (add/deduct)
+class WalletBalanceResponse(BaseModel):
+    """
+    Pydantic model for the response after a successful wallet balance update.
+    """
+    user_id: int = Field(..., description="The ID of the user whose wallet was updated.")
+    new_balance: Decimal = Field(..., decimal_places=8, description="The user's new wallet balance.")
+    message: str = Field(..., description="A confirmation message.")
+    transaction_id: Optional[str] = Field(None, description="The ID of the newly created wallet record for this transaction.")
+

@@ -216,286 +216,8 @@ async def register_user_with_proofs(
             detail="An error occurred during registration."
         )
     
-# # Remember to add the new Pydantic models (SignupSendOTPRequest, SignupVerifyOTPRequest)
-# # to app/schemas/user.py and import them at the top of users.py.
-# # Also, ensure crud_otp.generate_otp_code is accessible.
-# @router.post(
-#     "/send-otp",
-#     response_model=StatusResponse,
-#     summary="Send OTP for password reset",
-#     description="Generates and sends a one-time password (OTP) to the user's email for password reset."
-# )
-# async def send_otp_for_verification(
-#     otp_request: SendOTPRequest,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Generates and sends an OTP to the user's email for initial verification or password reset.
-#     """
-#     user = await crud_user.get_user_by_email(db, email=otp_request.email)
-#     if not user:
-#         logger.warning(f"Attempted to send OTP to non-existent email: {otp_request.email}")
-#         # Return a generic success message even if user not found for security
-#         return StatusResponse(message="If a user with that email exists, an OTP has been sent.")
-
-#     try:
-#         # Create a new OTP for the user (reusing the create_otp function)
-#         otp_record = await crud_otp.create_otp(db, user_id=user.id)
-
-#         subject = "Your Trading App OTP"
-#         body = f"Your One-Time Password (OTP) is: {otp_record.otp_code}\n\nThis OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes.\n\nUse this OTP for email verification or password reset." # Generic body
-
-
-#         await email_service.send_email(
-#             to_email=user.email,
-#             subject=subject,
-#             body=body
-#         )
-#         logger.info(f"OTP sent successfully to {user.email}.")
-
-#         return StatusResponse(message="OTP sent successfully.")
-
-#     except Exception as e:
-#         # Log the error and return a generic error response
-#         logger.error(f"Error sending OTP to {user.email}: {e}", exc_info=True)
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail="Failed to send OTP. Please try again later."
-#         )
-
-
-# @router.post(
-#     "/verify-otp",
-#     response_model=StatusResponse,
-#     summary="Verify OTP for email verification",
-#     description="Verifies the provided OTP code against the one sent to the user's email and activates the user account."
-# )
-# async def verify_user_otp(
-#     verify_request: VerifyOTPRequest,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Verifies the user-provided OTP for initial email verification and activates the user.
-#     """
-#     # Find the user by email
-#     user = await crud_user.get_user_by_email(db, email=verify_request.email)
-#     if not user:
-#         # Return a generic error message for security
-#         logger.warning(f"Verification attempt for non-existent email: {verify_request.email}")
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid email or OTP."
-#         )
-
-#     # Get the valid OTP record for the user
-#     otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=verify_request.otp_code)
-
-#     if not otp_record:
-#         # If no valid OTP found (either incorrect or expired)
-#         logger.warning(f"Invalid or expired OTP provided for email: {verify_request.email}")
-#         # Consider adding rate limiting here to prevent brute-force attacks
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid or expired OTP."
-#         )
-
-#     # If OTP is valid, set user status to active
-#     user.status = 1 # Assuming status 1 means verified/active
-#     user.isActive = 1 # Assuming isActive 1 means active
-#     try:
-#         await db.commit() # Commit the status update
-#         # await db.refresh(user) # Not needed unless you return the user object
-
-#         # Delete the used OTP record
-#         await crud_otp.delete_otp(db, otp_id=otp_record.id)
-#         logger.info(f"Email verified and user account activated successfully for user ID: {user.id}")
-
-#     except Exception as e:
-#         await db.rollback() # Rollback on error during DB operations
-#         logger.error(f"Error activating user ID {user.id} after OTP verification: {e}", exc_info=True)
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail="An error occurred during verification."
-#         )
-
-#     return StatusResponse(message="Email verified and account activated successfully.")
-
-# # --- Password Reset Endpoints ---
-
-# @router.post(
-#     "/request-password-reset",
-#     response_model=StatusResponse,
-#     summary="Request password reset",
-#     description="Initiates the password reset process by sending an OTP to the user's email."
-# )
-# async def request_password_reset(
-#     request: RequestPasswordReset,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Handles the request to reset a user's password.
-#     Sends an OTP to the user's registered email.
-#     """
-#     user = await crud_user.get_user_by_email(db, email=request.email)
-#     if not user:
-#         logger.warning(f"Password reset requested for non-existent email: {request.email}")
-#         # Return a generic success message for security reasons
-#         return StatusResponse(message="If a user with that email exists, a password reset OTP has been sent.")
-
-#     try:
-#         # Create a new OTP for the user, specifically for password reset
-#         otp_record = await crud_otp.create_otp(db, user_id=user.id)
-
-#         subject = "Password Reset OTP for Your Trading App Account"
-#         body = (
-#             f"You have requested to reset your password for your Trading App account.\n\n"
-#             f"Your One-Time Password (OTP) is: {otp_record.otp_code}\n\n"
-#             f"This OTP is valid for {settings.OTP_EXPIRATION_MINUTES} minutes.\n\n"
-#             f"If you did not request a password reset, please ignore this email."
-#         )
-
-#         await email_service.send_email(
-#             to_email=user.email,
-#             subject=subject,
-#             body=body
-#         )
-#         logger.info(f"Password reset OTP sent successfully to {user.email}.")
-#         return StatusResponse(message="Password reset OTP sent successfully. Please check your email.")
-
-#     except Exception as e:
-#         logger.error(f"Error sending password reset OTP to {user.email}: {e}", exc_info=True)
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail="Failed to send password reset OTP. Please try again later."
-#         )
-
-# @router.post(
-#     "/reset-password-confirm",
-#     response_model=StatusResponse,
-#     summary="Confirm password reset",
-#     description="Confirms the password reset using an OTP and sets a new password for the user."
-# )
-# async def confirm_password_reset(
-#     reset_confirm: ResetPasswordConfirm,
-#     db: AsyncSession = Depends(get_db)
-# ):
-#     """
-#     Confirms the password reset request by verifying the OTP and setting a new password.
-#     """
-#     user = await crud_user.get_user_by_email(db, email=reset_confirm.email)
-#     if not user:
-#         logger.warning(f"Password reset confirmation attempt for non-existent email: {reset_confirm.email}")
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid email or OTP."
-#         )
-
-#     # Verify the OTP
-#     otp_record = await crud_otp.get_valid_otp(db, user_id=user.id, otp_code=reset_confirm.otp_code)
-#     if not otp_record:
-#         logger.warning(f"Invalid or expired OTP for password reset for email: {reset_confirm.email}")
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid or expired OTP."
-#         )
-
-#     try:
-#         # Hash the new password
-#         hashed_new_password = get_password_hash(reset_confirm.new_password)
-
-#         # Update the user's password
-#         user.hashed_password = hashed_new_password
-#         await db.commit()
-#         # await db.refresh(user) # Not needed unless you return the user object
-
-#         # Delete the used OTP record
-#         await crud_otp.delete_otp(db, otp_id=otp_record.id)
-#         logger.info(f"Password successfully reset for user ID: {user.id}")
-
-#         return StatusResponse(message="Password has been reset successfully.")
-
-#     except Exception as e:
-#         await db.rollback()
-#         logger.error(f"Error resetting password for user ID {user.id}: {e}", exc_info=True)
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail="An error occurred while resetting the password."
-#         )
-
-# --- Authentication Endpoints ---
-
-# @router.post("/login", response_model=Token, summary="User Login")
-# async def login_for_access_tokens(
-#     form_data: OAuth2PasswordRequestForm = Depends(),
-#     db: AsyncSession = Depends(get_db),
-#     redis_client: Redis = Depends(get_redis_client) # <--- ADDED DEPENDENCY
-# ):
-#     """
-#     Authenticates a user and returns JWT access and refresh tokens.
-#     Uses OAuth2PasswordRequestForm for standard form-data login.
-#     """
-#     # Attempt to find the user by email or phone number
-#     user = await crud_user.get_user_by_email(db, email=form_data.username)
-#     if not user:
-#         # If not found by email, try phone number
-#         user = await crud_user.get_user_by_phone_number(db, phone_number=form_data.username)
-
-#     # If user is still not found
-#     if not user:
-#         logger.warning(f"Login attempt failed for username: {form_data.username} - User not found.")
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect email, phone number, or password",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-
-#     # Verify password
-#     if not verify_password(form_data.password, user.hashed_password):
-#         logger.warning(f"Login attempt failed for username: {form_data.username} - Incorrect password.")
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect email, phone number, or password",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-
-#     # Check if the user account is active (assuming 1 means active)
-#     # Use getattr for safety if 'isActive' might be missing or None
-#     if getattr(user, 'isActive', 0) != 1:
-#         logger.warning(f"Login attempt failed for username: {form_data.username} - Account not active.")
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="User account is not active or verified. Please verify your email."
-#         )
-
-#     # Generate tokens
-#     # Ensure settings are correctly loaded and have these attributes
-#     access_token_expires = datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-#     # Corrected: Use REFRESH_TOKEN_EXPIRE_MINUTES for timedelta's minutes parameter
-#     refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
-
-#     access_token = create_access_token(
-#         data={"sub": str(user.id)}, # Ensure user.id is converted to string
-#         expires_delta=access_token_expires
-#     )
-#     refresh_token = create_refresh_token(
-#         data={"sub": str(user.id)}, # Ensure user.id is converted to string
-#         expires_delta=refresh_token_expires
-#     )
-
-#     # Store the refresh token in Redis, passing the redis_client
-#     # Ensure store_refresh_token is imported from app.core.security
-#     try:
-#         await store_refresh_token(client=redis_client, user_id=user.id, refresh_token=refresh_token) # <--- MODIFIED CALL
-#         logger.info(f"Login successful for user ID {user.id}. Tokens generated and refresh token stored in Redis.")
-#     except Exception as e:
-#         logger.error(f"Failed to store refresh token for user ID {user.id} in Redis: {e}", exc_info=True)
-#         # Decide if login should fail if refresh token storage fails.
-#         # For robustness, you might still return tokens but log the error.
-#         # For now, we'll log and continue to allow login.
-
-#     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
-
-@router.post("/login/json", response_model=Token, summary="User Login (JSON)")
+#
+@router.post("/login", response_model=Token, summary="User Login (JSON)")
 async def login_with_user_type(
     credentials: UserLogin,
     db: AsyncSession = Depends(get_db),
@@ -1004,3 +726,188 @@ async def confirm_password_reset(
     await redis.delete(redis_key)
 
     return StatusResponse(message="Password reset successful.")
+
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from decimal import Decimal # Import Decimal
+from typing import Optional
+
+from app.database.session import get_db
+from app.database.models import User
+from app.schemas.user import StatusResponse # Assuming StatusResponse is in user schema
+from app.schemas.wallet import WalletTransactionRequest, WalletBalanceResponse, WalletCreate # Import new wallet schemas
+from app.crud import user as crud_user
+from app.crud import wallet as crud_wallet # Import crud_wallet
+from app.core.security import get_current_user # For user authentication
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Assuming 'router' is already defined as APIRouter() in users.py
+
+# NEW: Endpoint to add funds to user's wallet
+@router.post(
+    "/wallet/add",
+    response_model=WalletBalanceResponse,
+    summary="Add funds to user's wallet",
+    description="Adds a specified amount to the authenticated user's wallet balance and records the transaction."
+)
+async def add_funds_to_wallet(
+    request: WalletTransactionRequest,
+    current_user: User = Depends(get_current_user), # Authenticate user
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Adds funds to the authenticated user's wallet balance.
+    Ensures atomicity using transactions and row-level locking.
+    """
+    if request.amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount to add must be positive."
+        )
+
+    try:
+        # Use the new CRUD function to update balance and create record
+        updated_user = await crud_user.update_user_wallet_balance(
+            db=db,
+            user_id=current_user.id,
+            amount=request.amount,
+            transaction_type="deposit",
+            description=request.description or "Funds added by user request"
+        )
+
+        # Assuming update_user_wallet_balance returns the updated user and handles wallet record creation
+        # We need the transaction_id from the created wallet record.
+        # This requires a slight modification to update_user_wallet_balance to return it,
+        # or fetch the latest record. For simplicity, let's assume update_user_wallet_balance
+        # can return the wallet_record as well, or we fetch it.
+        # For now, we'll just return a generic success message and the new balance.
+        # If transaction_id is critical for the response, update_user_wallet_balance needs to return it.
+
+        # To get the transaction_id, we need to fetch the latest wallet record for the user
+        # This is not ideal as it adds another query. A better approach is to return it from the CRUD.
+        # Let's modify update_user_wallet_balance to return both user and wallet_record.
+
+        # Re-fetch the latest wallet record to get its transaction_id
+        latest_wallet_record = await crud_wallet.get_wallet_records_by_user_id(
+            db, user_id=current_user.id, limit=1, skip=0
+        )
+        transaction_id = latest_wallet_record[0].transaction_id if latest_wallet_record else None
+
+
+        return WalletBalanceResponse(
+            user_id=current_user.id,
+            new_balance=updated_user.wallet_balance,
+            message=f"Successfully added {request.amount} to wallet.",
+            transaction_id=transaction_id
+        )
+
+    except ValueError as ve:
+        logger.warning(f"Wallet add funds failed for user {current_user.id}: {ve}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        logger.error(f"Error adding funds to wallet for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while adding funds."
+        )
+
+
+# --- Wallet Endpoints Modified for Money Request Flow ---
+from app.schemas.money_request import MoneyRequestResponse, MoneyRequestCreate
+from app.crud import money_request as crud_money_request
+
+@router.post(
+    "/wallet/deposit",  # Changed from /wallet/add
+    response_model=MoneyRequestResponse, # Returns the created money request
+    summary="Request to deposit funds to user's wallet",
+    description="Creates a money request for depositing funds. Admin approval is required to update the wallet."
+)
+async def request_deposit_funds( # Renamed function
+    request: WalletTransactionRequest, # Re-using this schema for amount and description
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if request.amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount to deposit must be positive."
+        )
+
+    money_request_data = MoneyRequestCreate(
+        amount=request.amount,
+        type="deposit", # Explicitly set type
+        # description can be passed to money_request if schema is updated, or handled differently
+    )
+    # Note: The current MoneyRequestCreate schema doesn't have a description field.
+    # If description is needed for the money request itself, the schema and model should be updated.
+    # For now, the description from WalletTransactionRequest is not directly used in MoneyRequest.
+
+    try:
+        new_money_request = await crud_money_request.create_money_request(
+            db=db,
+            request_data=money_request_data,
+            user_id=current_user.id
+        )
+        logger.info(f"Deposit request created: ID {new_money_request.id} for user {current_user.id}, amount {request.amount}")
+        # If you want to include the description in the log or somewhere, you can access request.description
+        return new_money_request
+    except Exception as e:
+        logger.error(f"Error creating deposit request for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the deposit request."
+        )
+
+@router.post(
+    "/wallet/withdraw", # Changed from /wallet/deduct
+    response_model=MoneyRequestResponse, # Returns the created money request
+    summary="Request to withdraw funds from user's wallet",
+    description="Creates a money request for withdrawing funds. Admin approval is required to update the wallet."
+)
+async def request_withdraw_funds( # Renamed function
+    request: WalletTransactionRequest, # Re-using this schema for amount and description
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if request.amount <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount to withdraw must be positive."
+        )
+
+    # Optional: Check if user has sufficient balance for withdrawal request here,
+    # though final check will be done upon approval.
+    # This is a soft check to prevent obviously impossible requests.
+    # user_wallet = await crud_user.get_user_by_id(db, current_user.id) # Fetch user to check balance
+    # if user_wallet and user_wallet.wallet_balance < request.amount:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Insufficient funds to request this withdrawal amount."
+    #     )
+
+    money_request_data = MoneyRequestCreate(
+        amount=request.amount,
+        type="withdraw", # Explicitly set type
+    )
+
+    try:
+        new_money_request = await crud_money_request.create_money_request(
+            db=db,
+            request_data=money_request_data,
+            user_id=current_user.id
+        )
+        logger.info(f"Withdrawal request created: ID {new_money_request.id} for user {current_user.id}, amount {request.amount}")
+        return new_money_request
+    except Exception as e:
+        logger.error(f"Error creating withdrawal request for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the withdrawal request."
+        )

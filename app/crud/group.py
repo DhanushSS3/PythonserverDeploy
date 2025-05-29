@@ -8,6 +8,7 @@ from sqlalchemy import or_ # Import or_ for search filtering
 
 from app.database.models import Group # Import the Group model
 from app.schemas.group import GroupCreate, GroupUpdate # Import Group schemas
+from app.schemas.money_request import MoneyRequestCreate
 
 # Function to get a group by ID
 async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
@@ -195,3 +196,98 @@ async def delete_group(db: AsyncSession, db_group: Group):
     # Note: Deleting a group might require handling associated users (e.g., setting user.group_name to NULL or
     # handling foreign key constraints) depending on your database schema and application logic.
     # If users have a foreign key to groups, the database might prevent deletion or cascade the delete.
+
+    # app/crud/group.py
+
+from typing import Optional, List, Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from app.database.models import Group # Import Group model
+# Import the external_symbol_info CRUD functions to use get_external_symbol_info_by_symbol
+from app.crud import external_symbol_info as crud_external_symbol_info
+
+
+# app/crud/group.py
+
+from typing import Optional, List, Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from app.database.models import Group # Import Group model
+# Import the external_symbol_info CRUD functions to use get_external_symbol_info_by_symbol
+from app.crud import external_symbol_info as crud_external_symbol_info
+
+
+async def get_groups_by_name(db: AsyncSession, group_name: str) -> List[Group]:
+    """
+    Retrieves all Group objects from the database that match the given name.
+    """
+    result = await db.execute(
+        select(Group).filter(Group.name == group_name)
+    )
+    return result.scalars().all() # Fetch all records that match the group name
+
+
+async def get_group_symbols_and_external_info(db: AsyncSession, group_name: str) -> Dict[str, Any]:
+    """
+    Fetches all unique symbols belonging to a specific group name
+    and their associated external symbol information.
+    """
+    groups = await get_groups_by_name(db, group_name)
+    
+    if not groups:
+        return {"group_found": False, "message": f"Group '{group_name}' not found."}
+
+    unique_symbols_from_groups = set()
+    for group_record in groups:
+        if group_record.symbol:
+            unique_symbols_from_groups.add(group_record.symbol)
+
+    external_symbol_details = []
+    for symbol_value in unique_symbols_from_groups:
+        # Correctly call the function from crud_external_symbol_info
+        external_info = await crud_external_symbol_info.get_external_symbol_info_by_symbol(db, symbol_value)
+        if external_info:
+            external_symbol_details.append({
+                "id": external_info.id,
+                "fix_symbol": external_info.fix_symbol,
+                "description": external_info.description,
+                "instrument_type": external_info.instrument_type,
+                "contract_size": str(external_info.contract_size) # Convert Decimal to string for JSON
+                # Removed 'created_at' and 'updated_at' as ExternalSymbolInfo model does not have these attributes
+            })
+    
+    # Assuming all group records with the same name share common group properties
+    # besides the 'symbol' field, we can take the properties from the first one.
+    first_group_record = groups[0]
+
+    return {
+        "group_found": True,
+        "group_name": first_group_record.name,
+        "group_id": first_group_record.id,
+        "group_symbols_from_records": list(unique_symbols_from_groups), # The actual 'symbol' values from Group records
+        "external_symbols_info": external_symbol_details, # The detailed ExternalSymbolInfo objects
+        "group_details": { # Other details of the group (from the first record)
+            "symbol": first_group_record.symbol, # Include the symbol from the first group record if needed
+            "commision_type": first_group_record.commision_type,
+            "commision_value_type": first_group_record.commision_value_type,
+            "type": first_group_record.type,
+            "pip_currency": first_group_record.pip_currency,
+            "show_points": first_group_record.show_points,
+            "swap_buy": str(first_group_record.swap_buy),
+            "swap_sell": str(first_group_record.swap_sell),
+            "commision": str(first_group_record.commision),
+            "margin": str(first_group_record.margin),
+            "spread": str(first_group_record.spread),
+            "deviation": str(first_group_record.deviation),
+            "min_lot": str(first_group_record.min_lot),
+            "max_lot": str(first_group_record.max_lot),
+            "pips": str(first_group_record.pips),
+            "spread_pip": str(first_group_record.spread_pip),
+            "sending_orders": first_group_record.sending_orders,
+            "book": first_group_record.book,
+            "created_at": first_group_record.created_at.isoformat(),
+            "updated_at": first_group_record.updated_at.isoformat()
+        }
+    }

@@ -193,3 +193,21 @@ async def get_all_system_open_orders(db: AsyncSession) -> List[UserOrder]:
         .options(selectinload(UserOrder.user)) # Eager load the 'user' relationship
     )
     return result.scalars().all()
+
+async def get_orders_by_user_id_and_statuses(
+    db: AsyncSession, user_id: int, statuses: List[str], skip: int = 0, limit: int = 100
+) -> List[UserOrder]:
+    """
+    Retrieves orders for a specific user that match any of the given statuses, with pagination.
+    """
+    result = await db.execute(
+        select(UserOrder)
+        .filter(
+            UserOrder.order_user_id == user_id,
+            UserOrder.order_status.in_(statuses)
+        )
+        .offset(skip)
+        .limit(limit)
+        .order_by(UserOrder.created_at.desc())
+    )
+    return result.scalars().all()

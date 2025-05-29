@@ -121,6 +121,8 @@ class User(Base):
     # Relationship to OTPs
     otps = relationship("OTP", back_populates="user")
 
+    money_requests = relationship("MoneyRequest", back_populates="user")
+
 
 class Group(Base):
     """
@@ -414,3 +416,37 @@ class ExternalSymbolInfo(Base):
 
 # Ensure this new model is imported or defined in app/database/models.py
 # so that it's discoverable by SQLAlchemy.
+
+class MoneyRequest(Base):
+    """
+    SQLAlchemy model for the 'money_requests' table.
+    Represents a user's request to deposit or withdraw funds.
+    """
+    __tablename__ = "money_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Foreign key to User table
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    # Relationship back to the User
+    user = relationship("User", back_populates="money_requests")
+
+    # Amount of the request
+    # Using SQLDecimal for precision, adjust precision (e.g., 18) and scale (e.g., 8) as needed
+    amount = Column(SQLDecimal(18, 8), nullable=False)
+
+    # Type of request: 'deposit' or 'withdraw'
+    type = Column(String(10), nullable=False) # 'deposit' or 'withdraw'
+
+    # Status of the request:
+    # 0: requested
+    # 1: approved
+    # 2: rejected
+    status = Column(Integer, default=0, nullable=False)
+
+    # Timestamps
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    def __repr__(self):
+        return f"<MoneyRequest(id={self.id}, user_id={self.user_id}, type='{self.type}', amount={self.amount}, status={self.status})>"

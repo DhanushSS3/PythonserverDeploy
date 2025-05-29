@@ -87,6 +87,48 @@ class GroupUpdate(BaseModel):
 
 
 # Schema for data returned after creating/fetching a group
+# class GroupResponse(BaseModel):
+#     """
+#     Pydantic model for group response data, matching the existing Group model fields.
+#     """
+#     id: int = Field(..., description="Unique identifier of the group.")
+
+#     # String fields
+#     symbol: Optional[str] = Field(None, description="Symbol associated with the group (optional).")
+#     name: str = Field(..., description="Name of the group.")
+
+#     # Integer types
+#     commision_type: int = Field(..., description="Type of commission (integer).")
+#     commision_value_type: int = Field(..., description="Type of commission value (integer).")
+#     type: int = Field(..., description="Group type (integer).")
+
+#     pip_currency: Optional[str] = Field(None, description="Currency for pip calculation (optional).")
+
+#     # show_points is now an integer
+#     show_points: Optional[int] = Field(None, description="Show points setting (optional).")
+
+#     # Decimal fields
+#     swap_buy: Decimal = Field(..., max_digits=10, decimal_places=4, description="Swap buy value.")
+#     swap_sell: Decimal = Field(..., max_digits=10, decimal_places=4, description="Swap sell value.")
+#     commision: Decimal = Field(..., max_digits=10, decimal_places=4, description="Commission value.")
+#     margin: Decimal = Field(..., max_digits=10, decimal_places=4, description="Base margin value.")
+#     spread: Decimal = Field(..., max_digits=10, decimal_places=4, description="Spread value.")
+#     deviation: Decimal = Field(..., max_digits=10, decimal_places=4, description="Deviation value.")
+#     min_lot: Decimal = Field(..., max_digits=10, decimal_places=4, description="Minimum lot size.")
+#     max_lot: Decimal = Field(..., max_digits=10, decimal_places=4, description="Maximum lot size.")
+#     pips: Decimal = Field(..., max_digits=10, decimal_places=4, description="Pips value.")
+#     spread_pip: Optional[Decimal] = Field(None, max_digits=10, decimal_places=4, description="Spread pip value (optional).")
+
+#     # --- NEW FIELDS ---
+#     sending_orders: Optional[str] = Field(None, description="Where orders are sent (e.g., 'Barclays', 'Rock').")
+#     book: Optional[str] = Field(None, description="Book type (e.g., 'A', 'B').")
+#     # --- END NEW FIELDS ---
+
+
+#     # Timestamps
+#     created_at: datetime.datetime = Field(..., description="Timestamp when the group was created.")
+#     updated_at: datetime.datetime = Field(..., description="Timestamp when the group was last updated.")
+
 class GroupResponse(BaseModel):
     """
     Pydantic model for group response data, matching the existing Group model fields.
@@ -122,12 +164,14 @@ class GroupResponse(BaseModel):
     # --- NEW FIELDS ---
     sending_orders: Optional[str] = Field(None, description="Where orders are sent (e.g., 'Barclays', 'Rock').")
     book: Optional[str] = Field(None, description="Book type (e.g., 'A', 'B').")
+    contract_size: Optional[Decimal] = Field(None, description="Contract size from external symbol info (optional).") # Added contract_size
     # --- END NEW FIELDS ---
 
 
     # Timestamps
     created_at: datetime.datetime = Field(..., description="Timestamp when the group was created.")
     updated_at: datetime.datetime = Field(..., description="Timestamp when the group was last updated.")
+
 
     class Config:
         from_attributes = True # Allow mapping from SQLAlchemy models
