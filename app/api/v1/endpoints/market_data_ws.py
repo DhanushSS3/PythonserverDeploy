@@ -3,6 +3,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query, WebSocketException, Depends
 import asyncio
 import logging
+from app.crud.crud_order import get_order_model
 import json
 import threading
 from typing import Dict, Any, List, Optional
@@ -115,8 +116,11 @@ async def websocket_endpoint(
         await set_user_data_cache(redis_client, user_id, user_data_to_cache)
         logger.debug(f"Cached user data (including group_name, balance, leverage, overall margin) for user ID {user_id}")
 
-        # Fetch and cache initial user portfolio (open positions)
-        open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id)
+        user_model_instance = db_user
+
+        order_model_class = get_order_model(user_model_instance)
+
+        open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model_class)
 
         initial_positions_data = []
         for pos in open_positions_orm:

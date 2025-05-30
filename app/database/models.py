@@ -107,6 +107,7 @@ class User(Base):
     wallet_transactions = relationship("Wallet", back_populates="user")
     otps = relationship("OTP", back_populates="user")
     money_requests = relationship("MoneyRequest", back_populates="user")
+    rock_orders = relationship("RockUserOrder", back_populates="user")
 
 
 class DemoUser(Base):
@@ -377,6 +378,49 @@ class DemoUserOrder(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     user = relationship("DemoUser", back_populates="orders")
+
+
+class RockUserOrder(Base):
+    __tablename__ = "rock_user_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String(64), unique=True, index=True, nullable=False)
+    # This ForeignKey points to the 'users' table, assuming rock orders are also associated with a User
+    order_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    order_company_name = Column(String(255), nullable=False)
+    order_type = Column(String(20), nullable=False)  # e.g., 'buy', 'sell'
+    order_status = Column(String(20), nullable=False) # e.g., 'pending', 'open', 'closed', 'cancelled'
+    order_price = Column(SQLDecimal(18, 8), nullable=False)
+    order_quantity = Column(SQLDecimal(18, 8), nullable=False)
+    contract_value = Column(SQLDecimal(18, 8), nullable=False)
+    margin = Column(SQLDecimal(18, 8), nullable=False)
+
+    stop_loss = Column(SQLDecimal(18, 8), nullable=True)
+    take_profit = Column(SQLDecimal(18, 8), nullable=True)
+    close_price = Column(SQLDecimal(18, 8), nullable=True)
+    net_profit = Column(SQLDecimal(18, 8), nullable=True)
+    swap = Column(SQLDecimal(18, 8), nullable=True)
+    commission = Column(SQLDecimal(18, 8), nullable=True)
+    cancel_message = Column(String(255), nullable=True)
+    close_message = Column(String(255), nullable=True)
+
+    # Tracking fields
+    cancel_id = Column(String(64), nullable=True)
+    close_id = Column(String(64), nullable=True)
+    modify_id = Column(String(64), nullable=True)
+    stoploss_id = Column(String(64), nullable=True)
+    takeprofit_id = Column(String(64), nullable=True)
+    stoploss_cancel_id = Column(String(64), nullable=True)
+    takeprofit_cancel_id = Column(String(64), nullable=True)
+
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationship to User model.
+    # This assumes you will add a corresponding 'rock_orders' relationship list
+    # to your User model, like:
+    # rock_orders = relationship("RockUserOrder", back_populates="user")
+    user = relationship("User", back_populates="rock_orders")
 
 class OrderActionHistory(Base):
     __tablename__ = "order_action_history"

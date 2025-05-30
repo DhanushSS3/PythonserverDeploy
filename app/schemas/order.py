@@ -54,14 +54,47 @@ class OrderCreateInternal(BaseModel):
         from_attributes = True
 
 
-# --- Response Schema ---
-class OrderResponse(OrderCreateInternal):
+# app/schemas/order.py
+
+from pydantic import BaseModel, Field
+from decimal import Decimal
+from typing import Optional
+import datetime
+
+class OrderResponse(BaseModel):
     id: int
-    created_at: Any
-    updated_at: Any
+    order_id: str
+    order_user_id: int
+    order_company_name: str
+    order_type: str
+    order_status: str
+    order_price: Decimal
+    order_quantity: Decimal
+    contract_value: Decimal
+    margin: Decimal
+    stop_loss: Optional[Decimal] = None
+    take_profit: Optional[Decimal] = None
+    close_price: Optional[Decimal] = None
+    net_profit: Optional[Decimal] = None
+    swap: Optional[Decimal] = None
+    commission: Optional[Decimal] = None
+    cancel_message: Optional[str] = None
+    close_message: Optional[str] = None
+
+    # Ensure these tracking fields are present and Optional
+    cancel_id: Optional[str] = None
+    close_id: Optional[str] = None
+    modify_id: Optional[str] = None
+    stoploss_id: Optional[str] = None
+    takeprofit_id: Optional[str] = None
+    stoploss_cancel_id: Optional[str] = None
+    takeprofit_cancel_id: Optional[str] = None
+
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
 
     class Config:
-        from_attributes = True
+        from_attributes = True # For Pydantic v2. If using v1, use orm_mode = True
 
 
 # --- Close Order Request ---
