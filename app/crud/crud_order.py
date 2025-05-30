@@ -1,213 +1,103 @@
-# app/crud/crud_order.py
-
-from typing import List, Optional
+# crud_order.py
+from typing import List, Optional, Type
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
-import uuid
 from decimal import Decimal
-from app.database.models import UserOrder, User # Ensure User is imported
-from app.schemas.order import OrderCreateInternal # Use OrderCreateInternal for creation input
-from app.core.config import get_settings # Import settings to potentially use cache expiry
+from app.database.models import UserOrder, DemoUserOrder, OrderActionHistory
+from app.schemas.order import OrderCreateInternal
+from sqlalchemy.orm import selectinload
+from datetime import datetime
 
-# Import caching functions
-from app.core.cache import (
-    set_user_portfolio_cache, # To update portfolio cache after order changes
-    USER_PORTFOLIO_CACHE_EXPIRY_SECONDS # Use the expiry from cache.py
-)
+# Utility to get the appropriate model class
+def get_order_model(user_type: str):
+    return DemoUserOrder if user_type == "demo" else UserOrder
 
-settings = get_settings()
-
-async def create_user_order(db: AsyncSession, order_data: dict) -> UserOrder:
-    """
-    Creates a new user order in the database.
-    Expects order_data to be a dictionary with all necessary fields for UserOrder.
-    After creation, it attempts to update the user's portfolio cache.
-    """
-
-    db_order = UserOrder(**order_data) #
+# Create a new order
+async def create_order(db: AsyncSession, order_data: dict, order_model: Type[UserOrder | DemoUserOrder]):
+    db_order = order_model(**order_data)
     db.add(db_order)
     await db.commit()
     await db.refresh(db_order)
-
-    # Attempt to update the user's portfolio cache after a new order is created
-    # This is a basic implementation; a more robust approach might involve a dedicated
-    # service that handles cache updates based on various order/trade events.
-    # This requires access to redis_client, which is not available directly here.
-    # A better place for this cache update would be in the order processing service.
-    # For now, we'll leave this out of the CRUD layer to keep it focused on DB operations.
-    # The broadcaster will fetch the latest positions from DB or rely on the
-    # order processing service to update the cache.
-
     return db_order
 
-async def get_order_by_id(db: AsyncSession, order_id: str) -> Optional[UserOrder]:
-    """
-    Retrieves an order by its unique order_id.
-    """
+# Get order by order_id
+async def get_order_by_id(db: AsyncSession, order_id: str, order_model: Type[UserOrder | DemoUserOrder]):
     result = await db.execute(
-        select(UserOrder).filter(UserOrder.order_id == order_id) #
+        select(order_model).filter(order_model.order_id == order_id)
     )
     return result.scalars().first()
 
+# Get orders for a user
 async def get_orders_by_user_id(
-    db: AsyncSession, user_id: int, skip: int = 0, limit: int = 100
-) -> List[UserOrder]:
-    """
-    Retrieves all orders for a specific user with pagination.
-    """
+    db: AsyncSession, user_id: int, order_model: Type[UserOrder | DemoUserOrder],
+    skip: int = 0, limit: int = 100
+):
     result = await db.execute(
-        select(UserOrder) #
-        .filter(UserOrder.order_user_id == user_id) #
+        select(order_model)
+        .filter(order_model.order_user_id == user_id)
         .offset(skip)
         .limit(limit)
-        .order_by(UserOrder.created_at.desc()) # Optional: order by creation time
+        .order_by(order_model.created_at.desc())
     )
     return result.scalars().all()
 
-# --- NEW FUNCTION: Get all open orders by user ID ---
+# Get all open orders for user
 async def get_all_open_orders_by_user_id(
-    db: AsyncSession, user_id: int
-) -> List[UserOrder]:
-    """
-    Retrieves all open orders for a specific user.
-    Used to get the list of positions for portfolio calculation.
-    """
+    db: AsyncSession, user_id: int, order_model: Type[UserOrder | DemoUserOrder]
+):
     result = await db.execute(
-        select(UserOrder) #
-        .filter(
-            UserOrder.order_user_id == user_id, #
-            UserOrder.order_status == 'OPEN' # Filter for only open orders
+        select(order_model).filter(
+            order_model.order_user_id == user_id,
+            order_model.order_status == 'OPEN'
         )
-        # No limit or offset needed here as we need all open positions for the user's portfolio
     )
     return result.scalars().all()
 
-# --- Existing function: Get open orders by user ID and symbol ---
-async def get_open_orders_by_user_id_and_symbol(
-    db: AsyncSession, user_id: int, symbol: str
-) -> List[UserOrder]:
-    """
-    Retrieves all open orders for a specific user and symbol.
-    This is used for hedging logic to find existing opposing positions efficiently.
-    """
+# Get all open orders from UserOrder table (system-wide)
+async def get_all_system_open_orders(db: AsyncSession):
     result = await db.execute(
-        select(UserOrder) #
-        .filter(
-            UserOrder.order_user_id == user_id, #
-            UserOrder.order_company_name == symbol, # Assuming order_company_name stores the symbol
-            UserOrder.order_status == 'OPEN' # Filter for only open orders
-        )
-        # No limit or offset needed here as we need all open positions for the symbol
+        select(UserOrder).filter(UserOrder.order_status == 'OPEN')
     )
     return result.scalars().all()
 
-
-async def get_all_orders(
-    db: AsyncSession, skip: int = 0, limit: int = 100
-) -> List[UserOrder]:
-    """
-    Retrieves all orders with pagination (admin use).
-    """
-    result = await db.execute(
-        select(UserOrder) #
-        .offset(skip)
-        .limit(limit)
-        .order_by(UserOrder.created_at.desc()) # Optional: order by creation time
-    )
-    return result.scalars().all()
-
-async def update_order_status(db: AsyncSession, order_id: str, new_status: str, close_price: Optional[float] = None, net_profit: Optional[float] = None) -> Optional[UserOrder]:
-    """
-    Updates the status of an order.
-    Optionally updates close_price and net_profit if the order is being closed.
-    After updating status to 'CLOSED' or 'CANCELLED', it attempts to update the user's portfolio cache.
-    """
-    db_order = await get_order_by_id(db, order_id=order_id)
-    if db_order:
-        db_order.order_status = new_status #
-        if close_price is not None:
-            # Ensure close_price is stored as Decimal if the model expects it
-            from decimal import Decimal # Import Decimal locally if needed for conversion
-            db_order.close_price = Decimal(str(close_price)) if not isinstance(close_price, Decimal) else close_price #
-        if net_profit is not None:
-            # Ensure net_profit is stored as Decimal
-            from decimal import Decimal
-            db_order.net_profit = Decimal(str(net_profit)) if not isinstance(net_profit, Decimal) else net_profit #
-        # Add more fields to update as needed (e.g., close_message)
-        await db.commit()
-        await db.refresh(db_order)
-
-        # Attempt to update the user's portfolio cache after order status change
-        # Similar to create_user_order, this is better handled in a service layer
-        # that has access to redis_client and can refetch/recalculate portfolio.
-        # For now, we rely on the broadcaster fetching from cache (which should be
-        # updated by the order processing service upon order closure/cancellation).
-
-    return db_order
-
-# Add other CRUD operations as needed (e.g., delete_order)
-
+# Get open and pending orders
 async def get_open_and_pending_orders_by_user_id_and_symbol(
-    db: AsyncSession, user_id: int, symbol: str
-) -> List[UserOrder]:
+    db: AsyncSession, user_id: int, symbol: str, order_model: Type[UserOrder | DemoUserOrder]
+):
+    pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
     result = await db.execute(
-        select(UserOrder).filter(
-            UserOrder.order_user_id == user_id,
-            UserOrder.order_company_name == symbol,
-            UserOrder.order_status.in_(["OPEN", "PENDING"])  # Include both
+        select(order_model).filter(
+            order_model.order_user_id == user_id,
+            order_model.order_company_name == symbol,
+            order_model.order_status.in_(["OPEN"] + pending_statuses)
         )
     )
     return result.scalars().all()
 
-async def update_tp_sl_for_order(
+# Update order fields and track changes in OrderActionHistory
+async def update_order_with_tracking(
     db: AsyncSession,
-    order_id: str,
-    stop_loss: Decimal,
-    take_profit: Decimal,
-    stoploss_id: str,
-    takeprofit_id: str
-) -> Optional[UserOrder]:
-    order = await get_order_by_id(db, order_id)
-    if not order:
-        return None
+    db_order: UserOrder | DemoUserOrder,
+    update_fields: dict,
+    user_id: int,
+    user_type: str
+):
+    for field, value in update_fields.items():
+        if hasattr(db_order, field):
+            setattr(db_order, field, value)
 
-    order.stop_loss = stop_loss
-    order.take_profit = take_profit
-    order.stoploss_id = stoploss_id
-    order.takeprofit_id = takeprofit_id
+    # Create a log entry in OrderActionHistory
+    history = OrderActionHistory(
+        user_id=user_id,
+        user_type=user_type,
+        modify_id=update_fields.get("modify_id"),
+        stoploss_id=update_fields.get("stoploss_id"),
+        takeprofit_id=update_fields.get("takeprofit_id"),
+        stoploss_cancel_id=update_fields.get("stoploss_cancel_id"),
+        takeprofit_cancel_id=update_fields.get("takeprofit_cancel_id"),
+    )
+    db.add(history)
 
     await db.commit()
-    await db.refresh(order)
-    return order
-
-# --- NEW FUNCTION: Get all system-wide open orders ---
-async def get_all_system_open_orders(db: AsyncSession) -> List[UserOrder]:
-    """
-    Retrieves all orders with 'OPEN' status across all users.
-    Eager loads the related User object to access user.group_name efficiently.
-    """
-    result = await db.execute(
-        select(UserOrder)
-        .filter(UserOrder.order_status == 'OPEN')
-        .options(selectinload(UserOrder.user)) # Eager load the 'user' relationship
-    )
-    return result.scalars().all()
-
-async def get_orders_by_user_id_and_statuses(
-    db: AsyncSession, user_id: int, statuses: List[str], skip: int = 0, limit: int = 100
-) -> List[UserOrder]:
-    """
-    Retrieves orders for a specific user that match any of the given statuses, with pagination.
-    """
-    result = await db.execute(
-        select(UserOrder)
-        .filter(
-            UserOrder.order_user_id == user_id,
-            UserOrder.order_status.in_(statuses)
-        )
-        .offset(skip)
-        .limit(limit)
-        .order_by(UserOrder.created_at.desc())
-    )
-    return result.scalars().all()
+    await db.refresh(db_order)
+    return db_order

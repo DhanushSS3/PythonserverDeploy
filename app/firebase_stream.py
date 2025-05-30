@@ -10,6 +10,13 @@ import time # Import time for timestamping
 from firebase_admin import db
 from firebase_admin.db import Event
 
+import firebase_admin
+from firebase_admin import db
+
+# This will get the database service for the default app that was initialized in main.py
+# Ensure that firebase_admin.initialize_app() in main.py runs before this module is imported.
+firebase_db = db
+
 # Import the redis_publish_queue from your shared state module
 try:
     from app.shared_state import redis_publish_queue
