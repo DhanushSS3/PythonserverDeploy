@@ -1,6 +1,11 @@
 # app/services/order_processing.py
 
 import logging
+import random
+
+def generate_10_digit_id():
+    return str(random.randint(10**9, 10**10-1))
+
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP # Import ROUND_HALF_UP for quantization
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -96,7 +101,8 @@ async def calculate_total_symbol_margin_contribution(
     redis_client: Redis,
     user_id: int,
     symbol: str,
-    open_positions_for_symbol: List[UserOrder]
+    open_positions_for_symbol: list,
+    order_model=None
 ) -> Decimal:
     total_buy_quantity = Decimal(0)
     total_sell_quantity = Decimal(0)
@@ -124,8 +130,11 @@ async def process_new_order(
     db: AsyncSession,
     redis_client: Redis,
     user: User,
-    order_request: OrderPlacementRequest
-) -> UserOrder:
+    order_request: OrderPlacementRequest,
+    order_model,
+    create_order_fn=None,
+    get_user_by_id_with_lock_fn=None
+) -> object:
     logger.info(f"Processing new order for user {user.id}, symbol {order_request.symbol}, type {order_request.order_type}, quantity {order_request.order_quantity}")
 
     new_order_quantity = Decimal(str(order_request.order_quantity))
@@ -152,7 +161,8 @@ async def process_new_order(
     existing_orders = await crud_order.get_open_and_pending_orders_by_user_id_and_symbol(
         db=db,
         user_id=user.id,
-        symbol=order_symbol
+        symbol=order_symbol,
+        order_model=order_model
     )
 
     margin_before = await calculate_total_symbol_margin_contribution(
@@ -160,10 +170,11 @@ async def process_new_order(
         redis_client=redis_client,
         user_id=user.id,
         symbol=order_symbol,
-        open_positions_for_symbol=existing_orders
+        open_positions_for_symbol=existing_orders,
+        order_model=order_model
     )
 
-    dummy_order = UserOrder(
+    dummy_order = order_model(
         order_quantity=new_order_quantity,
         order_type=new_order_type,
         margin=full_margin_usd
@@ -175,12 +186,17 @@ async def process_new_order(
         redis_client=redis_client,
         user_id=user.id,
         symbol=order_symbol,
-        open_positions_for_symbol=orders_after
+        open_positions_for_symbol=orders_after,
+        order_model=order_model
     )
 
     additional_margin = max(Decimal("0.0"), margin_after - margin_before)
 
-    db_user_locked = await crud_user.get_user_by_id_with_lock(db, user.id)
+    # Use the provided lock function for demo/live user
+    if get_user_by_id_with_lock_fn is None:
+        db_user_locked = await crud_user.get_user_by_id_with_lock(db, user.id)
+    else:
+        db_user_locked = await get_user_by_id_with_lock_fn(db, user.id)
     if db_user_locked is None:
         raise OrderProcessingError("Could not lock user record.")
 
@@ -190,8 +206,10 @@ async def process_new_order(
     db_user_locked.margin += additional_margin
     await db.flush()
 
+    # Generate a unique 10-digit random order_id for new orders
+
     new_order_data = OrderCreateInternal(
-        order_id=order_request.order_id,
+        order_id=generated_order_id,
         order_status="PENDING" if new_order_type in ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"] else "OPEN",
         order_user_id=user.id,
         order_company_name=order_symbol,
@@ -204,8 +222,12 @@ async def process_new_order(
         take_profit=order_request.take_profit
     )
 
-    from app.crud.crud_order import create_user_order
-    db_order = await create_user_order(db, new_order_data.model_dump())
+    # Use the provided create_order_fn for demo/live user
+    if create_order_fn is None:
+        from app.crud.crud_order import create_order
+        db_order = await create_order(db, new_order_data.model_dump(), order_model)
+    else:
+        db_order = await create_order_fn(db, new_order_data.model_dump(), order_model)
     return db_order
 
 

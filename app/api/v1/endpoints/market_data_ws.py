@@ -3,6 +3,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query, WebSocketException, Depends
 import asyncio
 import logging
+from app.core.logging_config import websocket_logger
+
 from app.crud.crud_order import get_order_model
 import json
 # import threading # No longer needed for active_connections_lock
@@ -49,8 +51,7 @@ from app.database.models import Symbol, ExternalSymbolInfo, User, DemoUser # Imp
 from sqlalchemy.future import select
 
 # Configure logging for this module
-logger = logging.getLogger(__name__)
-
+logger = websocket_logger
 
 # REMOVE: active_websocket_connections and active_connections_lock
 # active_websocket_connections: Dict[int, Dict[str, Any]] = {}
@@ -312,36 +313,60 @@ async def per_connection_redis_listener(
                  logger.error(f"User {user_id}: Error during pubsub.close(): {close_e}")
 
 
+# app/api/v1/endpoints/market_data_ws.py
+# ... other imports ...
+logger = websocket_logger # or temporarily: import logging; logger = logging.getLogger(__name__)
+print("DEBUG: market_data_ws.py module imported!")
+
+
+
+from fastapi import WebSocket, Depends
+from sqlalchemy.orm import Session
+from app.database.session import get_db
+from app.dependencies.redis_client import get_redis_client
+
 @router.websocket("/ws/market-data")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    token: str = Query(...),
-    db: AsyncSession = Depends(get_db), # Keep DB for initial setup if needed
-    redis_client: Redis = Depends(get_redis_client)
-):
-    logger.info(f"Attempting to accept WebSocket connection from {websocket.client.host}:{websocket.client.port} with token...")
-    user_id: Optional[int] = None
-    group_name: Optional[str] = None
+async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+    logger.info("--- MINIMAL TEST: ENTERED websocket_endpoint ---")
+    for handler in logger.handlers:
+        handler.flush()
     db_user_instance: Optional[User | DemoUser] = None
+
+    # Extract token from query params
+    token = websocket.query_params.get("token")
+    if token is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
+
+    # Initialize Redis client
+    redis_client = await get_redis_client()
 
     try:
         from jose import JWTError
         payload = decode_token(token)
         user_id = int(payload.get("sub"))
+        user_type = payload.get("user_type", "live")
         if user_id is None:
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token: User ID missing")
 
-        # Try fetching as User, then as DemoUser if not found
-        db_user = await crud_user.get_user_by_id(db, user_id)
-        if db_user:
-            db_user_instance = db_user
+        # Strictly fetch from correct table based on user_type
+        logger.info(f"WebSocket auth: token payload={payload} (type={type(payload)}), user_id={user_id} (type={type(user_id)}), user_type={user_type} (type={type(user_type)})")
+        if user_type == "demo":
+            logger.info(f"WebSocket auth: About to call get_demo_user_by_id with id={user_id} (type={type(user_id)}), user_type='demo' (type={type('demo')})")
+            db_user_instance = await crud_user.get_demo_user_by_id(db, user_id, user_type="demo")
+            logger.info(f"WebSocket auth: get_demo_user_by_id({user_id}, 'demo') returned: {db_user_instance}")
+            if not db_user_instance:
+                # Extra debug: list all demo users
+                result = await db.execute(select(DemoUser))
+                all_demo_users = result.scalars().all()
+                logger.info(f"WebSocket auth: All demo users in DB: {[{'id': u.id, 'email': u.email, 'isActive': u.isActive, 'status': u.status, 'user_type': u.user_type} for u in all_demo_users]}")
+                for u in all_demo_users:
+                    logger.info(f"DemoUser row: id={u.id} (type={type(u.id)}), user_type={u.user_type} (type={type(u.user_type)}), isActive={u.isActive}, status={u.status}, email={u.email}")
         else:
-            db_demo_user = await crud_user.get_demo_user_by_id(db, user_id) # Assumes this function exists
-            if db_demo_user:
-                db_user_instance = db_demo_user
-            else: # User not found in either table
-                logger.warning(f"Authentication failed for user ID {user_id}: User not found in any table.")
-                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="User not found")
+            db_user_instance = await crud_user.get_user_by_id(db, user_id, user_type)
+            logger.info(f"WebSocket auth: get_user_by_id({user_id}, {user_type}) returned: {db_user_instance}")
+        if not db_user_instance:
+            logger.warning(f"Authentication failed for user ID {user_id} (type {user_type}): User not found in correct table.")
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="User not found")
         
         if not getattr(db_user_instance, 'isActive', True): # Check isActive for both types
              logger.warning(f"Authentication failed for user ID {user_id}: User inactive.")
@@ -359,31 +384,56 @@ async def websocket_endpoint(
         }
         await set_user_data_cache(redis_client, user_id, user_data_to_cache)
 
-        order_model_class = get_order_model(db_user_instance)
+        # Always use user_type to select the correct order model
+        order_model_class = get_order_model(user_type)
+        logger.info(f"[WS] Using order model: {order_model_class.__name__} for user_type={user_type}, user_id={user_id}")
         open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model_class)
+        logger.info(f"[WS] Open positions from DB: {open_positions_orm}")
+        # Helper to get adjusted live price
+        async def get_adjusted_live_price(redis_client, symbol: str, side: str):
+            key = f"adjusted_price:{symbol.lower()}:{side}"
+            price = await redis_client.get(key)
+            return float(price) if price else None
+
         initial_positions_data = []
         for pos in open_positions_orm:
-             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
-                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
-             pos_dict['profit_loss'] = "0.0" # Will be calculated by portfolio calculator
-             initial_positions_data.append(pos_dict)
-        
+            pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
+                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            pos_dict['profit_loss'] = "0.0" # Will be calculated by portfolio calculator
+            # Determine symbol and side
+            symbol = pos_dict.get('order_company_name')
+            order_type = pos_dict.get('order_type', '').upper()
+            if order_type.startswith('BUY'):
+                side = 'sell'
+            else:
+                side = 'buy'
+            pos_dict['live_price'] = await get_adjusted_live_price(redis_client, symbol, side)
+            initial_positions_data.append(pos_dict)
+
         # Also fetch pending positions for the initial cache state
         pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
         pending_positions_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model_class)
         initial_pending_positions_data = []
         for pos in pending_positions_orm:
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
-                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
             pos_dict['margin'] = "0.0" # Pending orders have 0 margin
+            # Determine symbol and side for pending
+            symbol = pos_dict.get('order_company_name')
+            order_type = pos_dict.get('order_type', '').upper()
+            if order_type.startswith('BUY'):
+                side = 'sell'
+            else:
+                side = 'buy'
+            pos_dict['live_price'] = await get_adjusted_live_price(redis_client, symbol, side)
             initial_pending_positions_data.append(pos_dict)
 
         user_portfolio_data = {
-             "balance": str(user_data_to_cache["wallet_balance"]), "equity": "0.0",
-             "margin": str(user_data_to_cache["margin"]), "free_margin": "0.0",
-             "profit_loss": "0.0", "margin_level": "0.0",
-             "positions": initial_positions_data,
-             "pending_positions": initial_pending_positions_data # Add pending positions
+            "balance": str(user_data_to_cache["wallet_balance"]), "equity": "0.0",
+            "margin": str(user_data_to_cache["margin"]), "free_margin": "0.0",
+            "profit_loss": "0.0", "margin_level": "0.0",
+            "positions": initial_positions_data,
+            "pending_orders": initial_pending_positions_data # Add pending orders as requested
         }
         await set_user_portfolio_cache(redis_client, user_id, user_portfolio_data)
         await update_group_symbol_settings(group_name, db, redis_client) # Cache group settings

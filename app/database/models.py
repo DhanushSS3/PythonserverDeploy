@@ -50,6 +50,7 @@ class User(Base):
     wallet_balance = Column(SQLDecimal(18, 8), default=Decimal("0.00"), nullable=False) # Default to 0.00, not Optional in DB
     leverage = Column(SQLDecimal(10, 2), default=Decimal("1.0"), nullable=False) # Default to 1.0, not Optional in DB
     margin = Column(SQLDecimal(18, 8), default=Decimal("0.00"), nullable=False) # Default to 0.00, not Optional in DB
+    net_profit = Column(SQLDecimal(18, 8), default=Decimal("0.00"), nullable=False) # Default to 0.00, not Optional in DB
 
     # Unique Account Number (Platform Specific)
     account_number = Column(String(100), unique=True, index=True, nullable=True)
@@ -64,6 +65,7 @@ class User(Base):
     security_answer = Column(String(255), nullable=True) # New field for security question answer
 
     # Address/Location Fields
+    country = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
     state = Column(String(100), nullable=True)
     pincode = Column(Integer, nullable=True) # Storing as Integer
@@ -119,6 +121,13 @@ class DemoUser(Base):
     __tablename__ = "demo_users"
 
     # Primary Key
+
+    # Financial Fields
+    net_profit = Column(SQLDecimal(18, 8), default=Decimal("0.00"), nullable=False) # Default to 0.00, not Optional in DB
+
+    # Address/Location Fields
+    country = Column(String(100), nullable=True)
+
     id = Column(Integer, primary_key=True, index=True)
 
     # Required Fields (replicated from User model, excluding sensitive ones)

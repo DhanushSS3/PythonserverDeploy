@@ -1,13 +1,15 @@
 # app/core/security.py
-
-import datetime
+import os
 from typing import Any, Union, Optional
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from redis import asyncio as aioredis # Use async Redis client
 import json
+from datetime import datetime, timedelta # Correct: Import both datetime and timedelta directly
+
 import logging
 
+# Ensure these imports are correct based on your project structure
 from app.database.models import User, DemoUser
 
 # Import necessary components from fastapi
@@ -20,21 +22,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 # Import your database models and session dependency
-from app.database.models import User # Assuming User model is imported here
+# Removed duplicate: from app.database.models import User
 from app.database.session import get_db # Assuming get_db dependency is imported here
 
 from app.core.config import get_settings
 
 # Configure logging
-# Basic config is fine for development, use a more advanced one for production
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__) 
 # Configure the password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Get application settings
 settings = get_settings()
+
+# Use settings for SECRET_KEY and ALGORITHM for consistency
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
 # --- Password Hashing Functions ---
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -51,30 +55,36 @@ def get_password_hash(password: str) -> str:
 
 # --- JWT Functions ---
 
-def create_access_token(data: dict, expires_delta: Union[datetime.timedelta, None] = None) -> str:
-    """
-    Creates a JWT access token.
-    """
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.datetime.utcnow() + expires_delta
+        expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire, "iat": datetime.datetime.utcnow()})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES) # Use settings for default expiry
+
+    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
+
+    logger.debug(f"\n--- Token Creation Details ---")
+    logger.debug(f"SECRET_KEY used for encoding: '{SECRET_KEY}'")
+    logger.debug(f"ALGORITHM used for encoding: '{ALGORITHM}'")
+    logger.debug(f"Payload to encode: {to_encode}")
+
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    logger.debug(f"Generated JWT: {encoded_jwt}\n")
     return encoded_jwt
 
-def create_refresh_token(data: dict, expires_delta: Union[datetime.timedelta, None] = None) -> str:
+
+def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
     Creates a JWT refresh token.
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.datetime.utcnow() + expires_delta
+        expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.datetime.utcnow() + datetime.timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "iat": datetime.datetime.utcnow()})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM) # Use SECRET_KEY and ALGORITHM from settings
     return encoded_jwt
 
 def decode_token(token: str) -> dict[str, Any]:
@@ -82,58 +92,50 @@ def decode_token(token: str) -> dict[str, Any]:
     Decodes a JWT token and returns the payload.
     """
     try:
+        logger.debug(f"Attempting to decode token: {token[:30]}...")
+        logger.debug(f"Using SECRET_KEY: {settings.SECRET_KEY[:5]}... ALGORITHM: {settings.ALGORITHM}")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        logger.debug(f"Token decoded successfully. Payload: {payload}")
         return payload
-    except JWTError:
-        # Log the specific JWT error for debugging if needed
-        logger.warning("JWTError during token decoding/validation.", exc_info=True)
+    except JWTError as e:
+        logger.warning(f"JWTError in decode_token: {type(e).__name__} - {str(e)}", exc_info=True)
         raise JWTError("Could not validate credentials")
+    except Exception as ex:
+        logger.error(f"Unexpected error in decode_token: {type(ex).__name__} - {str(ex)}", exc_info=True)
+        raise JWTError("Could not validate credentials due to unexpected error")
 
 # --- Redis Integration ---
 
-# Remove the global client variable here. It will be managed in main.py now.
-# redis_client: Optional[aioredis.Redis] = None # REMOVE THIS LINE
-
-async def connect_to_redis() -> Optional[aioredis.Redis]: # Add return type hint
+async def connect_to_redis() -> Optional[aioredis.Redis]:
     """
     Establishes connection to the Redis server and returns the client instance.
     Called during application startup. Returns None if connection fails.
     """
-    # Remove the global declaration inside the function
-    # global redis_client # REMOVE THIS LINE
     logger.info("Attempting to connect to Redis...")
     try:
         logger.info(f"Redis connection parameters: host={settings.REDIS_HOST}, port={settings.REDIS_PORT}, db={settings.REDIS_DB}, password={'<set>' if settings.REDIS_PASSWORD else '<not set>'}")
 
-        # Create the client instance
         client = aioredis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             db=settings.REDIS_DB,
             password=settings.REDIS_PASSWORD,
-            decode_responses=True # Decode responses to get strings instead of bytes
+            decode_responses=True
         )
-        # Ping the server to verify the connection is live
         await client.ping()
         logger.info("Connected to Redis successfully.")
-        return client # RETURN the client instance
+        return client
 
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
-        # Do NOT re-raise here if you want startup to potentially continue without Redis (e.g., for features not requiring Redis)
-        # If Redis is *mandatory* for the app to function, re-raise the exception:
-        # raise e
-        return None # Return None if connection fails
+        return None
 
-
-async def close_redis_connection(client: Optional[aioredis.Redis]): # Accept client as argument
+async def close_redis_connection(client: Optional[aioredis.Redis]):
     """
     Closes the Redis connection.
     Called during application shutdown. Accepts the client instance to close.
     """
-    # Remove global declaration
-    # global redis_client # REMOVE THIS LINE
-    if client: # Use the passed client
+    if client:
         logger.info("Closing Redis connection...")
         try:
             await client.close()
@@ -141,17 +143,14 @@ async def close_redis_connection(client: Optional[aioredis.Redis]): # Accept cli
         except Exception as e:
             logger.error(f"Error closing Redis connection: {e}", exc_info=True)
 
+# Remove the redundant 'import datetime' and 'import json' here, they are already at the top
+# from typing import Optional # Already imported
 
-import datetime
-import json
-import logging
-from typing import Optional
-
-# Change this import
-import redis.asyncio as redis_client # <-- New import and alias
+# Change this import (this was good)
+# import redis.asyncio as redis_client # This alias is fine, but the type hint should match aioredis.Redis
 
 async def store_refresh_token(
-    client: redis_client.Redis, # <-- Update the type hint here
+    client: aioredis.Redis, # Use the original aioredis type hint
     user_id: int,
     refresh_token: str,
     user_type: Optional[str] = None
@@ -171,10 +170,10 @@ async def store_refresh_token(
     # Include user_type in token_data if it's provided
     token_data = {
         "user_id": user_id,
-        "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(seconds=expiry_seconds)).isoformat()
+        "expires_at": (datetime.utcnow() + timedelta(seconds=expiry_seconds)).isoformat() # Corrected
     }
     if user_type:
-        token_data["user_type"] = user_type # Add user_type to the data stored in Redis
+        token_data["user_type"] = user_type
 
     token_data_json = json.dumps(token_data)
     
@@ -187,38 +186,34 @@ async def store_refresh_token(
         logger.error(f"Error storing refresh token in Redis for user ID {user_id}: {e}", exc_info=True)
 
 
-async def get_refresh_token_data(client: aioredis.Redis, refresh_token: str) -> dict[str, Any] | None: # Add client argument
-     """
-     Retrieves refresh token data from Redis.
-     Requires an active Redis client instance.
-     """
-     if not client:
-         logger.warning("Redis client not provided to get_refresh_token_data. Cannot retrieve refresh token.")
-         return None
+async def get_refresh_token_data(client: aioredis.Redis, refresh_token: str) -> dict[str, Any] | None:
+    """
+    Retrieves refresh token data from Redis.
+    Requires an active Redis client instance.
+    """
+    if not client:
+        logger.warning("Redis client not provided to get_refresh_token_data. Cannot retrieve refresh token.")
+        return None
 
-     redis_key = f"refresh_token:{refresh_token}"
-     logger.info(f"Attempting to retrieve refresh token data for key: {redis_key}")
+    redis_key = f"refresh_token:{refresh_token}"
+    logger.info(f"Attempting to retrieve refresh token data for key: {redis_key}")
 
-     try:
-         # Use the passed client instance
-         token_data_json = await client.get(redis_key)
-         # logger.debug(f"Redis GET result for key {redis_key}: {token_data_json}") # Debug log
+    try:
+        token_data_json = await client.get(redis_key)
+        if token_data_json:
+            token_data = json.loads(token_data_json)
+            return token_data
+        else:
+            logger.info(f"No refresh token data found in Redis for key: {redis_key}")
+            return None
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode JSON from Redis data for key {redis_key}: {token_data_json}", exc_info=True)
+        return None
+    except Exception as e:
+        logger.error(f"Error retrieving or parsing refresh token from Redis for key {redis_key}: {e}", exc_info=True)
+        return None
 
-         if token_data_json:
-             token_data = json.loads(token_data_json)
-             # logger.debug(f"Parsed token data from Redis: {token_data}") # Debug log
-             return token_data # Relying on Redis TTL for expiry
-         else:
-             logger.info(f"No refresh token data found in Redis for key: {redis_key}")
-             return None # Token not found in Redis
-     except json.JSONDecodeError:
-         logger.error(f"Failed to decode JSON from Redis data for key {redis_key}: {token_data_json}", exc_info=True)
-         return None
-     except Exception as e:
-         logger.error(f"Error retrieving or parsing refresh token from Redis for key {redis_key}: {e}", exc_info=True)
-         return None
-
-async def delete_refresh_token(client: aioredis.Redis, refresh_token: str): # Add client argument
+async def delete_refresh_token(client: aioredis.Redis, refresh_token: str):
     """
     Deletes a refresh token from Redis.
     Requires an active Redis client instance.
@@ -231,7 +226,6 @@ async def delete_refresh_token(client: aioredis.Redis, refresh_token: str): # Ad
     logger.info(f"Attempting to delete refresh token for key: {redis_key}")
 
     try:
-        # Use the passed client instance
         deleted_count = await client.delete(redis_key)
         if deleted_count > 0:
             logger.info(f"Refresh token deleted from Redis for key: {redis_key}")
@@ -243,19 +237,15 @@ async def delete_refresh_token(client: aioredis.Redis, refresh_token: str): # Ad
 
 # --- Authentication Dependency (for protecting routes) ---
 
-# OAuth2PasswordBearer is a FastAPI utility for handling OAuth2 token flow
-# Define the OAuth2 scheme. The tokenUrl points to your login endpoint.
-# The auto_error=False allows us to handle authentication errors manually
-# (e.g., to return a custom response or require 2FA verification).
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login", auto_error=False)
 
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db) # Assuming get_db is the dependency for DB session
-) -> User:
+    db: AsyncSession = Depends(get_db)
+) -> User | DemoUser:
     """
-    FastAPI dependency to get the current authenticated user from the access token.
-    Does NOT enforce 2FA check here. 2FA check is typically done after initial login.
+    Unified dependency to get the current authenticated user (live or demo) from the access token.
+    Always uses BOTH user_type and id for DB lookup. Returns User or DemoUser object.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -264,44 +254,48 @@ async def get_current_user(
     )
 
     if token is None:
-         logger.warning("Access token is missing.")
-         raise credentials_exception
+        logger.warning("Access token is missing.")
+        raise credentials_exception
 
     try:
-        payload = decode_token(token) # Use the local decode_token function
-        # The 'sub' claim should contain the user identifier, usually the user ID
-        user_id: int = payload.get("sub")
-        if user_id is None:
-            logger.warning("Access token payload missing 'sub' claim.")
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        user_type = payload.get("user_type")
+        if user_id is None or user_type not in ("live", "demo", "admin"): # Added 'admin' to user_type check
+            logger.warning(f"Access token payload missing 'sub' or invalid 'user_type'. Payload: {payload}")
             raise credentials_exception
 
-        # logger.info(f"Access token validated for user ID: {user_id}") # Debug log
-
-        # Fetch the user from the database using the provided session
-        result = await db.execute(select(User).filter(User.id == user_id))
-        user = result.scalars().first()
+        # Strictly filter by BOTH user_type and id
+        if user_type == "demo":
+            # from app.database.models import DemoUser # Already imported at the top
+            result = await db.execute(select(DemoUser).filter(DemoUser.id == int(user_id), DemoUser.user_type == "demo"))
+            user = result.scalars().first()
+        else: # Covers "live" and "admin" if "admin" is a separate type from "live" user model
+            # from app.database.models import User # Already imported at the top
+            # Assuming 'admin' users are also stored in the 'User' table and have user_type='admin'
+            result = await db.execute(select(User).filter(User.id == int(user_id), User.user_type == user_type))
+            user = result.scalars().first()
 
         if user is None:
-            logger.warning(f"User ID {user_id} from access token not found in database.")
+            logger.warning(f"User ID {user_id} with type {user_type} from access token not found in database.")
             raise credentials_exception
 
-        # Optional: Check if the user is active/verified - crucial for security
-        if user.isActive != 1: # Assuming 'isActive' is the correct attribute/column name
-             logger.warning(f"User ID {user_id} is not active or verified.")
-             raise HTTPException(
+        # Check for isActive only if the attribute exists on the user object
+        if hasattr(user, "isActive") and getattr(user, "isActive", 0) != 1:
+            logger.warning(f"User ID {user_id} (type {user_type}) is not active or verified.")
+            raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is not active or verified."
             )
-
-        # logger.info(f"Authenticated user ID {user_id} retrieved successfully.") # Debug log
         return user
 
     except JWTError:
         logger.warning("JWTError during access token validation.", exc_info=True)
         raise credentials_exception
     except Exception as e:
-        logger.error(f"Unexpected error in get_current_user dependency for token: {token[:20]}... : {e}", exc_info=True) # Log part of token
+        logger.error(f"Unexpected error in get_current_user dependency for token: {token[:20]}... : {e}", exc_info=True)
         raise credentials_exception
+
 
 # --- Dependency specifically for admin users ---
 async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
@@ -309,88 +303,82 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
     FastAPI dependency to get the current authenticated user and check if they are an admin.
     Requires successful authentication via get_current_user first.
     """
-    # The get_current_user dependency handles token validation and fetching the user
-    # We just need to check the user's role/type
-    if current_user.user_type != 'admin': # Assuming 'user_type' is the attribute/column name for user role
+    if current_user.user_type != 'admin':
         logger.warning(f"User ID {current_user.id} attempted to access admin resource without admin privileges.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this resource. Admin privileges required."
         )
-    # If the user is an admin, return the user object
     return current_user
 
-# You might add other dependencies here, e.g., get_active_user, verify_2fa etc.
-
-
-# --- security.py ---
-
-from fastapi import Request, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from jose import JWTError
-from app.database.models import User
-from app.database.session import get_db
-from app.core.config import get_settings
-from app.core.security import decode_token, get_current_user
-
-settings = get_settings()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # NEW FUNCTION TO SUPPORT SERVICE ACCOUNT JWT
 def create_service_account_token(service_name: str, expires_minutes: int = 60):
-    import datetime
-    from app.core.security import create_access_token
+    # Removed redundant import: import datetime
+    # from app.core.security import create_access_token # This would be a circular import if called from outside
     data = {"sub": "service", "service_name": service_name}
-    return create_access_token(data=data, expires_delta=datetime.timedelta(minutes=expires_minutes))
+    return create_access_token(data=data, expires_delta=timedelta(minutes=expires_minutes)) # Corrected
 
 # NEW DEPENDENCY FUNCTION - MODIFIED to handle service accounts targeting demo/live users
 async def get_user_from_service_or_user_token(
     request: Request,
     db: AsyncSession = Depends(get_db),
     token: str = Depends(oauth2_scheme)
-) -> Union[User, DemoUser]: # <<< MODIFIED: Return type can be User or DemoUser
+) -> Union[User, DemoUser]:
     """
     Authenticates a user either directly from their token or
     by a service account token operating on behalf of a specific user.
+    Always uses BOTH user_type and id/email for DB lookup.
     """
     try:
         payload = decode_token(token)
         if payload.get("sub") == "service":
+            logger.info(f"Service account token detected for service: {payload.get('service_name')}")
             # If a service account token, extract target user_id and user_type from request body or query params
             try:
-                # Attempt to parse as JSON for body, if not, check query params
+                # Attempt to get JSON body if present, else default to empty dict
                 body = await request.json()
-            except Exception:
-                body = {} # If no JSON body, it's an empty dict
-            
+            except Exception: # Catches JSONDecodeError if body is empty or not JSON
+                body = {}
+
             user_id = body.get("user_id") or request.query_params.get("user_id")
-            target_user_type = body.get("user_type") or request.query_params.get("user_type") # <<< NEW: Get target user type
+            target_user_type = body.get("user_type") or request.query_params.get("user_type")
 
-            if not user_id:
-                raise HTTPException(status_code=400, detail="Missing user_id for service account operation.")
+            if not user_id or target_user_type not in ["live", "demo"]:
+                logger.warning(f"Service account request missing or invalid target user_id/user_type. user_id: {user_id}, target_user_type: {target_user_type}")
+                raise HTTPException(status_code=400, detail="Missing or invalid user_id/user_type for service account operation.")
             
-            # Validate target_user_type
-            if target_user_type not in ["live", "demo"]:
-                raise HTTPException(status_code=400, detail="Invalid target_user_type. Must be 'live' or 'demo'.")
-
-            # Query the appropriate table based on target_user_type
+            logger.info(f"Service account targeting user ID: {user_id}, Type: {target_user_type}")
+            # Strictly filter by BOTH user_type and id
             if target_user_type == "demo":
-                stmt = select(DemoUser).where(DemoUser.id == int(user_id))
-            else: # Default to live if not explicitly 'demo'
-                stmt = select(User).where(User.id == int(user_id))
-
+                # from app.database.models import DemoUser # Already imported at the top
+                stmt = select(DemoUser).where(DemoUser.id == int(user_id), DemoUser.user_type == "demo")
+            else: # Covers "live" users targeted by service accounts
+                # from app.database.models import User # Already imported at the top
+                stmt = select(User).where(User.id == int(user_id), User.user_type == "live")
+            
             result = await db.execute(stmt)
             user = result.scalars().first()
+            
             if not user:
+                logger.warning(f"Target user (ID: {user_id}, Type: {target_user_type}) not found for service account.")
                 raise HTTPException(status_code=404, detail=f"Target user (ID: {user_id}, Type: {target_user_type}) not found.")
+            
+            # Optional: Add a check here if the service_name from payload is authorized
+            # to access/impersonate the 'target_user_type' (e.g., service 'analytics_service'
+            # can only read 'live' users). This depends on your authorization strategy.
+            # Example:
+            # service_name_from_token = payload.get("service_name")
+            # if service_name_from_token == "analytics_service" and target_user_type != "live":
+            #     raise HTTPException(status_code=403, detail="Analytics service cannot target demo users.")
+
+            logger.info(f"Service account '{payload.get('service_name')}' successfully identified target user ID: {user_id}, Type: {target_user_type}")
             return user
         else:
-            # For regular user tokens, defer to get_current_user
+            # For regular user tokens, defer to get_current_user (which is now strict on both fields)
+            logger.info("Regular user token detected. Deferring to get_current_user.")
             return await get_current_user(db=db, token=token)
-    except HTTPException:
-        # Re-raise HTTPExceptions directly
+    except HTTPException: # Re-raise HTTPExceptions as they are intended errors
         raise
     except Exception as e:
         logger.error(f"Authentication error in get_user_from_service_or_user_token: {e}", exc_info=True)

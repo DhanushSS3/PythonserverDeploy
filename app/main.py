@@ -8,6 +8,7 @@ import asyncio
 import os
 import json
 from typing import Optional, Any
+from dotenv import load_dotenv
 
 import logging
 
@@ -72,6 +73,18 @@ app.add_middleware(
 # --- End CORS Settings ---
 
 scheduler: Optional[AsyncIOScheduler] = None
+
+load_dotenv() 
+
+# Now, you can safely print and access them
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+
+print(f"--- Application Startup ---")
+print(f"Loaded SECRET_KEY (from code): '{SECRET_KEY}'")
+print(f"Loaded ALGORITHM (from code): '{ALGORITHM}'")
+print(f"---------------------------")
+
 
 # --- Scheduled Job Functions ---
 async def daily_swap_charge_job():

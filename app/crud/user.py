@@ -25,18 +25,17 @@ async def get_user(db: AsyncSession, user_id: int) -> Optional[User]:
     result = await db.execute(select(User).filter(User.id == user_id))
     return result.scalars().first()
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+async def get_user_by_id(db: AsyncSession, user_id: int, user_type: str) -> User | None:
     """
-    Retrieves a user from the database by their ID.
-
+    Retrieves a user from the database by their ID AND user_type (must match both).
     Args:
         db: The asynchronous database session.
         user_id: The ID to search for.
-
+        user_type: The user type to match (e.g., 'live').
     Returns:
         The User SQLAlchemy model instance if found, otherwise None.
     """
-    result = await db.execute(select(User).filter(User.id == user_id))
+    result = await db.execute(select(User).filter(User.id == user_id, User.user_type == user_type))
     return result.scalars().first()
 
 async def get_user_by_id_with_lock(db: AsyncSession, user_id: int) -> User | None:
@@ -130,7 +129,6 @@ async def create_user(
     db: AsyncSession,
     user_data: dict,
     hashed_password: str,
-    security_answer: Optional[str] = None, # Added security_answer
     id_proof_path: Optional[str] = None,
     id_proof_image_path: Optional[str] = None,
     address_proof_path: Optional[str] = None,
@@ -141,12 +139,7 @@ async def create_user(
     """
     db_user = User(
         **user_data,
-        hashed_password=hashed_password,
-        security_answer=security_answer, # Set security_answer
-        id_proof=id_proof_path,
-        id_proof_image=id_proof_image_path,
-        address_proof=address_proof_path,
-        address_proof_image=address_proof_image_path
+        hashed_password=hashed_password
     )
 
     db.add(db_user)
@@ -247,11 +240,17 @@ async def get_demo_user(db: AsyncSession, demo_user_id: int) -> Optional[DemoUse
     result = await db.execute(select(DemoUser).filter(DemoUser.id == demo_user_id))
     return result.scalars().first()
 
-async def get_demo_user_by_id(db: AsyncSession, demo_user_id: int) -> DemoUser | None:
+async def get_demo_user_by_id(db: AsyncSession, demo_user_id: int, user_type: str = "demo") -> DemoUser | None:
     """
-    Retrieves a demo user from the database by their ID.
+    Retrieves a demo user from the database by their ID AND user_type (must match both).
+    Args:
+        db: The asynchronous database session.
+        demo_user_id: The ID to search for.
+        user_type: The user type to match (default: 'demo').
+    Returns:
+        The DemoUser SQLAlchemy model instance if found, otherwise None.
     """
-    result = await db.execute(select(DemoUser).filter(DemoUser.id == demo_user_id))
+    result = await db.execute(select(DemoUser).filter(DemoUser.id == demo_user_id, DemoUser.user_type == user_type))
     return result.scalars().first()
 
 async def get_demo_user_by_id_with_lock(db: AsyncSession, demo_user_id: int) -> DemoUser | None:
@@ -291,7 +290,6 @@ async def create_demo_user(
     db: AsyncSession,
     demo_user_data: dict,
     hashed_password: str,
-    security_answer: Optional[str] = None, # Added security_answer
 ) -> DemoUser:
     """
     Creates a new demo user in the database.
@@ -299,7 +297,6 @@ async def create_demo_user(
     db_demo_user = DemoUser(
         **demo_user_data,
         hashed_password=hashed_password,
-        security_answer=security_answer, # Set security_answer
     )
 
     db.add(db_demo_user)

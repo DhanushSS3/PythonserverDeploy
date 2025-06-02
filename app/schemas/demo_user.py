@@ -73,23 +73,39 @@ class DemoUserLogin(BaseModel):
 # Schema for sending OTP for Demo User signup/verification
 class DemoSendOTPRequest(BaseModel):
     email: EmailStr
+    user_type: Optional[str] = Field("demo", description="User type, defaults to 'demo'.")
 
 # Schema for verifying OTP for Demo User signup/verification
 class DemoVerifyOTPRequest(BaseModel):
     email: EmailStr
     otp_code: str = Field(..., min_length=6, max_length=10)
+    user_type: Optional[str] = Field("demo", description="User type, defaults to 'demo'.")
 
 # Schema for requesting password reset for Demo User
 class DemoRequestPasswordReset(BaseModel):
     email: EmailStr
+    user_type: Optional[str] = Field("demo", description="User type, defaults to 'demo'.")
 
 # Schema for confirming password reset for Demo User
 class DemoResetPasswordConfirm(BaseModel):
     email: EmailStr
     new_password: str = Field(..., min_length=8)
     confirm_password: str = Field(..., min_length=8)
+    user_type: Optional[str] = Field("demo", description="User type, defaults to 'demo'.")
+    reset_token: str = Field(..., description="Reset token obtained after OTP verification.")
 
     class Config:
         # Add a custom validator if needed to ensure new_password == confirm_password
         pass
+
+class PasswordResetVerifyResponse(BaseModel):
+    verified: bool = Field(..., description="Whether the OTP was successfully verified.")
+    message: str = Field(..., description="Response message.")
+    reset_token: Optional[str] = Field(None, description="Reset token to be used for confirming password reset.")
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: EmailStr = Field(..., description="Email address associated with the OTP.")
+    user_type: Optional[str] = Field("demo", description="User type, defaults to 'demo'.")
+    new_password: str = Field(..., min_length=8, description="The new password for the user account.")
+    reset_token: str = Field(..., description="Reset token obtained after OTP verification.")
 

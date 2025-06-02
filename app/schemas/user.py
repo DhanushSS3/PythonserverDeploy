@@ -156,18 +156,29 @@ class SendOTPRequest(BaseModel):
 class VerifyOTPRequest(BaseModel):
     email: EmailStr = Field(..., description="Email address associated with the OTP.")
     otp_code: str = Field(..., description="The OTP code received by the user.")
-    user_type: str = Field(..., description="User type (e.g., 'live', 'demo').")
+    user_type: Optional[str] = Field("live", description="User type (e.g., 'live', 'demo'). Defaults to 'live'.")
 
 
 class RequestPasswordReset(BaseModel):
     email: EmailStr = Field(..., description="Email address to send the password reset OTP to.")
-    user_type: str = Field(..., description="User type (e.g., 'live', 'demo').")
+    user_type: Optional[str] = Field("live", description="User type (e.g., 'live', 'demo'). Defaults to 'live'.")
 
 
 class ResetPasswordConfirm(BaseModel):
     email: EmailStr = Field(..., description="Email address associated with the OTP.")
-    user_type: str = Field(..., description="User type (e.g., 'live', 'demo').")
+    user_type: Optional[str] = Field("live", description="User type (e.g., 'live', 'demo'). Defaults to 'live'.")
     new_password: str = Field(..., min_length=8, description="The new password for the user account.")
+
+class PasswordResetVerifyResponse(BaseModel):
+    verified: bool = Field(..., description="Whether the OTP was successfully verified.")
+    message: str = Field(..., description="Response message.")
+    reset_token: Optional[str] = Field(None, description="Reset token to be used for confirming password reset.")
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: EmailStr = Field(..., description="Email address associated with the OTP.")
+    user_type: Optional[str] = Field("live", description="User type (e.g., 'live', 'demo'). Defaults to 'live'.")
+    new_password: str = Field(..., min_length=8, description="The new password for the user account.")
+    reset_token: str = Field(..., description="Reset token obtained after OTP verification.")
 
 
 class StatusResponse(BaseModel):
@@ -180,11 +191,13 @@ class StatusResponse(BaseModel):
 # --- Authentication Schemas (Keep Existing) ---
 # in app/schemas/user.py
 
-class UserLogin(BaseModel):
-    username: str  # could be email or phone
-    password: str
-    user_type: str  # e.g., "live" or "demo"
+from typing import Optional
+from pydantic import BaseModel, EmailStr, Field
 
+class UserLogin(BaseModel):
+    email: EmailStr = Field(..., description="User's email address")
+    password: str = Field(..., min_length=8, description="User's password")
+    user_type: Optional[str] = Field("live", description="Type of user, defaults to 'live'")
 
 class Token(BaseModel):
     """
@@ -207,9 +220,9 @@ from pydantic import BaseModel, EmailStr, Field
 
 class SignupSendOTPRequest(BaseModel):
     email: EmailStr
-    user_type: str # Added user_type
+    user_type: Optional[str] = Field("live", description="User type, defaults to 'live'")
 
 class SignupVerifyOTPRequest(BaseModel):
     email: EmailStr
     otp_code: str = Field(..., min_length=4, max_length=8)
-    user_type: str # Added user_type
+    user_type: Optional[str] = Field("live", description="User type, defaults to 'live'")

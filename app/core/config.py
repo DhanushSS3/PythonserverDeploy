@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
 loaded = load_dotenv(dotenv_path=dotenv_path, verbose=True)
 
+LOADED_SECRET_KEY = os.getenv("SECRET_KEY")
+LOADED_ALGORITHM = os.getenv("ALGORITHM")
+print(f"DEBUG: Loaded SECRET_KEY from env: '{LOADED_SECRET_KEY}'")
+print(f"DEBUG: Loaded ALGORITHM from env: '{LOADED_ALGORITHM}'")
+
 if loaded:
     logger.info(".env file loaded successfully.")
 else:
@@ -51,8 +56,8 @@ class Settings(BaseSettings):
     ECHO_SQL: bool = os.getenv("ECHO_SQL", "False").lower() in ("true", "1", "t")
 
     # --- JWT Settings ---
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "") # IMPORTANT: This should be a strong, unique secret in production!
-    ALGORITHM: str = os.getenv("ALGORITHM", "")   # IMPORTANT: Set a secure algorithm like "HS256" or "RS256"
+    SECRET_KEY: str = LOADED_SECRET_KEY or "fallback_if_you_must_but_not_recommended_for_secret"
+    ALGORITHM: str = LOADED_ALGORITHM or "HS256" # Ensure a default if it can be empty
     # Ensure integer conversion for values from environment variables
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 

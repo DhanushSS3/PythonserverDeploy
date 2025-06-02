@@ -212,7 +212,8 @@ from app.services.order_processing import (
     process_new_order,
     OrderProcessingError,
     InsufficientFundsError,
-    calculate_total_symbol_margin_contribution
+    calculate_total_symbol_margin_contribution,
+    generate_10_digit_id
 )
 from app.services.portfolio_calculator import _convert_to_usd, calculate_user_portfolio
 
@@ -243,15 +244,14 @@ async def place_order(
     if order_request.user_id is not None and hasattr(current_user, 'is_service_account') and current_user.is_service_account:
         logger.info(f"Service account {current_user.id} placing order for target user_id {order_request.user_id} with type {order_request.user_type}")
         if order_request.user_type == "live":
-            fetched_user = await crud_user.get_user_by_id(db, order_request.user_id)
+            fetched_user = await crud_user.get_user_by_id(db, order_request.user_id, user_type="live")
             if not fetched_user:
-                raise HTTPException(status_code=404, detail=f"Target live user {order_request.user_id} not found.")
+                raise HTTPException(status_code=404, detail=f"Target live user {order_request.user_id} (type: live) not found.")
             target_user = fetched_user
         elif order_request.user_type == "demo":
-            # Assuming crud_user.get_demo_user_by_id exists and returns DemoUser or None
-            fetched_demo_user = await crud_user.get_demo_user_by_id(db, order_request.user_id)
+            fetched_demo_user = await crud_user.get_demo_user_by_id(db, order_request.user_id, user_type="demo")
             if not fetched_demo_user:
-                raise HTTPException(status_code=404, detail=f"Target demo user {order_request.user_id} not found.")
+                raise HTTPException(status_code=404, detail=f"Target demo user {order_request.user_id} (type: demo) not found.")
             target_user = fetched_demo_user
         else:
             raise HTTPException(status_code=400, detail=f"Invalid user_type '{order_request.user_type}' for service account operation.")
@@ -304,8 +304,24 @@ async def place_order(
             
             calculated_contract_value = order_request.order_quantity * contract_size
 
+            # --- Barclays Margin Calculation (do not add to user margin) ---
+            adjusted_price = await get_live_adjusted_buy_price_for_pair(redis_client, order_request.symbol, live_target_user.group_name)
+            if adjusted_price is None:
+                # fallback to order price if adjusted price not found
+                adjusted_price = Decimal(str(order_request.order_price))
+
+            user_leverage = getattr(live_target_user, 'leverage', None)
+            if user_leverage is None or Decimal(user_leverage) <= 0:
+                logger.error(f"User {live_target_user.id} has invalid leverage for margin calculation.")
+                user_leverage = Decimal(1)
+            else:
+                user_leverage = Decimal(str(user_leverage))
+
+            barclays_margin = (contract_size * Decimal(str(order_request.order_quantity)) * adjusted_price) / user_leverage
+            barclays_margin = barclays_margin.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
             order_data_internal = OrderCreateInternal(
-                order_id=str(uuid.uuid4()),
+                order_id=generate_10_digit_id(),
                 order_user_id=live_target_user.id,
                 order_company_name=order_request.symbol,
                 order_type=order_request.order_type,
@@ -313,7 +329,7 @@ async def place_order(
                 order_price=order_request.order_price,
                 order_quantity=order_request.order_quantity,
                 contract_value=calculated_contract_value,
-                margin=Decimal("0.0"), 
+                margin=barclays_margin,
                 stop_loss=order_request.stop_loss,
                 take_profit=order_request.take_profit,
             )
@@ -358,13 +374,30 @@ async def place_order(
     order_model_class = get_order_model(target_user) 
 
     try:
-        new_db_order = await process_new_order(
-            db=db,
-            redis_client=redis_client,
-            user=target_user, 
-            order_request=order_request,
-            order_model=order_model_class 
-        )
+        if isinstance(target_user, DemoUser):
+            from app.crud.user import get_demo_user_by_id_with_lock
+            from app.crud.crud_order import create_order
+            new_db_order = await process_new_order(
+                db=db,
+                redis_client=redis_client,
+                user=target_user,
+                order_request=order_request,
+                order_model=DemoUserOrder,
+                create_order_fn=create_order,
+                get_user_by_id_with_lock_fn=get_demo_user_by_id_with_lock
+            )
+        else:
+            from app.crud.user import get_user_by_id_with_lock
+            from app.crud.crud_order import create_order
+            new_db_order = await process_new_order(
+                db=db,
+                redis_client=redis_client,
+                user=target_user,
+                order_request=order_request,
+                order_model=UserOrder,
+                create_order_fn=create_order,
+                get_user_by_id_with_lock_fn=get_user_by_id_with_lock
+            )
         # process_new_order is expected to commit DB changes for user and order
         await db.refresh(target_user) # Refresh to get latest user.margin and user.wallet_balance
 
@@ -481,7 +514,10 @@ async def close_order(
 
     logger.info(f"Request to close order {order_id} for user {user_to_operate_on.id} ({type(user_to_operate_on).__name__}) with price {close_price}. Frontend provided type: {close_request.order_type}, company: {close_request.order_company_name}, status: {close_request.order_status}, frontend_status: {close_request.status}.")
 
-    close_order_id = str(uuid.uuid4()) # Generate close_order_id
+    # Generate a unique 10-digit random close_order_id
+    import random
+
+    close_order_id = generate_10_digit_id() # Generate close_order_id
 
     if isinstance(user_to_operate_on, User):
         user_group = await crud_group.get_group_by_name(db, user_to_operate_on.group_name)
@@ -625,11 +661,11 @@ async def close_order(
                 if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
                 else: wallet_common_data["user_id"] = db_user_locked.id
                 if db_order.net_profit != Decimal("0.0"):
-                    db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=str(uuid.uuid4())))
+                    db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
                 if total_commission_for_trade > Decimal("0.0"):
-                    db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Total commission for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=str(uuid.uuid4())))
+                    db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Total commission for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
                 if swap_amount != Decimal("0.0"):
-                    db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap charges for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=str(uuid.uuid4())))
+                    db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap charges for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
                 
                 await db.commit()
 
@@ -783,11 +819,11 @@ async def close_order(
             if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
             else: wallet_common_data["user_id"] = db_user_locked.id
             if db_order.net_profit != Decimal("0.0"):
-                db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=str(uuid.uuid4())))
+                db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
             if total_commission_for_trade > Decimal("0.0"):
-                db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Total commission for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=str(uuid.uuid4())))
+                db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Total commission for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
             if swap_amount != Decimal("0.0"):
-                db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap charges for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=str(uuid.uuid4())))
+                db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap charges for order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
             
             await db.commit()
 
