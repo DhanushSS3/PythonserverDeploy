@@ -310,3 +310,17 @@ async def get_adjusted_market_price_cache(
     except Exception as e:
         logger.error(f"Error retrieving adjusted market price cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
         return None # Return None on error
+    
+
+async def publish_account_structure_changed_event(redis_client: Redis, user_id: int):
+    """
+    Publishes an event to a Redis channel indicating that a user's account structure (e.g., portfolio, balance) has changed.
+    This can be used by WebSocket clients to trigger UI updates.
+    """
+    channel = f"user_updates:{user_id}"
+    message = json.dumps({"type": "ACCOUNT_STRUCTURE_CHANGED", "user_id": user_id})
+    try:
+        await redis_client.publish(channel, message)
+        logger.info(f"Published ACCOUNT_STRUCTURE_CHANGED event to {channel} for user_id {user_id}")
+    except Exception as e:
+        logger.error(f"Error publishing ACCOUNT_STRUCTURE_CHANGED event for user {user_id}: {e}", exc_info=True)

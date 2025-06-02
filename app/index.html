@@ -51,7 +51,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
             <div class="data-box">
@@ -136,23 +136,36 @@
             orderedSymbols.forEach(symbol => {
                 const symbolData = marketData[symbol];
                 if (symbolData) {
-                    const offerPrice = (typeof symbolData.o === 'number')
-                                       ? symbolData.o.toFixed(5)
-                                       : (typeof symbolData.buy === 'number' ? symbolData.buy.toFixed(5) + ' (buy)' : 'N/A');
-
-                    const bidPrice = (typeof symbolData.b === 'number')
-                                     ? symbolData.b.toFixed(5)
-                                     : (typeof symbolData.sell === 'number' ? symbolData.sell.toFixed(5) + ' (sell)' : 'N/A');
-
+                    let offerPrice = 'N/A';
+                    let bidPrice = 'N/A';
                     let spreadDisplay = 'N/A';
-                    if (typeof symbolData.o === 'number' && typeof symbolData.b === 'number') {
-                        spreadDisplay = (symbolData.o - symbolData.b).toFixed(5);
+
+                    // Determine Offer Price (prioritize 'buy', then 'o')
+                    if (typeof symbolData.buy === 'number') {
+                        offerPrice = symbolData.buy.toFixed(5);
+                    } else if (typeof symbolData.o === 'number') {
+                        offerPrice = symbolData.o.toFixed(5);
                     }
-                    else if (typeof symbolData.buy === 'number' && typeof symbolData.sell === 'number') {
-                         spreadDisplay = (symbolData.buy - symbolData.sell).toFixed(5);
+
+                    // Determine Bid Price (prioritize 'sell', then 'b')
+                    if (typeof symbolData.sell === 'number') {
+                        bidPrice = symbolData.sell.toFixed(5);
+                    } else if (typeof symbolData.b === 'number') {
+                        bidPrice = symbolData.b.toFixed(5);
                     }
-                    else if (typeof symbolData.spread === 'number' && spreadDisplay === 'N/A') {
-                         spreadDisplay = symbolData.spread.toFixed(1) + " pips";
+
+                    // Determine Spread Display (prioritize 'spread_value', then calculate from buy/sell or o/b, then 'spread')
+                    if (typeof symbolData.spread_value === 'number') {
+                        spreadDisplay = symbolData.spread_value.toFixed(5);
+                    } else if (offerPrice !== 'N/A' && bidPrice !== 'N/A') {
+                        // Ensure both are valid numbers before calculation
+                        const oNum = parseFloat(offerPrice);
+                        const bNum = parseFloat(bidPrice);
+                        if (!isNaN(oNum) && !isNaN(bNum)) {
+                            spreadDisplay = (oNum - bNum).toFixed(5);
+                        }
+                    } else if (typeof symbolData.spread === 'number') {
+                        spreadDisplay = symbolData.spread.toFixed(1) + " pips";
                     }
 
 

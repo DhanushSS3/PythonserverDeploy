@@ -101,3 +101,35 @@ async def update_order_with_tracking(
     await db.commit()
     await db.refresh(db_order)
     return db_order
+
+
+from typing import List, Type
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from app.database.models import UserOrder, DemoUserOrder # Make sure these imports are correct based on your models.py
+
+async def get_orders_by_user_id_and_statuses(
+    db: AsyncSession,
+    user_id: int,
+    statuses: List[str],
+    order_model: Type[UserOrder | DemoUserOrder]
+):
+    """
+    Retrieves orders for a given user ID with specified statuses.
+
+    Args:
+        db: The SQLAlchemy asynchronous session.
+        user_id: The ID of the user whose orders are to be fetched.
+        statuses: A list of strings representing the desired order statuses (e.g., ["OPEN", "PENDING", "CANCELLED", "CLOSED"]).
+        order_model: The SQLAlchemy model for orders (UserOrder or DemoUserOrder).
+
+    Returns:
+        A list of order objects matching the criteria.
+    """
+    result = await db.execute(
+        select(order_model).filter(
+            order_model.order_user_id == user_id,
+            order_model.order_status.in_(statuses)
+        )
+    )
+    return result.scalars().all()

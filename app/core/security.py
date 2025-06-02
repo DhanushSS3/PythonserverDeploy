@@ -8,6 +8,8 @@ from redis import asyncio as aioredis # Use async Redis client
 import json
 import logging
 
+from app.database.models import User, DemoUser
+
 # Import necessary components from fastapi
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -343,32 +345,57 @@ def create_service_account_token(service_name: str, expires_minutes: int = 60):
     data = {"sub": "service", "service_name": service_name}
     return create_access_token(data=data, expires_delta=datetime.timedelta(minutes=expires_minutes))
 
-# NEW DEPENDENCY FUNCTION
+# NEW DEPENDENCY FUNCTION - MODIFIED to handle service accounts targeting demo/live users
 async def get_user_from_service_or_user_token(
     request: Request,
     db: AsyncSession = Depends(get_db),
     token: str = Depends(oauth2_scheme)
-) -> User:
+) -> Union[User, DemoUser]: # <<< MODIFIED: Return type can be User or DemoUser
+    """
+    Authenticates a user either directly from their token or
+    by a service account token operating on behalf of a specific user.
+    """
     try:
         payload = decode_token(token)
         if payload.get("sub") == "service":
-            # Extract user_id from request body or query params
+            # If a service account token, extract target user_id and user_type from request body or query params
             try:
+                # Attempt to parse as JSON for body, if not, check query params
                 body = await request.json()
             except Exception:
-                body = {}
+                body = {} # If no JSON body, it's an empty dict
+            
             user_id = body.get("user_id") or request.query_params.get("user_id")
+            target_user_type = body.get("user_type") or request.query_params.get("user_type") # <<< NEW: Get target user type
+
             if not user_id:
-                raise HTTPException(status_code=400, detail="Missing user_id for service account.")
-            stmt = select(User).where(User.id == int(user_id))
+                raise HTTPException(status_code=400, detail="Missing user_id for service account operation.")
+            
+            # Validate target_user_type
+            if target_user_type not in ["live", "demo"]:
+                raise HTTPException(status_code=400, detail="Invalid target_user_type. Must be 'live' or 'demo'.")
+
+            # Query the appropriate table based on target_user_type
+            if target_user_type == "demo":
+                stmt = select(DemoUser).where(DemoUser.id == int(user_id))
+            else: # Default to live if not explicitly 'demo'
+                stmt = select(User).where(User.id == int(user_id))
+
             result = await db.execute(stmt)
-            user = result.scalar_one_or_none()
+            user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=404, detail="User not found.")
+                raise HTTPException(status_code=404, detail=f"Target user (ID: {user_id}, Type: {target_user_type}) not found.")
             return user
         else:
+            # For regular user tokens, defer to get_current_user
             return await get_current_user(db=db, token=token)
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token.")
+    except HTTPException:
+        # Re-raise HTTPExceptions directly
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Authentication error in get_user_from_service_or_user_token: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
