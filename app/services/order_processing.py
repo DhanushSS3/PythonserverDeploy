@@ -57,30 +57,71 @@ async def calculate_total_symbol_margin_contribution(
     redis_client: Redis,
     user_id: int,
     symbol: str,
-    open_positions_for_symbol: list,
+    open_positions_for_symbol: list, # List of order objects or dicts
     order_model=None
-) -> Decimal:
+) -> Dict[str, Any]: 
+    logger.warning(f"[!!! CTSMC_ENTRY_TEST !!!] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}") # FORCED WARNING
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
+    # logger.info(f"[MARGIN_TOTAL_CONTRIB_ENTRY] Positions data: {open_positions_for_symbol}") # Can be very verbose
+
     total_buy_quantity = Decimal(0)
     total_sell_quantity = Decimal(0)
     all_margins_per_lot: List[Decimal] = []
+    contributing_orders_count = 0
 
-    for position in open_positions_for_symbol:
-        position_quantity = Decimal(str(position.order_quantity))
-        position_type = position.order_type.upper()
-        position_full_margin = Decimal(str(position.margin))
+    if not open_positions_for_symbol:
+        logger.info(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
+        return {"total_margin": Decimal("0.0"), "contributing_orders_count": 0}
 
-        if position_quantity > 0:
-            margin_per_lot_of_position = position_full_margin / position_quantity
-            all_margins_per_lot.append(margin_per_lot_of_position)
+    for i, position in enumerate(open_positions_for_symbol):
+        try:
+            # Handle both ORM objects (like DemoUserOrder/UserOrder) and dicts (like OrderCreateInternal)
+            order_id_log = getattr(position, 'id', getattr(position, 'order_id', 'NEW_UNSAVED'))
+            if isinstance(position, dict):
+                position_quantity_str = str(position.get('quantity') or position.get('order_quantity', '0'))
+                position_type = str(position.get('order_type', '')).upper()
+                position_full_margin_str = str(position.get('margin', '0'))
+            else: # Assuming ORM object
+                position_quantity_str = str(position.order_quantity)
+                position_type = position.order_type.upper()
+                position_full_margin_str = str(position.margin)
 
-        if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-            total_buy_quantity += position_quantity
-        elif position_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
-            total_sell_quantity += position_quantity
+            position_quantity = Decimal(position_quantity_str)
+            position_full_margin = Decimal(position_full_margin_str)
+
+            logger.info(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
+
+            if position_quantity > 0:
+                margin_per_lot_of_position = Decimal("0.0")
+                if position_quantity != Decimal("0"): # Avoid division by zero if quantity is somehow zero
+                    margin_per_lot_of_position = position_full_margin / position_quantity
+                all_margins_per_lot.append(margin_per_lot_of_position)
+                logger.info(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
+                if position_full_margin > Decimal("0.0"):
+                    contributing_orders_count +=1 # Count if this position itself contributes margin
+
+            if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                total_buy_quantity += position_quantity
+            elif position_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
+                total_sell_quantity += position_quantity
+        except Exception as e:
+            logger.error(f"[MARGIN_TOTAL_CONTRIB_POS_ERROR] Error processing position {i}: {position}. Error: {e}", exc_info=True)
+            continue
 
     net_quantity = max(total_buy_quantity, total_sell_quantity)
     highest_margin_per_lot = max(all_margins_per_lot) if all_margins_per_lot else Decimal(0)
-    return (highest_margin_per_lot * net_quantity).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+    
+    calculated_total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) # Changed precision to 0.01
+    
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}")
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}, ContributingOrders={contributing_orders_count} (based on individual stored margins)")
+    
+    # The contributing_orders_count here might be misleading if highest_margin_per_lot is zero.
+    # The logic of this function implies that if highest_margin_per_lot is 0, total margin is 0.
+    # The count should reflect orders that *would* contribute if their margin per lot was the highest.
+    # For now, returning the count of positions that had non-zero margin themselves.
+    return {"total_margin": calculated_total_margin, "contributing_orders_count": contributing_orders_count}
 
 async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Dict[str, Any]]:
     """
@@ -110,130 +151,113 @@ async def process_new_order(
     user_type: str,
     is_barclays_live_user: bool = False
 ) -> dict:
-    from app.core.cache import get_user_data_cache, get_group_symbol_settings_cache, set_user_data_cache
-    from app.services.margin_calculator import calculate_single_order_margin
+    logger.warning(f"[!!! PNO_ENTRY_TEST !!!] User {user_id}, Symbol: {order_data.get('symbol')}") # FORCED WARNING
     from app.services.portfolio_calculator import calculate_user_portfolio
-    from app.core.firebase import get_latest_market_data
-    from app.services.order_processing import calculate_total_symbol_margin_contribution
-    from app.crud import crud_order
-    from app.crud.user import update_user_margin
-    from app.services.order_processing import generate_unique_10_digit_id
-    import logging
-    from decimal import Decimal, ROUND_HALF_UP
-    import uuid
-
-    logger = logging.getLogger(__name__)
+    # Removed import: from app.services.margin_calculator import calculate_total_symbol_margin_contribution
+    from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
 
     try:
-        user_data = await get_user_data_cache(redis_client, user_id)
-        if not user_data:
-            raise OrderProcessingError("User data not found")
+        # Step 1: Load user data and settings
+            user_data = await get_user_data_cache(redis_client, user_id)
+            if not user_data:
+                raise OrderProcessingError("User data not found")
 
-        symbol = order_data.get('order_company_name', '').upper()
-        order_type = order_data.get('order_type', '').upper()
-        quantity = Decimal(str(order_data.get('order_quantity', '0.0')))
+            symbol = order_data.get('order_company_name', '').upper()
+            order_type = order_data.get('order_type', '').upper()
+            quantity = Decimal(str(order_data.get('order_quantity', '0.0')))
+            group_name = user_data.get('group_name')
+            leverage = Decimal(str(user_data.get('leverage', '1.0')))
 
-        group_name = user_data.get('group_name')
-        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
-        if not group_settings:
-            raise OrderProcessingError(f"Group settings not found for symbol {symbol}")
+            group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+            if not group_settings:
+                raise OrderProcessingError(f"Group settings not found for symbol {symbol}")
 
-        external_symbol_info = await get_external_symbol_info(db, symbol)
-        if not external_symbol_info:
-            raise OrderProcessingError(f"External symbol info not found for {symbol}")
+            external_symbol_info = await get_external_symbol_info(db, symbol)
+            if not external_symbol_info:
+                raise OrderProcessingError(f"External symbol info not found for {symbol}")
 
-        raw_market_data = await get_latest_market_data()
-        if not raw_market_data:
-            raise OrderProcessingError("Failed to get market data")
+            raw_market_data = await get_latest_market_data()
+            if not raw_market_data:
+                raise OrderProcessingError("Failed to get market data")
 
-        margin, price, contract_value = await calculate_single_order_margin(
-            redis_client=redis_client,
-            symbol=symbol,
-            order_type=order_type,
-            quantity=quantity,
-            user_leverage=Decimal(str(user_data.get('leverage', '1.0'))),
-            group_settings=group_settings,
-            external_symbol_info=external_symbol_info,
-            raw_market_data=raw_market_data
-        )
+            # Step 2: Calculate standalone margin
+            full_margin_usd, price, contract_value = await calculate_single_order_margin(
+                redis_client=redis_client,
+                symbol=symbol,
+                order_type=order_type,
+                quantity=quantity,
+                user_leverage=leverage,
+                group_settings=group_settings,
+                external_symbol_info=external_symbol_info,
+                raw_market_data=raw_market_data
+            )
+            if full_margin_usd is None:
+                raise OrderProcessingError("Margin calculation failed")
 
-        if not margin or not price or not contract_value:
-            raise OrderProcessingError("Margin calculation returned invalid values")
+            order_model = get_order_model(user_type)
 
-        # Validate free margin before placing order
-        open_orders = await crud_order.get_all_open_orders_by_user_id(
-            db=db,
-            user_id=user_id,
-            order_model=get_order_model(user_type)
-        )
-
-        open_positions_dicts = [
-            {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-             for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value']}
-            for pos in open_orders
-        ]
-
-        adjusted_prices = {symbol: {'buy': price, 'sell': price}}
-        group_settings_all = {symbol: group_settings}
-
-        portfolio = await calculate_user_portfolio(
-            user_data=user_data,
-            open_positions=open_positions_dicts,
-            adjusted_market_prices=adjusted_prices,
-            group_symbol_settings=group_settings_all,
-            redis_client=redis_client
-        )
-
-        free_margin = Decimal(str(portfolio.get("free_margin", "0.0")))
-        if free_margin < margin:
-            raise InsufficientFundsError("Insufficient free margin to place order.")
-
-        order_model = get_order_model(user_type)
-        order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
-
-        order_create_internal = {
-            'order_id': await generate_unique_10_digit_id(db, order_model, 'order_id'),
-            'order_status': order_status,
-            'order_user_id': user_id,
-            'order_company_name': symbol,
-            'order_type': order_type,
-            'order_price': price,
-            'order_quantity': quantity,
-            'contract_value': contract_value,
-            'margin': margin,
-            'stop_loss': order_data.get('stop_loss'),
-            'take_profit': order_data.get('take_profit'),
-            'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
-        }
-
-        # Update margin only for non-barclays users
-        if not is_barclays_live_user:
+            # Step 3: Hedged margin change for symbol
             open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
                 db, user_id, symbol, order_model
             )
 
-            current_margin = await calculate_total_symbol_margin_contribution(
+            margin_before_data = await calculate_total_symbol_margin_contribution(
                 db, redis_client, user_id, symbol, open_orders_for_symbol, order_model
             )
+            margin_before = margin_before_data["total_margin"]
 
-            new_total_margin = await calculate_total_symbol_margin_contribution(
+            simulated_order = type('Obj', (object,), {
+                'order_quantity': quantity,
+                'order_type': order_type,
+                'margin': full_margin_usd
+            })()
+
+            margin_after_data = await calculate_total_symbol_margin_contribution(
                 db, redis_client, user_id, symbol,
-                open_orders_for_symbol + [type('obj', (object,), {
-                    'order_quantity': quantity,
-                    'order_type': order_type,
-                    'margin': margin
-                })()],
+                open_orders_for_symbol + [simulated_order],
                 order_model
             )
+            margin_after = margin_after_data["total_margin"]
 
-            margin_diff = max(Decimal("0.0"), new_total_margin - current_margin)
-            new_user_margin = Decimal(str(user_data.get("margin", "0.0"))) + margin_diff
-            user_data["margin"] = str(new_user_margin.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-            await set_user_data_cache(redis_client, user_id, user_data)
-            await update_user_margin(db, user_id, user_type, new_user_margin)
+            additional_margin = max(Decimal("0.0"), margin_after - margin_before)
+            logger.info(f"[MARGIN_PROCESS] User {user_id} Symbol {symbol}: MarginBefore={margin_before:.2f}, MarginAfter={margin_after:.2f}, AdditionalMargin={additional_margin:.2f}")
 
-        return order_create_internal
+            # Step 4: Lock user and update margin
+            if user_type == 'demo':
+                db_user_locked = await get_demo_user_by_id_with_lock(db, user_id)
+            else:
+                db_user_locked = await get_user_by_id_with_lock(db, user_id)
 
+            if db_user_locked is None:
+                raise OrderProcessingError("Could not lock user record.")
+
+            if not is_barclays_live_user:
+                if db_user_locked.wallet_balance < db_user_locked.margin + additional_margin:
+                    raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
+
+                original_user_margin = db_user_locked.margin
+                db_user_locked.margin = (Decimal(str(db_user_locked.margin)) + additional_margin).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+                logger.info(f"[MARGIN_PROCESS] User {user_id}: OriginalMarginDB={original_user_margin}, CalculatedNewMargin={db_user_locked.margin}")
+                db.add(db_user_locked)  # Ensure changes to user's margin are tracked for commit
+
+            # Step 5: Return order dict
+            order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
+            return {
+                'order_id': await generate_unique_10_digit_id(db, order_model, 'order_id'),
+                'order_status': order_status,
+                'order_user_id': user_id,
+                'order_company_name': symbol,
+                'order_type': order_type,
+                'order_price': price,
+                'order_quantity': quantity,
+                'contract_value': contract_value,
+                'margin': full_margin_usd,
+                'stop_loss': order_data.get('stop_loss'),
+                'take_profit': order_data.get('take_profit'),
+                'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
+            }
     except Exception as e:
         logger.error(f"Error processing new order: {e}", exc_info=True)
         raise OrderProcessingError(f"Failed to process order: {str(e)}")

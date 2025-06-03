@@ -27,7 +27,28 @@ from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger('app.services.portfolio_calculator').setLevel(logging.DEBUG)
 logging.getLogger('app.services.swap_service').setLevel(logging.DEBUG)
-logging.getLogger('app.api.v1.endpoints.orders').setLevel(logging.DEBUG)  # Added orders endpoint logging
+
+# Configure file logging for specific modules to logs/orders.log
+log_file_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'orders.log')
+os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+
+file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Orders endpoint logger to file
+orders_ep_logger = logging.getLogger('app.api.v1.endpoints.orders')
+orders_ep_logger.setLevel(logging.DEBUG)
+orders_fh = logging.FileHandler(log_file_path)
+orders_fh.setFormatter(file_formatter)
+orders_ep_logger.addHandler(orders_fh)
+orders_ep_logger.propagate = False # Prevent console output from basicConfig
+
+# Order processing service logger to file
+order_proc_logger = logging.getLogger('app.services.order_processing')
+order_proc_logger.setLevel(logging.DEBUG)
+order_proc_fh = logging.FileHandler(log_file_path) # Use the same file handler or a new one if separate formatting is needed
+order_proc_fh.setFormatter(file_formatter)
+order_proc_logger.addHandler(order_proc_fh)
+order_proc_logger.propagate = False # Prevent console output from basicConfig
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

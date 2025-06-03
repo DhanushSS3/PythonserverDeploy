@@ -28,6 +28,7 @@ from app.core.cache import (
     get_user_portfolio_cache,
     get_user_data_cache,
     get_group_settings_cache,
+    get_last_known_price, # Added import
 )
 
 from app.utils.validation import enforce_service_user_id_restriction
@@ -155,6 +156,16 @@ async def place_order(
         # Create order in database (OrderCreateInternal-compatible)
         order_model = get_order_model(current_user.user_type)
         db_order = await crud_order.create_order(db, order_create_internal, order_model)
+
+        # Log user margin from session before commit
+        try:
+            user_to_check = await db.get(type(current_user), current_user.id) # Assumes current_user is the correct user model type
+            if user_to_check:
+                orders_logger.info(f"[MARGIN_COMMIT_CHECK] User {current_user.id} margin in session BEFORE commit: {user_to_check.margin}")
+            else:
+                orders_logger.warning(f"[MARGIN_COMMIT_CHECK] User {current_user.id} not found in session before commit.")
+        except Exception as e_check:
+            orders_logger.error(f"[MARGIN_COMMIT_CHECK] Error checking user margin before commit: {e_check}", exc_info=True)
         
         await db.commit()
         await db.refresh(db_order)
@@ -177,10 +188,11 @@ async def place_order(
                 ]
                 adjusted_market_prices = {}
                 if group_symbol_settings:
-                    for symbol in group_symbol_settings.keys():
-                        prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                    for symbol_key in group_symbol_settings.keys(): # Renamed symbol to symbol_key to avoid conflict with outer scope symbol if any
+                        # Assuming symbol_key is the actual symbol string we need for price fetching
+                        prices = await get_last_known_price(redis_client, symbol_key)
                         if prices:
-                            adjusted_market_prices[symbol] = prices
+                            adjusted_market_prices[symbol_key] = prices
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                 await publish_account_structure_changed_event(redis_client, user_id)

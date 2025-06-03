@@ -5716,3 +5716,355 @@ NameError: name 'get_adjusted_market_price_cache' is not defined
 2025-06-03 13:30:14,322 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-03 13:30:28,151 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-03 13:30:28,152 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:38:10,153 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:40:26,051 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:40:26,054 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:40:26,843 - ERROR - orders - Order processing error: Failed to process order: No module named 'app.models'
+2025-06-03 13:40:45,001 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:41:58,195 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:42:07,381 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:42:58,401 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:43:04,884 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:43:04,886 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:43:04,895 - ERROR - orders - Order processing error: Failed to process order: A transaction is already begun on this Session.
+2025-06-03 13:43:45,724 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:43:45,725 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:43:45,726 - ERROR - orders - Order processing error: Failed to process order: A transaction is already begun on this Session.
+2025-06-03 13:44:00,620 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:44:00,621 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:44:00,624 - ERROR - orders - Order processing error: Failed to process order: A transaction is already begun on this Session.
+2025-06-03 13:44:55,181 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:45:17,852 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:45:17,854 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:45:18,314 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 181, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 13:46:58,652 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:47:26,542 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:48:23,220 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:48:23,224 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:48:23,764 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 181, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 13:49:23,404 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:49:27,926 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:49:55,619 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:49:55,621 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:49:56,040 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 13:49:56,064 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 191, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 14:00:38,657 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:00:44,714 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:00:44,716 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:00:45,234 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:00:45,271 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 191, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 14:02:25,881 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:02:33,187 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:02:44,230 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:04:24,454 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:04:24,455 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:04:25,489 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:04:25,518 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'symbol' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 195, in place_order
+    adjusted_market_prices[symbol] = prices
+                           ^^^^^^
+NameError: name 'symbol' is not defined
+2025-06-03 14:05:43,349 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:06:16,741 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:06:16,743 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:06:17,169 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:06:17,268 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:09:00,199 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:09:49,485 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:09:49,487 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:09:49,842 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.0, MarginAfter=0.0, AdditionalMargin=0.0
+2025-06-03 14:09:49,850 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=0.00
+2025-06-03 14:09:49,929 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:09:50,024 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:11:27,271 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:12:10,773 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:13:27,029 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:13:27,033 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:13:28,235 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.0, MarginAfter=0.0, AdditionalMargin=0.0
+2025-06-03 14:13:28,264 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=0.00
+2025-06-03 14:13:28,389 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:13:28,566 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:14:37,261 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:15:25,658 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:15:25,660 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:15:26,946 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.0, MarginAfter=0.0, AdditionalMargin=0.0
+2025-06-03 14:15:26,954 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=0.00
+2025-06-03 14:15:27,008 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:15:27,069 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:16:23,142 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:16:58,002 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:16:58,004 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:16:58,005 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:16:58,382 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.0, MarginAfter=0.0, AdditionalMargin=0.0
+2025-06-03 14:16:58,394 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=0.00
+2025-06-03 14:16:58,444 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 0.00
+2025-06-03 14:16:58,509 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:18:36,255 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:19:15,595 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:19:15,597 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:19:15,597 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:19:15,897 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 9
+2025-06-03 14:19:15,897 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 9
+2025-06-03 14:19:15,897 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 47): Type=BUY, Qty=1.00000000, StoredMargin=653.96557002
+2025-06-03 14:19:15,897 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=653.96557002
+2025-06-03 14:19:15,897 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 48): Type=BUY, Qty=1.00000000, StoredMargin=653.86829926
+2025-06-03 14:19:15,897 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=653.86829926
+2025-06-03 14:19:15,898 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 49): Type=BUY, Qty=1.00000000, StoredMargin=653.47616965
+2025-06-03 14:19:15,898 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=653.47616965
+2025-06-03 14:19:15,898 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: 50): Type=BUY, Qty=1.00000000, StoredMargin=654.18245410
+2025-06-03 14:19:15,899 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=654.1824541
+2025-06-03 14:19:15,899 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5 (ID: 51): Type=BUY, Qty=1.00000000, StoredMargin=654.17516759
+2025-06-03 14:19:15,899 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5: MarginPerLot=654.17516759
+2025-06-03 14:19:15,899 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6 (ID: 52): Type=BUY, Qty=1.00000000, StoredMargin=654.13621492
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6: MarginPerLot=654.13621492
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7 (ID: 53): Type=BUY, Qty=1.00000000, StoredMargin=654.27996852
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7: MarginPerLot=654.27996852
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8 (ID: 54): Type=BUY, Qty=1.00000000, StoredMargin=654.00001457
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8: MarginPerLot=654.00001457
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9 (ID: 55): Type=BUY, Qty=1.00000000, StoredMargin=654.28257020
+2025-06-03 14:19:15,900 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9: MarginPerLot=654.2825702
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=9.00000000, TotalSellQty=0, NetQty=9.00000000
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('653.96557002'), Decimal('653.86829926'), Decimal('653.47616965'), Decimal('654.1824541'), Decimal('654.17516759'), Decimal('654.13621492'), Decimal('654.27996852'), Decimal('654.00001457'), Decimal('654.2825702')], HighestMarginPerLot=654.2825702
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=5888.54, ContributingOrders=9 (based on individual stored margins)
+2025-06-03 14:19:15,901 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 10
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 10
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 47): Type=BUY, Qty=1.00000000, StoredMargin=653.96557002
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=653.96557002
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 48): Type=BUY, Qty=1.00000000, StoredMargin=653.86829926
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=653.86829926
+2025-06-03 14:19:15,901 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 49): Type=BUY, Qty=1.00000000, StoredMargin=653.47616965
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=653.47616965
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: 50): Type=BUY, Qty=1.00000000, StoredMargin=654.18245410
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=654.1824541
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5 (ID: 51): Type=BUY, Qty=1.00000000, StoredMargin=654.17516759
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5: MarginPerLot=654.17516759
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6 (ID: 52): Type=BUY, Qty=1.00000000, StoredMargin=654.13621492
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6: MarginPerLot=654.13621492
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7 (ID: 53): Type=BUY, Qty=1.00000000, StoredMargin=654.27996852
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7: MarginPerLot=654.27996852
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8 (ID: 54): Type=BUY, Qty=1.00000000, StoredMargin=654.00001457
+2025-06-03 14:19:15,902 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8: MarginPerLot=654.00001457
+2025-06-03 14:19:15,903 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9 (ID: 55): Type=BUY, Qty=1.00000000, StoredMargin=654.28257020
+2025-06-03 14:19:15,903 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9: MarginPerLot=654.2825702
+2025-06-03 14:19:15,903 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 10 (ID: NEW_UNSAVED): Type=BUY, Qty=1, StoredMargin=654.2018613396689818020158440
+2025-06-03 14:19:15,903 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 10: MarginPerLot=654.2018613396689818020158440
+2025-06-03 14:19:15,910 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=10.00000000, TotalSellQty=0, NetQty=10.00000000
+2025-06-03 14:19:15,910 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('653.96557002'), Decimal('653.86829926'), Decimal('653.47616965'), Decimal('654.1824541'), Decimal('654.17516759'), Decimal('654.13621492'), Decimal('654.27996852'), Decimal('654.00001457'), Decimal('654.2825702'), Decimal('654.2018613396689818020158440')], HighestMarginPerLot=654.2825702
+2025-06-03 14:19:15,910 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=6542.83, ContributingOrders=10 (based on individual stored margins)
+2025-06-03 14:19:15,911 - app.services.order_processing - ERROR - Error processing new order: unsupported operand type(s) for -: 'dict' and 'dict'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 220, in process_new_order
+    additional_margin = max(Decimal("0.0"), margin_after - margin_before)
+                                            ~~~~~~~~~~~~~^~~~~~~~~~~~~~~
+TypeError: unsupported operand type(s) for -: 'dict' and 'dict'
+2025-06-03 14:19:15,915 - ERROR - orders - Order processing error: Failed to process order: unsupported operand type(s) for -: 'dict' and 'dict'
+2025-06-03 14:20:35,305 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 14:21:04,360 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:21:04,362 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:21:04,363 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:21:04,676 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 9
+2025-06-03 14:21:04,676 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 9
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 47): Type=BUY, Qty=1.00000000, StoredMargin=653.96557002
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=653.96557002
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 48): Type=BUY, Qty=1.00000000, StoredMargin=653.86829926
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=653.86829926
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 49): Type=BUY, Qty=1.00000000, StoredMargin=653.47616965
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=653.47616965
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: 50): Type=BUY, Qty=1.00000000, StoredMargin=654.18245410
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=654.1824541
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5 (ID: 51): Type=BUY, Qty=1.00000000, StoredMargin=654.17516759
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5: MarginPerLot=654.17516759
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6 (ID: 52): Type=BUY, Qty=1.00000000, StoredMargin=654.13621492
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6: MarginPerLot=654.13621492
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7 (ID: 53): Type=BUY, Qty=1.00000000, StoredMargin=654.27996852
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7: MarginPerLot=654.27996852
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8 (ID: 54): Type=BUY, Qty=1.00000000, StoredMargin=654.00001457
+2025-06-03 14:21:04,677 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8: MarginPerLot=654.00001457
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9 (ID: 55): Type=BUY, Qty=1.00000000, StoredMargin=654.28257020
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9: MarginPerLot=654.2825702
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=9.00000000, TotalSellQty=0, NetQty=9.00000000
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('653.96557002'), Decimal('653.86829926'), Decimal('653.47616965'), Decimal('654.1824541'), Decimal('654.17516759'), Decimal('654.13621492'), Decimal('654.27996852'), Decimal('654.00001457'), Decimal('654.2825702')], HighestMarginPerLot=654.2825702
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=5888.54, ContributingOrders=9 (based on individual stored margins)
+2025-06-03 14:21:04,678 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 10
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 10
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 47): Type=BUY, Qty=1.00000000, StoredMargin=653.96557002
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=653.96557002
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 48): Type=BUY, Qty=1.00000000, StoredMargin=653.86829926
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=653.86829926
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 49): Type=BUY, Qty=1.00000000, StoredMargin=653.47616965
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=653.47616965
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: 50): Type=BUY, Qty=1.00000000, StoredMargin=654.18245410
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=654.1824541
+2025-06-03 14:21:04,678 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5 (ID: 51): Type=BUY, Qty=1.00000000, StoredMargin=654.17516759
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5: MarginPerLot=654.17516759
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6 (ID: 52): Type=BUY, Qty=1.00000000, StoredMargin=654.13621492
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 6: MarginPerLot=654.13621492
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7 (ID: 53): Type=BUY, Qty=1.00000000, StoredMargin=654.27996852
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 7: MarginPerLot=654.27996852
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8 (ID: 54): Type=BUY, Qty=1.00000000, StoredMargin=654.00001457
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 8: MarginPerLot=654.00001457
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9 (ID: 55): Type=BUY, Qty=1.00000000, StoredMargin=654.28257020
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 9: MarginPerLot=654.2825702
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 10 (ID: NEW_UNSAVED): Type=BUY, Qty=1, StoredMargin=654.3139698433867523703331220
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 10: MarginPerLot=654.3139698433867523703331220
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=10.00000000, TotalSellQty=0, NetQty=10.00000000
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('653.96557002'), Decimal('653.86829926'), Decimal('653.47616965'), Decimal('654.1824541'), Decimal('654.17516759'), Decimal('654.13621492'), Decimal('654.27996852'), Decimal('654.00001457'), Decimal('654.2825702'), Decimal('654.3139698433867523703331220')], HighestMarginPerLot=654.3139698433867523703331220
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=6543.14, ContributingOrders=10 (based on individual stored margins)
+2025-06-03 14:21:04,679 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=5888.54, MarginAfter=6543.14, AdditionalMargin=654.60
+2025-06-03 14:21:04,689 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=654.60
+2025-06-03 14:21:04,776 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 654.60
+2025-06-03 14:21:04,862 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:22:26,110 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:22:26,122 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:22:26,123 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:22:26,941 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-03 14:22:26,941 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-03 14:22:26,942 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol AUDCAD. Returning zero margin.
+2025-06-03 14:22:26,942 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-03 14:22:26,942 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-03 14:22:26,942 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=1, StoredMargin=654.2898578185236738352560505
+2025-06-03 14:22:26,942 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.2898578185236738352560505
+2025-06-03 14:22:26,942 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=1, TotalSellQty=0, NetQty=1
+2025-06-03 14:22:26,943 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.2898578185236738352560505')], HighestMarginPerLot=654.2898578185236738352560505
+2025-06-03 14:22:26,943 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=654.29, ContributingOrders=1 (based on individual stored margins)
+2025-06-03 14:22:26,943 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=654.29, AdditionalMargin=654.29
+2025-06-03 14:22:26,963 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=654.29
+2025-06-03 14:22:27,068 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 654.29
+2025-06-03 14:22:27,231 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:22:39,463 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 14:22:39,467 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:22:39,467 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:22:39,866 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-03 14:22:39,867 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-03 14:22:39,867 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:22:39,867 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:22:39,867 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=1.00000000, TotalSellQty=0, NetQty=1.00000000
+2025-06-03 14:22:39,867 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782')], HighestMarginPerLot=654.28985782
+2025-06-03 14:22:39,867 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=654.29, ContributingOrders=1 (based on individual stored margins)
+2025-06-03 14:22:39,868 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 2
+2025-06-03 14:22:39,868 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 2
+2025-06-03 14:22:39,868 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:22:39,868 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:22:39,868 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: NEW_UNSAVED): Type=BUY, Qty=1, StoredMargin=654.2873383958372808232156131
+2025-06-03 14:22:39,868 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873383958372808232156131
+2025-06-03 14:22:39,869 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=0, NetQty=2.00000000
+2025-06-03 14:22:39,869 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873383958372808232156131')], HighestMarginPerLot=654.28985782
+2025-06-03 14:22:39,869 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1308.58, ContributingOrders=2 (based on individual stored margins)
+2025-06-03 14:22:39,869 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=654.29, MarginAfter=1308.58, AdditionalMargin=654.29
+2025-06-03 14:22:39,878 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=654.29000000, CalculatedNewMargin=1308.58
+2025-06-03 14:22:39,971 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 1308.58
+2025-06-03 14:22:40,118 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:22:52,038 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: SELL, Quantity: 1
+2025-06-03 14:22:52,045 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:22:52,045 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:22:52,546 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 2
+2025-06-03 14:22:52,546 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 2
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 58): Type=BUY, Qty=1.00000000, StoredMargin=654.28733840
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873384
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=0, NetQty=2.00000000
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873384')], HighestMarginPerLot=654.28985782
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1308.58, ContributingOrders=2 (based on individual stored margins)
+2025-06-03 14:22:52,547 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 3
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 3
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:22:52,547 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 58): Type=BUY, Qty=1.00000000, StoredMargin=654.28733840
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873384
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: NEW_UNSAVED): Type=SELL, Qty=1, StoredMargin=652.9562232635422208294769675
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=652.9562232635422208294769675
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=1, NetQty=2.00000000
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873384'), Decimal('652.9562232635422208294769675')], HighestMarginPerLot=654.28985782
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1308.58, ContributingOrders=3 (based on individual stored margins)
+2025-06-03 14:22:52,548 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=1308.58, MarginAfter=1308.58, AdditionalMargin=0.00
+2025-06-03 14:22:52,568 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=1308.58000000, CalculatedNewMargin=1308.58
+2025-06-03 14:22:52,645 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 1308.58
+2025-06-03 14:22:52,825 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:23:02,230 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: SELL, Quantity: 1
+2025-06-03 14:23:02,234 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:23:02,234 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:23:02,576 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 3
+2025-06-03 14:23:02,576 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 3
+2025-06-03 14:23:02,577 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:23:02,577 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:23:02,577 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 58): Type=BUY, Qty=1.00000000, StoredMargin=654.28733840
+2025-06-03 14:23:02,577 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873384
+2025-06-03 14:23:02,577 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 59): Type=SELL, Qty=1.00000000, StoredMargin=652.95622326
+2025-06-03 14:23:02,578 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=652.95622326
+2025-06-03 14:23:02,578 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=1.00000000, NetQty=2.00000000
+2025-06-03 14:23:02,578 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873384'), Decimal('652.95622326')], HighestMarginPerLot=654.28985782
+2025-06-03 14:23:02,578 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1308.58, ContributingOrders=3 (based on individual stored margins)
+2025-06-03 14:23:02,578 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 4
+2025-06-03 14:23:02,578 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 4
+2025-06-03 14:23:02,578 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:23:02,579 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:23:02,579 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 58): Type=BUY, Qty=1.00000000, StoredMargin=654.28733840
+2025-06-03 14:23:02,579 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873384
+2025-06-03 14:23:02,579 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 59): Type=SELL, Qty=1.00000000, StoredMargin=652.95622326
+2025-06-03 14:23:02,579 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=652.95622326
+2025-06-03 14:23:02,579 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: NEW_UNSAVED): Type=SELL, Qty=1, StoredMargin=652.9879026380994024194723801
+2025-06-03 14:23:02,580 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=652.9879026380994024194723801
+2025-06-03 14:23:02,580 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=2.00000000, NetQty=2.00000000
+2025-06-03 14:23:02,580 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873384'), Decimal('652.95622326'), Decimal('652.9879026380994024194723801')], HighestMarginPerLot=654.28985782
+2025-06-03 14:23:02,580 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1308.58, ContributingOrders=4 (based on individual stored margins)
+2025-06-03 14:23:02,580 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=1308.58, MarginAfter=1308.58, AdditionalMargin=0.00
+2025-06-03 14:23:02,589 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=1308.58000000, CalculatedNewMargin=1308.58
+2025-06-03 14:23:02,693 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 1308.58
+2025-06-03 14:23:02,853 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-03 14:23:11,412 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: SELL, Quantity: 1
+2025-06-03 14:23:11,419 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 14:23:11,420 - app.services.order_processing - WARNING - [!!! PNO_ENTRY_TEST !!!] User 1, Symbol: None
+2025-06-03 14:23:11,795 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 4
+2025-06-03 14:23:11,797 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 4
+2025-06-03 14:23:11,798 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:23:11,798 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:23:11,798 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 58): Type=BUY, Qty=1.00000000, StoredMargin=654.28733840
+2025-06-03 14:23:11,799 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873384
+2025-06-03 14:23:11,799 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 59): Type=SELL, Qty=1.00000000, StoredMargin=652.95622326
+2025-06-03 14:23:11,799 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=652.95622326
+2025-06-03 14:23:11,799 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: 60): Type=SELL, Qty=1.00000000, StoredMargin=652.98790264
+2025-06-03 14:23:11,799 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=652.98790264
+2025-06-03 14:23:11,800 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=2.00000000, NetQty=2.00000000
+2025-06-03 14:23:11,800 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873384'), Decimal('652.95622326'), Decimal('652.98790264')], HighestMarginPerLot=654.28985782
+2025-06-03 14:23:11,801 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1308.58, ContributingOrders=4 (based on individual stored margins)
+2025-06-03 14:23:11,802 - app.services.order_processing - WARNING - [!!! CTSMC_ENTRY_TEST !!!] User 1, Symbol AUDCAD, Positions count: 5
+2025-06-03 14:23:11,802 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 5
+2025-06-03 14:23:11,802 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 57): Type=BUY, Qty=1.00000000, StoredMargin=654.28985782
+2025-06-03 14:23:11,803 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=654.28985782
+2025-06-03 14:23:11,803 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 58): Type=BUY, Qty=1.00000000, StoredMargin=654.28733840
+2025-06-03 14:23:11,803 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=654.2873384
+2025-06-03 14:23:11,803 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3 (ID: 59): Type=SELL, Qty=1.00000000, StoredMargin=652.95622326
+2025-06-03 14:23:11,804 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 3: MarginPerLot=652.95622326
+2025-06-03 14:23:11,804 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4 (ID: 60): Type=SELL, Qty=1.00000000, StoredMargin=652.98790264
+2025-06-03 14:23:11,804 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 4: MarginPerLot=652.98790264
+2025-06-03 14:23:11,804 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5 (ID: NEW_UNSAVED): Type=SELL, Qty=1, StoredMargin=652.9391187745048025769213952
+2025-06-03 14:23:11,805 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 5: MarginPerLot=652.9391187745048025769213952
+2025-06-03 14:23:11,805 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=2.00000000, TotalSellQty=3.00000000, NetQty=3.00000000
+2025-06-03 14:23:11,805 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('654.28985782'), Decimal('654.2873384'), Decimal('652.95622326'), Decimal('652.98790264'), Decimal('652.9391187745048025769213952')], HighestMarginPerLot=654.28985782
+2025-06-03 14:23:11,805 - app.services.order_processing - INFO - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1962.87, ContributingOrders=5 (based on individual stored margins)
+2025-06-03 14:23:11,805 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=1308.58, MarginAfter=1962.87, AdditionalMargin=654.29
+2025-06-03 14:23:11,822 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=1308.58000000, CalculatedNewMargin=1962.87
+2025-06-03 14:23:11,902 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 1962.87
+2025-06-03 14:23:12,061 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
