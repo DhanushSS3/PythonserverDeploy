@@ -5647,3 +5647,72 @@ Traceback (most recent call last):
                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 NameError: name 'get_adjusted_market_price_cache' is not defined
 2025-06-03 12:27:15,122 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:27:19,589 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:27:58,709 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:32:47,802 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:32:59,824 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:34:30,433 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:34:48,744 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 12:34:48,748 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 12:34:49,573 - INFO - orders - [MARGIN DEBUG] user_id=1, group_name=Group B, sending_orders=None, user_type=demo, is_barclays_live_user_flag_check=False
+2025-06-03 12:34:49,583 - INFO - orders - [MARGIN DEBUG] open_positions count: 1
+2025-06-03 12:34:49,584 - INFO - orders - [MARGIN DEBUG] symbols found: {'AUDCAD'}
+2025-06-03 12:34:49,584 - INFO - orders - [MARGIN DEBUG] Calculating margin for symbol: AUDCAD with 1 positions
+2025-06-03 12:34:49,598 - INFO - orders - [MARGIN DEBUG] Margin for symbol AUDCAD: 0.0
+2025-06-03 12:34:49,599 - INFO - orders - [MARGIN DEBUG] Total margin to update for user 1: 0.0
+2025-06-03 12:34:49,617 - INFO - orders - [MARGIN DEBUG] Margin updated in DB for user 1
+2025-06-03 12:34:49,642 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 208, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 12:40:00,694 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:40:00,695 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:40:04,935 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:40:04,935 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 12:40:20,569 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 12:40:20,571 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 12:40:21,180 - INFO - orders - [MARGIN DEBUG] user_id=1, group_name=Group B, sending_orders=None, user_type=demo, is_barclays_live_user_flag_check=False
+2025-06-03 12:40:21,187 - INFO - orders - [MARGIN DEBUG] open_positions count: 1
+2025-06-03 12:40:21,187 - INFO - orders - [MARGIN DEBUG] symbols found: {'AUDCAD'}
+2025-06-03 12:40:21,188 - INFO - orders - [MARGIN DEBUG] Calculating margin for symbol: AUDCAD with 1 positions
+2025-06-03 12:40:21,194 - INFO - orders - [MARGIN DEBUG] Margin for symbol AUDCAD: 0.0
+2025-06-03 12:40:21,194 - INFO - orders - [MARGIN DEBUG] Total margin to update for user 1: 0.0
+2025-06-03 12:40:21,218 - INFO - orders - [MARGIN DEBUG] Margin updated in DB for user 1
+2025-06-03 12:40:21,234 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 208, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 12:58:01,050 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 12:58:01,052 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 12:58:01,914 - INFO - orders - [MARGIN DEBUG] user_id=1, group_name=Group B, sending_orders=None, user_type=demo, is_barclays_live_user_flag_check=False
+2025-06-03 12:58:01,920 - INFO - orders - [MARGIN DEBUG] open_positions count: 1
+2025-06-03 12:58:01,920 - INFO - orders - [MARGIN DEBUG] symbols found: {'AUDCAD'}
+2025-06-03 12:58:01,920 - INFO - orders - [MARGIN DEBUG] Calculating margin for symbol: AUDCAD with 1 positions
+2025-06-03 12:58:01,927 - INFO - orders - [MARGIN DEBUG] Margin for symbol AUDCAD: 0.0
+2025-06-03 12:58:01,927 - INFO - orders - [MARGIN DEBUG] Total margin to update for user 1: 0.0
+2025-06-03 12:58:01,941 - INFO - orders - [MARGIN DEBUG] Margin updated in DB for user 1
+2025-06-03 12:58:01,955 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 208, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 13:01:39,737 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:06:20,791 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 1
+2025-06-03 13:06:20,793 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, sending_orders_setting=None
+2025-06-03 13:06:21,799 - ERROR - orders - Error updating portfolio cache or publishing websocket event after order placement: name 'get_adjusted_market_price_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 181, in place_order
+    prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_adjusted_market_price_cache' is not defined
+2025-06-03 13:20:13,653 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:20:13,655 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:30:14,309 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:30:14,322 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:30:28,151 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-03 13:30:28,152 - INFO - orders - Application starting up - Orders logging initialized

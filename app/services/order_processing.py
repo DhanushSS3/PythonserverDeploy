@@ -108,39 +108,44 @@ async def process_new_order(
     user_id: int,
     order_data: Dict[str, Any],
     user_type: str,
-    is_barclays_live_user: bool = False  # New parameter
+    is_barclays_live_user: bool = False
 ) -> dict:
-    """
-    Prepare all data for a new order (generate IDs, calculate margin, etc.), and return a dict compatible with OrderCreateInternal.
-    """
+    from app.core.cache import get_user_data_cache, get_group_symbol_settings_cache, set_user_data_cache
+    from app.services.margin_calculator import calculate_single_order_margin
+    from app.services.portfolio_calculator import calculate_user_portfolio
+    from app.core.firebase import get_latest_market_data
+    from app.services.order_processing import calculate_total_symbol_margin_contribution
+    from app.crud import crud_order
+    from app.crud.user import update_user_margin
+    from app.services.order_processing import generate_unique_10_digit_id
+    import logging
+    from decimal import Decimal, ROUND_HALF_UP
+    import uuid
+
+    logger = logging.getLogger(__name__)
+
     try:
-        # Get user data
         user_data = await get_user_data_cache(redis_client, user_id)
         if not user_data:
             raise OrderProcessingError("User data not found")
 
-        # Get order details
         symbol = order_data.get('order_company_name', '').upper()
         order_type = order_data.get('order_type', '').upper()
         quantity = Decimal(str(order_data.get('order_quantity', '0.0')))
-        
-        # Get group settings
+
         group_name = user_data.get('group_name')
         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
         if not group_settings:
             raise OrderProcessingError(f"Group settings not found for symbol {symbol}")
 
-        # Get external symbol info
         external_symbol_info = await get_external_symbol_info(db, symbol)
         if not external_symbol_info:
             raise OrderProcessingError(f"External symbol info not found for {symbol}")
 
-        # Get raw market data
         raw_market_data = await get_latest_market_data()
         if not raw_market_data:
             raise OrderProcessingError("Failed to get market data")
 
-        # Calculate margin for new order
         margin, price, contract_value = await calculate_single_order_margin(
             redis_client=redis_client,
             symbol=symbol,
@@ -155,63 +160,35 @@ async def process_new_order(
         if not margin or not price or not contract_value:
             raise OrderProcessingError("Margin calculation returned invalid values")
 
-        # Get all open orders for this symbol
+        # Validate free margin before placing order
+        open_orders = await crud_order.get_all_open_orders_by_user_id(
+            db=db,
+            user_id=user_id,
+            order_model=get_order_model(user_type)
+        )
+
+        open_positions_dicts = [
+            {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+             for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value']}
+            for pos in open_orders
+        ]
+
+        adjusted_prices = {symbol: {'buy': price, 'sell': price}}
+        group_settings_all = {symbol: group_settings}
+
+        portfolio = await calculate_user_portfolio(
+            user_data=user_data,
+            open_positions=open_positions_dicts,
+            adjusted_market_prices=adjusted_prices,
+            group_symbol_settings=group_settings_all,
+            redis_client=redis_client
+        )
+
+        free_margin = Decimal(str(portfolio.get("free_margin", "0.0")))
+        if free_margin < margin:
+            raise InsufficientFundsError("Insufficient free margin to place order.")
+
         order_model = get_order_model(user_type)
-        all_open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
-            db=db, user_id=user_id, symbol=symbol, order_model=order_model
-        )
-
-        # Calculate current margin contribution for this symbol
-        current_symbol_margin = await calculate_total_symbol_margin_contribution(
-            db=db,
-            redis_client=redis_client,
-            user_id=user_id,
-            symbol=symbol,
-            open_positions_for_symbol=all_open_orders_for_symbol,
-            order_model=order_model
-        )
-
-        # Calculate new margin contribution including the new order
-        new_order_margin = margin
-        new_symbol_margin = await calculate_total_symbol_margin_contribution(
-            db=db,
-            redis_client=redis_client,
-            user_id=user_id,
-            symbol=symbol,
-            open_positions_for_symbol=[*all_open_orders_for_symbol, type('obj', (object,), {
-                'order_quantity': quantity,
-                'order_type': order_type,
-                'margin': new_order_margin
-            })],
-            order_model=order_model
-        )
-
-        # Calculate margin difference
-        margin_difference = new_symbol_margin - current_symbol_margin
-        margin_difference = max(Decimal("0.0"), margin_difference)
-
-        # Update user's margin
-        current_user_margin = Decimal(str(user_data.get('margin', '0.0')))
-        new_user_margin = (current_user_margin + margin_difference).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-        # Update user data in cache
-        user_data['margin'] = str(new_user_margin)
-        await set_user_data_cache(redis_client, user_id, user_data)
-
-        # Calculate commission if applicable
-        commission = Decimal("0.0")
-        commission_type = int(group_settings.get('commision_type', 0))
-        commission_value_type = int(group_settings.get('commision_value_type', 0))
-        commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
-
-        if commission_type in [0, 1]:  # "Every Trade" or "In"
-            if commission_value_type == 0:  # Per lot
-                commission = quantity * commission_rate
-            elif commission_value_type == 1:  # Percent of price
-                commission = ((commission_rate * price) / Decimal("100")) * quantity
-            commission = commission.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-        # Prepare OrderCreateInternal-compatible dict
         order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
 
         order_create_internal = {
@@ -223,17 +200,44 @@ async def process_new_order(
             'order_price': price,
             'order_quantity': quantity,
             'contract_value': contract_value,
-            'margin': new_order_margin,
+            'margin': margin,
             'stop_loss': order_data.get('stop_loss'),
             'take_profit': order_data.get('take_profit'),
             'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
         }
-        # If you need to return extra IDs (like cancel_id, etc.), you can return them as a secondary dict or log them as needed.
+
+        # Update margin only for non-barclays users
+        if not is_barclays_live_user:
+            open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
+                db, user_id, symbol, order_model
+            )
+
+            current_margin = await calculate_total_symbol_margin_contribution(
+                db, redis_client, user_id, symbol, open_orders_for_symbol, order_model
+            )
+
+            new_total_margin = await calculate_total_symbol_margin_contribution(
+                db, redis_client, user_id, symbol,
+                open_orders_for_symbol + [type('obj', (object,), {
+                    'order_quantity': quantity,
+                    'order_type': order_type,
+                    'margin': margin
+                })()],
+                order_model
+            )
+
+            margin_diff = max(Decimal("0.0"), new_total_margin - current_margin)
+            new_user_margin = Decimal(str(user_data.get("margin", "0.0"))) + margin_diff
+            user_data["margin"] = str(new_user_margin.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+            await set_user_data_cache(redis_client, user_id, user_data)
+            await update_user_margin(db, user_id, user_type, new_user_margin)
+
         return order_create_internal
 
     except Exception as e:
         logger.error(f"Error processing new order: {e}", exc_info=True)
         raise OrderProcessingError(f"Failed to process order: {str(e)}")
+
 
 
 # # MAIN PROCESSING FUNCTION FOR NEW ORDER (remains the same in logic, but will use updated helper)
