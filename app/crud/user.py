@@ -18,6 +18,37 @@ import string
 
 # --- CRUD Operations for User Model ---
 
+async def update_user_margin(db: AsyncSession, user_id: int, user_type: str, new_margin) -> None:
+    """
+    Updates only the margin field for a user (live or demo) by user_id and user_type.
+    """
+    from app.database.models import User, DemoUser
+    model = User if user_type == 'live' else DemoUser
+    result = await db.execute(select(model).filter(model.id == user_id))
+    db_user = result.scalars().first()
+    if db_user is not None:
+        db_user.margin = new_margin
+        await db.commit()
+        await db.refresh(db_user)
+
+async def get_user_by_account_number(db: AsyncSession, account_number: str, user_type: str) -> User | None:
+    """
+    Retrieves a user from the database by their account_number AND user_type.
+    """
+    result = await db.execute(
+        select(User).filter(User.account_number == account_number, User.user_type == user_type)
+    )
+    return result.scalars().first()
+
+async def get_demo_user_by_account_number(db: AsyncSession, account_number: str, user_type: str = "demo") -> DemoUser | None:
+    """
+    Retrieves a demo user from the database by their account_number AND user_type.
+    """
+    result = await db.execute(
+        select(DemoUser).filter(DemoUser.account_number == account_number, DemoUser.user_type == user_type)
+    )
+    return result.scalars().first()
+
 async def get_user(db: AsyncSession, user_id: int) -> Optional[User]:
     """
     Retrieves a user from the database by their ID.

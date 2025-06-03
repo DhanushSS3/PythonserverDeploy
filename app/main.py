@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger('app.services.portfolio_calculator').setLevel(logging.DEBUG)
 logging.getLogger('app.services.swap_service').setLevel(logging.DEBUG)
+logging.getLogger('app.api.v1.endpoints.orders').setLevel(logging.DEBUG)  # Added orders endpoint logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -55,6 +56,9 @@ from app.core.security import close_redis_connection, create_service_account_tok
 
 # Import shared state (for the queue)
 from app.shared_state import redis_publish_queue
+
+# Import orders logger
+from app.core.logging_config import orders_logger
 
 settings = get_settings()
 app = FastAPI(
@@ -85,6 +89,8 @@ print(f"Loaded SECRET_KEY (from code): '{SECRET_KEY}'")
 print(f"Loaded ALGORITHM (from code): '{ALGORITHM}'")
 print(f"---------------------------")
 
+# Log application startup
+orders_logger.info("Application starting up - Orders logging initialized")
 
 # --- Scheduled Job Functions ---
 async def daily_swap_charge_job():

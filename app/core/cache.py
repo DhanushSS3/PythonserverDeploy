@@ -13,15 +13,19 @@ REDIS_USER_DATA_KEY_PREFIX = "user_data:" # Stores group_name, leverage, etc.
 REDIS_USER_PORTFOLIO_KEY_PREFIX = "user_portfolio:" # Stores balance, positions
 # New key prefix for group settings per symbol
 REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX = "group_symbol_settings:" # Stores spread, pip values, etc. per group and symbol
+# New key prefix for general group settings
+REDIS_GROUP_SETTINGS_KEY_PREFIX = "group_settings:" # Stores general group settings like sending_orders
+# New key prefix for last known price
+LAST_KNOWN_PRICE_KEY_PREFIX = "last_price:"
 
 # Expiry times (adjust as needed)
 USER_DATA_CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60 # Example: User session length
 # USER_DATA_CACHE_EXPIRY_SECONDS = 10
 USER_PORTFOLIO_CACHE_EXPIRY_SECONDS = 5 * 60 # Example: Short expiry, updated frequently
 GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
+GROUP_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 
-
-# Helper function to handle Decimal serialization/deserialization (keep as is)
+# --- Last Known Price Cache ---
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
@@ -236,8 +240,8 @@ async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
 # New key prefix for adjusted market prices per group and symbol
 REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX = "adjusted_market_price:"
 
-# Example expiry for adjusted market prices (adjust based on how frequently data updates)
-ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS = 10 # Example: Cache for 10 seconds
+# Increase cache expiry for adjusted market prices to 30 seconds
+ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS = 30  # Cache for 30 seconds
 
 async def set_adjusted_market_price_cache(
     redis_client: Redis,
@@ -245,72 +249,56 @@ async def set_adjusted_market_price_cache(
     symbol: str,
     buy_price: decimal.Decimal,
     sell_price: decimal.Decimal,
-    spread_value: decimal.Decimal # Include spread value as well
-):
+    spread_value: decimal.Decimal
+) -> None:
     """
     Caches the adjusted market buy and sell prices (and spread value)
     for a specific group and symbol in Redis.
     Key structure: adjusted_market_price:{group_name}:{symbol}
     Value is a JSON string: {"buy": "...", "sell": "...", "spread_value": "..."}
     """
-    key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}" # Use lower/upper for consistency
+    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol}"
+    logger.debug(f"Setting cache key: {cache_key}")
     try:
         # Create a dictionary with Decimal values
-        adjusted_prices_data = {
-            "buy": buy_price,
-            "sell": sell_price,
-            "spread_value": spread_value # Store spread value
+        adjusted_prices = {
+            "buy": str(buy_price),  # Convert to string for JSON serialization
+            "sell": str(sell_price),
+            "spread_value": str(spread_value)
         }
-        # Serialize the dictionary to a JSON string, using DecimalEncoder to handle Decimal types
-        adjusted_prices_json = json.dumps(adjusted_prices_data, cls=DecimalEncoder)
-
-        # Use setex to set the key with an expiry time
-        await redis_client.setex(
-            key,
-            ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS,
-            adjusted_prices_json
+        # Serialize the dictionary to a JSON string
+        await redis_client.set(
+            cache_key,
+            json.dumps(adjusted_prices),
+            ex=ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS
         )
-        logger.debug(f"Cached adjusted market price for group '{group_name}', symbol '{symbol}'. Key: {key}")
-
+        logger.debug(f"Successfully cached adjusted market price for key {cache_key}: {adjusted_prices}")
     except Exception as e:
-        logger.error(f"Error caching adjusted market price for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
+        logger.error(f"Error setting adjusted market price in cache for key {cache_key}: {e}", exc_info=True)
 
-async def get_adjusted_market_price_cache(
-    redis_client: Redis,
-    group_name: str,
-    symbol: str
-) -> Optional[Dict[str, decimal.Decimal]]:
+async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: str, symbol: str) -> Optional[Dict[str, decimal.Decimal]]:
     """
-    Retrieves the cached adjusted market buy and sell prices (and spread value)
-    for a specific group and symbol from Redis.
-    Returns a dictionary {"buy": Decimal, "sell": Decimal, "spread_value": Decimal} or None if not found/error.
+    Retrieves the cached adjusted market prices for a specific group and symbol.
+    Returns None if the cache is empty or expired.
     """
-    key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}" # Use lower/upper for consistency
+    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol}"
+    logger.debug(f"Looking up cache key: {cache_key}")
     try:
-        adjusted_prices_json = await redis_client.get(key)
-        if adjusted_prices_json:
-            # Decode the JSON string, using decode_decimal to convert strings back to Decimal
-            adjusted_prices_data = json.loads(adjusted_prices_json, object_hook=decode_decimal)
-
-            # Ensure the expected keys are present and have Decimal values
-            # Check if it's a dictionary and contains 'buy', 'sell', and 'spread_value' keys with Decimal values
-            if isinstance(adjusted_prices_data, dict) and \
-               'buy' in adjusted_prices_data and isinstance(adjusted_prices_data['buy'], decimal.Decimal) and \
-               'sell' in adjusted_prices_data and isinstance(adjusted_prices_data['sell'], decimal.Decimal) and \
-               'spread_value' in adjusted_prices_data and isinstance(adjusted_prices_data['spread_value'], decimal.Decimal):
-                logger.debug(f"Adjusted market price retrieved from cache for group '{group_name}', symbol '{symbol}'.")
-                return adjusted_prices_data
-            else:
-                 logger.warning(f"Cached data for key '{key}' is not in expected format: {adjusted_prices_data}")
-                 return None
-
-        logger.debug(f"Adjusted market price not found in cache for group '{group_name}', symbol '{symbol}'. Key: {key}")
-        return None # Return None if the key is not found
-
+        cached_data = await redis_client.get(cache_key)
+        if cached_data:
+            price_data = json.loads(cached_data)
+            # Convert string values back to Decimal
+            return {
+                "buy": decimal.Decimal(price_data["buy"]),
+                "sell": decimal.Decimal(price_data["sell"]),
+                "spread_value": decimal.Decimal(price_data["spread_value"])
+            }
+        else:
+            logger.debug(f"No cached data found for key {cache_key}")
+            return None
     except Exception as e:
-        logger.error(f"Error retrieving adjusted market price cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
-        return None # Return None on error
-    
+        logger.error(f"Error fetching adjusted market price from cache for key {cache_key}: {e}", exc_info=True)
+        return None
 
 async def publish_account_structure_changed_event(redis_client: Redis, user_id: int):
     """
@@ -324,3 +312,158 @@ async def publish_account_structure_changed_event(redis_client: Redis, user_id: 
         logger.info(f"Published ACCOUNT_STRUCTURE_CHANGED event to {channel} for user_id {user_id}")
     except Exception as e:
         logger.error(f"Error publishing ACCOUNT_STRUCTURE_CHANGED event for user {user_id}: {e}", exc_info=True)
+
+async def get_live_adjusted_buy_price_for_pair(redis_client: Redis, symbol: str, user_group_name: str) -> Optional[decimal.Decimal]:
+    """
+    Fetches the live *adjusted* buy price for a given symbol, using group-specific cache.
+    Falls back to raw Firebase in-memory market data if Redis cache is cold.
+
+    Cache Key Format: adjusted_market_price:{group}:{symbol}
+    Value: {"buy": "1.12345", "sell": "...", "spread_value": "..."}
+    """
+    cache_key = f"adjusted_market_price:{user_group_name}:{symbol.upper()}"
+    try:
+        cached_data_json = await redis_client.get(cache_key)
+        if cached_data_json:
+            price_data = json.loads(cached_data_json)
+            buy_price_str = price_data.get("buy")
+            if buy_price_str and isinstance(buy_price_str, (str, int, float)):
+                return decimal.Decimal(str(buy_price_str))
+            else:
+                logger.warning(f"'buy' price not found or invalid in cache for {cache_key}: {price_data}")
+        else:
+            logger.warning(f"No cached adjusted buy price found for key: {cache_key}")
+    except (json.JSONDecodeError, decimal.InvalidOperation) as e:
+        logger.error(f"Error decoding cached data for {cache_key}: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Unexpected error accessing Redis for {cache_key}: {e}", exc_info=True)
+
+    # --- Fallback: Try raw Firebase price ---
+    try:
+        fallback_data = get_latest_market_data(symbol)
+        # For BUY price, typically use the 'offer' or 'ask' price from market data ('o' in your Firebase structure)
+        if fallback_data and 'o' in fallback_data:
+            logger.warning(f"Fallback: Using raw Firebase 'o' price for {symbol}")
+            return decimal.Decimal(str(fallback_data['o']))
+        else:
+            logger.warning(f"Fallback: No 'o' price found in Firebase for symbol {symbol}")
+    except Exception as fallback_error:
+        logger.error(f"Fallback error fetching from Firebase for {symbol}: {fallback_error}", exc_info=True)
+
+    return None
+
+async def get_live_adjusted_sell_price_for_pair(redis_client: Redis, symbol: str, user_group_name: str) -> Optional[decimal.Decimal]:
+    """
+    Fetches the live *adjusted* sell price for a given symbol, using group-specific cache.
+    Falls back to raw Firebase in-memory market data if Redis cache is cold.
+
+    Cache Key Format: adjusted_market_price:{group}:{symbol}
+    Value: {"buy": "1.12345", "sell": "...", "spread_value": "..."}
+    """
+    cache_key = f"adjusted_market_price:{user_group_name}:{symbol.upper()}"
+    try:
+        cached_data_json = await redis_client.get(cache_key)
+        if cached_data_json:
+            price_data = json.loads(cached_data_json)
+            sell_price_str = price_data.get("sell")
+            if sell_price_str and isinstance(sell_price_str, (str, int, float)):
+                return decimal.Decimal(str(sell_price_str))
+            else:
+                logger.warning(f"'sell' price not found or invalid in cache for {cache_key}: {price_data}")
+        else:
+            logger.warning(f"No cached adjusted sell price found for key: {cache_key}")
+    except (json.JSONDecodeError, decimal.InvalidOperation) as e:
+        logger.error(f"Error decoding cached data for {cache_key}: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Unexpected error accessing Redis for {cache_key}: {e}", exc_info=True)
+
+    # --- Fallback: Try raw Firebase price ---
+    try:
+        fallback_data = get_latest_market_data(symbol)
+        # For SELL price, typically use the 'bid' price from market data ('b' in your Firebase structure)
+        if fallback_data and 'b' in fallback_data:
+            logger.warning(f"Fallback: Using raw Firebase 'b' price for {symbol}")
+            return decimal.Decimal(str(fallback_data['b']))
+        else:
+            logger.warning(f"Fallback: No 'b' price found in Firebase for symbol {symbol}")
+    except Exception as fallback_error:
+        logger.error(f"Fallback error fetching from Firebase for {symbol}: {fallback_error}", exc_info=True)
+
+    return None
+
+async def set_group_settings_cache(redis_client: Redis, group_name: str, settings: Dict[str, Any]):
+    """
+    Stores general group settings in Redis.
+    Settings include sending_orders, etc.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for setting group settings cache for group '{group_name}'.")
+        return
+
+    key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}" # Use lower for consistency
+    try:
+        settings_serializable = json.dumps(settings, cls=DecimalEncoder)
+        await redis_client.set(key, settings_serializable, ex=GROUP_SETTINGS_CACHE_EXPIRY_SECONDS)
+        logger.debug(f"Group settings cached for group '{group_name}'.")
+    except Exception as e:
+        logger.error(f"Error setting group settings cache for group '{group_name}': {e}", exc_info=True)
+
+async def get_group_settings_cache(redis_client: Redis, group_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves general group settings from Redis cache.
+    Returns None if no settings found for the specified group.
+    
+    Expected settings include:
+    - sending_orders: str (e.g., 'barclays' or other values)
+    - other group-level settings
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for getting group settings cache for group '{group_name}'.")
+        return None
+
+    key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}" # Use lower for consistency
+    try:
+        settings_json = await redis_client.get(key)
+        if settings_json:
+            settings = json.loads(settings_json, object_hook=decode_decimal)
+            logger.debug(f"Group settings retrieved from cache for group '{group_name}'.")
+            return settings
+        logger.debug(f"Group settings not found in cache for group '{group_name}'.")
+        return None
+    except Exception as e:
+        logger.error(f"Error getting group settings cache for group '{group_name}': {e}", exc_info=True)
+        return None
+
+# --- Last Known Price Cache ---
+async def set_last_known_price(redis_client: Redis, symbol: str, price_data: dict):
+    """
+    Store the last known price data for a symbol in Redis.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for setting last known price for {symbol}.")
+        return
+    key = f"last_price:{symbol.upper()}"
+    try:
+        await redis_client.set(key, json.dumps(price_data, cls=DecimalEncoder))
+        logger.debug(f"Last known price cached for symbol {symbol}")
+    except Exception as e:
+        logger.error(f"Error setting last known price for symbol {symbol}: {e}", exc_info=True)
+
+async def get_last_known_price(redis_client: Redis, symbol: str) -> Optional[dict]:
+    """
+    Retrieve the last known price data for a symbol from Redis.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for getting last known price for {symbol}.")
+        return None
+    key = f"last_price:{symbol.upper()}"
+    try:
+        data_json = await redis_client.get(key)
+        if data_json:
+            data = json.loads(data_json, object_hook=decode_decimal)
+            logger.debug(f"Last known price retrieved from cache for symbol {symbol}")
+            return data
+        return None
+    except Exception as e:
+        logger.error(f"Error getting last known price for symbol {symbol}: {e}", exc_info=True)
+        return None

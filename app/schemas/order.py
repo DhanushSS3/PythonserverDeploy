@@ -105,6 +105,21 @@ class UpdateStopLossTakeProfitRequest(BaseModel):
         from_attributes = True
 
 
+# --- Update Order ---
+class OrderUpdateRequest(BaseModel):
+    order_status: str = Field(..., description="New status of the order (OPEN, CLOSE, etc.)")
+    order_price: Optional[Decimal] = Field(None, description="Updated order price if changed")
+    margin: Optional[Decimal] = Field(None, description="Updated margin if changed")
+    profit_loss: Optional[Decimal] = Field(None, description="Profit/loss amount if order is closed")
+    close_price: Optional[Decimal] = Field(None, description="Price at which order was closed")
+    close_time: Optional[str] = Field(None, description="Time when order was closed")
+
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v),
+        }
+
+
 # --- Order PATCH Update Schema ---
 class OrderUpdateRequest(BaseModel):
     order_status: Optional[str] = None

@@ -259,6 +259,7 @@ async def get_current_user(
 
     try:
         payload = decode_token(token)
+        logger.info(f"Token payload in get_current_user: {payload}")
         user_id = payload.get("sub")
         user_type = payload.get("user_type")
         if user_id is None or user_type not in ("live", "demo", "admin"): # Added 'admin' to user_type check
@@ -267,14 +268,24 @@ async def get_current_user(
 
         # Strictly filter by BOTH user_type and id
         if user_type == "demo":
+            logger.info(f"Looking up demo user with ID: {user_id}")
             # from app.database.models import DemoUser # Already imported at the top
             result = await db.execute(select(DemoUser).filter(DemoUser.id == int(user_id), DemoUser.user_type == "demo"))
             user = result.scalars().first()
+            if user:
+                logger.info(f"Found demo user - ID: {user.id}, Type: {user.user_type}")
+            else:
+                logger.warning(f"Demo user not found for ID: {user_id}")
         else: # Covers "live" and "admin" if "admin" is a separate type from "live" user model
+            logger.info(f"Looking up live user with ID: {user_id}, Type: {user_type}")
             # from app.database.models import User # Already imported at the top
             # Assuming 'admin' users are also stored in the 'User' table and have user_type='admin'
             result = await db.execute(select(User).filter(User.id == int(user_id), User.user_type == user_type))
             user = result.scalars().first()
+            if user:
+                logger.info(f"Found live user - ID: {user.id}, Type: {user.user_type}")
+            else:
+                logger.warning(f"Live user not found for ID: {user_id}, Type: {user_type}")
 
         if user is None:
             logger.warning(f"User ID {user_id} with type {user_type} from access token not found in database.")
@@ -287,6 +298,7 @@ async def get_current_user(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is not active or verified."
             )
+        logger.info(f"Successfully authenticated user - ID: {user.id}, Type: {user.user_type}, Class: {type(user).__name__}")
         return user
 
     except JWTError:
@@ -332,6 +344,8 @@ async def get_user_from_service_or_user_token(
     """
     try:
         payload = decode_token(token)
+        logger.info(f"Token payload: {payload}")
+        
         if payload.get("sub") == "service":
             logger.info(f"Service account token detected for service: {payload.get('service_name')}")
             # If a service account token, extract target user_id and user_type from request body or query params
@@ -358,26 +372,20 @@ async def get_user_from_service_or_user_token(
                 stmt = select(User).where(User.id == int(user_id), User.user_type == "live")
             
             result = await db.execute(stmt)
-            user = result.scalars().first()
+            user = result.scalar_one_or_none()
             
             if not user:
                 logger.warning(f"Target user (ID: {user_id}, Type: {target_user_type}) not found for service account.")
                 raise HTTPException(status_code=404, detail=f"Target user (ID: {user_id}, Type: {target_user_type}) not found.")
             
-            # Optional: Add a check here if the service_name from payload is authorized
-            # to access/impersonate the 'target_user_type' (e.g., service 'analytics_service'
-            # can only read 'live' users). This depends on your authorization strategy.
-            # Example:
-            # service_name_from_token = payload.get("service_name")
-            # if service_name_from_token == "analytics_service" and target_user_type != "live":
-            #     raise HTTPException(status_code=403, detail="Analytics service cannot target demo users.")
-
             logger.info(f"Service account '{payload.get('service_name')}' successfully identified target user ID: {user_id}, Type: {target_user_type}")
             return user
         else:
             # For regular user tokens, defer to get_current_user (which is now strict on both fields)
             logger.info("Regular user token detected. Deferring to get_current_user.")
-            return await get_current_user(db=db, token=token)
+            user = await get_current_user(db=db, token=token)
+            logger.info(f"Authenticated user - ID: {user.id}, Type: {user.user_type}, Class: {type(user).__name__}")
+            return user
     except HTTPException: # Re-raise HTTPExceptions as they are intended errors
         raise
     except Exception as e:

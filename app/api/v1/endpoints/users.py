@@ -253,11 +253,11 @@ async def login_with_user_type(
     refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
-        data={"sub": str(user.id), "user_type": user_type},
+        data={"sub": str(user.id), "user_type": user_type, "account_number": user.account_number},
         expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(
-        data={"sub": str(user.id), "user_type": user_type},
+        data={"sub": str(user.id), "user_type": user_type, "account_number": user.account_number},
         expires_delta=refresh_token_expires
     )
 
@@ -330,12 +330,13 @@ async def refresh_access_token(
         refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
         # Optionally, include user_type if present in the original token
         user_type = payload.get("user_type", getattr(user, "user_type", "live"))
+        account_number = payload.get("account_number", getattr(user, "account_number", None))
         new_access_token = create_access_token(
-            data={"sub": str(user.id), "user_type": user_type},
+            data={"sub": str(user.id), "user_type": user_type, "account_number": account_number},
             expires_delta=access_token_expires
         )
         new_refresh_token = create_refresh_token(
-            data={"sub": str(user.id), "user_type": user_type},
+            data={"sub": str(user.id), "user_type": user_type, "account_number": account_number},
             expires_delta=refresh_token_expires
         )
         await store_refresh_token(client=redis_client, user_id=user.id, refresh_token=new_refresh_token)
@@ -853,11 +854,11 @@ async def login_demo_user(
     refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
-        data={"sub": str(demo_user.id), "user_type": "demo"}, # Include user_type in token
+        data={"sub": str(demo_user.id), "user_type": "demo", "account_number": demo_user.account_number},
         expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(
-        data={"sub": str(demo_user.id), "user_type": "demo"}, # Include user_type in token
+        data={"sub": str(demo_user.id), "user_type": "demo", "account_number": demo_user.account_number},
         expires_delta=refresh_token_expires
     )
 
