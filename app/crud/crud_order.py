@@ -16,6 +16,20 @@ def get_order_model(user_type: str):
 
 # Create a new order
 async def create_order(db: AsyncSession, order_data: dict, order_model: Type[UserOrder | DemoUserOrder]):
+    import logging
+    orders_logger = logging.getLogger('orders-log-debug')
+    file_handler = logging.FileHandler('logs/orders.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    file_handler.setFormatter(formatter)
+    if not orders_logger.hasHandlers():
+        orders_logger.addHandler(file_handler)
+    orders_logger.setLevel(logging.DEBUG)
+    orders_logger.info(f"[ENTER-CRUD] create_order called with: {order_data}")
+    orders_logger.debug(f"[DEBUG][create_order] Received order_data: {order_data}")
+    # Ensure 'status' is present and valid
+    if 'status' not in order_data or not isinstance(order_data['status'], str) or not (0 <= len(order_data['status']) <= 30):
+        orders_logger.debug(f"[DEBUG][create_order] status field value: {order_data.get('status')}")
+        raise ValueError("'status' is required and must be a string of length 10-30.")
     db_order = order_model(**order_data)
     db.add(db_order)
     await db.commit()
@@ -198,7 +212,20 @@ async def create_user_order(
     """
     Create a new order in the database.
     """
+    import logging
+    orders_logger = logging.getLogger('orders-log-debug')
+    file_handler = logging.FileHandler('logs/orders.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    file_handler.setFormatter(formatter)
+    if not orders_logger.hasHandlers():
+        orders_logger.addHandler(file_handler)
+    orders_logger.setLevel(logging.DEBUG)
+    orders_logger.debug(f"[DEBUG][create_user_order] Received order_data: {order_data}")
     try:
+        # Ensure 'status' is present and valid
+        if 'status' not in order_data or not isinstance(order_data['status'], str) or not (0 <= len(order_data['status']) <= 30):
+            orders_logger.debug(f"[DEBUG][create_user_order] status field value: {order_data.get('status')}")
+            raise ValueError("'status' is required and must be a string of length 10-30.")
         db_order = order_model(**order_data)
         db.add(db_order)
         await db.commit()
@@ -206,7 +233,7 @@ async def create_user_order(
         return db_order
     except Exception as e:
         await db.rollback()
-        print(f"Error creating order: {e}")
+        orders_logger.error(f"Error creating order: {e}")
         raise e
 
 async def update_order(
@@ -214,26 +241,20 @@ async def update_order(
     order_id: str,
     order_data: Dict[str, Any],
     order_model=UserOrder
-) -> Optional[Any]:
-    """
-    Update an existing order.
-    """
-    try:
-        stmt = select(order_model).where(order_model.order_id == order_id)
-        result = await db.execute(stmt)
-        db_order = result.scalars().first()
-        
-        if db_order:
-            for key, value in order_data.items():
-                setattr(db_order, key, value)
-            await db.commit()
-            await db.refresh(db_order)
-            return db_order
+):
+    result = await db.execute(select(order_model).filter(order_model.order_id == order_id))
+    db_order = result.scalars().first()
+    if not db_order:
         return None
-    except Exception as e:
-        await db.rollback()
-        print(f"Error updating order: {e}")
-        raise e
+    # If 'status' is being updated, validate it
+    if 'status' in order_data and order_data['status'] is not None:
+        if not isinstance(order_data['status'], str) or not (10 <= len(order_data['status']) <= 30):
+            raise ValueError("'status' must be a string of length 10-30.")
+    for key, value in order_data.items():
+        setattr(db_order, key, value)
+    await db.commit()
+    await db.refresh(db_order)
+    return db_order
 
 async def delete_order(
     db: AsyncSession,

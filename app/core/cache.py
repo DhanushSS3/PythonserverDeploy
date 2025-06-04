@@ -58,15 +58,23 @@ async def set_user_data_cache(redis_client: Redis, user_id: int, data: Dict[str,
 
     key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_id}"
     try:
+        # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(data, cls=DecimalEncoder)
         await redis_client.set(key, data_serializable, ex=USER_DATA_CACHE_EXPIRY_SECONDS)
         logger.debug(f"User data cached for user {user_id}")
     except Exception as e:
         logger.error(f"Error setting user data cache for user {user_id}: {e}", exc_info=True)
 
-async def get_user_data_cache(redis_client: Redis, user_id: int) -> Optional[Dict[str, Any]]:
+
+async def get_user_data_cache(
+    redis_client: Redis,
+    user_id: int,
+    db: 'AsyncSession' = None,  # Optional for backward compatibility
+    user_type: str = None       # Optional for backward compatibility
+) -> Optional[Dict[str, Any]]:
     """
-    Retrieves user data from Redis cache. Expected data includes 'group_name'.
+    Retrieves user data from Redis cache. If not found, fetches from DB,
+    caches it, and then returns it. Expected data includes 'group_name', 'leverage', etc.
     """
     if not redis_client:
         logger.warning(f"Redis client not available for getting user data cache for user {user_id}.")
@@ -79,10 +87,42 @@ async def get_user_data_cache(redis_client: Redis, user_id: int) -> Optional[Dic
             data = json.loads(data_json, object_hook=decode_decimal)
             logger.debug(f"User data retrieved from cache for user {user_id}")
             return data
+        # If not in cache, try fetching from DB if db and user_type are provided
+        if db is not None and user_type is not None:
+            from app.crud import user as crud_user
+            logger.info(f"User data for user {user_id} (type: {user_type}) not in cache. Fetching from DB.")
+            db_user_instance = None
+            actual_user_type = user_type.lower()
+            if actual_user_type == 'live':
+                db_user_instance = await crud_user.get_user_by_id(db, user_id, user_type=actual_user_type)
+            elif actual_user_type == 'demo':
+                db_user_instance = await crud_user.get_demo_user_by_id(db, user_id, user_type=actual_user_type)
+            if db_user_instance:
+                user_data_to_cache = {
+                    "id": db_user_instance.id,
+                    "email": db_user_instance.email,
+                    "group_name": db_user_instance.group_name,
+                    "leverage": db_user_instance.leverage,
+                    "user_type": db_user_instance.user_type,
+                    "account_number": getattr(db_user_instance, 'account_number', None),
+                    "wallet_balance": db_user_instance.wallet_balance,
+                    "margin": db_user_instance.margin,
+                    "first_name": getattr(db_user_instance, 'first_name', None),
+                    "last_name": getattr(db_user_instance, 'last_name', None),
+                    "country": getattr(db_user_instance, 'country', None),
+                    "phone_number": getattr(db_user_instance, 'phone_number', None),
+                }
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                logger.info(f"User data for user {user_id} (type: {actual_user_type}) fetched from DB and cached.")
+                return user_data_to_cache
+            else:
+                logger.warning(f"User {user_id} (type: {actual_user_type}) not found in DB. Cannot cache.")
+                return None
         return None
     except Exception as e:
         logger.error(f"Error getting user data cache for user {user_id}: {e}", exc_info=True)
         return None
+
 
 # --- User Portfolio Cache (Keep as is) ---
 async def set_user_portfolio_cache(redis_client: Redis, user_id: int, portfolio_data: Dict[str, Any]):

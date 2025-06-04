@@ -121,16 +121,16 @@ async def calculate_single_order_margin(
         contract_size = Decimal(str(external_symbol_info.get('contract_size', 100000)))
         order_type_upper = order_type.upper()
         
+        contract_value = quantity * contract_size
+        adjusted_price = raw_ask_price
+        adjusted_price = raw_bid_price
+
         # Calculate contract value based on order type
         if order_type_upper in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-            contract_value = quantity * contract_size * raw_ask_price
-            adjusted_price = raw_ask_price
+            margin = ((contract_value * raw_ask_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
         else:  # SELL orders
-            contract_value = quantity * contract_size * raw_bid_price
-            adjusted_price = raw_bid_price
-
-        # Calculate base margin
-        margin = (contract_value / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+            margin = ((contract_value * raw_ask_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+            
 
         # Calculate commission
         commission = Decimal('0.0')

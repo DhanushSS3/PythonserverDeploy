@@ -1,6 +1,7 @@
 from typing import Optional, Any
 from pydantic import BaseModel, Field, model_validator
 from decimal import Decimal
+from pydantic import validator
 
 # --- Place Order ---
 class OrderPlacementRequest(BaseModel):
@@ -9,6 +10,7 @@ class OrderPlacementRequest(BaseModel):
     order_quantity: Decimal = Field(..., gt=0)
     order_price: Decimal # For LIMIT/STOP. For MARKET, can be current market price or 0 if server fetches.
     user_type: str # "live" or "demo" as passed by frontend
+    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
 
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
@@ -29,8 +31,9 @@ class OrderCreateInternal(BaseModel):
     order_type: str
     order_price: Decimal
     order_quantity: Decimal
-    contract_value: Decimal
-    margin: Decimal
+    contract_value: Optional[Decimal]
+    margin: Optional[Decimal]
+    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
 
     # Optional financials
     stop_loss: Optional[Decimal] = None
@@ -49,6 +52,7 @@ class OrderResponse(BaseModel):
     order_quantity: Decimal
     contract_value: Decimal
     margin: Decimal
+    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
     net_profit: Optional[Decimal] = None
@@ -73,7 +77,7 @@ class CloseOrderRequest(BaseModel):
     order_type: Optional[str] = None
     order_company_name: Optional[str] = None
     order_status: Optional[str] = None
-    status: Optional[str] = None # This seems redundant with order_status, but keeping if frontend uses it
+    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
 
     class Config:
         json_encoders = {
@@ -90,6 +94,7 @@ class UpdateStopLossTakeProfitRequest(BaseModel):
     modify_id: Optional[str] = None # Unique ID for this modification
     stoploss_id: Optional[str] = None
     takeprofit_id: Optional[str] = None
+    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
 
     @model_validator(mode="after")
     def validate_tp_sl(self) -> 'UpdateStopLossTakeProfitRequest':
@@ -105,24 +110,29 @@ class UpdateStopLossTakeProfitRequest(BaseModel):
         from_attributes = True
 
 
-# --- Update Order ---
-class OrderUpdateRequest(BaseModel):
-    order_status: str = Field(..., description="New status of the order (OPEN, CLOSE, etc.)")
-    order_price: Optional[Decimal] = Field(None, description="Updated order price if changed")
-    margin: Optional[Decimal] = Field(None, description="Updated margin if changed")
-    profit_loss: Optional[Decimal] = Field(None, description="Profit/loss amount if order is closed")
-    close_price: Optional[Decimal] = Field(None, description="Price at which order was closed")
-    close_time: Optional[str] = Field(None, description="Time when order was closed")
+class PendingOrderPlacementRequest(OrderPlacementRequest):
+    """
+    Schema for placing pending orders (BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP).
+    """
+    order_status: str = "PENDING" # Default status for pending orders
+
+    @validator('order_type')
+    def validate_pending_order_type(cls, v):
+        valid_pending_types = {"BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"}
+        if v.upper() not in valid_pending_types:
+            raise ValueError(f"Invalid order type for pending order. Must be one of: {', '.join(valid_pending_types)}")
+        return v.upper()
 
     class Config:
-        json_encoders = {
-            Decimal: lambda v: str(v),
-        }
+        # Inherits json_encoders from OrderPlacementRequest, but can be overridden if needed
+        pass
+
 
 
 # --- Order PATCH Update Schema ---
 class OrderUpdateRequest(BaseModel):
     order_status: Optional[str] = None
+    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
     order_price: Optional[Decimal] = None
     order_quantity: Optional[Decimal] = None
     margin: Optional[Decimal] = None

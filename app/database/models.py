@@ -309,12 +309,15 @@ class Wallet(Base):
 # cancel_id, close_id, modify_id, stoploss_id, takeprofit_id, stoploss_cancel_id, takeprofit_cancel_id
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, DECIMAL as SQLDecimal, func
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Text, Table, Float, func, CheckConstraint
 from sqlalchemy.orm import relationship
 from app.database.base import Base
 
 
 class UserOrder(Base):
     __tablename__ = "user_orders"
+
+    status = Column(String(30), nullable=True, doc="Status string (max 30 chars)")
 
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(String(64), unique=True, index=True, nullable=False)
@@ -350,9 +353,17 @@ class UserOrder(Base):
 
     user = relationship("User", back_populates="orders")
 
+    __table_args__ = (
+        CheckConstraint("status IS NULL OR length(status) >= 0", name="userorder_status_min_length_0"),
+        CheckConstraint("length(status) <= 30", name="userorder_status_max_length_30"),
+    )
+
 
 class DemoUserOrder(Base):
     __tablename__ = "demo_user_orders"
+
+    # Status string field, must be between 10 and 30 characters
+    status = Column(String(30), nullable=True, doc="Status string (10-30 chars)")
 
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(String(64), unique=True, index=True, nullable=False)
@@ -387,6 +398,12 @@ class DemoUserOrder(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     user = relationship("DemoUser", back_populates="orders")
+
+    __table_args__ = (
+        CheckConstraint("status IS NULL OR length(status) >= 10", name="demouserorder_status_min_length_10"),
+        CheckConstraint("status IS NULL OR length(status) <= 30", name="demouserorder_status_max_length_30"),
+    )
+
 
 
 class RockUserOrder(Base):

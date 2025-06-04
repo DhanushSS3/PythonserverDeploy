@@ -60,9 +60,8 @@ async def calculate_total_symbol_margin_contribution(
     open_positions_for_symbol: list, # List of order objects or dicts
     order_model=None
 ) -> Dict[str, Any]: 
-    logger.warning(f"[!!! CTSMC_ENTRY_TEST !!!] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}") # FORCED WARNING
-    logger.info(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
-    # logger.info(f"[MARGIN_TOTAL_CONTRIB_ENTRY] Positions data: {open_positions_for_symbol}") # Can be very verbose
+    logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
+    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] Positions data: {open_positions_for_symbol}") # Can be very verbose
 
     total_buy_quantity = Decimal(0)
     total_sell_quantity = Decimal(0)
@@ -70,7 +69,7 @@ async def calculate_total_symbol_margin_contribution(
     contributing_orders_count = 0
 
     if not open_positions_for_symbol:
-        logger.info(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
+        logger.debug(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
         return {"total_margin": Decimal("0.0"), "contributing_orders_count": 0}
 
     for i, position in enumerate(open_positions_for_symbol):
@@ -89,14 +88,14 @@ async def calculate_total_symbol_margin_contribution(
             position_quantity = Decimal(position_quantity_str)
             position_full_margin = Decimal(position_full_margin_str)
 
-            logger.info(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
+            logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
 
             if position_quantity > 0:
                 margin_per_lot_of_position = Decimal("0.0")
                 if position_quantity != Decimal("0"): # Avoid division by zero if quantity is somehow zero
                     margin_per_lot_of_position = position_full_margin / position_quantity
                 all_margins_per_lot.append(margin_per_lot_of_position)
-                logger.info(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
+                logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
                 if position_full_margin > Decimal("0.0"):
                     contributing_orders_count +=1 # Count if this position itself contributes margin
 
@@ -113,9 +112,9 @@ async def calculate_total_symbol_margin_contribution(
     
     calculated_total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) # Changed precision to 0.01
     
-    logger.info(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}")
-    logger.info(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
-    logger.info(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}, ContributingOrders={contributing_orders_count} (based on individual stored margins)")
+    logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}")
+    logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
+    logger.debug(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}, ContributingOrders={contributing_orders_count} (based on individual stored margins)")
     
     # The contributing_orders_count here might be misleading if highest_margin_per_lot is zero.
     # The logic of this function implies that if highest_margin_per_lot is 0, total margin is 0.
@@ -151,7 +150,6 @@ async def process_new_order(
     user_type: str,
     is_barclays_live_user: bool = False
 ) -> dict:
-    logger.warning(f"[!!! PNO_ENTRY_TEST !!!] User {user_id}, Symbol: {order_data.get('symbol')}") # FORCED WARNING
     from app.services.portfolio_calculator import calculate_user_portfolio
     # Removed import: from app.services.margin_calculator import calculate_total_symbol_margin_contribution
     from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
@@ -223,15 +221,15 @@ async def process_new_order(
             logger.info(f"[MARGIN_PROCESS] User {user_id} Symbol {symbol}: MarginBefore={margin_before:.2f}, MarginAfter={margin_after:.2f}, AdditionalMargin={additional_margin:.2f}")
 
             # Step 4: Lock user and update margin
-            if user_type == 'demo':
-                db_user_locked = await get_demo_user_by_id_with_lock(db, user_id)
-            else:
-                db_user_locked = await get_user_by_id_with_lock(db, user_id)
-
-            if db_user_locked is None:
-                raise OrderProcessingError("Could not lock user record.")
-
             if not is_barclays_live_user:
+                if user_type == 'demo':
+                    db_user_locked = await get_demo_user_by_id_with_lock(db, user_id)
+                else:
+                    db_user_locked = await get_user_by_id_with_lock(db, user_id)
+
+                if db_user_locked is None:
+                    raise OrderProcessingError("Could not lock user record.")
+
                 if db_user_locked.wallet_balance < db_user_locked.margin + additional_margin:
                     raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
 
@@ -241,6 +239,7 @@ async def process_new_order(
                 )
                 logger.info(f"[MARGIN_PROCESS] User {user_id}: OriginalMarginDB={original_user_margin}, CalculatedNewMargin={db_user_locked.margin}")
                 db.add(db_user_locked)  # Ensure changes to user's margin are tracked for commit
+            # For Barclays users, skip user locking and margin update until order is confirmed
 
             # Step 5: Return order dict
             order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
@@ -256,7 +255,8 @@ async def process_new_order(
                 'margin': full_margin_usd,
                 'stop_loss': order_data.get('stop_loss'),
                 'take_profit': order_data.get('take_profit'),
-                'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
+                # 'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
+                'status': order_data.get('status'),
             }
     except Exception as e:
         logger.error(f"Error processing new order: {e}", exc_info=True)

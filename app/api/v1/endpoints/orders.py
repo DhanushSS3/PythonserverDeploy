@@ -15,7 +15,7 @@ from sqlalchemy import select
 from fastapi.security import OAuth2PasswordBearer
 
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
-from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest
+from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
 
@@ -129,19 +129,58 @@ async def place_order(
             'order_company_name': order_request.symbol,
             'order_type': order_request.order_type,
             'order_quantity': order_request.order_quantity,
+            'order_price': order_request.order_price,
+            'user_type': order_request.user_type,
+            'status': order_request.status,
             'stop_loss': order_request.stop_loss,
             'take_profit': order_request.take_profit
         }
 
         # Get user and group settings to determine if Barclays live user
         user_id_for_order = current_user.id
-        user_data_cache = await get_user_data_cache(redis_client, user_id_for_order)
-        group_name_cache = user_data_cache.get('group_name') if user_data_cache else None
-        group_settings_cache = await get_group_settings_cache(redis_client, group_name_cache) if group_name_cache else None
+        # Use user_type from request (not just current_user)
+        user_type = order_request.user_type.lower() if hasattr(order_request, 'user_type') else current_user.user_type
+        user_data_cache = await get_user_data_cache(redis_client, user_id_for_order, db, user_type)
+        group_name = user_data_cache.get('group_name') if user_data_cache else None
+        # Fallback: If group_name is missing, fetch from DB
+        if not group_name:
+            from app.crud import user as crud_user
+            db_user = await crud_user.get_user_by_id(db, user_id_for_order, user_type=user_type)
+            group_name = getattr(db_user, 'group_name', None) if db_user else None
+        group_settings_cache = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders_cache = group_settings_cache.get('sending_orders') if group_settings_cache else None
 
-        is_barclays_live_user = (current_user.user_type == 'live' and sending_orders_cache == 'barclays')
-        orders_logger.info(f"Order placement: user_id={user_id_for_order}, is_barclays_live_user={is_barclays_live_user}, user_type={current_user.user_type}, sending_orders_setting={sending_orders_cache}")
+        # If not found in cache, fetch group settings from DB
+        if (group_settings_cache is None or sending_orders_cache is None) and group_name:
+            from app.crud import group as crud_group
+            db_group_result = await crud_group.get_group_by_name(db, group_name)
+            orders_logger.info(f"[DEBUG] db_group_result fetched from DB: {db_group_result}")
+            sending_orders_extracted = None
+            if db_group_result:
+                # If it's a list (multiple group-symbol records), extract from the first
+                if isinstance(db_group_result, list):
+                    orders_logger.info(f"[DEBUG] Number of group records found: {len(db_group_result)}")
+                    if len(db_group_result) > 0 and hasattr(db_group_result[0], 'sending_orders'):
+                        sending_orders_extracted = getattr(db_group_result[0], 'sending_orders', None)
+                # If it's a single record
+                elif hasattr(db_group_result, 'sending_orders'):
+                    sending_orders_extracted = getattr(db_group_result, 'sending_orders', None)
+            if sending_orders_extracted is not None:
+                sending_orders_cache = sending_orders_extracted
+                orders_logger.info(f"[DEBUG] sending_orders_cache extracted from DB: {sending_orders_cache}")
+            else:
+                orders_logger.warning(f"[WARNING] Group '{group_name}' not found in DB or missing 'sending_orders' attribute. db_group_result={db_group_result}")
+
+        # Normalize for robust comparison
+        sending_orders_normalized = sending_orders_cache.lower() if isinstance(sending_orders_cache, str) else sending_orders_cache
+        orders_logger.info(f"[DEBUG] group_settings_cache: {group_settings_cache}")
+        orders_logger.info(f"[DEBUG] sending_orders_cache value: {sending_orders_cache} (type: {type(sending_orders_cache)})")
+        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"Order placement: user_id={user_id_for_order}, is_barclays_live_user={is_barclays_live_user}, user_type={user_type}, group_name={group_name}, sending_orders_setting={sending_orders_cache}")
+
+        # Force order_status to 'PROCESSING' for Barclays live users
+        if is_barclays_live_user:
+            order_data['order_status'] = 'PROCESSING'
 
         # Prepare order data (all IDs, margin, etc.)
         order_create_internal = await process_new_order(
@@ -155,6 +194,7 @@ async def place_order(
 
         # Create order in database (OrderCreateInternal-compatible)
         order_model = get_order_model(current_user.user_type)
+        orders_logger.info(f"[PRE-CRUD] About to call create_order with: {order_create_internal}")
         db_order = await crud_order.create_order(db, order_create_internal, order_model)
 
         # Log user margin from session before commit
@@ -176,7 +216,7 @@ async def place_order(
         # --- Portfolio Update & Websocket Event ---
         try:
             user_id = db_order.order_user_id
-            user_data = await get_user_data_cache(redis_client, user_id)
+            user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
             if user_data:
                 group_name = user_data.get('group_name')
                 group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
@@ -200,6 +240,55 @@ async def place_order(
         except Exception as e:
             orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order placement: {e}", exc_info=True)
 
+        # --- Barclays Firebase Push Logic ---
+        if is_barclays_live_user:
+            try:
+                # For Barclays live users, ensure order_status is PROCESSING and do NOT update margin in DB
+                # Check margin and send to Firebase if sufficient, but do not update user margin
+                user_id = db_order.order_user_id
+                user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
+                group_name = user_data.get('group_name') if user_data else None
+                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
+                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                open_positions_dicts = [
+                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                    for pos in open_positions
+                ]
+                adjusted_market_prices = {}
+                if group_symbol_settings:
+                    for symbol_key in group_symbol_settings.keys():
+                        prices = await get_last_known_price(redis_client, symbol_key)
+                        if prices:
+                            adjusted_market_prices[symbol_key] = prices
+                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                free_margin = Decimal(str(portfolio.get('free_margin', '0')))
+                order_margin = Decimal(str(db_order.margin or 0))
+                # Do NOT update user margin for Barclays users; just check
+                if free_margin > order_margin:
+                    firebase_order_data = {
+                        'order_id': db_order.order_id,
+                        'order_user_id': db_order.order_user_id,
+                        'order_company_name': db_order.order_company_name,
+                        'order_type': db_order.order_type,
+                        'order_status': db_order.order_status,  # Should be PROCESSING
+                        'order_price': db_order.order_price,
+                        'order_quantity': db_order.order_quantity,
+                        'contract_value': db_order.contract_value,
+                        'margin': db_order.margin,
+                        'stop_loss': db_order.stop_loss,
+                        'take_profit': db_order.take_profit,
+
+                        'status': getattr(db_order, 'status', None),
+                    }
+                    orders_logger.info(f"[FIREBASE] Payload being sent to Firebase: {firebase_order_data}")
+                    await send_order_to_firebase(firebase_order_data, "live")
+                    orders_logger.info(f"[FIREBASE] Barclays order sent to Firebase: {db_order.order_id} (order_status=PROCESSING, margin not updated in DB)")
+                else:
+                    orders_logger.warning(f"[FIREBASE] Barclays order NOT sent to Firebase due to insufficient free margin. free_margin={free_margin}, order_margin={order_margin}")
+            except Exception as e:
+                orders_logger.error(f"[FIREBASE] Error sending Barclays order to Firebase: {e}", exc_info=True)
+
         return OrderResponse(
             order_id=db_order.order_id,
             order_status=db_order.order_status,
@@ -220,6 +309,98 @@ async def place_order(
     except Exception as e:
         orders_logger.error(f"Unexpected error in place_order: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+
+@router.post("/pending-place", response_model=OrderResponse)
+async def place_pending_order(
+    order_request: PendingOrderPlacementRequest, # Use the new schema here
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Place a new PENDING order (BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP).
+    """
+    try:
+        orders_logger.info(f"Pending order placement request received - User ID: {current_user.id}, Symbol: {order_request.symbol}, Type: {order_request.order_type}, Quantity: {order_request.order_quantity}")
+        
+        user_id_for_order = current_user.id
+        user_type = order_request.user_type.lower()
+
+        # Generate a unique order_id for the new pending order
+        new_order_id = str(uuid.uuid4())
+
+        # Prepare order data for internal processing
+        order_data_for_internal_processing = {
+            'order_id': new_order_id, # Assign the generated order_id
+            'order_company_name': order_request.symbol,
+            'order_type': order_request.order_type,
+            'order_quantity': order_request.order_quantity,
+            'order_price': order_request.order_price, # This is the limit/stop price
+            'user_type': user_type,
+            'status': order_request.status,
+            'stop_loss': order_request.stop_loss,
+            'take_profit': order_request.take_profit,
+            'order_user_id': user_id_for_order,
+            'order_status': order_request.order_status, # This will be PENDING from the schema default
+            'contract_value': None, # Not known at placement, will be set on trigger
+            'margin': None, # Not known at placement, will be set on trigger
+            'open_time': None # Not open yet
+        }
+
+        orders_logger.info(f"Placing PENDING order: {order_request.order_type} for user {user_id_for_order} at price {order_request.order_price}")
+
+        # Create order in database with PENDING status
+        # Convert Pydantic model to dictionary using .model_dump()
+        order_create_internal_dict = OrderCreateInternal(**order_data_for_internal_processing).model_dump()
+        order_model = get_order_model(user_type)
+        # Pass the dictionary to crud_order.create_order
+        db_order = await crud_order.create_order(db, order_create_internal_dict, order_model) 
+        await db.commit()
+        await db.refresh(db_order)
+
+        # Add to Redis pending orders
+        # Ensure the order dict passed to add_pending_order has all necessary fields
+        order_dict_for_redis = {
+            'order_id': db_order.order_id,
+            'order_user_id': db_order.order_user_id,
+            'order_company_name': db_order.order_company_name,
+            'order_type': db_order.order_type,
+            'order_status': db_order.order_status, # Should be PENDING
+            'order_price': str(db_order.order_price), # Store as string for JSON serialization
+            'order_quantity': str(db_order.order_quantity), # Store as string
+            'contract_value': str(db_order.contract_value) if db_order.contract_value else None,
+            'margin': str(db_order.margin) if db_order.margin else None,
+            'stop_loss': str(db_order.stop_loss) if db_order.stop_loss else None,
+            'take_profit': str(db_order.take_profit) if db_order.take_profit else None,
+            'user_type': user_type,
+            'status': db_order.status,
+            'open_time': db_order.open_time.isoformat() if db_order.open_time else None,
+            # Add any other fields that might be needed by trigger_pending_order
+        }
+        await add_pending_order(redis_client, order_dict_for_redis)
+        orders_logger.info(f"Pending order {db_order.order_id} added to Redis.")
+
+        return OrderResponse(
+            order_id=db_order.order_id,
+            order_status=db_order.order_status,
+            order_user_id=db_order.order_user_id,
+            order_company_name=db_order.order_company_name,
+            order_type=db_order.order_type,
+            order_price=db_order.order_price,
+            order_quantity=db_order.order_quantity,
+            contract_value=db_order.contract_value,
+            margin=db_order.margin,
+            stop_loss=db_order.stop_loss,
+            take_profit=db_order.take_profit
+        )
+
+    except OrderProcessingError as e:
+        orders_logger.error(f"Order processing error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        orders_logger.error(f"Unexpected error in place_pending_order: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process pending order: {str(e)}")
+
 
 @router.post("/close", response_model=OrderResponse)
 async def close_order(
