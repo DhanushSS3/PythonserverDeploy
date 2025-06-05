@@ -204,6 +204,28 @@ async def get_open_orders_by_user_id_and_symbol(
         print(f"Error getting open orders: {e}")
         return []
 
+async def get_order_by_id_and_user_id(
+    db: AsyncSession,
+    order_id: str,
+    user_id: int,
+    order_model
+) -> Any:
+    """
+    Retrieve a single order by order_id and user_id for the given order model.
+    """
+    try:
+        stmt = select(order_model).where(
+            and_(
+                order_model.order_id == order_id,
+                order_model.order_user_id == user_id
+            )
+        )
+        result = await db.execute(stmt)
+        return result.scalars().first()
+    except Exception as e:
+        print(f"Error getting order by order_id and user_id: {e}")
+        return None
+
 async def create_user_order(
     db: AsyncSession,
     order_data: Dict[str, Any],

@@ -232,6 +232,13 @@ async def startup_event():
 
     logger.info("Application startup event finished.")
 
+    if global_redis_client_instance:
+        try:
+            pong = await global_redis_client_instance.ping()
+            logger.info(f"Redis ping response: {pong}")
+        except Exception as e:
+            logger.critical(f"Redis ping failed post-init: {e}", exc_info=True)
+
 background_tasks = set()
 
 @app.on_event("shutdown")

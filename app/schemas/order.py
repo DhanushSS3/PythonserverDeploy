@@ -44,17 +44,20 @@ class OrderCreateInternal(BaseModel):
 # --- Order Response Schema ---
 class OrderResponse(BaseModel):
     order_id: str
-    order_status: str
-    order_user_id: int
-    order_company_name: str
+    order_user_id: int  # Use this field for user id
+    order_company_name: str  # Use this for symbol/company
     order_type: str
-    order_price: Decimal
     order_quantity: Decimal
-    contract_value: Decimal
-    margin: Decimal
-    status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
+    order_price: Decimal
+    status: str
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
+    order_status: str
+    contract_value: Optional[Decimal] = None  # Allow None for pending orders
+    margin: Optional[Decimal] = None  # Allow None for pending orders
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    # open_time removed; use created_at
     net_profit: Optional[Decimal] = None
     close_price: Optional[Decimal] = None
     commission: Optional[Decimal] = None

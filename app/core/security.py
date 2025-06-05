@@ -106,28 +106,40 @@ def decode_token(token: str) -> dict[str, Any]:
 
 # --- Redis Integration ---
 
+import socket
+
 async def connect_to_redis() -> Optional[aioredis.Redis]:
-    """
-    Establishes connection to the Redis server and returns the client instance.
-    Called during application startup. Returns None if connection fails.
-    """
     logger.info("Attempting to connect to Redis...")
+
     try:
-        logger.info(f"Redis connection parameters: host={settings.REDIS_HOST}, port={settings.REDIS_PORT}, db={settings.REDIS_DB}, password={'<set>' if settings.REDIS_PASSWORD else '<not set>'}")
+        redis_host = settings.REDIS_HOST
+        redis_port = settings.REDIS_PORT
+
+        # Resolve IP address from hostname
+        resolved_ip = socket.gethostbyname(redis_host)
+
+        logger.info(
+            f"Redis connection details:\n"
+            f"  Host: {redis_host}\n"
+            f"  Resolved IP: {resolved_ip}\n"
+            f"  Port: {redis_port}\n"
+            f"  DB: {settings.REDIS_DB}\n"
+            f"  Password: {'<set>' if settings.REDIS_PASSWORD else '<not set>'}"
+        )
 
         client = aioredis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
+            host=redis_host,
+            port=redis_port,
             db=settings.REDIS_DB,
             password=settings.REDIS_PASSWORD,
             decode_responses=True
         )
         await client.ping()
-        logger.info("Connected to Redis successfully.")
+        logger.info(f"✅ Connected to Redis at {redis_host} ({resolved_ip}):{redis_port}")
         return client
 
     except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
+        logger.error(f"❌ Failed to connect to Redis: {e}", exc_info=True)
         return None
 
 async def close_redis_connection(client: Optional[aioredis.Redis]):

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import for raw market data
 from app.firebase_stream import get_latest_market_data
-from app.core.cache import get_adjusted_market_price_cache
+from app.core.cache import get_adjusted_market_price_cache, get_last_known_price
 from redis import Redis
 from app.core.logging_config import orders_logger
 
@@ -19,7 +19,8 @@ async def _convert_to_usd(
     user_id: int,
     position_id: str,
     value_description: str,
-    db: AsyncSession
+    db: AsyncSession,
+    redis_client
 ) -> Decimal:
     """
     Converts an amount from a given currency to USD using raw market prices.
@@ -28,15 +29,9 @@ async def _convert_to_usd(
         if from_currency == "USD":
             return amount
 
-        # Get raw market data
-        raw_market_data = await get_latest_market_data()
-        if not raw_market_data:
-            orders_logger.error(f"Failed to get raw market data for {value_description} conversion")
-            return amount
-
         # Try direct conversion first (e.g., EURUSD)
         direct_conversion_symbol = f"{from_currency}USD"
-        raw_direct_prices = raw_market_data.get(direct_conversion_symbol, {})
+        raw_direct_prices = await get_last_known_price(redis_client, direct_conversion_symbol)
         if raw_direct_prices and 'b' in raw_direct_prices:
             rate_str = raw_direct_prices['b']
             rate = Decimal(str(rate_str))
@@ -46,6 +41,22 @@ async def _convert_to_usd(
             converted_amount_usd = amount * rate
             orders_logger.debug(f"Direct conversion for {value_description}: {amount} {from_currency} * {rate} = {converted_amount_usd} USD")
             return converted_amount_usd
+
+        # Try inverse conversion (e.g., USDCAD)
+        inverse_conversion_symbol = f"USD{from_currency}"
+        raw_inverse_prices = await get_last_known_price(redis_client, inverse_conversion_symbol)
+        if raw_inverse_prices and 'b' in raw_inverse_prices:
+            rate_str = raw_inverse_prices['b']
+            rate = Decimal(str(rate_str))
+            if rate <= 0:
+                orders_logger.error(f"Invalid inverse conversion rate for {inverse_conversion_symbol}: {rate}")
+                return amount
+            converted_amount_usd = amount / rate
+            orders_logger.debug(f"Inverse conversion for {value_description}: {amount} {from_currency} / {rate} = {converted_amount_usd} USD")
+            return converted_amount_usd
+
+        orders_logger.error(f"No conversion rate found for {from_currency} to USD for {value_description}")
+        return amount
 
         # Try indirect conversion through USD (e.g., EUR -> USD -> JPY)
         indirect_conversion_symbol = f"USD{from_currency}"
