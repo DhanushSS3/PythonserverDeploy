@@ -39,7 +39,8 @@ from app.services.order_processing import (
     process_new_order,
     OrderProcessingError,
     InsufficientFundsError,
-    calculate_total_symbol_margin_contribution
+    calculate_total_symbol_margin_contribution,
+    generate_unique_10_digit_id
 )
 from app.services.portfolio_calculator import _convert_to_usd, calculate_user_portfolio
 from app.services.margin_calculator import calculate_single_order_margin, get_live_adjusted_buy_price_for_pair
@@ -353,7 +354,7 @@ async def place_order(
             close_message=getattr(db_order, 'close_message', None),
             stoploss_id=getattr(db_order, 'stoploss_id', None),
             takeprofit_id=getattr(db_order, 'takeprofit_id', None),
-            close_order_id=getattr(db_order, 'close_order_id', None),
+            close_id=getattr(db_order, 'close_id', None),
         )
 
     except OrderProcessingError as e:
@@ -379,8 +380,9 @@ async def place_pending_order(
         user_id_for_order = current_user.id
         user_type = order_request.user_type.lower()
 
-        # Generate a unique order_id for the new pending order
-        new_order_id = str(uuid.uuid4())
+        # Generate a unique order_id for the new pending order using the async utility
+        order_model = get_order_model(user_type)
+        new_order_id = await generate_unique_10_digit_id(db, order_model, 'order_id')
 
         # Prepare order data for internal processing
         order_data_for_internal_processing = {
@@ -419,7 +421,7 @@ async def place_pending_order(
         # Create order in database with PENDING status
         # Create the OrderCreateInternal model (contract_value and margin are None)
         order_create_internal = OrderCreateInternal(**order_data_for_internal_processing)
-        order_model = get_order_model(user_type)
+        # order_model already set above
         # Convert to dict before passing to crud_order.create_order
         db_order = await crud_order.create_order(db, order_create_internal.model_dump(), order_model) 
         await db.commit()
@@ -530,7 +532,7 @@ async def close_order(
         orders_logger.info(f"Request to close order {order_id} for user {user_to_operate_on.id} ({type(user_to_operate_on).__name__}) with price {close_price}. Frontend provided type: {close_request.order_type}, company: {close_request.order_company_name}, status: {close_request.order_status}, frontend_status: {close_request.status}.")
 
         from app.services.order_processing import generate_unique_10_digit_id
-        close_order_id = await generate_unique_10_digit_id(db, order_model_class, 'close_id')
+        close_id = await generate_unique_10_digit_id(db, order_model_class, 'close_id')
 
         try:
             if isinstance(user_to_operate_on, User):
@@ -551,7 +553,7 @@ async def close_order(
                         "status": close_request.status,
                         "action": "close_order",
                         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                        "close_id": close_id # Include close_order_id for Firebase
+                        "close_id": close_id # Include close_id for Firebase
                     }
 
                     background_tasks.add_task(send_order_to_firebase, firebase_close_data, "live")
@@ -560,7 +562,7 @@ async def close_order(
                     if db_order_for_response:
                         db_order_for_response.order_status = "PENDING_CLOSE"
                         db_order_for_response.close_message = "Order sent to service provider for closure."
-                        db_order_for_response.close_order_id = close_order_id # Save close_order_id in DB
+                        db_order_for_response.close_id = close_id # Save close_id in DB
                         await db.commit()
                         await db.refresh(db_order_for_response)
                         
@@ -569,7 +571,6 @@ async def close_order(
                         update_fields_for_history = OrderUpdateRequest(
                             order_status="PENDING_CLOSE",
                             close_message="Order sent to service provider for closure.",
-                            close_id=close_order_id, # Log the close_order_id here
                             close_price=close_price, # Log the requested close price
                         ).model_dump(exclude_unset=True)
                         await crud_order.update_order_with_tracking(
@@ -645,7 +646,7 @@ async def close_order(
                         db_order.net_profit = profit_usd.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                         db_order.swap = db_order.swap or Decimal("0.0")
                         db_order.commission = total_commission_for_trade
-                        db_order.close_order_id = close_order_id # Save close_order_id in DB
+                        db_order.close_id = close_id # Save close_id in DB
 
                         original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
                         swap_amount = db_order.swap
@@ -794,7 +795,7 @@ async def close_order(
                 db_order.net_profit = profit_usd.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 db_order.swap = db_order.swap or Decimal("0.0")
                 db_order.commission = total_commission_for_trade
-                db_order.close_order_id = close_order_id # Save close_order_id in DB
+                db_order.close_id = close_id # Save close_id in DB
 
                 original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
                 swap_amount = db_order.swap
@@ -826,11 +827,145 @@ async def close_order(
 
 
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
+from decimal import Decimal, InvalidOperation
+from pydantic import BaseModel, Field
+import uuid
+import time
 
+from app.dependencies.redis_client import get_redis_client
+from app.database.session import get_db
+from app.core.security import get_current_user
+from app.crud import crud_order, user as crud_user, group as crud_group
+from app.database.models import User, DemoUser
+from app.api.v1.endpoints.orders import get_order_model
+from app.core.firebase import send_order_to_firebase
+from app.core.cache import get_user_data_cache, get_group_settings_cache
+from app.services.pending_orders import remove_pending_order, add_pending_order
 
+class ModifyPendingOrderRequest(BaseModel):
+    order_id: str
+    order_type: str
+    order_price: Decimal = Field(..., gt=0, description="The new price for the pending order (required)")
+    order_quantity: Decimal = Field(..., gt=0, description="The new quantity for the pending order (required)")
+    order_company_name: str
+    user_id: int
+    user_type: str
+    order_status: str
+    status: str  # No close_price field; order_price and order_quantity are required for modification
 
+@router.post("/modify-pending")
+async def modify_pending_order(
+    modify_request: ModifyPendingOrderRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user),
+):
+    try:
+        order_model = get_order_model(modify_request.user_type)
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db,
+            modify_request.order_id,
+            modify_request.user_id,
+            order_model
+        )
 
+        if not db_order:
+            raise HTTPException(status_code=404, detail="Order not found")
 
+        if db_order.order_status != "PENDING":
+            raise HTTPException(status_code=400, detail="Only PENDING orders can be modified")
+
+        user_data = await get_user_data_cache(redis_client, modify_request.user_id, db, modify_request.user_type)
+        group_name = user_data.get("group_name") if user_data else None
+
+        sending_orders_normalized = None
+        if group_name:
+            group_settings = await get_group_settings_cache(redis_client, group_name)
+            if group_settings:
+                sending_orders = group_settings.get("sending_orders")
+                sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+
+        is_barclays_live_user = (modify_request.user_type == 'live' and sending_orders_normalized == 'barclays')
+
+        order_model = get_order_model(modify_request.user_type)
+        modify_id = await generate_unique_10_digit_id(db, order_model, 'order_id')
+
+        if is_barclays_live_user:
+            firebase_modify_data = {
+                "order_id": modify_request.order_id,
+                "order_user_id": modify_request.user_id,
+                "order_company_name": modify_request.order_company_name,
+                "order_type": modify_request.order_type,
+                "order_status": modify_request.order_status,
+                "order_price": str(modify_request.order_price),
+                "order_quantity": str(modify_request.order_quantity),
+                "status": modify_request.status,
+                "modify_id": modify_id,
+                "action": "modify_order"
+            }
+            await send_order_to_firebase(firebase_modify_data, "live")
+            return {"message": "Order modification request sent to external service (Barclays)."}
+
+        # For non-Barclays users, update the order
+        update_data = {
+            "order_price": modify_request.order_price,
+            "order_quantity": modify_request.order_quantity,
+            "modify_id": modify_id,
+            "status": modify_request.status,
+            "order_status": modify_request.order_status
+        }
+
+        updated_order = await crud_order.update_order_with_tracking(
+            db,
+            db_order,
+            update_data,
+            user_id=modify_request.user_id,
+            user_type=modify_request.user_type
+        )
+
+        # --- Update Redis Cache ---
+        await remove_pending_order(
+            redis_client,
+            modify_request.order_id,
+            modify_request.order_company_name,
+            modify_request.order_type,
+            str(modify_request.user_id)
+        )
+
+        new_pending_order_data = {
+            "order_id": updated_order.order_id,
+            "order_user_id": updated_order.order_user_id,
+            "order_company_name": updated_order.order_company_name,
+            "order_type": updated_order.order_type,
+            "order_status": updated_order.order_status,
+            "order_price": str(updated_order.order_price),
+            "order_quantity": str(updated_order.order_quantity),
+            "contract_value": str(updated_order.contract_value) if updated_order.contract_value else None,
+            "margin": str(updated_order.margin) if updated_order.margin else None,
+            "stop_loss": str(updated_order.stop_loss) if updated_order.stop_loss else None,
+            "take_profit": str(updated_order.take_profit) if updated_order.take_profit else None,
+            "user_type": modify_request.user_type,
+            "status": updated_order.status,
+            "created_at": updated_order.created_at.isoformat() if updated_order.created_at else None,
+            "updated_at": updated_order.updated_at.isoformat() if updated_order.updated_at else None,
+        }
+        await add_pending_order(redis_client, new_pending_order_data)
+
+        return {
+            "order_id": updated_order.order_id,
+            "order_price": updated_order.order_price,
+            "order_quantity": updated_order.order_quantity,
+            "order_status": updated_order.order_status,
+            "modify_id": updated_order.modify_id,
+            "message": "Pending order successfully modified"
+        }
+
+    except InvalidOperation:
+        raise HTTPException(status_code=400, detail="Invalid decimal value for price or quantity")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to modify pending order: {str(e)}")
 
 
 
@@ -921,7 +1056,7 @@ async def close_order(
 #                     db_order.net_profit = profit_usd.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 #                     db_order.swap = db_order.swap or Decimal("0.0")
 #                     db_order.commission = total_commission_for_trade
-#                     db_order.close_order_id = close_order_id # Save close_order_id in DB
+#                     db_order.close_id = close_id # Save close_id in DB
 
 #                     original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
 #                     swap_amount = db_order.swap
