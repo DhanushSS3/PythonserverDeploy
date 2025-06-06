@@ -9982,3 +9982,24 @@ AttributeError: 'ExternalSymbolInfo' object has no attribute 'profit_currency'
 2025-06-06 06:06:17,142 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 6564.23
 2025-06-06 06:06:17,197 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
 2025-06-06 06:12:37,398 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 06:25:26,235 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 06:28:00,593 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 09:28:14,654 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 09:37:28,839 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 09:45:40,594 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 09:51:33,773 - INFO - orders - Close order request received - Order ID: 7019168913, User ID: 1, User Type: demo
+2025-06-06 09:51:33,773 - INFO - orders - Close request details - Price: 0.89, Type: SELL, Symbol: AUDCAD
+2025-06-06 09:51:33,773 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x000001C03F1A4180>, type: <class 'app.database.models.DemoUser'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-06 09:51:33,774 - INFO - orders - Using order model: demo_user_orders for user 1 (DemoUser)
+2025-06-06 09:51:33,774 - INFO - orders - Request to close order 7019168913 for user 1 (DemoUser) with price 0.89. Frontend provided type: SELL, company: AUDCAD, status: CLOSE, frontend_status: CLOSE.
+2025-06-06 09:51:33,789 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-06-06 09:51:33,817 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 113): Type=SELL, Qty=10.00000000, StoredMargin=6564.22662028
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=656.422662028
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=0, TotalSellQty=10.00000000, NetQty=10.00000000
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('656.422662028')], HighestMarginPerLot=656.422662028
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=6564.23, ContributingOrders=1 (based on individual stored margins)
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-06 09:51:33,818 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol AUDCAD. Returning zero margin.
+2025-06-06 09:51:33,850 - DEBUG - orders - Inverse conversion for PnL on Close: -1870.000000000000000000000000 CAD / 1.3690900000 = -1365.870760870359143664770030 USD
+2025-06-06 09:54:17,138 - INFO - orders - Application starting up - Orders logging initialized

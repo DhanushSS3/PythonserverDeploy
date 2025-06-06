@@ -9,10 +9,26 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 from sqlalchemy import and_, or_
 from typing import Dict
+import logging
+
+orders_crud_logger = logging.getLogger('orders-crud-log')
+# Ensure handler is only added once to avoid duplicate logs
+if not orders_crud_logger.handlers:
+    file_handler = logging.FileHandler('logs/orders_crud.log')
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    file_handler.setFormatter(formatter)
+    orders_crud_logger.addHandler(file_handler)
+    orders_crud_logger.setLevel(logging.DEBUG)
 
 # Utility to get the appropriate model class
 def get_order_model(user_type: str):
-    return DemoUserOrder if user_type == "demo" else UserOrder
+    orders_crud_logger.debug(f"[get_order_model] Called with user_type: '{user_type}'")
+    if user_type == "demo":
+        orders_crud_logger.debug("[get_order_model] Returning DemoUserOrder")
+        return DemoUserOrder
+    else:
+        orders_crud_logger.debug("[get_order_model] Returning UserOrder")
+        return UserOrder
 
 # Create a new order
 async def create_order(db: AsyncSession, order_data: dict, order_model: Type[UserOrder | DemoUserOrder]):
@@ -54,19 +70,24 @@ async def get_orders_by_user_id(
         .limit(limit)
         .order_by(order_model.created_at.desc())
     )
-    return result.scalars().all()
+    orders = result.scalars().all()
+    orders_crud_logger.debug(f"[get_orders_by_user_id] Retrieved {len(orders)} orders for user {user_id} using model {order_model.__name__}")
+    return orders
 
 # Get all open orders for user
 async def get_all_open_orders_by_user_id(
     db: AsyncSession, user_id: int, order_model: Type[UserOrder | DemoUserOrder]
 ):
+    orders_crud_logger.debug(f"[get_all_open_orders_by_user_id] Called for user {user_id} with order_model: {order_model.__name__}")
     result = await db.execute(
         select(order_model).filter(
             order_model.order_user_id == user_id,
             order_model.order_status == 'OPEN'
         )
     )
-    return result.scalars().all()
+    orders = result.scalars().all()
+    orders_crud_logger.debug(f"[get_all_open_orders_by_user_id] Retrieved {len(orders)} open orders for user {user_id} using model {order_model.__name__}")
+    return orders
 
 # Get all open orders from UserOrder table (system-wide)
 async def get_all_system_open_orders(db: AsyncSession):
@@ -147,7 +168,9 @@ async def get_orders_by_user_id_and_statuses(
             order_model.order_status.in_(statuses)
         )
     )
-    return result.scalars().all()
+    orders = result.scalars().all()
+    orders_crud_logger.debug(f"[get_orders_by_user_id_and_statuses] Retrieved {len(orders)} orders for user {user_id} with statuses {statuses} using model {order_model.__name__}")
+    return orders
 
 async def get_order_by_cancel_id(db: AsyncSession, cancel_id: str, order_model: Type[Any]) -> Optional[Any]:
     """Get order by cancel_id"""

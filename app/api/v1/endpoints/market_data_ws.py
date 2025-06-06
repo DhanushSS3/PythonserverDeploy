@@ -253,7 +253,10 @@ async def per_connection_redis_listener(
 
                         # Fallback to DB if positions are empty
                         if not positions:
-                            order_model = get_order_model(user_type)  # adjust if using user_type
+                            # Retrieve user_type from cached user_data to get the correct order model
+                            user_data_from_cache = await get_user_data_cache(redis_client, user_id)
+                            user_type_from_cache = user_data_from_cache.get("user_type", "live") if user_data_from_cache else "live"
+                            order_model = get_order_model(user_type_from_cache)  # Use user_type from cache
                             open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
                             for pos in open_positions_orm:
                                 positions.append({

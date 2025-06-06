@@ -17190,3 +17190,1171 @@ TypeError: object dict can't be used in 'await' expression
 2025-06-06 06:14:14,153 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
 2025-06-06 06:14:14,154 - INFO - app.main - Redis client connection closed.
 2025-06-06 06:14:14,154 - INFO - app.main - Application shutdown event finished.
+2025-06-06 06:25:25,750 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-06 06:25:25,780 - INFO - app.core.config - .env file loaded successfully.
+2025-06-06 06:25:25,786 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-06 06:25:25,786 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-06 06:25:26,279 - INFO - app.main - Application startup event triggered.
+2025-06-06 06:25:26,323 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-06 06:25:26,323 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-06 06:25:26,366 - INFO - app.main - Redis client initialized successfully.
+2025-06-06 06:25:26,397 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-06 06:25:26,466 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-06 06:25:26,468 - INFO - app.main - Database tables ensured/created.
+2025-06-06 06:25:26,473 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-06 06:25:27,639 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 06:25:27,639 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIxODEyNiwiaWF0IjoxNzQ5MjE2MzI2fQ.wRg3MoQ_p1YclNGur4AXH8p8L68izm8Q0i0YsE2u-PU
+2025-06-06 06:25:27,639 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-06 06:25:27,639 - INFO - app.main - Redis publisher task scheduled.
+2025-06-06 06:25:27,639 - INFO - app.main - Application startup event finished.
+2025-06-06 06:25:27,640 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 06:25:27,640 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-06 06:25:28,366 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 06:25:28,378 - INFO - app.main - Redis ping response: True
+2025-06-06 06:25:47,446 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 06:25:47,463 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 06:25:47,488 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 06:25:47,505 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 06:25:47,609 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 06:25:47,679 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 06:25:47,706 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 06:25:47,717 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 06:25:47,762 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 06:25:47,780 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 06:25:47,799 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 06:25:47,823 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 06:25:47,838 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 06:25:47,862 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 06:25:47,879 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 06:25:47,904 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 06:25:47,916 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 06:25:47,939 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 06:25:47,965 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 06:25:47,984 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 06:25:48,003 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 06:25:48,025 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 06:25:48,040 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 06:25:48,062 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 06:25:48,085 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 06:25:48,102 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 06:25:48,116 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 06:25:48,135 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 06:25:48,156 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 06:25:48,171 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 06:25:48,190 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 06:25:48,211 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 06:25:48,232 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 06:25:48,246 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 06:25:48,261 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 06:25:48,280 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 06:25:48,332 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 06:25:48,355 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 06:25:48,376 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 06:25:48,402 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 06:25:48,424 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 06:25:48,445 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 06:25:48,467 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 06:25:48,486 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 06:25:48,507 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 06:25:48,528 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 06:25:48,590 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 06:25:48,611 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 06:25:48,628 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 06:25:48,642 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 06:25:48,665 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 06:25:48,688 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 06:25:48,712 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 06:25:48,733 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 06:25:48,741 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 06:25:48,751 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 06:25:48,759 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 06:25:48,783 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 06:25:48,809 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 06:25:48,828 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 06:25:48,847 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 06:25:48,871 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 06:25:48,891 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 06:25:48,903 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 06:25:48,944 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 06:25:48,975 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 06:25:48,994 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 06:25:49,017 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 06:25:49,037 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 06:25:49,052 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 06:25:49,077 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 06:25:49,096 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 06:25:49,124 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 06:25:49,142 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 06:25:49,161 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 06:25:49,183 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 06:25:49,253 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 06:25:49,347 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 06:25:49,380 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 06:25:59,401 - INFO - app.main - Application shutdown event triggered.
+2025-06-06 06:25:59,401 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-06 06:25:59,401 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-06 06:25:59,403 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-06 06:26:00,101 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-06 06:26:00,102 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-06 06:26:00,102 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-06 06:26:00,103 - INFO - app.main - Redis client connection closed.
+2025-06-06 06:26:00,103 - INFO - app.main - Application shutdown event finished.
+2025-06-06 06:28:00,095 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-06 06:28:00,142 - INFO - app.core.config - .env file loaded successfully.
+2025-06-06 06:28:00,150 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-06 06:28:00,150 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-06 06:28:00,646 - INFO - app.main - Application startup event triggered.
+2025-06-06 06:28:00,683 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-06 06:28:00,683 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-06 06:28:00,709 - INFO - app.main - Redis client initialized successfully.
+2025-06-06 06:28:00,745 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-06 06:28:00,853 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-06 06:28:00,857 - INFO - app.main - Database tables ensured/created.
+2025-06-06 06:28:00,864 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-06 06:28:01,674 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 06:28:01,674 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIxODI4MCwiaWF0IjoxNzQ5MjE2NDgwfQ.9QxSbJgzqS0jJ4JzwqMofgZZIbR8BXQqxB9Ll7-EOgw
+2025-06-06 06:28:01,674 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-06 06:28:01,674 - INFO - app.main - Redis publisher task scheduled.
+2025-06-06 06:28:01,674 - INFO - app.main - Application startup event finished.
+2025-06-06 06:28:01,675 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 06:28:01,675 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-06 06:28:02,387 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 06:28:02,402 - INFO - app.main - Redis ping response: True
+2025-06-06 06:28:06,877 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 06:28:06,897 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 06:28:06,921 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 06:28:06,956 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 06:28:06,999 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 06:28:07,026 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 06:28:07,062 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 06:28:07,086 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 06:28:07,114 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 06:28:07,140 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 06:28:07,161 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 06:28:07,238 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 06:28:07,259 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 06:28:07,286 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 06:28:07,311 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 06:28:07,331 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 06:28:07,361 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 06:28:07,432 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 06:28:07,445 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 06:28:07,467 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 06:28:07,518 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 06:28:07,546 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 06:28:07,567 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 06:28:07,592 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 06:28:07,617 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 06:28:07,638 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 06:28:07,673 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 06:28:07,730 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 06:28:07,793 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 06:28:07,846 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 06:28:07,906 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 06:28:07,926 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 06:28:07,951 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 06:28:07,980 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 06:28:08,012 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 06:28:08,035 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 06:28:08,054 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 06:28:08,075 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 06:28:08,089 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 06:28:08,109 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 06:28:08,129 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 06:28:08,147 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 06:28:08,175 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 06:28:08,204 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 06:28:08,226 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 06:28:08,249 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 06:28:08,269 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 06:28:08,303 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 06:28:08,321 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 06:28:08,345 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 06:28:08,365 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 06:28:08,381 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 06:28:08,396 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 06:28:08,432 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 06:28:08,452 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 06:28:08,473 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 06:28:08,498 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 06:28:08,534 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 06:28:08,642 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 06:28:08,697 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 06:28:08,746 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 06:28:08,758 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 06:28:08,803 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 06:28:08,844 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 06:28:08,866 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 06:28:08,887 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 06:28:08,933 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 06:28:08,966 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 06:28:09,002 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 06:28:09,035 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 06:28:09,057 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 06:28:09,091 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 06:28:09,101 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 06:28:09,129 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 06:28:09,153 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 06:28:09,178 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 06:28:09,200 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 06:28:09,227 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 06:28:09,251 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 06:28:13,510 - INFO - app.main - Application shutdown event triggered.
+2025-06-06 06:28:13,510 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-06 06:28:13,510 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-06 06:28:13,512 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-06 06:28:14,141 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-06 06:28:14,142 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-06 06:28:14,142 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-06 06:28:14,143 - INFO - app.main - Redis client connection closed.
+2025-06-06 06:28:14,143 - INFO - app.main - Application shutdown event finished.
+2025-06-06 09:28:14,056 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-06 09:28:14,084 - INFO - app.core.config - .env file loaded successfully.
+2025-06-06 09:28:14,090 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-06 09:28:14,091 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-06 09:28:14,722 - INFO - app.main - Application startup event triggered.
+2025-06-06 09:28:14,766 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-06 09:28:14,767 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-06 09:28:14,804 - INFO - app.main - Redis client initialized successfully.
+2025-06-06 09:28:14,827 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-06 09:28:14,889 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-06 09:28:14,891 - INFO - app.main - Database tables ensured/created.
+2025-06-06 09:28:14,908 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-06 09:28:16,399 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 09:28:16,399 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIyOTA5NCwiaWF0IjoxNzQ5MjI3Mjk0fQ.cjScLXxglCtkCEMj1bQLyCU6c2wg_mBqUSnHI5SqOew
+2025-06-06 09:28:16,399 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-06 09:28:16,399 - INFO - app.main - Redis publisher task scheduled.
+2025-06-06 09:28:16,399 - INFO - app.main - Application startup event finished.
+2025-06-06 09:28:16,400 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:28:16,400 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-06 09:28:17,426 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:28:17,453 - INFO - app.main - Redis ping response: True
+2025-06-06 09:30:01,978 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 09:30:01,979 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIyOTIwMCwiaWF0IjoxNzQ5MjI3NDAwfQ.dgptnz12g3bvG1FqAIjcbwY4rF0vzrThRdYmK3LD-Bg
+2025-06-06 09:31:57,805 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 09:31:57,828 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 09:31:57,846 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 09:31:57,861 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 09:31:57,874 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 09:31:57,885 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 09:31:57,895 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 09:31:57,949 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 09:31:57,968 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 09:31:57,985 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 09:31:58,004 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 09:31:58,018 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 09:31:58,034 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 09:31:58,052 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 09:31:58,070 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 09:31:58,092 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 09:31:58,109 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 09:31:58,207 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 09:31:58,274 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 09:31:58,287 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 09:31:58,298 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 09:31:58,345 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 09:31:58,355 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 09:31:58,365 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 09:31:58,385 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 09:31:58,410 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 09:31:58,431 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 09:31:58,452 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 09:31:58,479 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 09:31:58,496 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 09:31:58,513 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 09:31:58,535 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 09:31:58,551 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 09:31:58,566 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 09:31:58,585 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 09:31:58,603 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 09:31:58,620 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 09:31:58,664 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 09:31:58,693 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 09:31:58,721 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 09:31:58,742 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 09:31:58,767 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 09:31:58,783 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 09:31:58,802 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 09:31:58,818 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 09:31:58,834 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 09:31:58,851 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 09:31:58,867 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 09:31:58,882 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 09:31:58,898 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 09:31:58,912 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 09:31:58,928 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 09:31:58,940 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 09:31:58,954 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 09:31:58,974 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 09:31:58,988 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 09:31:59,003 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 09:31:59,016 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 09:31:59,030 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 09:31:59,044 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 09:31:59,061 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 09:31:59,080 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 09:31:59,095 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 09:31:59,115 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 09:31:59,131 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 09:31:59,148 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 09:31:59,163 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 09:31:59,183 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 09:31:59,199 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 09:31:59,212 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 09:31:59,224 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 09:31:59,239 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 09:31:59,252 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 09:31:59,265 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 09:31:59,276 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 09:31:59,291 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 09:31:59,304 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 09:31:59,320 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 09:31:59,334 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 09:32:05,872 - INFO - app.main - Application shutdown event triggered.
+2025-06-06 09:32:05,873 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-06 09:32:05,873 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-06 09:32:05,874 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-06 09:32:07,104 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-06 09:32:07,105 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-06 09:32:07,105 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-06 09:32:07,107 - INFO - app.main - Redis client connection closed.
+2025-06-06 09:32:07,107 - INFO - app.main - Application shutdown event finished.
+2025-06-06 09:37:28,293 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-06 09:37:28,332 - INFO - app.core.config - .env file loaded successfully.
+2025-06-06 09:37:28,341 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-06 09:37:28,341 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-06 09:37:28,894 - INFO - app.main - Application startup event triggered.
+2025-06-06 09:37:28,937 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-06 09:37:28,937 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-06 09:37:28,971 - INFO - app.main - Redis client initialized successfully.
+2025-06-06 09:37:29,020 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-06 09:37:29,092 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-06 09:37:29,095 - INFO - app.main - Database tables ensured/created.
+2025-06-06 09:37:29,101 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-06 09:37:30,690 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 09:37:30,690 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIyOTY0OSwiaWF0IjoxNzQ5MjI3ODQ5fQ.aTkShZXJsiO-kEXJeSYHA0uOnHl2UoIsE8geq6JZa1E
+2025-06-06 09:37:30,690 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-06 09:37:30,690 - INFO - app.main - Redis publisher task scheduled.
+2025-06-06 09:37:30,691 - INFO - app.main - Application startup event finished.
+2025-06-06 09:37:30,691 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:37:30,691 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-06 09:37:31,510 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:37:31,525 - INFO - app.main - Redis ping response: True
+2025-06-06 09:37:36,588 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 09:37:36,602 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 09:37:36,616 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 09:37:36,628 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 09:37:36,640 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 09:37:36,651 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 09:37:36,664 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 09:37:36,675 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 09:37:36,688 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 09:37:36,699 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 09:37:36,711 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 09:37:36,724 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 09:37:36,737 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 09:37:36,748 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 09:37:36,760 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 09:37:36,770 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 09:37:36,781 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 09:37:36,794 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 09:37:36,806 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 09:37:36,817 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 09:37:36,827 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 09:37:36,840 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 09:37:36,853 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 09:37:36,867 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 09:37:36,879 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 09:37:36,893 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 09:37:36,905 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 09:37:36,918 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 09:37:36,928 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 09:37:36,938 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 09:37:36,950 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 09:37:36,960 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 09:37:36,971 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 09:37:36,982 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 09:37:36,992 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 09:37:37,002 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 09:37:37,011 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 09:37:37,025 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 09:37:37,038 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 09:37:37,047 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 09:37:37,059 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 09:37:37,070 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 09:37:37,082 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 09:37:37,094 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 09:37:37,103 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 09:37:37,115 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 09:37:37,129 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 09:37:37,140 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 09:37:37,149 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 09:37:37,161 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 09:37:37,177 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 09:37:37,196 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 09:37:37,208 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 09:37:37,223 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 09:37:37,236 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 09:37:37,251 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 09:37:37,262 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 09:37:37,271 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 09:37:37,282 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 09:37:37,299 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 09:37:37,312 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 09:37:37,326 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 09:37:37,339 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 09:37:37,351 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 09:37:37,365 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 09:37:37,376 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 09:37:37,386 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 09:37:37,408 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 09:37:37,417 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 09:37:37,426 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 09:37:37,436 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 09:37:37,446 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 09:37:37,455 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 09:37:37,463 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 09:37:37,473 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 09:37:37,481 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 09:37:37,491 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 09:37:37,501 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 09:37:37,509 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 09:39:05,853 - INFO - app.main - Application shutdown event triggered.
+2025-06-06 09:39:05,853 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-06 09:39:05,853 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-06 09:39:05,856 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-06 09:39:07,049 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-06 09:39:07,050 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-06 09:39:07,050 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-06 09:39:07,051 - INFO - app.main - Redis client connection closed.
+2025-06-06 09:39:07,051 - INFO - app.main - Application shutdown event finished.
+2025-06-06 09:45:40,081 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-06 09:45:40,109 - INFO - app.core.config - .env file loaded successfully.
+2025-06-06 09:45:40,117 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-06 09:45:40,117 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-06 09:45:40,644 - INFO - app.main - Application startup event triggered.
+2025-06-06 09:45:40,686 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-06 09:45:40,686 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-06 09:45:40,715 - INFO - app.main - Redis client initialized successfully.
+2025-06-06 09:45:40,740 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-06 09:45:40,809 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-06 09:45:40,811 - INFO - app.main - Database tables ensured/created.
+2025-06-06 09:45:40,816 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-06 09:45:42,418 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 09:45:42,418 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIzMDE0MCwiaWF0IjoxNzQ5MjI4MzQwfQ.OwiDS8WTh-XSaF7pW7ORUtWViza2ft3xyBLGGDudXAA
+2025-06-06 09:45:42,418 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-06 09:45:42,418 - INFO - app.main - Redis publisher task scheduled.
+2025-06-06 09:45:42,418 - INFO - app.main - Application startup event finished.
+2025-06-06 09:45:42,419 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:45:42,419 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-06 09:45:43,042 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:45:43,054 - INFO - app.main - Redis ping response: True
+2025-06-06 09:46:01,614 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 09:46:01,625 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 09:46:01,633 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 09:46:01,642 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 09:46:01,652 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 09:46:01,661 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 09:46:01,669 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 09:46:01,679 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 09:46:01,689 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 09:46:01,697 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 09:46:01,708 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 09:46:01,717 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 09:46:01,728 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 09:46:01,739 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 09:46:01,749 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 09:46:01,758 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 09:46:01,766 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 09:46:01,775 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 09:46:01,786 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 09:46:01,796 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 09:46:01,805 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 09:46:01,816 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 09:46:01,827 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 09:46:01,836 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 09:46:01,860 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 09:46:01,876 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 09:46:01,894 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 09:46:01,909 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 09:46:01,924 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 09:46:01,940 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 09:46:01,956 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 09:46:01,973 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 09:46:01,983 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 09:46:01,991 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 09:46:02,005 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 09:46:02,018 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 09:46:02,031 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 09:46:02,042 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 09:46:02,053 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 09:46:02,063 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 09:46:02,073 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 09:46:02,083 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 09:46:02,093 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 09:46:02,104 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 09:46:02,115 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 09:46:02,125 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 09:46:02,134 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 09:46:02,143 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 09:46:02,153 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 09:46:02,162 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 09:46:02,171 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 09:46:02,180 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 09:46:02,189 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 09:46:02,200 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 09:46:02,211 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 09:46:02,221 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 09:46:02,230 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 09:46:02,239 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 09:46:02,250 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 09:46:02,265 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 09:46:02,274 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 09:46:02,286 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 09:46:02,296 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 09:46:02,305 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 09:46:02,314 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 09:46:02,322 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 09:46:02,332 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 09:46:02,341 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 09:46:02,350 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 09:46:02,360 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 09:46:02,369 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 09:46:02,378 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 09:46:02,388 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 09:46:02,397 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 09:46:02,406 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 09:46:02,417 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 09:46:02,427 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 09:46:02,436 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 09:46:02,445 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 09:46:48,440 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 09:46:48,449 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 09:46:48,458 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 09:46:48,467 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 09:46:48,486 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 09:46:48,501 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 09:46:48,516 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 09:46:48,530 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 09:46:48,544 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 09:46:48,558 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 09:46:48,570 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 09:46:48,576 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 09:46:48,583 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 09:46:48,596 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 09:46:48,605 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 09:46:48,613 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 09:46:48,620 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 09:46:48,628 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 09:46:48,635 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 09:46:48,642 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 09:46:48,649 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 09:46:48,657 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 09:46:48,665 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 09:46:48,672 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 09:46:48,681 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 09:46:48,689 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 09:46:48,697 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 09:46:48,704 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 09:46:48,712 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 09:46:48,719 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 09:46:48,729 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 09:46:48,737 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 09:46:48,747 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 09:46:48,758 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 09:46:48,766 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 09:46:48,776 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 09:46:48,784 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 09:46:48,793 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 09:46:48,800 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 09:46:48,809 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 09:46:48,818 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 09:46:48,828 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 09:46:48,837 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 09:46:48,848 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 09:46:48,858 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 09:46:48,867 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 09:46:48,877 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 09:46:48,896 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 09:46:48,907 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 09:46:48,918 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 09:46:48,929 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 09:46:48,939 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 09:46:48,948 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 09:46:48,958 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 09:46:48,968 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 09:46:48,977 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 09:46:48,987 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 09:46:48,997 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 09:46:49,008 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 09:46:49,017 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 09:46:49,026 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 09:46:49,075 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 09:46:49,086 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 09:46:49,098 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 09:46:49,109 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 09:46:49,122 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 09:46:49,132 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 09:46:49,145 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 09:46:49,156 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 09:46:49,166 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 09:46:49,177 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 09:46:49,188 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 09:46:49,198 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 09:46:49,210 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 09:46:49,222 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 09:46:49,233 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 09:46:49,242 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 09:46:49,251 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 09:46:49,260 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 09:46:51,372 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:46:53,685 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:46:55,910 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:46:58,226 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:47:00,490 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:47:02,769 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:47:05,106 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:47:07,559 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:14,711 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 09:50:14,722 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 09:50:14,746 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 09:50:14,756 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 09:50:14,766 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 09:50:14,776 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 09:50:14,786 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 09:50:14,795 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 09:50:14,803 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 09:50:14,813 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 09:50:14,821 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 09:50:14,831 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 09:50:14,840 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 09:50:14,848 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 09:50:14,858 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 09:50:14,869 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 09:50:14,880 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 09:50:14,890 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 09:50:14,902 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 09:50:14,911 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 09:50:14,922 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 09:50:14,932 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 09:50:14,944 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 09:50:14,953 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 09:50:14,965 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 09:50:14,975 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 09:50:14,987 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 09:50:14,996 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 09:50:15,005 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 09:50:15,015 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 09:50:15,025 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 09:50:15,035 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 09:50:15,045 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 09:50:15,056 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 09:50:15,065 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 09:50:15,076 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 09:50:15,084 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 09:50:15,095 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 09:50:15,104 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 09:50:15,113 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 09:50:15,124 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 09:50:15,133 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 09:50:15,144 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 09:50:15,154 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 09:50:15,166 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 09:50:15,175 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 09:50:15,186 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 09:50:15,196 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 09:50:15,207 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 09:50:15,217 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 09:50:15,228 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 09:50:15,238 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 09:50:15,250 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 09:50:15,260 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 09:50:15,271 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 09:50:15,283 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 09:50:15,296 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 09:50:15,308 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 09:50:15,320 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 09:50:15,332 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 09:50:15,344 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 09:50:15,355 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 09:50:15,367 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 09:50:15,378 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 09:50:15,390 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 09:50:15,403 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 09:50:15,416 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 09:50:15,427 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 09:50:15,438 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 09:50:15,448 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 09:50:15,460 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 09:50:15,474 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 09:50:15,487 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 09:50:15,500 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 09:50:15,534 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 09:50:15,551 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 09:50:15,568 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 09:50:15,586 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 09:50:15,603 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 09:50:17,200 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:19,471 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:21,884 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:24,007 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:26,234 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:28,520 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:30,931 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:33,181 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:35,458 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:37,927 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:40,191 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:42,446 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:44,686 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:47,007 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:49,345 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:51,730 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:54,154 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:56,171 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:50:58,629 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:00,767 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:03,033 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:05,359 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:07,772 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:09,983 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:12,425 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:14,569 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:16,936 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:19,221 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:21,539 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:23,860 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:26,156 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:28,481 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:30,750 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:33,092 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:35,362 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:37,770 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:39,982 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:42,475 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:44,705 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:47,049 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:49,424 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:51,812 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:53,833 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:56,206 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:51:58,444 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:00,952 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:03,172 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:05,426 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:07,804 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:10,050 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:12,407 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 132, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-06 09:52:13,042 - INFO - app.main - Application shutdown event triggered.
+2025-06-06 09:52:13,042 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-06 09:52:13,042 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-06 09:52:13,043 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-06 09:52:14,619 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-06 09:52:14,619 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-06 09:52:14,620 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-06 09:52:14,622 - INFO - app.main - Redis client connection closed.
+2025-06-06 09:52:14,622 - INFO - app.main - Application shutdown event finished.
+2025-06-06 09:54:16,259 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-06 09:54:16,306 - INFO - app.core.config - .env file loaded successfully.
+2025-06-06 09:54:16,332 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-06 09:54:16,332 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-06 09:54:17,245 - INFO - app.main - Application startup event triggered.
+2025-06-06 09:54:17,347 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-06 09:54:17,347 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-06 09:54:17,406 - INFO - app.main - Redis client initialized successfully.
+2025-06-06 09:54:17,468 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-06 09:54:17,574 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-06 09:54:17,577 - INFO - app.main - Database tables ensured/created.
+2025-06-06 09:54:17,583 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-06 09:54:18,620 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-06 09:54:18,620 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTIzMDY1NywiaWF0IjoxNzQ5MjI4ODU3fQ.8IsaFyIleDEJvZFqjx3Y16GdOm8e58aEjV4VQFUsz1Q
+2025-06-06 09:54:18,620 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-06 09:54:18,621 - INFO - app.main - Redis publisher task scheduled.
+2025-06-06 09:54:18,621 - INFO - app.main - Application startup event finished.
+2025-06-06 09:54:18,621 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:54:18,622 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-06 09:54:19,342 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-06 09:54:19,374 - INFO - app.main - Redis ping response: True
+2025-06-06 09:54:22,786 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-06 09:54:22,807 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-06 09:54:22,824 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-06 09:54:22,837 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-06 09:54:22,853 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-06 09:54:22,868 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-06 09:54:22,880 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-06 09:54:22,894 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-06 09:54:22,907 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-06 09:54:22,919 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-06 09:54:22,963 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-06 09:54:22,980 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-06 09:54:23,000 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-06 09:54:23,021 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-06 09:54:23,040 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-06 09:54:23,055 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-06 09:54:23,069 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-06 09:54:23,083 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-06 09:54:23,097 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-06 09:54:23,115 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-06 09:54:23,131 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-06 09:54:23,149 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-06 09:54:23,167 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-06 09:54:23,183 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-06 09:54:23,197 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-06 09:54:23,210 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-06 09:54:23,223 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-06 09:54:23,235 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-06 09:54:23,248 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-06 09:54:23,259 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-06 09:54:23,270 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-06 09:54:23,283 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-06 09:54:23,298 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-06 09:54:23,312 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-06 09:54:23,326 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-06 09:54:23,344 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-06 09:54:23,363 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-06 09:54:23,378 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-06 09:54:23,391 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-06 09:54:23,404 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-06 09:54:23,416 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-06 09:54:23,430 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-06 09:54:23,440 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-06 09:54:23,453 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-06 09:54:23,465 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-06 09:54:23,476 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-06 09:54:23,490 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-06 09:54:23,504 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-06 09:54:23,516 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-06 09:54:23,527 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-06 09:54:23,537 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-06 09:54:23,551 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-06 09:54:23,564 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-06 09:54:23,578 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-06 09:54:23,592 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-06 09:54:23,605 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-06 09:54:23,618 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-06 09:54:23,631 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-06 09:54:23,643 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-06 09:54:23,656 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-06 09:54:23,669 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-06 09:54:23,682 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-06 09:54:23,694 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-06 09:54:23,705 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-06 09:54:23,718 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-06 09:54:23,731 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-06 09:54:23,745 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-06 09:54:23,760 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-06 09:54:23,773 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-06 09:54:23,787 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-06 09:54:23,801 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-06 09:54:23,815 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-06 09:54:23,828 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-06 09:54:23,842 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-06 09:54:23,857 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-06 09:54:23,870 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-06 09:54:23,883 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-06 09:54:23,899 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-06 09:54:23,913 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-06 09:54:32,285 - INFO - app.main - Application shutdown event triggered.
+2025-06-06 09:54:32,286 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-06 09:54:32,286 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-06 09:54:32,289 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-06 09:54:33,265 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-06 09:54:33,266 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-06 09:54:33,266 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-06 09:54:33,272 - INFO - app.main - Redis client connection closed.
+2025-06-06 09:54:33,272 - INFO - app.main - Application shutdown event finished.
