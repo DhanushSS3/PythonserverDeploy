@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, validator
 from sqlalchemy import select
 from fastapi.security import OAuth2PasswordBearer
 
+from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
 from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest
 from app.schemas.user import StatusResponse
@@ -50,15 +51,116 @@ from app.crud import crud_order, user as crud_user, group as crud_group
 from app.crud.crud_order import OrderCreateInternal
 # Ensure NO import of get_order_model from any module. Only use the local version below.
 
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.schemas.order import OrderResponse
+
 # Robust local get_order_model implementation
 from app.database.models import UserOrder, DemoUserOrder
+
+
+
+from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
+from app.crud.group import get_all_symbols_for_group
+from app.firebase_stream import get_latest_market_data
+from app.core.security import get_user_from_service_or_user_token, get_current_user
+from app.core.firebase import send_order_to_firebase
+from app.core.logging_config import orders_logger
+
+from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+logger = logging.getLogger(__name__)
+
+router = APIRouter(
+    prefix="/orders",
+    tags=["orders"]
+)
 
 def get_order_model(user_or_type):
     """
     Returns the correct order model class based on user object or user_type string.
     Accepts a user object (User or DemoUser) or a user_type string.
-    Adds info logging for tracing.
     """
+    # If a string is passed
+    if isinstance(user_or_type, str):
+        if user_or_type.lower() == 'demo':
+            return DemoUserOrder
+        elif user_or_type.lower() == 'live':
+            return UserOrder
+        else:
+            return None
+    # If a user object is passed
+    user_type = getattr(user_or_type, 'user_type', None)
+    if user_type and str(user_type).lower() == 'demo':
+        return DemoUserOrder
+    elif user_type and str(user_type).lower() == 'live':
+        return UserOrder
+    # Fallback: check class name
+    if user_or_type.__class__.__name__ == 'DemoUser':
+        return DemoUserOrder
+    elif user_or_type.__class__.__name__ == 'User':
+        return UserOrder
+    return None
+
+# --- New Endpoints for Order Status Filtering ---
+@router.get("/pending", response_model=List[OrderResponse], summary="Get all pending orders for the current user")
+async def get_pending_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: User | DemoUser = Depends(get_current_user),
+):
+    """
+    Returns all orders with status 'PENDING' for the current user.
+    """
+    if not current_user or not hasattr(current_user, "user_type"):
+        logger.error(f"[get_pending_orders] Invalid user or missing user_type: {current_user}")
+        raise HTTPException(status_code=400, detail="Invalid user or user_type.")
+    logger.info(f"[get_pending_orders] user_type: {current_user.user_type}")
+    order_model = get_order_model(current_user.user_type)
+    if order_model is None:
+        logger.error(f"[get_pending_orders] Could not determine order model for user_type: {current_user.user_type}")
+        raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
+    orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["PENDING"], order_model)
+    return orders
+
+@router.get("/closed", response_model=List[OrderResponse], summary="Get all closed orders for the current user")
+async def get_closed_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: User | DemoUser = Depends(get_current_user),
+):
+    """
+    Returns all orders with status 'CLOSED' for the current user.
+    """
+    if not current_user or not hasattr(current_user, "user_type"):
+        logger.error(f"[get_closed_orders] Invalid user or missing user_type: {current_user}")
+        raise HTTPException(status_code=400, detail="Invalid user or user_type.")
+    logger.info(f"[get_closed_orders] user_type: {current_user.user_type}")
+    order_model = get_order_model(current_user.user_type)
+    if order_model is None:
+        logger.error(f"[get_closed_orders] Could not determine order model for user_type: {current_user.user_type}")
+        raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
+    orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["CLOSED"], order_model)
+    return orders
+
+@router.get("/rejected", response_model=List[OrderResponse], summary="Get all rejected orders for the current user")
+async def get_rejected_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: User | DemoUser = Depends(get_current_user),
+):
+    """
+    Returns all orders with status 'REJECTED' for the current user.
+    """
+    if not current_user or not hasattr(current_user, "user_type"):
+        logger.error(f"[get_rejected_orders] Invalid user or missing user_type: {current_user}")
+        raise HTTPException(status_code=400, detail="Invalid user or user_type.")
+    logger.info(f"[get_rejected_orders] user_type: {current_user.user_type}")
+    order_model = get_order_model(current_user.user_type)
+    if order_model is None:
+        logger.error(f"[get_rejected_orders] Could not determine order model for user_type: {current_user.user_type}")
+        raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
+    orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["REJECTED"], order_model)
+    return orders
+
     from app.core.logging_config import orders_logger
     orders_logger.info(f"[get_order_model] called with: {repr(user_or_type)} (type: {type(user_or_type)})")
     # Log attributes if it's an object
@@ -86,24 +188,7 @@ def get_order_model(user_or_type):
         return DemoUserOrder
     orders_logger.info("[get_order_model] Branch: default -> UserOrder")
     return UserOrder
-
-from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
-from app.crud.group import get_all_symbols_for_group
-from app.firebase_stream import get_latest_market_data
-from app.core.security import get_user_from_service_or_user_token, get_current_user
-from app.core.firebase import send_order_to_firebase
-from app.core.logging_config import orders_logger
-
-from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-logger = logging.getLogger(__name__)
-
-router = APIRouter(
-    prefix="/orders",
-    tags=["orders"]
-)
-
+    
 class OrderPlacementRequest(BaseModel):
     # Required fields
     symbol: str  # Corresponds to order_company_name

@@ -9559,3 +9559,39 @@ NameError: name 'generate_unique_10_digit_id' is not defined
 2025-06-05 03:39:49,136 - INFO - orders - [get_order_model] called with: 'demo' (type: <class 'str'>)
 2025-06-05 03:39:49,136 - INFO - orders - [get_order_model] Branch: isinstance(user_or_type, str)
 2025-06-05 03:39:49,136 - INFO - orders - [get_order_model] Branch: user_type string is 'demo' -> DemoUserOrder
+2025-06-06 00:55:59,112 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 00:56:10,587 - INFO - orders - Close order request received - Order ID: 3942036292, User ID: 1, User Type: demo
+2025-06-06 00:56:10,588 - INFO - orders - Close request details - Price: 0.89, Type: SELL, Symbol: AUDCAD
+2025-06-06 00:56:10,588 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000014CCAD357F0>, type: <class 'app.database.models.DemoUser'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-06 00:56:10,588 - INFO - orders - [get_order_model] called with: <app.database.models.DemoUser object at 0x0000014CCAD357F0> (type: <class 'app.database.models.DemoUser'>)
+2025-06-06 00:56:10,588 - INFO - orders - [get_order_model] user_or_type.__class__.__name__: DemoUser
+2025-06-06 00:56:10,588 - INFO - orders - [get_order_model] user_or_type attributes: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-06 00:56:10,588 - INFO - orders - [get_order_model] user_type attribute value: demo, type: <class 'str'>
+2025-06-06 00:56:10,589 - INFO - orders - [get_order_model] Branch: user_type attribute is 'demo' -> DemoUserOrder
+2025-06-06 00:56:10,590 - INFO - orders - Using order model: demo_user_orders for user 1 (DemoUser)
+2025-06-06 00:56:10,590 - INFO - orders - Request to close order 3942036292 for user 1 (DemoUser) with price 0.89. Frontend provided type: SELL, company: AUDCAD, status: CLOSE, frontend_status: CLOSE.
+2025-06-06 00:56:10,622 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-06-06 00:56:10,656 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 2
+2025-06-06 00:56:10,657 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 88): Type=BUY, Qty=1.00000000, StoredMargin=656.68966425
+2025-06-06 00:56:10,657 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=656.68966425
+2025-06-06 00:56:10,658 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: 93): Type=SELL, Qty=2.00000000, StoredMargin=1314.77957965
+2025-06-06 00:56:10,658 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=657.389789825
+2025-06-06 00:56:10,658 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=1.00000000, TotalSellQty=2.00000000, NetQty=2.00000000
+2025-06-06 00:56:10,658 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('656.68966425'), Decimal('657.389789825')], HighestMarginPerLot=657.389789825
+2025-06-06 00:56:10,658 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=1314.78, ContributingOrders=2 (based on individual stored margins)
+2025-06-06 00:56:10,659 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-06 00:56:10,660 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 88): Type=BUY, Qty=1.00000000, StoredMargin=656.68966425
+2025-06-06 00:56:10,660 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=656.68966425
+2025-06-06 00:56:10,662 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=1.00000000, TotalSellQty=0, NetQty=1.00000000
+2025-06-06 00:56:10,662 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('656.68966425')], HighestMarginPerLot=656.68966425
+2025-06-06 00:56:10,662 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=656.69, ContributingOrders=1 (based on individual stored margins)
+2025-06-06 00:56:10,691 - DEBUG - orders - Inverse conversion for PnL on Close: -338.000000000000000000000000 CAD / 1.3665600000 = -247.3363774733637747336377473 USD
+2025-06-06 00:58:50,578 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 01:00:39,545 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 01:04:07,503 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 01:04:43,082 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: demo
+2025-06-06 01:04:43,082 - app.api.v1.endpoints.orders - ERROR - [get_rejected_orders] Could not determine order model for user_type: demo
+2025-06-06 01:05:54,163 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-06 01:06:07,418 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: demo
+2025-06-06 01:06:50,378 - app.api.v1.endpoints.orders - INFO - [get_pending_orders] user_type: demo
+2025-06-06 01:06:57,849 - app.api.v1.endpoints.orders - INFO - [get_closed_orders] user_type: demo
