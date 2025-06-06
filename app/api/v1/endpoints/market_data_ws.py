@@ -253,7 +253,7 @@ async def per_connection_redis_listener(
 
                         # Fallback to DB if positions are empty
                         if not positions:
-                            order_model = get_order_model("live")  # adjust if using user_type
+                            order_model = get_order_model(user_type)  # adjust if using user_type
                             open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
                             for pos in open_positions_orm:
                                 positions.append({
@@ -264,21 +264,44 @@ async def per_connection_redis_listener(
                                     "order_price": str(pos.order_price),
                                     "margin": str(pos.margin),
                                     "contract_value": str(pos.contract_value),
-                                    "profit_loss": "0.0",
-                                    "commission": "0.0"
+                                    "stop_loss": str(pos.stop_loss) if pos.stop_loss is not None else None, # Add stop_loss
+                                    "take_profit": str(pos.take_profit) if pos.take_profit is not None else None, # Add take_profit
+                                    "commission": "0.0" # Ensure commission is present
                                 })
 
-                        # Attach current price from adjusted prices
-                        for pos in positions:
-                            symbol = pos.get("order_company_name", "").upper()
-                            pos["current_price"] = str(adjusted_prices.get(symbol, {}).get("buy", "0.0"))
+                        # Fetch pending orders
+                        pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
+                        # user_type is not directly available here, assume "live" or derive from user_id if possible
+                        # For now, will assume user_type can be derived from the user_id (which is db_user_id from authentication)
+                        # We need the user_type to get the correct order model.
+                        # Let's get the user_type from the user_data_cache which is set at connection time.
+                        user_data_from_cache = await get_user_data_cache(redis_client, user_id)
+                        user_type = user_data_from_cache.get("user_type", "live") if user_data_from_cache else "live" # Default to "live"
+                        order_model = get_order_model(user_type) # Get correct model based on user_type
+
+                        pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
+                        
+                        pending_orders_data = []
+                        for po in pending_orders_orm:
+                            po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
+                                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+                            po_dict['commission'] = "0.0" # Ensure commission is present
+                            pending_orders_data.append(po_dict)
+
+                        # Get full portfolio details to get balance, margin etc.
+                        account_summary_data = await _get_full_portfolio_details(user_id, group_name, redis_client)
 
                         if websocket.client_state == WebSocketState.CONNECTED:
                             await websocket.send_text(json.dumps({
                                 "type": "market_update",
                                 "data": {
                                     "market_prices": adjusted_prices,
-                                    "positions": positions
+                                    "account_summary": {
+                                        "balance": account_summary_data.get("balance", "0.0") if account_summary_data else "0.0",
+                                        "margin": account_summary_data.get("margin", "0.0") if account_summary_data else "0.0",
+                                        "open_orders": positions, # Existing open positions
+                                        "pending_orders": pending_orders_data
+                                    }
                                 }
                             }, cls=DecimalEncoder))
                             logger.debug(f"User {user_id}: Sent positions + market prices update")
@@ -376,7 +399,8 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             "account_number": account_number, "group_name": group_name,
             "leverage": Decimal(str(getattr(db_user_instance, 'leverage', 1.0))),
             "wallet_balance": Decimal(str(getattr(db_user_instance, 'wallet_balance', 0.0))),
-            "margin": Decimal(str(getattr(db_user_instance, 'margin', 0.0)))
+            "margin": Decimal(str(getattr(db_user_instance, 'margin', 0.0))),
+            "user_type": user_type # Add user_type to cache for later retrieval
         }
         await set_user_data_cache(redis_client, account_number, user_data_to_cache)
 
@@ -392,10 +416,8 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         for pos in open_positions_orm:
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
-            pos_dict['profit_loss'] = "0.0"
             pos_dict['commission'] = "0.0"  # Add commission field
-            pos_dict['commission_applied'] = "0.0"  # Add commission_applied field
-            pos_dict['applied_commission'] = "0.0"  # Add applied_commission field
+            # Removed 'profit_loss', 'commission_applied', 'applied_commission' fields to match pending_orders format
             initial_positions_data.append(pos_dict)
 
         # Dynamically calculate margin from open positions
