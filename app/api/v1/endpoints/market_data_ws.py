@@ -215,84 +215,11 @@ async def per_connection_redis_listener(
     user_id: int,
     group_name: str,
     redis_client: Redis,
+    db: AsyncSession
 ):
-    """
-    A per-WebSocket task that subscribes to market data and user-specific account updates.
-    """
-    user_account_channel = f"user_updates:{user_id}"
-    raw_market_data_feed_channel = REDIS_MARKET_DATA_CHANNEL
-
     pubsub = redis_client.pubsub()
-    await pubsub.subscribe(raw_market_data_feed_channel)
-    await pubsub.subscribe(user_account_channel)
-    logger.info(f"User {user_id}: Subscribed to {raw_market_data_feed_channel} and {user_account_channel}")
-
-    # Initial full data send
-    try:
-        # Send initial market prices and account summary
-        group_settings_initial = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-        if group_settings_initial:
-            initial_market_payload = {}
-            for sym_upper in group_settings_initial.keys():
-                cached_price = await get_adjusted_market_price_cache(redis_client, group_name, sym_upper)
-                if cached_price:
-                    initial_market_payload[sym_upper] = {
-                        'buy': float(cached_price.get('buy', 0.0)),
-                        'sell': float(cached_price.get('sell', 0.0)),
-                        'spread': float((Decimal(str(cached_price.get('buy',0.0))) - Decimal(str(cached_price.get('sell',0.0)))) / Decimal(str(group_settings_initial[sym_upper].get('spread_pip', 1))) if Decimal(str(group_settings_initial[sym_upper].get('spread_pip', 1))) > 0 else 0.0)
-                    }
-            
-            # Get initial portfolio
-            initial_portfolio = await _get_full_portfolio_details(user_id, group_name, redis_client)
-            
-            # Clean commission fields and overwrite profit_loss with USD before sending
-            if initial_portfolio and 'positions' in initial_portfolio:
-                for pos in initial_portfolio['positions']:
-                    # Overwrite profit_loss with USD value if available
-                    if 'profit_loss_usd' in pos:
-                        pos['profit_loss'] = pos['profit_loss_usd']
-                    keys_to_remove = [k for k in pos if k.startswith('commission_') and k != 'commission']
-                    for k in keys_to_remove:
-                        pos.pop(k, None)
-
-            # Get open positions from database
-            order_model = get_order_model(user_type)
-            open_positions = await crud_order.get_all_open_orders_by_user_id(db, account_number, order_model)
-            if open_positions:
-                # Convert positions to dict format
-                positions_data = []
-                for pos in open_positions:
-                    pos_dict = {
-                        'order_id': pos.order_id,
-                        'order_company_name': pos.order_company_name,
-                        'order_type': pos.order_type,
-                        'order_quantity': str(pos.order_quantity),
-                        'order_price': str(pos.order_price),
-                        'margin': str(pos.margin),
-                        'contract_value': str(pos.contract_value),
-                        'stop_loss': str(pos.stop_loss) if pos.stop_loss else None,
-                        'take_profit': str(pos.take_profit) if pos.take_profit else None,
-                        'commission': str(pos.commission) if pos.commission else "0.0",
-                        'profit_loss': "0.0"  # Initial PnL
-                    }
-                    positions_data.append(pos_dict)
-                
-                # Update initial portfolio with positions
-                if initial_portfolio:
-                    initial_portfolio['positions'] = positions_data
-
-            if websocket.client_state == WebSocketState.CONNECTED:
-                await websocket.send_text(json.dumps({
-                    "type": "market_update",
-                    "data": {
-                        "market_prices": initial_market_payload,
-                        "account_summary": initial_portfolio
-                    }
-                }, cls=DecimalEncoder))
-                logger.debug(f"User {user_id}: Sent initial combined data.")
-
-    except Exception as e_init:
-        logger.error(f"User {user_id}: Error sending initial data: {e_init}", exc_info=True)
+    await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
+    logger.info(f"User {user_id}: Subscribed to {REDIS_MARKET_DATA_CHANNEL}")
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
@@ -301,100 +228,72 @@ async def per_connection_redis_listener(
                 await asyncio.sleep(0.01)
                 continue
 
-            received_channel = message['channel']
-            
-            # Always fetch fresh group settings and relevant symbols
-            current_group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-            if not current_group_settings:
-                logger.warning(f"User {user_id}: No group settings found for group {group_name}. Skipping message processing.")
-                continue
-            current_relevant_symbols = set(current_group_settings.keys())
-
-            if received_channel == raw_market_data_feed_channel:
+            if message['channel'] == REDIS_MARKET_DATA_CHANNEL:
                 try:
                     raw_market_data_update = json.loads(message['data'], object_hook=decode_decimal)
                     if raw_market_data_update.get("type") == "market_data_update":
                         price_data_content = {k: v for k, v in raw_market_data_update.items() if k != "type"}
-                        
-                        # Calculate and cache adjusted prices
-                        adjusted_prices_for_this_update = await _calculate_and_cache_adjusted_prices(
-                            price_data_content, group_name, current_relevant_symbols, current_group_settings, redis_client
+
+                        # Get group settings
+                        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                        relevant_symbols = set(group_settings.keys())
+
+                        # Update and cache adjusted prices
+                        adjusted_prices = await _calculate_and_cache_adjusted_prices(
+                            raw_market_data=price_data_content,
+                            group_name=group_name,
+                            relevant_symbols=relevant_symbols,
+                            group_settings=group_settings,
+                            redis_client=redis_client
                         )
-                        
-                        if adjusted_prices_for_this_update:
-                            # Get user's portfolio data
-                            user_data = await get_user_data_cache(redis_client, user_id)
-                            user_portfolio_cache = await get_user_portfolio_cache(redis_client, user_id)
-                            
-                            if user_data and user_portfolio_cache:
-                                open_positions = user_portfolio_cache.get('positions', [])
-                                
-                                # Get all current market prices for symbols in positions
-                                current_market_prices = {}
-                                for pos in open_positions:
-                                    symbol = pos.get('order_company_name')
-                                    if symbol:
-                                        symbol_upper = symbol.upper()
-                                        # Get the latest cached price
-                                        cached_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol_upper)
-                                        if cached_price:
-                                            current_market_prices[symbol_upper] = {
-                                                'buy': Decimal(str(cached_price.get('buy', 0.0))),
-                                                'sell': Decimal(str(cached_price.get('sell', 0.0)))
-                                            }
-                                
-                                # Calculate portfolio with current market prices
-                                portfolio_metrics = await calculate_user_portfolio(
-                                    user_data=user_data,
-                                    open_positions=open_positions,
-                                    adjusted_market_prices=current_market_prices,
-                                    group_symbol_settings=current_group_settings,
-                                    redis_client=redis_client
-                                )
-                                
-                                # Update portfolio cache with new calculations
-                                await set_user_portfolio_cache(redis_client, user_id, portfolio_metrics)
-                                
-                                # Clean commission fields and overwrite profit_loss with USD before sending
-                                if portfolio_metrics and 'positions' in portfolio_metrics:
-                                    for pos in portfolio_metrics['positions']:
-                                        # Overwrite profit_loss with USD value if available
-                                        if 'profit_loss_usd' in pos:
-                                            pos['profit_loss'] = pos['profit_loss_usd']
-                                        keys_to_remove = [k for k in pos if k.startswith('commission_') and k != 'commission']
-                                        for k in keys_to_remove:
-                                            pos.pop(k, None)
-                                if websocket.client_state == WebSocketState.CONNECTED:
-                                    await websocket.send_text(json.dumps({
-                                        "type": "market_update",
-                                        "data": {
-                                            "market_prices": adjusted_prices_for_this_update,
-                                            "account_summary": portfolio_metrics
-                                        }
-                                    }, cls=DecimalEncoder))
-                                    logger.debug(f"User {user_id}: Sent combined market and portfolio update.")
-                            
-                except Exception as e_market_proc:
-                    logger.error(f"User {user_id}: Error processing market data: {e_market_proc}", exc_info=True)
+
+                        # Get open positions from portfolio cache
+                        portfolio_cache = await get_user_portfolio_cache(redis_client, user_id)
+                        positions = portfolio_cache.get("positions", []) if portfolio_cache else []
+
+                        # Fallback to DB if positions are empty
+                        if not positions:
+                            order_model = get_order_model("live")  # adjust if using user_type
+                            open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                            for pos in open_positions_orm:
+                                positions.append({
+                                    "order_id": pos.order_id,
+                                    "order_company_name": pos.order_company_name,
+                                    "order_type": pos.order_type,
+                                    "order_quantity": str(pos.order_quantity),
+                                    "order_price": str(pos.order_price),
+                                    "margin": str(pos.margin),
+                                    "contract_value": str(pos.contract_value),
+                                    "profit_loss": "0.0",
+                                    "commission": "0.0"
+                                })
+
+                        # Attach current price from adjusted prices
+                        for pos in positions:
+                            symbol = pos.get("order_company_name", "").upper()
+                            pos["current_price"] = str(adjusted_prices.get(symbol, {}).get("buy", "0.0"))
+
+                        if websocket.client_state == WebSocketState.CONNECTED:
+                            await websocket.send_text(json.dumps({
+                                "type": "market_update",
+                                "data": {
+                                    "market_prices": adjusted_prices,
+                                    "positions": positions
+                                }
+                            }, cls=DecimalEncoder))
+                            logger.debug(f"User {user_id}: Sent positions + market prices update")
+
+                except Exception as e:
+                    logger.error(f"User {user_id}: Error in market data processing: {e}", exc_info=True)
 
     except WebSocketDisconnect:
-        logger.info(f"User {user_id}: WebSocket disconnected during Redis listening.")
-    except asyncio.CancelledError:
-        logger.info(f"User {user_id}: Redis listener task cancelled.")
+        logger.info(f"User {user_id}: WebSocket disconnected.")
     except Exception as e:
-        logger.error(f"User {user_id}: Unexpected error in Redis listener: {e}", exc_info=True)
+        logger.error(f"User {user_id}: Unexpected error: {e}", exc_info=True)
     finally:
-        logger.info(f"User {user_id}: Cleaning up Redis subscriptions.")
-        if pubsub:
-            try:
-                await pubsub.unsubscribe(raw_market_data_feed_channel)
-                await pubsub.unsubscribe(user_account_channel)
-            except Exception as unsub_e:
-                logger.error(f"User {user_id}: Error during pubsub unsubscribe: {unsub_e}")
-            try:
-                await pubsub.close()
-            except Exception as close_e:
-                logger.error(f"User {user_id}: Error during pubsub.close(): {close_e}")
+        await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
+        await pubsub.close()
+        logger.info(f"User {user_id}: Unsubscribed from Redis and cleaned up.")
 
 
 # app/api/v1/endpoints/market_data_ws.py
@@ -510,7 +409,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             "margin_level": "0.0",
             "positions": initial_positions_data
         }
-        await set_user_portfolio_cache(redis_client, account_number, user_portfolio_data)
+        await set_user_portfolio_cache(redis_client, db_user_id, user_portfolio_data)
         await update_group_symbol_settings(group_name, db, redis_client)
 
     except Exception as e:
@@ -524,8 +423,11 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     logger.info(f"WebSocket connection accepted for user {account_number} (Group: {group_name}).")
 
     # Create and manage the per-connection Redis listener task
+    # listener_task = asyncio.create_task(
+    #     per_connection_redis_listener(websocket, account_number, group_name, redis_client, db)
+    # )
     listener_task = asyncio.create_task(
-        per_connection_redis_listener(websocket, account_number, group_name, redis_client)
+        per_connection_redis_listener(websocket, db_user_id, group_name, redis_client, db)
     )
 
     try:

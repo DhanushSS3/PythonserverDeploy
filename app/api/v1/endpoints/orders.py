@@ -19,6 +19,7 @@ from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserO
 from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
+from app.core.cache import publish_account_structure_changed_event
 
 from app.core.cache import (
     set_user_data_cache,
@@ -416,6 +417,13 @@ async def place_order(
             except Exception as e:
                 orders_logger.error(f"[FIREBASE] Error sending Barclays order to Firebase: {e}", exc_info=True)
 
+        await publish_account_structure_changed_event(redis_client, current_user.id)
+        await redis_client.publish("market_data_updates", json.dumps({
+            "type": "market_data_update",
+            "symbol": "TRIGGER",
+            "b": "0",
+            "o": "0"
+        }))
         return OrderResponse(
             order_id=db_order.order_id,
             order_user_id=db_order.order_user_id,
@@ -552,6 +560,7 @@ async def place_pending_order(
             created_at=getattr(db_order, 'created_at', None).isoformat() if getattr(db_order, 'created_at', None) else None,
             updated_at=getattr(db_order, 'updated_at', None).isoformat() if getattr(db_order, 'updated_at', None) else None
         )
+        await publish_account_structure_changed_event(redis_client, current_user.id)
         return response
 
     except OrderProcessingError as e:
@@ -773,6 +782,12 @@ async def close_order(
                                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                                 await publish_account_structure_changed_event(redis_client, user_id)
+                                await redis_client.publish("market_data_updates", json.dumps({
+                                    "type": "market_data_update",
+                                    "symbol": "TRIGGER",
+                                    "b": "0",
+                                    "o": "0"
+                                }))
                                 orders_logger.info(f"Portfolio cache updated and websocket event published for user {user_id} after closing order.")
                         except Exception as e:
                             orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order close: {e}", exc_info=True)

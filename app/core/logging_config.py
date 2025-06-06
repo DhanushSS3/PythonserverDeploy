@@ -52,6 +52,8 @@ redis_logger      = setup_file_logger("redis", "redis.log", logging.DEBUG)
 security_logger   = setup_file_logger("app.core.security", "security.log", logging.DEBUG)
 app_logger        = setup_file_logger("app", "app.log", logging.INFO)
 orders_logger     = setup_file_logger("orders", "orders.log", logging.DEBUG)
+market_data_logger = setup_file_logger("market_data", "market_data.log", logging.DEBUG)
+cache_logger      = setup_file_logger("cache", "cache.log", logging.DEBUG)
 
 # WebSocket logger with stream output
 websocket_logger  = setup_stream_logger("websocket_logger", logging.DEBUG)
