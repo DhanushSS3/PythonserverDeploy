@@ -97,9 +97,10 @@ async def calculate_single_order_margin(
     group_settings: Dict[str, Any],
     external_symbol_info: Dict[str, Any],
     raw_market_data: Dict[str, Any]
-) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[Decimal]]:
+) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[Decimal], Optional[Decimal]]:
     """
     Calculate margin for a single order using raw prices.
+    Returns (margin_usd, price, contract_value, commission)
     """
     try:
         # Get raw prices
@@ -109,30 +110,28 @@ async def calculate_single_order_margin(
             symbol_data = await get_last_known_price(redis_client, symbol)
             if not symbol_data:
                 logger.error(f"No live or cached price found for {symbol}")
-                return None, None, None
+                return None, None, None, None
         raw_ask_price = Decimal(str(symbol_data.get('b', 0)))  # Ask price
         raw_bid_price = Decimal(str(symbol_data.get('o', 0)))  # Bid price
 
         if not raw_ask_price or not raw_bid_price:
             logger.error(f"Invalid raw prices for {symbol}: ask={raw_ask_price}, bid={raw_bid_price}")
-            return None, None, None
+            return None, None, None, None
 
         # Calculate contract value and margin using raw prices
         contract_size = Decimal(str(external_symbol_info.get('contract_size', 100000)))
         order_type_upper = order_type.upper()
         
         contract_value = quantity * contract_size
-        adjusted_price = raw_ask_price
-        adjusted_price = raw_bid_price
+        adjusted_price = raw_ask_price if order_type_upper in ['BUY', 'BUY_LIMIT', 'BUY_STOP'] else raw_bid_price
 
-        # Calculate contract value based on order type
+        # Calculate margin based on order type
         if order_type_upper in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
             margin = ((contract_value * raw_ask_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
         else:  # SELL orders
-            margin = ((contract_value * raw_ask_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-            
+            margin = ((contract_value * raw_bid_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
 
-        # Calculate commission
+        # Calculate commission separately
         commission = Decimal('0.0')
         commission_type = int(group_settings.get('commision_type', 0))
         commission_value_type = int(group_settings.get('commision_value_type', 0))
@@ -142,12 +141,9 @@ async def calculate_single_order_margin(
             if commission_value_type == 0:  # Per lot
                 commission = quantity * commission_rate
             elif commission_value_type == 1:  # Percent of price
-                commission = ((commission_rate * adjusted_price) / Decimal("100")) * quantity
+                commission = ((commission_rate * adjusted_price) / Decimal("100")) * quantity * contract_size
 
         commission = commission.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-        # Add commission to margin
-        margin = margin + commission
 
         # Convert margin to USD if needed
         profit_currency = external_symbol_info.get('profit_currency', 'USD')
@@ -172,18 +168,18 @@ async def calculate_single_order_margin(
                         margin_usd = margin / indirect_rate
                     else:
                         logger.error(f"Could not convert margin from {profit_currency} to USD")
-                        return None, None, None
+                        return None, None, None, None
             except Exception as e:
                 logger.error(f"Error converting margin to USD: {e}")
-                return None, None, None
+                return None, None, None, None
         else:
             margin_usd = margin
 
-        return margin_usd, adjusted_price, contract_value
+        return margin_usd, adjusted_price, contract_value, commission
 
     except Exception as e:
         logger.error(f"Error calculating margin for {symbol}: {e}", exc_info=True)
-        return None, None, None
+        return None, None, None, None
 
 async def calculate_total_symbol_margin_contribution(
     db: AsyncSession,
@@ -192,9 +188,10 @@ async def calculate_total_symbol_margin_contribution(
     symbol: str,
     open_positions_for_symbol: list,
     order_model=None
-) -> Decimal:
+) -> Dict[str, Any]:
     """
     Calculate total margin contribution for a symbol considering hedged positions.
+    Returns a dictionary with total_margin and other details.
     """
     try:
         total_buy_quantity = Decimal('0.0')
@@ -205,31 +202,31 @@ async def calculate_total_symbol_margin_contribution(
         user_data = await get_user_data_cache(redis_client, user_id)
         if not user_data:
             logger.error(f"User data not found for user {user_id}")
-            return Decimal('0.0')
+            return {"total_margin": Decimal('0.0')}
 
         user_leverage = Decimal(str(user_data.get('leverage', '1.0')))
         if user_leverage <= 0:
             logger.error(f"Invalid leverage for user {user_id}: {user_leverage}")
-            return Decimal('0.0')
+            return {"total_margin": Decimal('0.0')}
 
         # Get group settings for margin calculation
         group_name = user_data.get('group_name')
         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
         if not group_settings:
             logger.error(f"Group settings not found for symbol {symbol}")
-            return Decimal('0.0')
+            return {"total_margin": Decimal('0.0')}
 
         # Get external symbol info
         external_symbol_info = await get_external_symbol_info(db, symbol)
         if not external_symbol_info:
             logger.error(f"External symbol info not found for {symbol}")
-            return Decimal('0.0')
+            return {"total_margin": Decimal('0.0')}
 
         # Get raw market data for price calculations
         raw_market_data = await get_latest_market_data()
         if not raw_market_data:
             logger.error("Failed to get market data")
-            return Decimal('0.0')
+            return {"total_margin": Decimal('0.0')}
 
         # Process each position
         for position in open_positions_for_symbol:
@@ -257,31 +254,9 @@ async def calculate_total_symbol_margin_contribution(
         # Calculate total margin contribution
         total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
 
-        # Add commission if applicable
-        commission_type = int(group_settings.get('commision_type', 0))
-        commission_value_type = int(group_settings.get('commision_value_type', 0))
-        commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
-
-        if commission_type in [0, 1]:  # If commission is enabled
-            if commission_value_type == 0:  # Fixed commission per lot
-                commission = net_quantity * commission_rate
-            elif commission_value_type == 1:  # Percentage of price
-                # Get current price for commission calculation
-                symbol_data = raw_market_data.get(symbol, {})
-                if symbol_data:
-                    current_price = Decimal(str(symbol_data.get('b', 0)))  # Use ask price
-                    contract_size = Decimal(str(external_symbol_info.get('contract_size', 100000)))
-                    commission = ((commission_rate * current_price * net_quantity * contract_size) / Decimal('100'))
-                else:
-                    commission = Decimal('0.0')
-            else:
-                commission = Decimal('0.0')
-            
-            commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            total_margin += commission
-
-        return total_margin
+        # Return the result
+        return {"total_margin": total_margin, "net_quantity": net_quantity}
 
     except Exception as e:
         logger.error(f"Error calculating total symbol margin contribution: {e}", exc_info=True)
-        return Decimal('0.0')
+        return {"total_margin": Decimal('0.0')}

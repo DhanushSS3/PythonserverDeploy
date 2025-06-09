@@ -710,27 +710,30 @@ async def close_order(
                         commission_type = int(group_settings.get('commision_type', -1))
                         commission_value_type = int(group_settings.get('commision_value_type', -1))
                         commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
+                        
+                        # Get existing entry commission from the order
+                        existing_entry_commission = Decimal(str(db_order.commission or "0.0"))
+                        orders_logger.info(f"Existing entry commission for order {order_id}: {existing_entry_commission}")
+                        
+                        # Only calculate exit commission if applicable
                         exit_commission = Decimal("0.0")
-                        if commission_type in [0, 2]:
-                            if commission_value_type == 0: exit_commission = quantity * commission_rate
-                            elif commission_value_type == 1:
+                        if commission_type in [0, 2]:  # "Every Trade" or "Out"
+                            if commission_value_type == 0:  # Per lot
+                                exit_commission = quantity * commission_rate
+                            elif commission_value_type == 1:  # Percent of price
                                 calculated_exit_contract_value = quantity * contract_size * close_price
                                 if calculated_exit_contract_value > Decimal("0.0"):
                                     exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
-                        entry_commission_for_total = Decimal("0.0")
-                        if commission_type in [0, 1]:
-                            if commission_value_type == 0: entry_commission_for_total = quantity * commission_rate
-                            elif commission_value_type == 1:
-                                initial_contract_value = quantity * contract_size * entry_price
-                                if initial_contract_value > Decimal("0.0"):
-                                    entry_commission_for_total = (commission_rate / Decimal("100")) * initial_contract_value
-                        total_commission_for_trade = (entry_commission_for_total + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                        
+                        # Total commission is existing entry commission plus exit commission
+                        total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                        orders_logger.info(f"Commission calculation for order {order_id}: entry={existing_entry_commission}, exit={exit_commission}, total={total_commission_for_trade}")
 
                         if order_type_db == "BUY": profit = (close_price - entry_price) * quantity * contract_size
                         elif order_type_db == "SELL": profit = (entry_price - close_price) * quantity * contract_size
                         else: raise HTTPException(status_code=500, detail="Invalid order type.")
                         
-                        profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db) 
+                        profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db, redis_client=redis_client)
                         if profit_currency != "USD" and profit_usd == profit: 
                             orders_logger.error(f"Order {db_order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
                             raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
@@ -865,27 +868,30 @@ async def close_order(
                 commission_type = int(group_settings.get('commision_type', -1))
                 commission_value_type = int(group_settings.get('commision_value_type', -1))
                 commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
+                
+                # Get existing entry commission from the order
+                existing_entry_commission = Decimal(str(db_order.commission or "0.0"))
+                orders_logger.info(f"Existing entry commission for order {order_id}: {existing_entry_commission}")
+                
+                # Only calculate exit commission if applicable
                 exit_commission = Decimal("0.0")
-                if commission_type in [0, 2]:
-                    if commission_value_type == 0: exit_commission = quantity * commission_rate
-                    elif commission_value_type == 1:
+                if commission_type in [0, 2]:  # "Every Trade" or "Out"
+                    if commission_value_type == 0:  # Per lot
+                        exit_commission = quantity * commission_rate
+                    elif commission_value_type == 1:  # Percent of price
                         calculated_exit_contract_value = quantity * contract_size * close_price
                         if calculated_exit_contract_value > Decimal("0.0"):
                             exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
-                entry_commission_for_total = Decimal("0.0")
-                if commission_type in [0, 1]:
-                    if commission_value_type == 0: entry_commission_for_total = quantity * commission_rate
-                    elif commission_value_type == 1:
-                        initial_contract_value = quantity * contract_size * entry_price
-                        if initial_contract_value > Decimal("0.0"):
-                            entry_commission_for_total = (commission_rate / Decimal("100")) * initial_contract_value
-                total_commission_for_trade = (entry_commission_for_total + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                
+                # Total commission is existing entry commission plus exit commission
+                total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                orders_logger.info(f"Commission calculation for order {order_id}: entry={existing_entry_commission}, exit={exit_commission}, total={total_commission_for_trade}")
 
                 if order_type_db == "BUY": profit = (close_price - entry_price) * quantity * contract_size
                 elif order_type_db == "SELL": profit = (entry_price - close_price) * quantity * contract_size
                 else: raise HTTPException(status_code=500, detail="Invalid order type.")
                 
-                profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db, redis_client=redis_client) 
+                profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db, redis_client=redis_client)
                 if profit_currency != "USD" and profit_usd == profit: 
                     orders_logger.error(f"Order {db_order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
                     raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
@@ -1020,7 +1026,7 @@ async def modify_pending_order(
         updated_order = await crud_order.update_order_with_tracking(
             db,
             db_order,
-            update_data,
+            update_fields=update_data,
             user_id=modify_request.user_id,
             user_type=modify_request.user_type
         )
@@ -1043,9 +1049,9 @@ async def modify_pending_order(
             "order_price": str(updated_order.order_price),
             "order_quantity": str(updated_order.order_quantity),
             "contract_value": str(updated_order.contract_value) if updated_order.contract_value else None,
-            "margin": str(updated_order.margin) if updated_order.margin else None,
-            "stop_loss": str(updated_order.stop_loss) if updated_order.stop_loss else None,
-            "take_profit": str(updated_order.take_profit) if updated_order.take_profit else None,
+            "margin": str(updated_order.margin) if updated_order.margin is not None else None,
+            "stop_loss": str(updated_order.stop_loss) if updated_order.stop_loss is not None else None,
+            "take_profit": str(updated_order.take_profit) if updated_order.take_profit is not None else None,
             "user_type": modify_request.user_type,
             "status": updated_order.status,
             "created_at": updated_order.created_at.isoformat() if updated_order.created_at else None,

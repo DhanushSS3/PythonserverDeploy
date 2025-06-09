@@ -183,14 +183,9 @@ async def calculate_user_portfolio(
                 price_diff = entry_price - current_buy
                 pnl = price_diff * quantity * contract_size
 
-            # Calculate commission based on settings
-            commission_usd = Decimal('0.0')
-            if commission_type in [0, 1]:  # If commission is enabled
-                if commission_value_type == 0:  # Fixed commission per lot
-                    commission_usd = commission_rate * quantity
-                elif commission_value_type == 1:  # Percentage of price
-                    commission_usd = (commission_rate * entry_price * quantity * contract_size) / Decimal('100')
-
+            # Use stored commission value if available, otherwise use 0
+            commission_usd = Decimal(str(position.get('commission', '0.0')))
+            
             # Convert PnL to USD if needed
             pnl_usd = pnl
             if profit_currency != 'USD':

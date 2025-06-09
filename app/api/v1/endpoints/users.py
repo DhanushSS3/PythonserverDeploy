@@ -834,14 +834,17 @@ async def login_demo_user(
     # For demo login, always use "demo" as user_type regardless of what might be in the credentials
     fixed_user_type = "demo"
     
-    demo_user = await crud_user.get_demo_user_by_email(db, email=credentials.username)
+    # Try to find user by email
+    demo_user = await crud_user.get_demo_user_by_email(db, email=credentials.email)
+    
+    # If not found by email, try by phone number (for backward compatibility)
     if not demo_user:
-        demo_user = await crud_user.get_demo_user_by_phone_number(db, phone_number=credentials.username)
+        demo_user = await crud_user.get_demo_user_by_phone_number(db, phone_number=credentials.email)
 
     if not demo_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password for demo user",
+            detail="Invalid email or password for demo user",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

@@ -179,7 +179,7 @@ async def process_new_order(
                 raise OrderProcessingError("Failed to get market data")
 
             # Step 2: Calculate standalone margin
-            full_margin_usd, price, contract_value = await calculate_single_order_margin(
+            full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
                 redis_client=redis_client,
                 symbol=symbol,
                 order_type=order_type,
@@ -191,6 +191,9 @@ async def process_new_order(
             )
             if full_margin_usd is None:
                 raise OrderProcessingError("Margin calculation failed")
+
+            # Log the calculated commission
+            logger.info(f"[COMMISSION_CALC] User {user_id} Symbol {symbol}: Calculated commission={commission:.2f}")
 
             order_model = get_order_model(user_type)
 
@@ -253,6 +256,7 @@ async def process_new_order(
                 'order_quantity': quantity,
                 'contract_value': contract_value,
                 'margin': full_margin_usd,
+                'commission': commission,  # Include the calculated commission
                 'stop_loss': order_data.get('stop_loss'),
                 'take_profit': order_data.get('take_profit'),
                 # 'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
