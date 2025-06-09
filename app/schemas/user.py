@@ -26,7 +26,7 @@ class UserCreate(BaseModel):
     pincode: int = Field(..., description="Pincode of the user's location.") # Assuming pincode is an integer
 
     # Optional fields that might be provided during registration or set later
-    user_type: str = Field(..., max_length=100, description="Type of user (e.g., 'trader', 'investor').") # user_type is required
+    user_type: Optional[str] = Field("live", max_length=100, description="Type of user (e.g., 'trader', 'investor'). Defaults to 'live'.")
     security_question: Optional[str] = Field(None, max_length=255, description="Security question for recovery.")
     fund_manager: Optional[str] = Field(None, max_length=255, description="Name of the assigned fund manager.")
     is_self_trading: Optional[int] = Field(1, description="Flag indicating if the user is self-trading (0 or 1). Defaults to 1.")

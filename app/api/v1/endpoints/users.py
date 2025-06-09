@@ -136,11 +136,14 @@ async def register_user_with_proofs(
     is_self_trading: int = Form(...),
     # Optional fields
     fund_manager: str = Form(None),
-    user_type: str = Form("live"),
+    user_type: str = Form(None),  # Changed from default="live" to None
     isActive: int = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
-    existing_user = await crud_user.get_user_by_email_phone_type(db, email=email, phone_number=phone_number, user_type=user_type)
+    # Force user_type to be "live" for this endpoint regardless of what's provided
+    fixed_user_type = "live"
+    
+    existing_user = await crud_user.get_user_by_email_phone_type(db, email=email, phone_number=phone_number, user_type=fixed_user_type)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -172,7 +175,7 @@ async def register_user_with_proofs(
         "security_answer": security_answer,
         "address_proof": address_proof,
         "id_proof": id_proof,
-        "user_type": user_type if user_type else "live",
+        "user_type": fixed_user_type,  # Always use "live" for this endpoint
         "fund_manager": fund_manager,
         "is_self_trading": is_self_trading,
         "wallet_balance": Decimal("0.0"),
@@ -226,6 +229,7 @@ async def login_with_user_type(
     redis_client: Redis = Depends(get_redis_client)
 ):
     # Always require email and user_type to distinguish demo/live
+    # UserLogin schema already defaults user_type to "live" if not provided
     user_type = credentials.user_type if credentials.user_type else "live"
     user = await crud_user.get_user_by_email_and_type(db, email=credentials.email, user_type=user_type)
 
@@ -759,16 +763,17 @@ async def register_demo_user(
     email: str = Form(...),
     phone_number: str = Form(..., max_length=20),
     password: str = Form(..., min_length=8),
-    security_answer: Optional[str] = Form(None), # Added security_answer
+    security_answer: Optional[str] = Form(None),  # Added security_answer parameter
     city: Optional[str] = Form(None), # Changed to Optional to match schema more closely if None is intended as default
     state: Optional[str] = Form(None), # Changed to Optional
     pincode: Optional[int] = Form(None),
-    # user_type: str = Form("demo", max_length=100), # Removed: user_type is fixed to "demo" for this endpoint
+    # Removed user_type parameter completely as it's always "demo" for this endpoint
     security_question: Optional[str] = Form(None),
     group_name: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
-    fixed_user_type = "demo"  # User type is always "demo" for this endpoint
+    # User type is always "demo" for this endpoint
+    fixed_user_type = "demo"  
 
     existing_user = await crud_user.get_user_by_email_phone_type(db, email=email, phone_number=phone_number, user_type=fixed_user_type)
     if existing_user:
@@ -786,6 +791,7 @@ async def register_demo_user(
         "pincode": pincode,
         "user_type": fixed_user_type, # Use fixed "demo" user type
         "security_question": security_question,
+        "security_answer": security_answer,  # Added security_answer to the data dictionary
         "group_name": group_name,
         "wallet_balance": Decimal("100000.0"), # Starting balance for demo
         "leverage": Decimal("100.0"), # Default leverage for demo
@@ -802,7 +808,6 @@ async def register_demo_user(
             db=db,
             demo_user_data=demo_user_data,
             hashed_password=hashed_password,
-            security_answer=security_answer, # Pass security_answer
         )
         return new_demo_user
 
@@ -826,6 +831,9 @@ async def login_demo_user(
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
 ):
+    # For demo login, always use "demo" as user_type regardless of what might be in the credentials
+    fixed_user_type = "demo"
+    
     demo_user = await crud_user.get_demo_user_by_email(db, email=credentials.username)
     if not demo_user:
         demo_user = await crud_user.get_demo_user_by_phone_number(db, phone_number=credentials.username)
@@ -854,15 +862,15 @@ async def login_demo_user(
     refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
-        data={"sub": str(demo_user.id), "user_type": "demo", "account_number": demo_user.account_number},
+        data={"sub": str(demo_user.id), "user_type": fixed_user_type, "account_number": demo_user.account_number},
         expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(
-        data={"sub": str(demo_user.id), "user_type": "demo", "account_number": demo_user.account_number},
+        data={"sub": str(demo_user.id), "user_type": fixed_user_type, "account_number": demo_user.account_number},
         expires_delta=refresh_token_expires
     )
 
-    await store_refresh_token(client=redis_client, user_id=demo_user.id, refresh_token=refresh_token, user_type="demo") # Store user_type
+    await store_refresh_token(client=redis_client, user_id=demo_user.id, refresh_token=refresh_token, user_type=fixed_user_type) # Store user_type
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
 
@@ -876,6 +884,9 @@ async def demo_signup_send_otp(
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
 ):
+    # Always use "demo" as user_type for this endpoint
+    fixed_user_type = "demo"
+    
     demo_user = await crud_user.get_demo_user_by_email(db, email=request_data.email)
 
     if demo_user and getattr(demo_user, 'isActive', 0) == 1:
@@ -892,7 +903,7 @@ async def demo_signup_send_otp(
         await crud_otp.create_otp(db, demo_user_id=demo_user.id, force_otp_code=otp_code) # Pass demo_user_id
         logger.info(f"Sent OTP to existing inactive demo user {request_data.email} for activation.")
     else:
-        redis_key = f"signup_otp:{request_data.email}:demo" # Specific key for demo
+        redis_key = f"signup_otp:{request_data.email}:{fixed_user_type}" # Use fixed_user_type
         await redis_client.set(redis_key, otp_code, ex=int(settings.OTP_EXPIRATION_MINUTES * 60))
         logger.info(f"Stored OTP in Redis for new demo email {request_data.email}.")
 
@@ -922,13 +933,16 @@ async def demo_signup_verify_otp(
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
 ):
-    redis_key_signup_otp = f"signup_otp:{request_data.email}:demo"
+    # Always use "demo" as user_type for this endpoint
+    fixed_user_type = "demo"
+    
+    redis_key_signup_otp = f"signup_otp:{request_data.email}:{fixed_user_type}"
     stored_otp_in_redis = await redis_client.get(redis_key_signup_otp)
 
     if stored_otp_in_redis:
         if stored_otp_in_redis == request_data.otp_code:
             await redis_client.delete(redis_key_signup_otp)
-            redis_key_preverified = f"preverified_email:{request_data.email}:demo"
+            redis_key_preverified = f"preverified_email:{request_data.email}:{fixed_user_type}"
             await redis_client.set(redis_key_preverified, "1", ex=15 * 60)
             logger.info(f"OTP for new demo email {request_data.email} verified via Redis.")
             return StatusResponse(message="Email verified successfully. Please complete your registration.")
@@ -963,6 +977,9 @@ async def demo_request_password_reset(
     payload: DemoRequestPasswordReset,
     db: AsyncSession = Depends(get_db),
 ):
+    # Always use "demo" as user_type for this endpoint
+    fixed_user_type = "demo"
+    
     demo_user = await crud_user.get_demo_user_by_email(db, payload.email)
     if not demo_user:
         return StatusResponse(message="If a demo user exists, an OTP has been sent.")
@@ -984,7 +1001,9 @@ async def demo_verify_password_reset_otp(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis_client)
 ):
-    user_type = payload.user_type if payload.user_type else "demo"
+    # Always use "demo" as user_type for this endpoint
+    fixed_user_type = "demo"
+    
     demo_user = await crud_user.get_demo_user_by_email(db, payload.email)
     if not demo_user:
         raise HTTPException(status_code=400, detail="Invalid credentials for demo user.")
@@ -994,9 +1013,9 @@ async def demo_verify_password_reset_otp(
         raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
 
     reset_token = str(uuid4())
-    redis_key = f"reset_token:{demo_user.email}:{user_type}"
+    redis_key = f"reset_token:{demo_user.email}:{fixed_user_type}"
     await redis.setex(redis_key, settings.OTP_EXPIRATION_MINUTES * 60, reset_token)
-    await redis.setex(crud_otp.get_otp_flag_key(demo_user.email, user_type), settings.OTP_EXPIRATION_MINUTES * 60, "1")
+    await redis.setex(crud_otp.get_otp_flag_key(demo_user.email, fixed_user_type), settings.OTP_EXPIRATION_MINUTES * 60, "1")
     return PasswordResetVerifyResponse(verified=True, message="Demo OTP verified successfully.", reset_token=reset_token)
 
 
@@ -1006,12 +1025,14 @@ async def demo_confirm_password_reset(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis_client)
 ):
-    user_type = payload.user_type if payload.user_type else "demo"
+    # Always use "demo" as user_type for this endpoint
+    fixed_user_type = "demo"
+    
     demo_user = await crud_user.get_demo_user_by_email(db, payload.email)
     if not demo_user:
         raise HTTPException(status_code=400, detail="Invalid email for demo user.")
 
-    redis_key = f"reset_token:{demo_user.email}:{user_type}"
+    redis_key = f"reset_token:{demo_user.email}:{fixed_user_type}"
     stored_token = await redis.get(redis_key)
     if not stored_token or stored_token.decode() != payload.reset_token:
         raise HTTPException(status_code=403, detail="Invalid or expired reset token.")
