@@ -875,17 +875,26 @@ async def close_order(
                         if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
                         else: wallet_common_data["user_id"] = db_user_locked.id
                         if db_order.net_profit != Decimal("0.0"):
-                            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
+                            transaction_id_profit = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+                            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_profit))
                         if total_commission_for_trade > Decimal("0.0"):
-                            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
+                            transaction_id_commission = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+                            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_commission))
                         if swap_amount != Decimal("0.0"):
-                            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
+                            transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+                            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
 
                         await db.commit()
                         await db.refresh(db_order)
-
-                        # --- Refresh user data cache after DB update ---
-                        from app.core.cache import set_user_data_cache
+                        
+                        # Log the user's wallet balance and margin after commit
+                        orders_logger.info(f"AFTER COMMIT: User {db_user_locked.id} wallet_balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
+                        
+                        # Define variables needed for WebSocket updates
+                        user_id = db_order.order_user_id
+                        user_type_str = 'demo' if isinstance(db_user_locked, DemoUser) else 'live'
+                        
+                        # Update user data cache with the latest values from db_user_locked
                         user_data_to_cache = {
                             "id": db_user_locked.id,
                             "email": getattr(db_user_locked, 'email', None),
@@ -900,46 +909,22 @@ async def close_order(
                             "country": getattr(db_user_locked, 'country', None),
                             "phone_number": getattr(db_user_locked, 'phone_number', None)
                         }
-                        await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
-
-                        # --- Portfolio Update & Websocket Event ---
-                        try:
-                            user_id = db_order.order_user_id
-                            user_data = await get_user_data_cache(redis_client, user_id)
-                            if user_data:
-                                group_name = user_data.get('group_name')
-                                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-                                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model_class)
-                                open_positions_dicts = [
-                                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                                    for pos in open_positions
-                                ]
-                                adjusted_market_prices = {}
-                                if group_symbol_settings:
-                                    for symbol in group_symbol_settings.keys():
-                                        prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
-                                        if prices:
-                                            adjusted_market_prices[symbol] = prices
-                                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                                await set_user_portfolio_cache(redis_client, user_id, portfolio)
-                                await publish_account_structure_changed_event(redis_client, user_id)
-                                await publish_market_data_trigger(redis_client)
-                                orders_logger.info(f"Portfolio cache updated and websocket event published for user {user_id} after closing order.")
-                        except Exception as e:
-                            orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order close: {e}", exc_info=True)
-
-                        # Update static orders cache - force a fresh fetch from the database
+                        orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
+                        await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                        orders_logger.info(f"User data cache updated for user {user_id}")
+                        
                         await update_user_static_orders(user_id, db, redis_client, user_type_str)
-
-                        # Publish updates to notify WebSocket clients - make sure these are in the right order
-                        orders_logger.info(f"Publishing order update for user {user_id} after closing order {order_id}")
+                        
+                        # Publish updates in the correct order
+                        orders_logger.info(f"Publishing order update for user {user_id}")
                         await publish_order_update(redis_client, user_id)
-                        orders_logger.info(f"Publishing user data update for user {user_id} after closing order {order_id}")
+                        
+                        orders_logger.info(f"Publishing user data update for user {user_id}")
                         await publish_user_data_update(redis_client, user_id)
-                        orders_logger.info(f"Publishing market data trigger after closing order {order_id}")
+                        
+                        orders_logger.info(f"Publishing market data trigger")
                         await publish_market_data_trigger(redis_client)
-
+                        
                         return OrderResponse.model_validate(db_order, from_attributes=True)
             else:
                 # Always fetch user_group before logging
@@ -1068,6 +1053,45 @@ async def close_order(
 
                 await db.commit()
                 await db.refresh(db_order)
+                
+                # Log the user's wallet balance and margin after commit
+                orders_logger.info(f"AFTER COMMIT: User {db_user_locked.id} wallet_balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
+                
+                # Define variables needed for WebSocket updates
+                user_id = db_order.order_user_id
+                user_type_str = 'demo' if isinstance(db_user_locked, DemoUser) else 'live'
+                
+                # Update user data cache with the latest values from db_user_locked
+                user_data_to_cache = {
+                    "id": db_user_locked.id,
+                    "email": getattr(db_user_locked, 'email', None),
+                    "group_name": db_user_locked.group_name,
+                    "leverage": db_user_locked.leverage,
+                    "user_type": user_type_str,
+                    "account_number": getattr(db_user_locked, 'account_number', None),
+                    "wallet_balance": db_user_locked.wallet_balance,
+                    "margin": db_user_locked.margin,
+                    "first_name": getattr(db_user_locked, 'first_name', None),
+                    "last_name": getattr(db_user_locked, 'last_name', None),
+                    "country": getattr(db_user_locked, 'country', None),
+                    "phone_number": getattr(db_user_locked, 'phone_number', None)
+                }
+                orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id}")
+                
+                await update_user_static_orders(user_id, db, redis_client, user_type_str)
+                
+                # Publish updates in the correct order
+                orders_logger.info(f"Publishing order update for user {user_id}")
+                await publish_order_update(redis_client, user_id)
+                
+                orders_logger.info(f"Publishing user data update for user {user_id}")
+                await publish_user_data_update(redis_client, user_id)
+                
+                orders_logger.info(f"Publishing market data trigger")
+                await publish_market_data_trigger(redis_client)
+                
                 return OrderResponse.model_validate(db_order, from_attributes=True)
         except Exception as e:
             orders_logger.error(f"Error processing close order: {str(e)}", exc_info=True)

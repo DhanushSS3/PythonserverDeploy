@@ -120,7 +120,7 @@ async def trigger_pending_order(
     order_type_original = order['order_type'] # Store original order_type
 
     try:
-        user_data = await get_user_data_cache(redis_client, user_id)
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
         if not user_data:
             user_model = User if user_type == 'live' else DemoUser
             user_data = await user_model.by_id(db, user_id)
@@ -230,7 +230,7 @@ async def trigger_pending_order(
 
         try:
             # --- Portfolio Update & Websocket Event ---
-            user_data_for_portfolio = await get_user_data_cache(redis_client, user_id) # Re-fetch updated user data
+            user_data_for_portfolio = await get_user_data_cache(redis_client, user_id, db, user_type) # Re-fetch updated user data
             if user_data_for_portfolio:
                 open_positions_dicts = [o.to_dict() for o in await crud_order.get_user_open_orders(db, user_id, order_model)]
                 

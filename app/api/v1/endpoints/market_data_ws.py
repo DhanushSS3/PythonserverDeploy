@@ -333,6 +333,14 @@ async def per_connection_redis_listener(
                             balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
                             margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
                             
+                            # Ensure balance and margin are properly formatted as strings
+                            if isinstance(balance_value, Decimal):
+                                balance_value = str(balance_value)
+                            if isinstance(margin_value, Decimal):
+                                margin_value = str(margin_value)
+                                
+                            logger.info(f"User {user_id}: ORDER UPDATE - Formatted values for WebSocket: balance={balance_value} (type: {type(balance_value)}), margin={margin_value} (type: {type(margin_value)})")
+                            
                             response_data = {
                                 "type": "market_update",
                                 "data": {
@@ -359,6 +367,12 @@ async def per_connection_redis_listener(
                             logger.info(f"User {user_id}: Fetching fresh user data from database")
                             user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
                             logger.info(f"User {user_id}: User data fetched from database: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+                            
+                            # Log specific wallet_balance and margin values
+                            if user_data:
+                                wallet_balance = user_data.get("wallet_balance", "0.0")
+                                margin = user_data.get("margin", "0.0")
+                                logger.info(f"User {user_id}: IMPORTANT - Fresh wallet_balance={wallet_balance}, margin={margin}")
                         
                         # Get the latest dynamic portfolio data
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
@@ -386,6 +400,14 @@ async def per_connection_redis_listener(
                             # This ensures we're sending the most up-to-date values from the database
                             balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
                             margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+                            
+                            # Ensure balance and margin are properly formatted as strings
+                            if isinstance(balance_value, Decimal):
+                                balance_value = str(balance_value)
+                            if isinstance(margin_value, Decimal):
+                                margin_value = str(margin_value)
+                                
+                            logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
                             
                             response_data = {
                                 "type": "market_update",
@@ -575,7 +597,14 @@ async def process_portfolio_update(
             balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
             margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
             
-            # Send only what the client needs for display
+            # Ensure balance and margin are properly formatted as strings
+            if isinstance(balance_value, Decimal):
+                balance_value = str(balance_value)
+            if isinstance(margin_value, Decimal):
+                margin_value = str(margin_value)
+                
+            logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
+            
             response_data = {
                 "type": "market_update",
                 "data": {
