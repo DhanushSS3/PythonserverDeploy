@@ -45,7 +45,7 @@ async def calculate_base_margin_per_lot(
     Returns the base margin value per lot or None if calculation fails.
     """
     # Retrieve user data from cache to get group_name and leverage
-    user_data = await get_user_data_cache(redis_client, user_id)
+    user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
     if not user_data or 'group_name' not in user_data or 'leverage' not in user_data:
         orders_logger.error(f"User data or group_name/leverage not found in cache for user {user_id}.")
         return None
@@ -187,6 +187,7 @@ async def calculate_total_symbol_margin_contribution(
     user_id: int,
     symbol: str,
     open_positions_for_symbol: list,
+    user_type: str,
     order_model=None
 ) -> Dict[str, Any]:
     """
@@ -199,7 +200,7 @@ async def calculate_total_symbol_margin_contribution(
         all_margins_per_lot: List[Decimal] = []
 
         # Get user data for leverage
-        user_data = await get_user_data_cache(redis_client, user_id)
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
         if not user_data:
             logger.error(f"User data not found for user {user_id}")
             return {"total_margin": Decimal('0.0')}

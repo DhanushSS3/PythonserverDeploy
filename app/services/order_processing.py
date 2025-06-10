@@ -156,7 +156,7 @@ async def process_new_order(
 
     try:
         # Step 1: Load user data and settings
-            user_data = await get_user_data_cache(redis_client, user_id)
+            user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
             if not user_data:
                 raise OrderProcessingError("User data not found")
 
@@ -242,6 +242,17 @@ async def process_new_order(
                 )
                 logger.info(f"[MARGIN_PROCESS] User {user_id}: OriginalMarginDB={original_user_margin}, CalculatedNewMargin={db_user_locked.margin}")
                 db.add(db_user_locked)  # Ensure changes to user's margin are tracked for commit
+                await db.commit()
+                await db.refresh(db_user_locked)
+                # --- Refresh user data cache after DB update ---
+                user_data_to_cache = {
+                    "wallet_balance": db_user_locked.wallet_balance,
+                    "leverage": db_user_locked.leverage,
+                    "group_name": db_user_locked.group_name,
+                    "margin": db_user_locked.margin,
+                    # Add any other fields you want cached
+                }
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
             # For Barclays users, skip user locking and margin update until order is confirmed
 
             # Step 5: Return order dict

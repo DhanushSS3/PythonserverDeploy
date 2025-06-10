@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from redis.asyncio import Redis
 import decimal # Import Decimal for type hinting and serialization
+import datetime
 
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,10 @@ from app.core.logging_config import cache_logger
 # Keys for storing data in Redis
 REDIS_USER_DATA_KEY_PREFIX = "user_data:" # Stores group_name, leverage, etc.
 REDIS_USER_PORTFOLIO_KEY_PREFIX = "user_portfolio:" # Stores balance, positions
+# New key prefix for static orders data (open and pending orders)
+REDIS_USER_STATIC_ORDERS_KEY_PREFIX = "user_static_orders:" # Stores open and pending orders without PnL
+# New key prefix for dynamic portfolio metrics
+REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX = "user_dynamic_portfolio:" # Stores free_margin, positions with PnL, margin_level
 # New key prefix for group settings per symbol
 REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX = "group_symbol_settings:" # Stores spread, pip values, etc. per group and symbol
 # New key prefix for general group settings
@@ -21,10 +26,17 @@ REDIS_GROUP_SETTINGS_KEY_PREFIX = "group_settings:" # Stores general group setti
 # New key prefix for last known price
 LAST_KNOWN_PRICE_KEY_PREFIX = "last_price:"
 
+# Redis channels for real-time updates
+REDIS_MARKET_DATA_CHANNEL = 'market_data_updates'
+REDIS_ORDER_UPDATES_CHANNEL = 'order_updates'
+REDIS_USER_DATA_UPDATES_CHANNEL = 'user_data_updates'
+
 # Expiry times (adjust as needed)
 USER_DATA_CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60 # Example: User session length
 # USER_DATA_CACHE_EXPIRY_SECONDS = 10
 USER_PORTFOLIO_CACHE_EXPIRY_SECONDS = 5 * 60 # Example: Short expiry, updated frequently
+USER_STATIC_ORDERS_CACHE_EXPIRY_SECONDS = 30 * 60 # Static order data expires after 30 minutes
+USER_DYNAMIC_PORTFOLIO_CACHE_EXPIRY_SECONDS = 60 # Dynamic portfolio metrics expire after 60 seconds
 GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 GROUP_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 
@@ -72,8 +84,8 @@ async def set_user_data_cache(redis_client: Redis, user_id: int, data: Dict[str,
 async def get_user_data_cache(
     redis_client: Redis,
     user_id: int,
-    db: 'AsyncSession' = None,  # Optional for backward compatibility
-    user_type: str = None       # Optional for backward compatibility
+    db: 'AsyncSession',  # REQUIRED
+    user_type: str       # REQUIRED
 ) -> Optional[Dict[str, Any]]:
     """
     Retrieves user data from Redis cache. If not found, fetches from DB,
@@ -92,14 +104,14 @@ async def get_user_data_cache(
             return data
         # If not in cache, try fetching from DB if db and user_type are provided
         if db is not None and user_type is not None:
-            from app.crud import user as crud_user
+            from app.crud.user import get_user_by_id, get_demo_user_by_id
             cache_logger.info(f"User data for user {user_id} (type: {user_type}) not in cache. Fetching from DB.")
             db_user_instance = None
             actual_user_type = user_type.lower()
             if actual_user_type == 'live':
-                db_user_instance = await crud_user.get_user_by_id(db, user_id, user_type=actual_user_type)
+                db_user_instance = await get_user_by_id(db, user_id, user_type=actual_user_type)
             elif actual_user_type == 'demo':
-                db_user_instance = await crud_user.get_demo_user_by_id(db, user_id, user_type=actual_user_type)
+                db_user_instance = await get_demo_user_by_id(db, user_id, user_type=actual_user_type)
             if db_user_instance:
                 user_data_to_cache = {
                     "id": db_user_instance.id,
@@ -176,6 +188,86 @@ async def get_user_positions_from_cache(redis_client: Redis, user_id: int) -> Li
         # The decode_decimal in get_user_portfolio_cache should handle Decimal conversion within positions
         return portfolio['positions']
     return []
+
+# --- New Static Orders Cache ---
+async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static_orders_data: Dict[str, Any]):
+    """
+    Stores static order data (open and pending orders without PnL) in Redis.
+    This should be called whenever orders are added, modified, or removed.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for setting static orders cache for user {user_id}.")
+        return
+
+    key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_id}"
+    try:
+        # Ensure all Decimal values are handled by DecimalEncoder
+        data_serializable = json.dumps(static_orders_data, cls=DecimalEncoder)
+        await redis_client.set(key, data_serializable, ex=USER_STATIC_ORDERS_CACHE_EXPIRY_SECONDS)
+        cache_logger.debug(f"Static orders cached for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error setting static orders cache for user {user_id}: {e}", exc_info=True)
+
+async def get_user_static_orders_cache(redis_client: Redis, user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves static order data from Redis cache.
+    Returns None if data is not found.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for getting static orders cache for user {user_id}.")
+        return None
+
+    key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_id}"
+    try:
+        data_json = await redis_client.get(key)
+        if data_json:
+            data = json.loads(data_json, object_hook=decode_decimal)
+            cache_logger.debug(f"Static orders retrieved from cache for user {user_id}")
+            return data
+        return None
+    except Exception as e:
+        logger.error(f"Error getting static orders cache for user {user_id}: {e}", exc_info=True)
+        return None
+
+# --- New Dynamic Portfolio Cache ---
+async def set_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, dynamic_portfolio_data: Dict[str, Any]):
+    """
+    Stores dynamic portfolio metrics (free_margin, positions with PnL, margin_level) in Redis.
+    This should be called whenever market data changes affect the user's portfolio.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for setting dynamic portfolio cache for user {user_id}.")
+        return
+
+    key = f"{REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX}{user_id}"
+    try:
+        # Ensure all Decimal values are handled by DecimalEncoder
+        data_serializable = json.dumps(dynamic_portfolio_data, cls=DecimalEncoder)
+        await redis_client.set(key, data_serializable, ex=USER_DYNAMIC_PORTFOLIO_CACHE_EXPIRY_SECONDS)
+        cache_logger.debug(f"Dynamic portfolio cached for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error setting dynamic portfolio cache for user {user_id}: {e}", exc_info=True)
+
+async def get_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves dynamic portfolio metrics from Redis cache.
+    Returns None if data is not found.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for getting dynamic portfolio cache for user {user_id}.")
+        return None
+
+    key = f"{REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX}{user_id}"
+    try:
+        data_json = await redis_client.get(key)
+        if data_json:
+            data = json.loads(data_json, object_hook=decode_decimal)
+            cache_logger.debug(f"Dynamic portfolio retrieved from cache for user {user_id}")
+            return data
+        return None
+    except Exception as e:
+        logger.error(f"Error getting dynamic portfolio cache for user {user_id}: {e}", exc_info=True)
+        return None
 
 # --- New Group Symbol Settings Cache ---
 
@@ -510,3 +602,64 @@ async def get_last_known_price(redis_client: Redis, symbol: str) -> Optional[dic
     except Exception as e:
         cache_logger.error(f"Error getting last known price for symbol {symbol}: {e}", exc_info=True)
         return None
+
+async def publish_order_update(redis_client: Redis, user_id: int):
+    """
+    Publishes an event to notify that a user's orders have been updated.
+    WebSocket connections can listen to this channel to refresh order data.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for publishing order update for user {user_id}.")
+        return
+
+    try:
+        message = json.dumps({
+            "type": "ORDER_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        result = await redis_client.publish(REDIS_ORDER_UPDATES_CHANNEL, message)
+        cache_logger.info(f"Published order update for user {user_id} to {REDIS_ORDER_UPDATES_CHANNEL}, received by {result} subscribers")
+    except Exception as e:
+        logger.error(f"Error publishing order update for user {user_id}: {e}", exc_info=True)
+
+async def publish_user_data_update(redis_client: Redis, user_id: int):
+    """
+    Publishes an event to notify that a user's data has been updated.
+    WebSocket connections can listen to this channel to refresh user data.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for publishing user data update for user {user_id}.")
+        return
+
+    try:
+        message = json.dumps({
+            "type": "USER_DATA_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        result = await redis_client.publish(REDIS_USER_DATA_UPDATES_CHANNEL, message)
+        cache_logger.info(f"Published user data update for user {user_id} to {REDIS_USER_DATA_UPDATES_CHANNEL}, received by {result} subscribers")
+    except Exception as e:
+        logger.error(f"Error publishing user data update for user {user_id}: {e}", exc_info=True)
+
+async def publish_market_data_trigger(redis_client: Redis, symbol: str = "TRIGGER"):
+    """
+    Publishes a market data trigger event to force recalculation of dynamic portfolio metrics.
+    """
+    if not redis_client:
+        logger.warning(f"Redis client not available for publishing market data trigger.")
+        return
+
+    try:
+        message = json.dumps({
+            "type": "market_data_update",
+            "symbol": symbol,
+            "b": "0",
+            "o": "0",
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        result = await redis_client.publish(REDIS_MARKET_DATA_CHANNEL, message)
+        cache_logger.info(f"Published market data trigger for symbol {symbol} to {REDIS_MARKET_DATA_CHANNEL}, received by {result} subscribers")
+    except Exception as e:
+        logger.error(f"Error publishing market data trigger: {e}", exc_info=True)

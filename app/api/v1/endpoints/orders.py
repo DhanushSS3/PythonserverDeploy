@@ -31,6 +31,15 @@ from app.core.cache import (
     get_user_data_cache,
     get_group_settings_cache,
     get_last_known_price, # Added import
+    # New cache functions
+    set_user_static_orders_cache,
+    get_user_static_orders_cache,
+    set_user_dynamic_portfolio_cache,
+    get_user_dynamic_portfolio_cache,
+    # New publish functions
+    publish_order_update,
+    publish_user_data_update,
+    publish_market_data_trigger
 )
 
 from app.utils.validation import enforce_service_user_id_restriction
@@ -48,8 +57,9 @@ from app.services.portfolio_calculator import _convert_to_usd, calculate_user_po
 from app.services.margin_calculator import calculate_single_order_margin, get_live_adjusted_buy_price_for_pair
 from app.services.pending_orders import add_pending_order, remove_pending_order
 
-from app.crud import crud_order, user as crud_user, group as crud_group
+from app.crud import crud_order, group as crud_group
 from app.crud.crud_order import OrderCreateInternal
+from app.crud.user import get_user_by_id, get_demo_user_by_id, get_user_by_id_with_lock, get_demo_user_by_id_with_lock
 # Ensure NO import of get_order_model from any module. Only use the local version below.
 
 from typing import List
@@ -68,8 +78,6 @@ from app.core.security import get_user_from_service_or_user_token, get_current_u
 from app.core.firebase import send_order_to_firebase
 from app.core.logging_config import orders_logger
 
-from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 logger = logging.getLogger(__name__)
 
@@ -77,6 +85,54 @@ router = APIRouter(
     prefix="/orders",
     tags=["orders"]
 )
+
+async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client: Redis, user_type: str):
+    """
+    Update the static orders cache for a user after order changes.
+    This includes both open and pending orders.
+    Always fetches fresh data from the database to ensure the cache is up-to-date.
+    """
+    try:
+        orders_logger.info(f"Starting update_user_static_orders for user {user_id}, user_type {user_type}")
+        order_model = get_order_model(user_type)
+        orders_logger.info(f"Using order model: {order_model.__name__}")
+        
+        # Get open orders - always fetch from database to ensure fresh data
+        open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+        orders_logger.info(f"Fetched {len(open_orders_orm)} open orders for user {user_id}")
+        open_orders_data = []
+        for pos in open_orders_orm:
+            pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
+                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
+                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            open_orders_data.append(pos_dict)
+        
+        # Get pending orders - always fetch from database to ensure fresh data
+        pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
+        pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
+        orders_logger.info(f"Fetched {len(pending_orders_orm)} pending orders for user {user_id}")
+        pending_orders_data = []
+        for po in pending_orders_orm:
+            po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
+                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
+                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
+            pending_orders_data.append(po_dict)
+        
+        # Cache the static orders data
+        static_orders_data = {
+            "open_orders": open_orders_data,
+            "pending_orders": pending_orders_data,
+            "updated_at": datetime.datetime.now().isoformat()
+        }
+        await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
+        orders_logger.info(f"Updated static orders cache for user {user_id} with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
+        
+        return static_orders_data
+    except Exception as e:
+        orders_logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
+        return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
 
 def get_order_model(user_or_type):
     """
@@ -272,8 +328,7 @@ async def place_order(
         group_name = user_data_cache.get('group_name') if user_data_cache else None
         # Fallback: If group_name is missing, fetch from DB
         if not group_name:
-            from app.crud import user as crud_user
-            db_user = await crud_user.get_user_by_id(db, user_id_for_order, user_type=user_type)
+            db_user = await get_user_by_id(db, user_id_for_order, user_type=user_type)
             group_name = getattr(db_user, 'group_name', None) if db_user else None
         group_settings_cache = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders_cache = group_settings_cache.get('sending_orders') if group_settings_cache else None
@@ -340,6 +395,36 @@ async def place_order(
 
         # Margin update for non-Barclays users is now handled within process_new_order.
         # The database commit for the order itself is sufficient here.
+
+        # --- Update user data cache after DB update ---
+        try:
+            user_id = db_order.order_user_id
+            # Fetch the latest user data from DB to update cache
+            db_user = None
+            if user_type == 'live':
+                db_user = await get_user_by_id(db, user_id)
+            else:
+                db_user = await get_demo_user_by_id(db, user_id)
+            
+            if db_user:
+                user_data_to_cache = {
+                    "id": db_user.id,
+                    "email": db_user.email,
+                    "group_name": db_user.group_name,
+                    "leverage": db_user.leverage,
+                    "user_type": db_user.user_type,
+                    "account_number": getattr(db_user, 'account_number', None),
+                    "wallet_balance": db_user.wallet_balance,
+                    "margin": db_user.margin,
+                    "first_name": getattr(db_user, 'first_name', None),
+                    "last_name": getattr(db_user, 'last_name', None),
+                    "country": getattr(db_user, 'country', None),
+                    "phone_number": getattr(db_user, 'phone_number', None),
+                }
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id} after placing order")
+        except Exception as e:
+            orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
 
         # --- Portfolio Update & Websocket Event ---
         try:
@@ -418,12 +503,15 @@ async def place_order(
                 orders_logger.error(f"[FIREBASE] Error sending Barclays order to Firebase: {e}", exc_info=True)
 
         await publish_account_structure_changed_event(redis_client, current_user.id)
-        await redis_client.publish("market_data_updates", json.dumps({
-            "type": "market_data_update",
-            "symbol": "TRIGGER",
-            "b": "0",
-            "o": "0"
-        }))
+        await publish_market_data_trigger(redis_client)
+        
+        # Update static orders cache - force a fresh fetch from the database
+        await update_user_static_orders(user_id, db, redis_client, user_type)
+        
+        # Publish updates to notify WebSocket clients - make sure these are in the right order
+        await publish_order_update(redis_client, user_id)
+        await publish_user_data_update(redis_client, user_id)
+        
         return OrderResponse(
             order_id=db_order.order_id,
             order_user_id=db_order.order_user_id,
@@ -543,8 +631,43 @@ async def place_pending_order(
         await add_pending_order(redis_client, order_dict_for_redis)
         orders_logger.info(f"Pending order {db_order.order_id} added to Redis.")
 
-        # Prepare response using created_at and omitting open_time
-        response = OrderResponse(
+        # --- Update user data cache after DB update ---
+        try:
+            # Fetch the latest user data from DB to update cache
+            db_user = None
+            if user_type == 'live':
+                db_user = await get_user_by_id(db, user_id_for_order)
+            else:
+                db_user = await get_demo_user_by_id(db, user_id_for_order)
+            
+            if db_user:
+                user_data_to_cache = {
+                    "id": db_user.id,
+                    "email": getattr(db_user, 'email', None),
+                    "group_name": db_user.group_name,
+                    "leverage": db_user.leverage,
+                    "user_type": user_type,
+                    "account_number": getattr(db_user, 'account_number', None),
+                    "wallet_balance": db_user.wallet_balance,
+                    "margin": db_user.margin,
+                    "first_name": getattr(db_user, 'first_name', None),
+                    "last_name": getattr(db_user, 'last_name', None),
+                    "country": getattr(db_user, 'country', None),
+                    "phone_number": getattr(db_user, 'phone_number', None),
+                }
+                await set_user_data_cache(redis_client, user_id_for_order, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id_for_order} after placing pending order")
+        except Exception as e:
+            orders_logger.error(f"Error updating user data cache after pending order placement: {e}", exc_info=True)
+
+        # Update static orders cache - force a fresh fetch from the database
+        await update_user_static_orders(user_id_for_order, db, redis_client, user_type)
+        
+        # Publish updates to notify WebSocket clients - make sure these are in the right order
+        await publish_order_update(redis_client, user_id_for_order)
+        await publish_user_data_update(redis_client, user_id_for_order)
+        
+        return OrderResponse(
             order_id=db_order.order_id,
             order_user_id=db_order.order_user_id,
             order_company_name=db_order.order_company_name,
@@ -560,8 +683,6 @@ async def place_pending_order(
             created_at=getattr(db_order, 'created_at', None).isoformat() if getattr(db_order, 'created_at', None) else None,
             updated_at=getattr(db_order, 'updated_at', None).isoformat() if getattr(db_order, 'updated_at', None) else None
         )
-        await publish_account_structure_changed_event(redis_client, current_user.id)
-        return response
 
     except OrderProcessingError as e:
         orders_logger.error(f"Order processing error: {str(e)}")
@@ -595,11 +716,11 @@ async def close_order(
             if is_service_account:
                 orders_logger.info(f"Service account operation - Target user ID: {close_request.user_id}")
                 enforce_service_user_id_restriction(close_request.user_id, token)
-                _user = await crud_user.get_user_by_id(db, close_request.user_id)
+                _user = await get_user_by_id(db, close_request.user_id)
                 if _user:
                     user_to_operate_on = _user
                 else:
-                    _demo_user = await crud_user.get_demo_user_by_id(db, close_request.user_id)
+                    _demo_user = await get_demo_user_by_id(db, close_request.user_id)
                     if _demo_user:
                         user_to_operate_on = _demo_user
                     else:
@@ -763,6 +884,24 @@ async def close_order(
                         await db.commit()
                         await db.refresh(db_order)
 
+                        # --- Refresh user data cache after DB update ---
+                        from app.core.cache import set_user_data_cache
+                        user_data_to_cache = {
+                            "id": db_user_locked.id,
+                            "email": getattr(db_user_locked, 'email', None),
+                            "group_name": db_user_locked.group_name,
+                            "leverage": db_user_locked.leverage,
+                            "user_type": user_type_str,
+                            "account_number": getattr(db_user_locked, 'account_number', None),
+                            "wallet_balance": db_user_locked.wallet_balance,
+                            "margin": db_user_locked.margin,
+                            "first_name": getattr(db_user_locked, 'first_name', None),
+                            "last_name": getattr(db_user_locked, 'last_name', None),
+                            "country": getattr(db_user_locked, 'country', None),
+                            "phone_number": getattr(db_user_locked, 'phone_number', None)
+                        }
+                        await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
+
                         # --- Portfolio Update & Websocket Event ---
                         try:
                             user_id = db_order.order_user_id
@@ -785,15 +924,21 @@ async def close_order(
                                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                                 await publish_account_structure_changed_event(redis_client, user_id)
-                                await redis_client.publish("market_data_updates", json.dumps({
-                                    "type": "market_data_update",
-                                    "symbol": "TRIGGER",
-                                    "b": "0",
-                                    "o": "0"
-                                }))
+                                await publish_market_data_trigger(redis_client)
                                 orders_logger.info(f"Portfolio cache updated and websocket event published for user {user_id} after closing order.")
                         except Exception as e:
                             orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order close: {e}", exc_info=True)
+
+                        # Update static orders cache - force a fresh fetch from the database
+                        await update_user_static_orders(user_id, db, redis_client, user_type_str)
+
+                        # Publish updates to notify WebSocket clients - make sure these are in the right order
+                        orders_logger.info(f"Publishing order update for user {user_id} after closing order {order_id}")
+                        await publish_order_update(redis_client, user_id)
+                        orders_logger.info(f"Publishing user data update for user {user_id} after closing order {order_id}")
+                        await publish_user_data_update(redis_client, user_id)
+                        orders_logger.info(f"Publishing market data trigger after closing order {order_id}")
+                        await publish_market_data_trigger(redis_client)
 
                         return OrderResponse.model_validate(db_order, from_attributes=True)
             else:
@@ -1059,6 +1204,42 @@ async def modify_pending_order(
         }
         await add_pending_order(redis_client, new_pending_order_data)
 
+        # --- Update user data cache after DB update ---
+        try:
+            # Fetch the latest user data from DB to update cache
+            db_user = None
+            if modify_request.user_type == 'live':
+                db_user = await get_user_by_id(db, modify_request.user_id)
+            else:
+                db_user = await get_demo_user_by_id(db, modify_request.user_id)
+            
+            if db_user:
+                user_data_to_cache = {
+                    "id": db_user.id,
+                    "email": getattr(db_user, 'email', None),
+                    "group_name": db_user.group_name,
+                    "leverage": db_user.leverage,
+                    "user_type": modify_request.user_type,
+                    "account_number": getattr(db_user, 'account_number', None),
+                    "wallet_balance": db_user.wallet_balance,
+                    "margin": db_user.margin,
+                    "first_name": getattr(db_user, 'first_name', None),
+                    "last_name": getattr(db_user, 'last_name', None),
+                    "country": getattr(db_user, 'country', None),
+                    "phone_number": getattr(db_user, 'phone_number', None),
+                }
+                await set_user_data_cache(redis_client, modify_request.user_id, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {modify_request.user_id} after modifying pending order")
+        except Exception as e:
+            orders_logger.error(f"Error updating user data cache after pending order modification: {e}", exc_info=True)
+
+        # Update static orders cache - force a fresh fetch from the database
+        await update_user_static_orders(modify_request.user_id, db, redis_client, modify_request.user_type)
+
+        # Publish updates to notify WebSocket clients - make sure these are in the right order
+        await publish_order_update(redis_client, modify_request.user_id)
+        await publish_user_data_update(redis_client, modify_request.user_id)
+        
         return {
             "order_id": updated_order.order_id,
             "order_price": updated_order.order_price,
@@ -1223,5 +1404,41 @@ async def modify_pending_order(
 #         user_type=user_type
 #     )
 #     return {"status": "success", "updated_order": updated_order.order_id}
+
+
+
+@router.post("/debug/trigger-order-update/{user_id}")
+async def debug_trigger_order_update(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Debug endpoint to manually trigger an order update for a user.
+    This is useful for testing WebSocket functionality.
+    """
+    try:
+        # Check if the user has admin privileges or is requesting their own update
+        if not getattr(current_user, 'is_admin', False) and current_user.id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to trigger updates for other users")
+        
+        # Get user type
+        user_type = 'demo' if isinstance(current_user, DemoUser) else 'live'
+        
+        # Update static orders cache
+        orders_logger.info(f"DEBUG: Manually triggering order update for user {user_id}")
+        await update_user_static_orders(user_id, db, redis_client, user_type)
+        
+        # Publish updates
+        orders_logger.info(f"DEBUG: Publishing order update for user {user_id}")
+        await publish_order_update(redis_client, user_id)
+        await publish_user_data_update(redis_client, user_id)
+        await publish_market_data_trigger(redis_client)
+        
+        return {"status": "success", "message": f"Order update triggered for user {user_id}"}
+    except Exception as e:
+        orders_logger.error(f"Error in debug_trigger_order_update: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error triggering order update: {str(e)}")
 
 

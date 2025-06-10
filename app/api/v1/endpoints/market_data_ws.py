@@ -1,6 +1,6 @@
 # app/api/v1/endpoints/market_data_ws.py
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query, WebSocketException, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query, WebSocketException, Depends, HTTPException
 import asyncio
 import logging
 from app.core.logging_config import websocket_logger
@@ -12,12 +12,14 @@ from typing import Dict, Any, List, Optional, Set
 import decimal
 from starlette.websockets import WebSocketState
 from decimal import Decimal
+import datetime
+import random
 
 
 # Import necessary components for DB interaction and authentication
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db, AsyncSessionLocal # Import AsyncSessionLocal for db sessions in tasks
-from app.crud import user as crud_user
+from app.crud.user import get_user_by_account_number, get_demo_user_by_account_number
 from app.crud import group as crud_group
 from app.crud import crud_order
 
@@ -34,8 +36,15 @@ from app.core.cache import (
     # get_user_positions_from_cache, # Will be part of get_user_portfolio_cache
     set_adjusted_market_price_cache, get_adjusted_market_price_cache,
     set_group_symbol_settings_cache, get_group_symbol_settings_cache,
-    set_last_known_price, get_last_known_price,  # <-- Add these for last known price caching
-    DecimalEncoder, decode_decimal
+    set_last_known_price, get_last_known_price,  # <-- For last known price caching
+    # New cache functions
+    set_user_static_orders_cache, get_user_static_orders_cache,
+    set_user_dynamic_portfolio_cache, get_user_dynamic_portfolio_cache,
+    DecimalEncoder, decode_decimal,
+    # Redis channels
+    REDIS_MARKET_DATA_CHANNEL,
+    REDIS_ORDER_UPDATES_CHANNEL,
+    REDIS_USER_DATA_UPDATES_CHANNEL
 )
 
 # Import the dependency to get the Redis client
@@ -163,11 +172,13 @@ async def _get_full_portfolio_details(
     user_id: int,
     group_name: str, # User's group name
     redis_client: Redis,
+    db: AsyncSession,
+    user_type: str
 ) -> Optional[Dict[str, Any]]:
     """
     Fetches all necessary data from cache and calculates the full user portfolio.
     """
-    user_data = await get_user_data_cache(redis_client, user_id)
+    user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
     user_portfolio_cache = await get_user_portfolio_cache(redis_client, user_id) # Contains positions
     group_symbol_settings_all = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
 
@@ -215,29 +226,49 @@ async def per_connection_redis_listener(
     user_id: int,
     group_name: str,
     redis_client: Redis,
-    db: AsyncSession
+    db: AsyncSession,
+    user_type: str
 ):
     pubsub = redis_client.pubsub()
+    # Subscribe to all relevant channels
     await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
-    logger.info(f"User {user_id}: Subscribed to {REDIS_MARKET_DATA_CHANNEL}")
+    await pubsub.subscribe(REDIS_ORDER_UPDATES_CHANNEL)
+    await pubsub.subscribe(REDIS_USER_DATA_UPDATES_CHANNEL)
+    logger.info(f"User {user_id}: Subscribed to Redis channels for market data and updates")
+
+    # Initial setup - fetch and cache static order data
+    await update_static_orders_cache(user_id, db, redis_client, user_type)
+
+    # Log WebSocket state
+    logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message is None:
+                # Periodically check WebSocket state
+                if random.random() < 0.01:  # Log state approximately once every 100 iterations
+                    logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
                 await asyncio.sleep(0.01)
                 continue
 
-            if message['channel'] == REDIS_MARKET_DATA_CHANNEL:
-                try:
-                    raw_market_data_update = json.loads(message['data'], object_hook=decode_decimal)
-                    if raw_market_data_update.get("type") == "market_data_update":
-                        price_data_content = {k: v for k, v in raw_market_data_update.items() if k != "type"}
-
+            try:
+                message_data = json.loads(message['data'], object_hook=decode_decimal)
+                channel = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
+                
+                # Log all received messages for debugging - use DecimalEncoder for JSON serialization
+                logger.info(f"User {user_id}: Received message on channel {channel}: {json.dumps(message_data, cls=DecimalEncoder)[:200]}...")
+                
+                # Handle different message types based on channel
+                if channel == REDIS_MARKET_DATA_CHANNEL:
+                    if message_data.get("type") == "market_data_update":
+                        # Process market data update (existing code)
+                        price_data_content = {k: v for k, v in message_data.items() if k != "type"}
+                        
                         # Get group settings
                         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
                         relevant_symbols = set(group_settings.keys())
-
+                        
                         # Update and cache adjusted prices
                         adjusted_prices = await _calculate_and_cache_adjusted_prices(
                             raw_market_data=price_data_content,
@@ -246,71 +277,136 @@ async def per_connection_redis_listener(
                             group_settings=group_settings,
                             redis_client=redis_client
                         )
-
-                        # Get open positions from portfolio cache
-                        portfolio_cache = await get_user_portfolio_cache(redis_client, user_id)
-                        positions = portfolio_cache.get("positions", []) if portfolio_cache else []
-
-                        # Fallback to DB if positions are empty
-                        if not positions:
-                            # Retrieve user_type from cached user_data to get the correct order model
-                            user_data_from_cache = await get_user_data_cache(redis_client, user_id)
-                            user_type_from_cache = user_data_from_cache.get("user_type", "live") if user_data_from_cache else "live"
-                            order_model = get_order_model(user_type_from_cache)  # Use user_type from cache
-                            open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                            for pos in open_positions_orm:
-                                positions.append({
-                                    "order_id": pos.order_id,
-                                    "order_company_name": pos.order_company_name,
-                                    "order_type": pos.order_type,
-                                    "order_quantity": str(pos.order_quantity),
-                                    "order_price": str(pos.order_price),
-                                    "margin": str(pos.margin),
-                                    "contract_value": str(pos.contract_value),
-                                    "stop_loss": str(pos.stop_loss) if pos.stop_loss is not None else None, # Add stop_loss
-                                    "take_profit": str(pos.take_profit) if pos.take_profit is not None else None, # Add take_profit
-                                    "commission": "0.0" # Ensure commission is present
-                                })
-
-                        # Fetch pending orders
-                        pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
-                        # user_type is not directly available here, assume "live" or derive from user_id if possible
-                        # For now, will assume user_type can be derived from the user_id (which is db_user_id from authentication)
-                        # We need the user_type to get the correct order model.
-                        # Let's get the user_type from the user_data_cache which is set at connection time.
-                        user_data_from_cache = await get_user_data_cache(redis_client, user_id)
-                        user_type = user_data_from_cache.get("user_type", "live") if user_data_from_cache else "live" # Default to "live"
-                        order_model = get_order_model(user_type) # Get correct model based on user_type
-
-                        pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
                         
-                        pending_orders_data = []
-                        for po in pending_orders_orm:
-                            po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
-                                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
-                            po_dict['commission'] = "0.0" # Ensure commission is present
-                            pending_orders_data.append(po_dict)
-
-                        # Get full portfolio details to get balance, margin etc.
-                        account_summary_data = await _get_full_portfolio_details(user_id, group_name, redis_client)
-
+                        # Update dynamic portfolio data
+                        await process_portfolio_update(
+                            user_id=user_id,
+                            group_name=group_name,
+                            redis_client=redis_client,
+                            db=db,
+                            user_type=user_type,
+                            adjusted_prices=adjusted_prices,
+                            websocket=websocket
+                        )
+                
+                elif channel == REDIS_ORDER_UPDATES_CHANNEL:
+                    # Handle order updates
+                    logger.info(f"User {user_id}: ORDER UPDATE CHANNEL - Full message data: {json.dumps(message_data, cls=DecimalEncoder)}")
+                    if message_data.get("type") == "ORDER_UPDATE" and str(message_data.get("user_id")) == str(user_id):
+                        logger.info(f"User {user_id}: Received order update notification, timestamp: {message_data.get('timestamp')}")
+                        
+                        # Force refresh of static orders cache from database
+                        logger.info(f"User {user_id}: Forcing refresh of static orders cache from database")
+                        
+                        # IMPORTANT: Create a new database session for this operation to ensure fresh data
+                        async with AsyncSessionLocal() as refresh_db:
+                            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+                        
+                        # Log the static orders that were fetched
+                        open_orders_count = len(static_orders.get("open_orders", []))
+                        pending_orders_count = len(static_orders.get("pending_orders", []))
+                        logger.info(f"User {user_id}: Refreshed static orders cache: {open_orders_count} open orders, {pending_orders_count} pending orders")
+                        logger.info(f"User {user_id}: Static orders content: {json.dumps(static_orders, cls=DecimalEncoder)}")
+                        
+                        # Get fresh user data to ensure we have the latest balance and margin
+                        async with AsyncSessionLocal() as refresh_db:
+                            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+                            logger.info(f"User {user_id}: Fresh user data fetched for order update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+                        
+                        # Get the latest dynamic portfolio data
+                        dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
+                        if not dynamic_portfolio:
+                            dynamic_portfolio = {
+                                "balance": user_data.get("wallet_balance", "0.0") if user_data else "0.0",
+                                "margin": user_data.get("margin", "0.0") if user_data else "0.0",
+                                "free_margin": "0.0",
+                                "profit_loss": "0.0",
+                                "margin_level": "0.0"
+                            }
+                        
+                        # Send update to client - use market_update type to match existing frontend handling
                         if websocket.client_state == WebSocketState.CONNECTED:
-                            await websocket.send_text(json.dumps({
+                            logger.info(f"User {user_id}: Sending order update to WebSocket client")
+                            
+                            # IMPORTANT: Use the values directly from user_data for balance and margin
+                            # This ensures we're sending the most up-to-date values from the database
+                            balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
+                            margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+                            
+                            response_data = {
                                 "type": "market_update",
                                 "data": {
-                                    "market_prices": adjusted_prices,
+                                    "market_prices": {},  # Empty market prices as this is just an order update
                                     "account_summary": {
-                                        "balance": account_summary_data.get("balance", "0.0") if account_summary_data else "0.0",
-                                        "margin": account_summary_data.get("margin", "0.0") if account_summary_data else "0.0",
-                                        "open_orders": positions, # Existing open positions
-                                        "pending_orders": pending_orders_data
+                                        "balance": balance_value,
+                                        "margin": margin_value,
+                                        "open_orders": static_orders.get("open_orders", []) if static_orders else [],
+                                        "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
                                     }
                                 }
-                            }, cls=DecimalEncoder))
-                            logger.debug(f"User {user_id}: Sent positions + market prices update")
-
-                except Exception as e:
-                    logger.error(f"User {user_id}: Error in market data processing: {e}", exc_info=True)
+                            }
+                            logger.info(f"User {user_id}: WebSocket response data: {json.dumps(response_data, cls=DecimalEncoder)[:500]}...")
+                            await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
+                            logger.info(f"User {user_id}: Sent orders update using market_update type")
+                
+                elif channel == REDIS_USER_DATA_UPDATES_CHANNEL:
+                    # Handle user data updates
+                    if message_data.get("type") == "USER_DATA_UPDATE" and str(message_data.get("user_id")) == str(user_id):
+                        logger.info(f"User {user_id}: Received user data update notification")
+                        
+                        # Refresh user data cache with a fresh database session
+                        async with AsyncSessionLocal() as refresh_db:
+                            logger.info(f"User {user_id}: Fetching fresh user data from database")
+                            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+                            logger.info(f"User {user_id}: User data fetched from database: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+                        
+                        # Get the latest dynamic portfolio data
+                        dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
+                        logger.info(f"User {user_id}: Dynamic portfolio from cache: {json.dumps(dynamic_portfolio, cls=DecimalEncoder) if dynamic_portfolio else None}")
+                        
+                        if not dynamic_portfolio:
+                            logger.info(f"User {user_id}: No dynamic portfolio found in cache, creating default")
+                            dynamic_portfolio = {
+                                "balance": user_data.get("wallet_balance", "0.0") if user_data else "0.0",
+                                "margin": user_data.get("margin", "0.0") if user_data else "0.0",
+                                "free_margin": "0.0",
+                                "profit_loss": "0.0",
+                                "margin_level": "0.0"
+                            }
+                        
+                        # Get static orders to include in the response - use fresh database session
+                        async with AsyncSessionLocal() as refresh_db:
+                            logger.info(f"User {user_id}: Fetching fresh static orders from database")
+                            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+                            logger.info(f"User {user_id}: Static orders fetched from database: {len(static_orders.get('open_orders', []))} open orders, {len(static_orders.get('pending_orders', []))} pending orders")
+                        
+                        # Send update to client using market_update type for consistency
+                        if websocket.client_state == WebSocketState.CONNECTED:
+                            # IMPORTANT: Use the values directly from user_data for balance and margin
+                            # This ensures we're sending the most up-to-date values from the database
+                            balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
+                            margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+                            
+                            response_data = {
+                                "type": "market_update",
+                                "data": {
+                                    "market_prices": {},  # Empty market prices
+                                    "account_summary": {
+                                        "balance": balance_value,
+                                        "margin": margin_value,
+                                        "open_orders": static_orders.get("open_orders", []) if static_orders else [],
+                                        "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
+                                    }
+                                }
+                            }
+                            logger.info(f"User {user_id}: Sending user data update with balance={balance_value}, margin={margin_value}, {len(static_orders.get('open_orders', []))} open orders and {len(static_orders.get('pending_orders', []))} pending orders")
+                            await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
+                            logger.info(f"User {user_id}: Sent user data update using market_update type")
+            
+            except json.JSONDecodeError as e:
+                logger.error(f"User {user_id}: JSON decode error: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"User {user_id}: Error in message processing: {e}", exc_info=True)
 
     except WebSocketDisconnect:
         logger.info(f"User {user_id}: WebSocket disconnected.")
@@ -318,8 +414,185 @@ async def per_connection_redis_listener(
         logger.error(f"User {user_id}: Unexpected error: {e}", exc_info=True)
     finally:
         await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
+        await pubsub.unsubscribe(REDIS_ORDER_UPDATES_CHANNEL)
+        await pubsub.unsubscribe(REDIS_USER_DATA_UPDATES_CHANNEL)
         await pubsub.close()
         logger.info(f"User {user_id}: Unsubscribed from Redis and cleaned up.")
+
+async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_client: Redis, user_type: str):
+    """
+    Update the static orders cache for a user (open and pending orders without PnL).
+    This is called when initializing the WebSocket connection and when order status changes.
+    Always fetches fresh data from the database to ensure the cache is up-to-date.
+    """
+    try:
+        order_model = get_order_model(user_type)
+        
+        # Get open orders - always fetch from database to ensure fresh data
+        open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+        logger.info(f"User {user_id}: Fetched {len(open_orders_orm)} open orders directly from database")
+        open_orders_data = []
+        for pos in open_orders_orm:
+            pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
+                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
+                                    'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            open_orders_data.append(pos_dict)
+        
+        # Get pending orders - always fetch from database to ensure fresh data
+        pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
+        pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
+        logger.info(f"User {user_id}: Fetched {len(pending_orders_orm)} pending orders directly from database")
+        pending_orders_data = []
+        for po in pending_orders_orm:
+            po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
+                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
+                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
+            pending_orders_data.append(po_dict)
+        
+        # Cache the static orders data
+        static_orders_data = {
+            "open_orders": open_orders_data,
+            "pending_orders": pending_orders_data,
+            "updated_at": datetime.datetime.now().isoformat()
+        }
+        await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
+        logger.info(f"User {user_id}: Updated static orders cache with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
+        
+        return static_orders_data
+    except Exception as e:
+        logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
+        return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
+
+async def update_dynamic_portfolio_cache(
+    user_id: int,
+    group_name: str,
+    open_positions: List[Dict[str, Any]],
+    adjusted_market_prices: Dict[str, Dict[str, float]],
+    redis_client: Redis,
+    db: AsyncSession,
+    user_type: str
+):
+    """
+    Update the dynamic portfolio cache for a user (free margin, positions with PnL, margin level).
+    This is called whenever market data changes.
+    """
+    try:
+        # Get user data for balance, leverage, etc.
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+        if not user_data:
+            logger.warning(f"User data not found for user {user_id}. Cannot update dynamic portfolio.")
+            return
+        
+        # Get group symbol settings for contract sizes, etc.
+        group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+        if not group_symbol_settings:
+            logger.warning(f"Group symbol settings not found for group {group_name}. Cannot update dynamic portfolio.")
+            return
+        
+        # Calculate portfolio metrics using the portfolio calculator
+        portfolio_metrics = await calculate_user_portfolio(
+            user_data=user_data,
+            open_positions=open_positions,
+            adjusted_market_prices=adjusted_market_prices,
+            group_symbol_settings=group_symbol_settings,
+            redis_client=redis_client
+        )
+        
+        # Cache the dynamic portfolio data
+        dynamic_portfolio_data = {
+            "balance": portfolio_metrics.get("balance", "0.0"),
+            "equity": portfolio_metrics.get("equity", "0.0"),
+            "margin": portfolio_metrics.get("margin", "0.0"),
+            "free_margin": portfolio_metrics.get("free_margin", "0.0"),
+            "profit_loss": portfolio_metrics.get("profit_loss", "0.0"),
+            "margin_level": portfolio_metrics.get("margin_level", "0.0"),
+            "positions_with_pnl": portfolio_metrics.get("positions", [])  # Positions with PnL calculations
+        }
+        await set_user_dynamic_portfolio_cache(redis_client, user_id, dynamic_portfolio_data)
+        logger.debug(f"Updated dynamic portfolio cache for user {user_id}")
+        
+        return dynamic_portfolio_data
+    except Exception as e:
+        logger.error(f"Error updating dynamic portfolio cache for user {user_id}: {e}", exc_info=True)
+        return None
+
+async def process_portfolio_update(
+    user_id: int,
+    group_name: str,
+    redis_client: Redis,
+    db: AsyncSession,
+    user_type: str,
+    adjusted_prices: Dict[str, Dict[str, float]],
+    websocket: WebSocket
+):
+    """
+    Process market data updates, update dynamic portfolio data, and send updates to the client.
+    """
+    try:
+        # Always fetch fresh data from the database for market data updates
+        async with AsyncSessionLocal() as refresh_db:
+            # Get static orders data directly from database
+            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+        
+        # Get open positions from static orders
+        open_positions = static_orders.get("open_orders", []) if static_orders else []
+        pending_orders = static_orders.get("pending_orders", []) if static_orders else []
+
+        # Update dynamic portfolio data (PnL, free margin, etc.)
+        await update_dynamic_portfolio_cache(
+            user_id=user_id,
+            group_name=group_name,
+            open_positions=open_positions,
+            adjusted_market_prices=adjusted_prices,
+            redis_client=redis_client,
+            db=db,
+            user_type=user_type
+        )
+        
+        # Get the latest dynamic portfolio data
+        dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
+        
+        # Get fresh user data to ensure we have the latest balance and margin
+        async with AsyncSessionLocal() as refresh_db:
+            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+            logger.debug(f"User {user_id}: Fresh user data fetched for market update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+        
+        if not dynamic_portfolio:
+            # Get user data for basic account info
+            dynamic_portfolio = {
+                "balance": user_data.get("wallet_balance", "0.0") if user_data else "0.0",
+                "margin": user_data.get("margin", "0.0") if user_data else "0.0",
+                "free_margin": "0.0",
+                "profit_loss": "0.0",
+                "margin_level": "0.0"
+            }
+
+        if websocket.client_state == WebSocketState.CONNECTED:
+            # IMPORTANT: Use the values directly from user_data for balance and margin
+            # This ensures we're sending the most up-to-date values from the database
+            balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
+            margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+            
+            # Send only what the client needs for display
+            response_data = {
+                "type": "market_update",
+                "data": {
+                    "market_prices": adjusted_prices,
+                    "account_summary": {
+                        "balance": balance_value,
+                        "margin": margin_value,
+                        "open_orders": open_positions,  # Static open orders without PnL
+                        "pending_orders": pending_orders  # Static pending orders
+                    }
+                }
+            }
+            logger.info(f"User {user_id}: Sending market data update with balance={balance_value}, margin={margin_value}, {len(open_positions)} open orders and {len(pending_orders)} pending orders")
+            await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
+            logger.debug(f"User {user_id}: Sent positions + market prices update")
+    except Exception as e:
+        logger.error(f"User {user_id}: Error processing portfolio update: {e}", exc_info=True)
 
 
 # app/api/v1/endpoints/market_data_ws.py
@@ -369,11 +642,11 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             logger.info(f"WebSocket auth: token payload={payload}, account_number={account_number}, user_type={user_type}")
             if user_type == "demo":
                 logger.info(f"WebSocket auth: About to call get_demo_user_by_account_number with account_number={account_number}, user_type={user_type}")
-                db_user_instance = await crud_user.get_demo_user_by_account_number(db, account_number, user_type)
+                db_user_instance = await get_demo_user_by_account_number(db, account_number, user_type)
                 logger.info(f"WebSocket auth: get_demo_user_by_account_number({account_number}, {user_type}) returned: {db_user_instance}")
             else:
                 logger.info(f"WebSocket auth: About to call get_user_by_account_number with account_number={account_number}, user_type={user_type}")
-                db_user_instance = await crud_user.get_user_by_account_number(db, account_number, user_type)
+                db_user_instance = await get_user_by_account_number(db, account_number, user_type)
                 logger.info(f"WebSocket auth: get_user_by_account_number({account_number}, {user_type}) returned: {db_user_instance}")
 
             if not db_user_instance:
@@ -397,21 +670,34 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
         group_name = getattr(db_user_instance, 'group_name', 'default')
         
+        # Get user ID from the user instance
+        db_user_id = getattr(db_user_instance, 'id', None)
+        if not db_user_id:
+            logger.warning(f"Authentication failed: User instance missing ID field. Account: {account_number}")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid user data")
+            return
+            
         # Initial caching of user data, portfolio, and group-symbol settings
         user_data_to_cache = {
-            "account_number": account_number, "group_name": group_name,
+            "id": getattr(db_user_instance, 'id', None),
+            "email": getattr(db_user_instance, 'email', None),
+            "account_number": account_number,
+            "group_name": group_name,
             "leverage": Decimal(str(getattr(db_user_instance, 'leverage', 1.0))),
             "wallet_balance": Decimal(str(getattr(db_user_instance, 'wallet_balance', 0.0))),
             "margin": Decimal(str(getattr(db_user_instance, 'margin', 0.0))),
-            "user_type": user_type # Add user_type to cache for later retrieval
+            "user_type": user_type,
+            "first_name": getattr(db_user_instance, 'first_name', None),
+            "last_name": getattr(db_user_instance, 'last_name', None),
+            "country": getattr(db_user_instance, 'country', None),
+            "phone_number": getattr(db_user_instance, 'phone_number', None)
         }
-        await set_user_data_cache(redis_client, account_number, user_data_to_cache)
+        await set_user_data_cache(redis_client, db_user_id, user_data_to_cache)
 
         # Always use user_type to select the correct order model
         order_model_class = get_order_model(user_type)
         logger.info(f"[WS] Using order model: {order_model_class.__name__} for user_type={user_type}, account_number={account_number}")
         # Use DB user_id (int) for querying open orders
-        db_user_id = getattr(db_user_instance, 'id', None)
         open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, db_user_id, order_model_class)
         logger.info(f"[WS] Open positions from DB for user_id={db_user_id}: {open_positions_orm}")
 
@@ -447,12 +733,25 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     await websocket.accept()
     logger.info(f"WebSocket connection accepted for user {account_number} (Group: {group_name}).")
 
+    # Initialize static orders cache
+    static_orders = await update_static_orders_cache(db_user_id, db, redis_client, user_type)
+    
+    # Initialize dynamic portfolio cache with empty data
+    # This will be updated with the first market data update
+    initial_dynamic_portfolio = {
+        "balance": str(user_data_to_cache["wallet_balance"]),
+        "equity": str(user_data_to_cache["wallet_balance"]),
+        "margin": str(user_data_to_cache["margin"]),
+        "free_margin": str(user_data_to_cache["wallet_balance"]),
+        "profit_loss": "0.0",
+        "margin_level": "0.0",
+        "positions_with_pnl": []
+    }
+    await set_user_dynamic_portfolio_cache(redis_client, db_user_id, initial_dynamic_portfolio)
+
     # Create and manage the per-connection Redis listener task
-    # listener_task = asyncio.create_task(
-    #     per_connection_redis_listener(websocket, account_number, group_name, redis_client, db)
-    # )
     listener_task = asyncio.create_task(
-        per_connection_redis_listener(websocket, db_user_id, group_name, redis_client, db)
+        per_connection_redis_listener(websocket, db_user_id, group_name, redis_client, db, user_type)
     )
 
     try:
@@ -563,3 +862,171 @@ async def redis_publisher_task(redis_client: Redis):
 
 # REMOVE redis_market_data_broadcaster function entirely
 # Its functionality is now distributed into per_connection_redis_listener tasks managed by websocket_endpoint
+
+# Add a debug endpoint to manually trigger order updates
+@router.post("/debug/publish-order-update/{user_id}")
+async def debug_publish_order_update(
+    user_id: int,
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Debug endpoint to manually publish an order update message to Redis.
+    This is useful for testing WebSocket functionality.
+    """
+    try:
+        message = json.dumps({
+            "type": "ORDER_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        
+        result = await redis_client.publish(REDIS_ORDER_UPDATES_CHANNEL, message)
+        logger.info(f"DEBUG: Published order update for user {user_id} to {REDIS_ORDER_UPDATES_CHANNEL}, received by {result} subscribers")
+        
+        return {"status": "success", "message": f"Order update published for user {user_id}", "subscribers": result}
+    except Exception as e:
+        logger.error(f"Error in debug_publish_order_update: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error publishing order update: {str(e)}")
+
+# Add a debug endpoint to test the WebSocket order updates
+@router.post("/debug/refresh-orders/{user_id}")
+async def debug_refresh_orders(
+    user_id: int,
+    user_type: str = Query("demo"),
+    redis_client: Redis = Depends(get_redis_client),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Debug endpoint to manually refresh the static orders cache from the database.
+    This bypasses Redis and ensures fresh data is fetched.
+    """
+    try:
+        # Create a new database session for this operation
+        async with AsyncSessionLocal() as refresh_db:
+            # Force refresh of static orders cache from database
+            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+            
+        # Log the static orders that were fetched
+        open_orders_count = len(static_orders.get("open_orders", []))
+        pending_orders_count = len(static_orders.get("pending_orders", []))
+        
+        # Publish an order update message to Redis
+        message = json.dumps({
+            "type": "ORDER_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        
+        result = await redis_client.publish(REDIS_ORDER_UPDATES_CHANNEL, message)
+        logger.info(f"DEBUG: Published order update for user {user_id} to {REDIS_ORDER_UPDATES_CHANNEL}, received by {result} subscribers")
+        
+        return {
+            "status": "success", 
+            "message": f"Orders refreshed for user {user_id}", 
+            "open_orders": open_orders_count,
+            "pending_orders": pending_orders_count,
+            "subscribers": result
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_refresh_orders: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error refreshing orders: {str(e)}")
+
+# Add a debug endpoint to manually publish a user data update message to Redis
+@router.post("/debug/publish-user-data-update/{user_id}")
+async def debug_publish_user_data_update(
+    user_id: int,
+    redis_client: Redis = Depends(get_redis_client),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Debug endpoint to manually publish a user data update message to Redis.
+    This is useful for testing WebSocket functionality.
+    """
+    try:
+        # Publish a user data update message
+        message = json.dumps({
+            "type": "USER_DATA_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        
+        result = await redis_client.publish(REDIS_USER_DATA_UPDATES_CHANNEL, message)
+        logger.info(f"DEBUG: Published user data update for user {user_id} to {REDIS_USER_DATA_UPDATES_CHANNEL}, received by {result} subscribers")
+        
+        # Force refresh of user data cache from database
+        async with AsyncSessionLocal() as refresh_db:
+            user_type = "demo"  # Default to demo for testing
+            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+            logger.info(f"DEBUG: Refreshed user data cache for user {user_id}: {user_data}")
+        
+        return {
+            "status": "success", 
+            "message": f"User data update published for user {user_id}", 
+            "subscribers": result,
+            "user_data": user_data
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_publish_user_data_update: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error publishing user data update: {str(e)}")
+
+# Add a debug endpoint to test the entire WebSocket update flow
+@router.post("/debug/test-all-updates/{user_id}")
+async def debug_test_all_updates(
+    user_id: int,
+    user_type: str = Query("demo"),
+    redis_client: Redis = Depends(get_redis_client),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Debug endpoint to test the entire WebSocket update flow.
+    This will:
+    1. Refresh the user data cache
+    2. Refresh the static orders cache
+    3. Publish a user data update
+    4. Publish an order update
+    """
+    try:
+        # Step 1: Refresh user data cache
+        async with AsyncSessionLocal() as refresh_db:
+            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+            logger.info(f"DEBUG: Refreshed user data cache for user {user_id}: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+        
+        # Step 2: Refresh static orders cache
+        async with AsyncSessionLocal() as refresh_db:
+            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+            open_orders_count = len(static_orders.get("open_orders", []))
+            pending_orders_count = len(static_orders.get("pending_orders", []))
+            logger.info(f"DEBUG: Refreshed static orders cache: {open_orders_count} open orders, {pending_orders_count} pending orders")
+        
+        # Step 3: Publish user data update
+        user_data_message = json.dumps({
+            "type": "USER_DATA_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        user_data_result = await redis_client.publish(REDIS_USER_DATA_UPDATES_CHANNEL, user_data_message)
+        logger.info(f"DEBUG: Published user data update, received by {user_data_result} subscribers")
+        
+        # Step 4: Publish order update
+        order_update_message = json.dumps({
+            "type": "ORDER_UPDATE",
+            "user_id": user_id,
+            "timestamp": datetime.datetime.now().isoformat()
+        }, cls=DecimalEncoder)
+        order_update_result = await redis_client.publish(REDIS_ORDER_UPDATES_CHANNEL, order_update_message)
+        logger.info(f"DEBUG: Published order update, received by {order_update_result} subscribers")
+        
+        return {
+            "status": "success",
+            "message": "All updates published successfully",
+            "user_data_subscribers": user_data_result,
+            "order_update_subscribers": order_update_result,
+            "user_data": user_data,
+            "static_orders": {
+                "open_orders_count": open_orders_count,
+                "pending_orders_count": pending_orders_count
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_test_all_updates: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error testing updates: {str(e)}")

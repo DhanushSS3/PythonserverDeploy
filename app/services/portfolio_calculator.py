@@ -120,12 +120,13 @@ async def calculate_user_portfolio(
 ) -> Dict[str, Any]:
     """
     Calculates the user's portfolio metrics including equity, margin, and PnL.
+    This function focuses on dynamic metrics that change with market prices.
     """
     try:
         # Initialize portfolio metrics
         balance = Decimal(str(user_data.get('wallet_balance', '0.0')))
         leverage = Decimal(str(user_data.get('leverage', '1.0')))
-        overall_hedged_margin_usd = Decimal('0.0')
+        overall_hedged_margin_usd = Decimal(str(user_data.get('margin', '0.0')))
         total_pnl_usd = Decimal('0.0')
 
         # Get raw market data
@@ -135,14 +136,15 @@ async def calculate_user_portfolio(
             return {
                 "balance": str(balance),
                 "equity": str(balance),
-                "margin": "0.0",
+                "margin": str(overall_hedged_margin_usd),
                 "free_margin": str(balance),
                 "profit_loss": "0.0",
                 "margin_level": "0.0",
                 "positions": open_positions
             }
 
-        # Process each position
+        # Process each position to calculate PnL
+        positions_with_pnl = []
         for position in open_positions:
             symbol = position.get('order_company_name', '').upper()
             order_type = position.get('order_type', '')
@@ -166,6 +168,11 @@ async def calculate_user_portfolio(
             current_prices = adjusted_market_prices.get(symbol, {})
             if not current_prices:
                 logger.warning(f"No adjusted prices found for symbol {symbol}")
+                # Skip this position in PnL calculation but include it in the result
+                position_with_pnl = position.copy()
+                position_with_pnl['profit_loss'] = "0.0"
+                position_with_pnl['current_price'] = "0.0"
+                positions_with_pnl.append(position_with_pnl)
                 continue
 
             current_buy = current_prices.get('buy', Decimal('0'))
@@ -173,6 +180,11 @@ async def calculate_user_portfolio(
 
             if current_buy <= 0 or current_sell <= 0:
                 logger.warning(f"Invalid current prices for {symbol}: buy={current_buy}, sell={current_sell}")
+                # Skip this position in PnL calculation but include it in the result
+                position_with_pnl = position.copy()
+                position_with_pnl['profit_loss'] = "0.0"
+                position_with_pnl['current_price'] = "0.0"
+                positions_with_pnl.append(position_with_pnl)
                 continue
 
             # Calculate PnL based on order type and contract size
@@ -209,24 +221,32 @@ async def calculate_user_portfolio(
                             pnl_usd = pnl / indirect_rate
                         else:
                             logger.error(f"Could not convert PnL from {profit_currency} to USD")
+                            # Skip this position in PnL calculation but include it in the result
+                            position_with_pnl = position.copy()
+                            position_with_pnl['profit_loss'] = "0.0"
+                            position_with_pnl['current_price'] = str(current_sell if order_type == 'BUY' else current_buy)
+                            positions_with_pnl.append(position_with_pnl)
                             continue
                 except Exception as e:
                     logger.error(f"Error converting PnL to USD for {symbol}: {e}", exc_info=True)
+                    # Skip this position in PnL calculation but include it in the result
+                    position_with_pnl = position.copy()
+                    position_with_pnl['profit_loss'] = "0.0"
+                    position_with_pnl['current_price'] = str(current_sell if order_type == 'BUY' else current_buy)
+                    positions_with_pnl.append(position_with_pnl)
                     continue
 
             # Calculate final PnL after commission
             final_pnl = pnl_usd - commission_usd
 
-            # Update position with current PnL, price, and commission
-            position['profit_loss'] = str(final_pnl)  # PnL after commission
-            position['current_price'] = str(current_sell if order_type == 'BUY' else current_buy)
-            position['commission'] = str(commission_usd)  # Add commission field
-            position['commission_applied'] = str(commission_usd)  # For backward compatibility
-            position['applied_commission'] = str(commission_usd)  # For backward compatibility
+            # Create position with PnL
+            position_with_pnl = position.copy()
+            position_with_pnl['profit_loss'] = str(final_pnl)  # PnL after commission
+            position_with_pnl['current_price'] = str(current_sell if order_type == 'BUY' else current_buy)
+            positions_with_pnl.append(position_with_pnl)
 
             # Accumulate totals
             total_pnl_usd += final_pnl  # Using final PnL (after commission)
-            overall_hedged_margin_usd += margin
 
             logger.debug(
                 f"Position calculation for {symbol}: Type={order_type}, "
@@ -248,7 +268,7 @@ async def calculate_user_portfolio(
             "free_margin": str(free_margin),
             "profit_loss": str(total_pnl_usd),  # This is already net of commission
             "margin_level": str(margin_level),
-            "positions": open_positions  # Include the updated positions
+            "positions": positions_with_pnl  # Include positions with PnL
         }
 
         return account_summary
@@ -258,7 +278,7 @@ async def calculate_user_portfolio(
         return {
             "balance": str(balance),
             "equity": str(balance),
-            "margin": "0.0",
+            "margin": str(overall_hedged_margin_usd),
             "free_margin": str(balance),
             "profit_loss": "0.0",
             "margin_level": "0.0",

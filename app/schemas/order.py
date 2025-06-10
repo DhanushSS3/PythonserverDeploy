@@ -132,6 +132,15 @@ class PendingOrderPlacementRequest(OrderPlacementRequest):
 
 
 
+# --- Cancel Pending Order Request Schema ---
+class PendingOrderCancelRequest(BaseModel):
+    order_id: str
+    symbol: str
+    order_type: str
+    user_id: int
+    user_type: str  # 'live' or 'demo'
+    cancel_message: Optional[str] = None
+
 # --- Order PATCH Update Schema ---
 class OrderUpdateRequest(BaseModel):
     order_status: Optional[str] = None
