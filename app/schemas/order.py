@@ -135,11 +135,11 @@ class PendingOrderPlacementRequest(OrderPlacementRequest):
 # --- Cancel Pending Order Request Schema ---
 class PendingOrderCancelRequest(BaseModel):
     order_id: str
-    symbol: str
-    order_type: str
-    user_id: int
+    symbol: str  # The trading symbol/company name
+    order_type: str  # The order type (BUY_LIMIT, SELL_LIMIT, etc.)
+    user_id: int  # The user ID
     user_type: str  # 'live' or 'demo'
-    cancel_message: Optional[str] = None
+    cancel_message: Optional[str] = None  # Optional cancellation message
 
 # --- Order PATCH Update Schema ---
 class OrderUpdateRequest(BaseModel):

@@ -16,7 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
-from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest
+from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
 from app.core.cache import publish_account_structure_changed_event
@@ -1465,5 +1465,148 @@ async def debug_trigger_order_update(
     except Exception as e:
         orders_logger.error(f"Error in debug_trigger_order_update: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error triggering order update: {str(e)}")
+
+@router.post("/cancel-pending", response_model=dict)
+async def cancel_pending_order(
+    cancel_request: PendingOrderCancelRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Cancel a pending order.
+    For Barclays users: Store cancel_id and send order to Firebase without changing status
+    For non-Barclays users: Cancel the order immediately by updating its status
+    """
+    try:
+        orders_logger.info(f"Cancel pending order request received - Order ID: {cancel_request.order_id}, User ID: {current_user.id}")
+        
+        # Determine if user is authorized to cancel this order
+        if cancel_request.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
+            orders_logger.warning(f"Unauthorized attempt to cancel order {cancel_request.order_id} by user {current_user.id}")
+            raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+        
+        # Get the order model based on user type
+        order_model = get_order_model(cancel_request.user_type)
+        
+        # Find the order
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db, 
+            cancel_request.order_id, 
+            cancel_request.user_id, 
+            order_model
+        )
+        
+        if not db_order:
+            orders_logger.warning(f"Order {cancel_request.order_id} not found for user {cancel_request.user_id}")
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Check if order is in PENDING status
+        if db_order.order_status != "PENDING":
+            orders_logger.warning(f"Cannot cancel order {cancel_request.order_id} with status {db_order.order_status}. Only PENDING orders can be cancelled.")
+            raise HTTPException(status_code=400, detail="Only PENDING orders can be cancelled")
+        
+        # Generate a cancel_id
+        cancel_id = await generate_unique_10_digit_id(db, order_model, 'cancel_id')
+        orders_logger.info(f"Generated cancel_id: {cancel_id} for order {cancel_request.order_id}")
+        
+        # Check if user is a Barclays live user
+        user_data = await get_user_data_cache(redis_client, cancel_request.user_id, db, cancel_request.user_type)
+        group_name = user_data.get('group_name') if user_data else None
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        
+        is_barclays_live_user = (cancel_request.user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"User {cancel_request.user_id} is_barclays_live_user: {is_barclays_live_user}")
+        
+        if is_barclays_live_user:
+            # For Barclays users, just store cancel_id and send to Firebase
+            orders_logger.info(f"Barclays user detected. Sending cancel request to Firebase for order {cancel_request.order_id}")
+            
+            # Update the order with cancel_id without changing status
+            update_fields = {
+                "cancel_id": cancel_id,
+                "cancel_message": cancel_request.cancel_message or "Cancellation requested"
+            }
+            
+            # Update order with tracking
+            await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=cancel_request.user_id,
+                user_type=cancel_request.user_type,
+                action_type="CANCEL_REQUESTED"
+            )
+            
+            # Send to Firebase
+            firebase_cancel_data = {
+                "order_id": cancel_request.order_id,
+                "cancel_id": cancel_id,
+                "user_id": cancel_request.user_id,
+                "symbol": cancel_request.symbol,
+                "order_type": cancel_request.order_type,
+                "action": "cancel_order",
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "cancel_message": cancel_request.cancel_message
+            }
+            
+            await send_order_to_firebase(firebase_cancel_data, "live")
+            orders_logger.info(f"Cancel request sent to Firebase for order {cancel_request.order_id}")
+            
+            return {
+                "order_id": db_order.order_id,
+                "cancel_id": cancel_id,
+                "status": "PENDING_CANCELLATION",
+                "message": "Cancellation request sent to service provider"
+            }
+        else:
+            # For non-Barclays users, cancel the order immediately
+            orders_logger.info(f"Non-Barclays user. Cancelling order {cancel_request.order_id} immediately")
+            
+            # Update the order status to CANCELLED
+            update_fields = {
+                "order_status": "CANCELLED",
+                "cancel_id": cancel_id,
+                "cancel_message": cancel_request.cancel_message or "Order cancelled by user"
+            }
+            
+            # Update order with tracking
+            updated_order = await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=cancel_request.user_id,
+                user_type=cancel_request.user_type,
+                action_type="CANCEL"
+            )
+            
+            # Remove from Redis pending orders
+            await remove_pending_order(
+                redis_client,
+                cancel_request.order_id,
+                cancel_request.symbol,
+                cancel_request.order_type,
+                str(cancel_request.user_id)
+            )
+            
+            # Update static orders cache
+            await update_user_static_orders(cancel_request.user_id, db, redis_client, cancel_request.user_type)
+            
+            # Publish updates to notify WebSocket clients
+            await publish_order_update(redis_client, cancel_request.user_id)
+            await publish_user_data_update(redis_client, cancel_request.user_id)
+            
+            return {
+                "order_id": updated_order.order_id,
+                "cancel_id": updated_order.cancel_id,
+                "status": updated_order.order_status,
+                "message": "Order cancelled successfully"
+            }
+    
+    except Exception as e:
+        orders_logger.error(f"Error cancelling pending order: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to cancel order: {str(e)}")
 
 

@@ -11346,3 +11346,24 @@ sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (1054, "Unknown 
 2025-06-10 22:32:03,290 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-10 22:32:20,519 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-10 22:32:21,789 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-10 22:46:41,974 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-10 22:47:24,279 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-10 22:50:51,031 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 1
+2025-06-10 22:50:51,065 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '7930267270', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('1'), 'order_price': Decimal('0.88'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': None, 'margin': None, 'open_time': None}
+2025-06-10 22:50:51,065 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.88
+2025-06-10 22:50:51,234 - INFO - orders - Pending order 7930267270 added to Redis.
+2025-06-10 22:50:51,270 - INFO - orders - User data cache updated for user 1 after placing pending order
+2025-06-10 22:50:51,270 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-10 22:50:51,270 - INFO - orders - Using order model: DemoUserOrder
+2025-06-10 22:50:51,349 - INFO - orders - Fetched 0 open orders for user 1
+2025-06-10 22:50:51,403 - INFO - orders - Fetched 2 pending orders for user 1
+2025-06-10 22:50:51,414 - INFO - orders - Updated static orders cache for user 1 with 0 open orders and 2 pending orders
+2025-06-10 22:53:13,211 - INFO - orders - Cancel pending order request received - Order ID: 7930267270, User ID: 1
+2025-06-10 22:53:13,245 - INFO - orders - Generated cancel_id: 4861576896 for order 7930267270
+2025-06-10 22:53:13,253 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-10 22:53:13,253 - INFO - orders - Non-Barclays user. Cancelling order 7930267270 immediately
+2025-06-10 22:53:13,340 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-10 22:53:13,341 - INFO - orders - Using order model: DemoUserOrder
+2025-06-10 22:53:13,361 - INFO - orders - Fetched 0 open orders for user 1
+2025-06-10 22:53:13,377 - INFO - orders - Fetched 1 pending orders for user 1
+2025-06-10 22:53:13,381 - INFO - orders - Updated static orders cache for user 1 with 0 open orders and 1 pending orders
