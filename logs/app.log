@@ -35855,3 +35855,94 @@ fastapi.exceptions.HTTPException: 403: Not authorized to access this resource. A
 2025-06-11 00:34:44,124 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
 2025-06-11 00:34:44,125 - INFO - app.main - Redis client connection closed.
 2025-06-11 00:34:44,125 - INFO - app.main - Application shutdown event finished.
+2025-06-11 04:37:56,715 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 04:37:56,742 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 04:37:56,747 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 04:37:56,747 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 04:37:57,491 - INFO - app.main - Application startup event triggered.
+2025-06-11 04:37:57,521 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 04:37:57,521 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 04:37:57,556 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 04:37:57,574 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 04:37:57,651 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 04:37:57,654 - INFO - app.main - Database tables ensured/created.
+2025-06-11 04:37:57,657 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 04:37:58,778 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 04:37:58,778 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTY0MzY3NywiaWF0IjoxNzQ5NjQxODc3fQ.QLs30HLJ2oF6wL9kZ-l9y0To12oeAG8Pzy-OhHok14A
+2025-06-11 04:37:58,778 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 04:37:58,778 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 04:37:58,778 - INFO - app.main - Application startup event finished.
+2025-06-11 04:37:58,778 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 04:37:58,779 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 04:37:59,490 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 04:37:59,497 - INFO - app.main - Redis ping response: True
+2025-06-11 04:38:50,103 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 04:38:50,103 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 04:38:50,103 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 04:38:50,104 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 04:38:51,442 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 04:38:51,443 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 04:38:51,443 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 04:38:51,448 - INFO - app.main - Redis client connection closed.
+2025-06-11 04:38:51,448 - INFO - app.main - Application shutdown event finished.
+2025-06-11 04:40:30,993 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 04:40:31,009 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 04:40:31,014 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 04:40:31,015 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 04:40:31,564 - INFO - app.main - Application startup event triggered.
+2025-06-11 04:40:31,594 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 04:40:31,594 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 04:40:31,637 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 04:40:31,659 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 04:40:31,735 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 04:40:31,737 - INFO - app.main - Database tables ensured/created.
+2025-06-11 04:40:31,741 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 04:40:32,507 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 04:40:32,507 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTY0MzgzMSwiaWF0IjoxNzQ5NjQyMDMxfQ.wbmsgI6pCuG1THeRypkWbWlckrbVT4kfjI6o0WJSeR4
+2025-06-11 04:40:32,507 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 04:40:32,507 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 04:40:32,508 - INFO - app.main - Application startup event finished.
+2025-06-11 04:40:32,508 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 04:40:32,509 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 04:40:33,096 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 04:40:33,108 - INFO - app.main - Redis ping response: True
+2025-06-11 04:40:51,125 - INFO - app.services.pending_orders - Pending order 4530201306 added to Redis for user 1 under key pending_orders:AUDCAD:BUY_LIMIT.
+2025-06-11 04:41:55,798 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 04:41:55,799 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 04:41:55,799 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 04:41:55,800 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 04:41:56,245 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 04:41:56,246 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 04:41:56,246 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 04:41:56,248 - INFO - app.main - Redis client connection closed.
+2025-06-11 04:41:56,248 - INFO - app.main - Application shutdown event finished.
+2025-06-11 04:42:10,745 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 04:42:10,762 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 04:42:10,767 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 04:42:10,767 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 04:42:11,283 - INFO - app.main - Application startup event triggered.
+2025-06-11 04:42:11,316 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 04:42:11,316 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 04:42:11,332 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 04:42:11,352 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 04:42:11,416 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 04:42:11,418 - INFO - app.main - Database tables ensured/created.
+2025-06-11 04:42:11,422 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 04:42:12,323 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 04:42:12,323 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTY0MzkzMSwiaWF0IjoxNzQ5NjQyMTMxfQ.tY0Q6nMRoxNGK919fbPzkVpPROmMU4z3Le6Cb2fDuak
+2025-06-11 04:42:12,324 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 04:42:12,324 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 04:42:12,324 - INFO - app.main - Application startup event finished.
+2025-06-11 04:42:12,324 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 04:42:12,325 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 04:42:13,011 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 04:42:13,013 - INFO - app.main - Redis ping response: True
+2025-06-11 04:42:13,553 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 04:42:13,553 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 04:42:13,553 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 04:42:13,554 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 04:42:14,566 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 04:42:14,566 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 04:42:14,567 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 04:42:14,568 - INFO - app.main - Redis client connection closed.
+2025-06-11 04:42:14,568 - INFO - app.main - Application shutdown event finished.

@@ -565,6 +565,20 @@ async def place_pending_order(
         order_model = get_order_model(user_type)
         new_order_id = await generate_unique_10_digit_id(db, order_model, 'order_id')
 
+        # Fetch contract_size from ExternalSymbolInfo table
+        symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(order_request.symbol))
+        symbol_info_result = await db.execute(symbol_info_stmt)
+        ext_symbol_info = symbol_info_result.scalars().first()
+        
+        if not ext_symbol_info or ext_symbol_info.contract_size is None:
+            orders_logger.error(f"Missing critical ExternalSymbolInfo for symbol {order_request.symbol}.")
+            raise HTTPException(status_code=500, detail=f"Missing critical ExternalSymbolInfo for symbol {order_request.symbol}.")
+        
+        # Calculate contract_value = contract_size * order_quantity
+        contract_size = Decimal(str(ext_symbol_info.contract_size))
+        contract_value = contract_size * order_request.order_quantity
+        orders_logger.info(f"Calculated contract_value for pending order: {contract_value} (contract_size: {contract_size} * quantity: {order_request.order_quantity})")
+
         # Prepare order data for internal processing
         order_data_for_internal_processing = {
             'order_id': new_order_id, # Assign the generated order_id
@@ -578,8 +592,8 @@ async def place_pending_order(
             'take_profit': order_request.take_profit,
             'order_user_id': user_id_for_order,  # Always current_user.id
             'order_status': order_request.order_status, # This will be PENDING from the schema default
-            'contract_value': None, # Must be None for pending orders (nullable in DB)
-            'margin': None,         # Must be None for pending orders (nullable in DB)
+            'contract_value': contract_value, # Store calculated contract_value
+            'margin': None,         # Still None for pending orders
             'open_time': None # Not open yet
         }
 
@@ -591,16 +605,10 @@ async def place_pending_order(
             orders_logger.error("[ERROR][pending_order] current_user.id is missing or invalid!")
             raise HTTPException(status_code=400, detail="Authenticated user not found. Cannot place pending order.")
 
-        # Defensive check: ensure contract_value and margin are None
-        if order_data_for_internal_processing['contract_value'] is not None or order_data_for_internal_processing['margin'] is not None:
-            orders_logger.error(f"[ERROR][pending_order] contract_value and margin must be None for pending orders!")
-            raise HTTPException(status_code=400, detail="contract_value and margin must be None for pending orders.")
-
-
         orders_logger.info(f"Placing PENDING order: {order_request.order_type} for user {user_id_for_order} at price {order_request.order_price}")
 
         # Create order in database with PENDING status
-        # Create the OrderCreateInternal model (contract_value and margin are None)
+        # Create the OrderCreateInternal model (margin is None)
         order_create_internal = OrderCreateInternal(**order_data_for_internal_processing)
         # order_model already set above
         # Convert to dict before passing to crud_order.create_order
@@ -1549,7 +1557,11 @@ async def cancel_pending_order(
                 "order_type": cancel_request.order_type,
                 "action": "cancel_order",
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "cancel_message": cancel_request.cancel_message
+                "cancel_message": cancel_request.cancel_message,
+                "status": cancel_request.status or db_order.status,
+                "order_quantity": str(cancel_request.order_quantity or db_order.order_quantity),
+                "order_status": cancel_request.order_status or db_order.order_status,
+                "contract_value": str(db_order.contract_value) if db_order.contract_value else None
             }
             
             await send_order_to_firebase(firebase_cancel_data, "live")

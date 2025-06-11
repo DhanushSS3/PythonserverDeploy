@@ -140,6 +140,9 @@ class PendingOrderCancelRequest(BaseModel):
     user_id: int  # The user ID
     user_type: str  # 'live' or 'demo'
     cancel_message: Optional[str] = None  # Optional cancellation message
+    status: Optional[str] = None  # Order status string
+    order_quantity: Optional[Decimal] = None  # Order quantity
+    order_status: Optional[str] = None  # Order status (PENDING, OPEN, etc.)
 
 # --- Order PATCH Update Schema ---
 class OrderUpdateRequest(BaseModel):

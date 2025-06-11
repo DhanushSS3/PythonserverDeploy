@@ -11527,3 +11527,37 @@ TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
 2025-06-11 00:29:19,650 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-11 00:31:33,936 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-11 00:33:37,096 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 04:37:57,450 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 04:40:31,530 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 04:40:50,899 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 1
+2025-06-11 04:40:50,920 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '4530201306', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('1'), 'order_price': Decimal('0.88'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': None, 'margin': None, 'open_time': None}
+2025-06-11 04:40:50,920 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.88
+2025-06-11 04:40:51,125 - INFO - orders - Pending order 4530201306 added to Redis.
+2025-06-11 04:40:51,165 - INFO - orders - User data cache updated for user 1 after placing pending order
+2025-06-11 04:40:51,165 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 04:40:51,165 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 04:40:51,211 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-11 04:40:51,251 - INFO - orders - Fetched 3 pending orders for user 1
+2025-06-11 04:40:51,254 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 3 pending orders
+2025-06-11 04:42:11,235 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 04:50:49,253 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 04:52:37,772 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 1
+2025-06-11 04:52:37,815 - INFO - orders - Calculated contract_value for pending order: 100000.00000000 (contract_size: 100000.00000000 * quantity: 1)
+2025-06-11 04:52:37,816 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '7182219615', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('1'), 'order_price': Decimal('0.88'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': Decimal('100000.00000000'), 'margin': None, 'open_time': None}
+2025-06-11 04:52:37,819 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.88
+2025-06-11 04:52:37,934 - INFO - orders - Pending order 7182219615 added to Redis.
+2025-06-11 04:52:37,959 - INFO - orders - User data cache updated for user 1 after placing pending order
+2025-06-11 04:52:37,959 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 04:52:37,959 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 04:52:38,069 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-11 04:52:38,110 - INFO - orders - Fetched 4 pending orders for user 1
+2025-06-11 04:52:38,128 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 4 pending orders
+2025-06-11 04:54:30,039 - INFO - orders - Cancel pending order request received - Order ID: 7182219615, User ID: 1
+2025-06-11 04:54:30,058 - INFO - orders - Generated cancel_id: 1099323937 for order 7182219615
+2025-06-11 04:54:30,061 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-11 04:54:30,062 - INFO - orders - Non-Barclays user. Cancelling order 7182219615 immediately
+2025-06-11 04:54:30,206 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 04:54:30,206 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 04:54:30,216 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-11 04:54:30,224 - INFO - orders - Fetched 3 pending orders for user 1
+2025-06-11 04:54:30,225 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 3 pending orders
