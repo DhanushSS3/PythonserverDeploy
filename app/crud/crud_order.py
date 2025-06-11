@@ -48,6 +48,29 @@ async def create_order(db: AsyncSession, order_data: dict, order_model: Type[Use
         raise ValueError("'status' is required and must be a string of length 10-30.")
     db_order = order_model(**order_data)
     db.add(db_order)
+    
+    # Create a log entry in OrderActionHistory
+    user_id = order_data.get('order_user_id')
+    user_type = 'demo' if order_model.__name__ == 'DemoUserOrder' else 'live'
+    
+    # Create history record only if we have the required fields
+    if user_id and 'order_id' in order_data:
+        history = OrderActionHistory(
+            user_id=user_id,
+            user_type=user_type,
+            order_id=order_data['order_id'],
+            cancel_id=order_data.get('cancel_id'),
+            close_id=order_data.get('close_id'),
+            action_type="CREATE",
+            modify_id=order_data.get('modify_id'),
+            stoploss_id=order_data.get('stoploss_id'),
+            takeprofit_id=order_data.get('takeprofit_id'),
+            stoploss_cancel_id=order_data.get('stoploss_cancel_id'),
+            takeprofit_cancel_id=order_data.get('takeprofit_cancel_id')
+        )
+        db.add(history)
+        orders_logger.debug(f"[DEBUG][create_order] Created OrderActionHistory record for order_id: {order_data['order_id']}")
+    
     await db.commit()
     await db.refresh(db_order)
     return db_order
@@ -116,7 +139,8 @@ async def update_order_with_tracking(
     db_order: UserOrder | DemoUserOrder,
     update_fields: dict,
     user_id: int,
-    user_type: str
+    user_type: str,
+    action_type: Optional[str] = "UPDATE"
 ):
     for field, value in update_fields.items():
         if hasattr(db_order, field):
@@ -126,6 +150,10 @@ async def update_order_with_tracking(
     history = OrderActionHistory(
         user_id=user_id,
         user_type=user_type,
+        order_id=db_order.order_id,
+        cancel_id=update_fields.get("cancel_id") or getattr(db_order, 'cancel_id', None),
+        close_id=update_fields.get("close_id") or getattr(db_order, 'close_id', None),
+        action_type=action_type,
         modify_id=update_fields.get("modify_id"),
         stoploss_id=update_fields.get("stoploss_id"),
         takeprofit_id=update_fields.get("takeprofit_id"),
@@ -273,6 +301,29 @@ async def create_user_order(
             raise ValueError("'status' is required and must be a string of length 10-30.")
         db_order = order_model(**order_data)
         db.add(db_order)
+        
+        # Create a log entry in OrderActionHistory
+        user_id = order_data.get('order_user_id')
+        user_type = 'demo' if order_model.__name__ == 'DemoUserOrder' else 'live'
+        
+        # Create history record only if we have the required fields
+        if user_id and 'order_id' in order_data:
+            history = OrderActionHistory(
+                user_id=user_id,
+                user_type=user_type,
+                order_id=order_data['order_id'],
+                cancel_id=order_data.get('cancel_id'),
+                close_id=order_data.get('close_id'),
+                action_type="CREATE",
+                modify_id=order_data.get('modify_id'),
+                stoploss_id=order_data.get('stoploss_id'),
+                takeprofit_id=order_data.get('takeprofit_id'),
+                stoploss_cancel_id=order_data.get('stoploss_cancel_id'),
+                takeprofit_cancel_id=order_data.get('takeprofit_cancel_id')
+            )
+            db.add(history)
+            orders_logger.debug(f"[DEBUG][create_user_order] Created OrderActionHistory record for order_id: {order_data['order_id']}")
+        
         await db.commit()
         await db.refresh(db_order)
         return db_order

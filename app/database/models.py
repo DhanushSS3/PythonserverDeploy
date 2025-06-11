@@ -278,6 +278,9 @@ class Wallet(Base):
     user = relationship("User", back_populates="wallet_transactions") # Define relationship back to User
     demo_user = relationship("DemoUser", back_populates="wallet_transactions") # Define relationship back to DemoUser
 
+    # Add order_id to identify which order's transaction it is
+    order_id = Column(String(64), nullable=True, index=True)  # Nullable as not all wallet transactions are tied to orders
+    
     # Fields based on your list
     symbol = Column(String(255), nullable=True) # Nullable as requested
     order_quantity = Column(SQLDecimal(18, 8), nullable=True) # Nullable Decimal
@@ -327,8 +330,8 @@ class UserOrder(Base):
     order_status = Column(String(20), nullable=False)
     order_price = Column(SQLDecimal(18, 8), nullable=False)
     order_quantity = Column(SQLDecimal(18, 8), nullable=False)
-    contract_value = Column(SQLDecimal(18, 8), nullable=False)
-    margin = Column(SQLDecimal(18, 8), nullable=False)
+    contract_value = Column(SQLDecimal(18, 8), nullable=True)
+    margin = Column(SQLDecimal(18, 8), nullable=True)
 
     stop_loss = Column(SQLDecimal(18, 8), nullable=True)
     take_profit = Column(SQLDecimal(18, 8), nullable=True)
@@ -373,8 +376,8 @@ class DemoUserOrder(Base):
     order_status = Column(String(20), nullable=False)
     order_price = Column(SQLDecimal(18, 8), nullable=False)
     order_quantity = Column(SQLDecimal(18, 8), nullable=False)
-    contract_value = Column(SQLDecimal(18, 8), nullable=False)
-    margin = Column(SQLDecimal(18, 8), nullable=False)
+    contract_value = Column(SQLDecimal(18, 8), nullable=True)  # Changed to nullable for pending orders
+    margin = Column(SQLDecimal(18, 8), nullable=True)  # Changed to nullable for pending orders
 
     stop_loss = Column(SQLDecimal(18, 8), nullable=True)
     take_profit = Column(SQLDecimal(18, 8), nullable=True)
@@ -418,8 +421,8 @@ class RockUserOrder(Base):
     order_status = Column(String(20), nullable=False) # e.g., 'pending', 'open', 'closed', 'cancelled'
     order_price = Column(SQLDecimal(18, 8), nullable=False)
     order_quantity = Column(SQLDecimal(18, 8), nullable=False)
-    contract_value = Column(SQLDecimal(18, 8), nullable=False)
-    margin = Column(SQLDecimal(18, 8), nullable=False)
+    contract_value = Column(SQLDecimal(18, 8), nullable=True)  # Changed to nullable for pending orders
+    margin = Column(SQLDecimal(18, 8), nullable=True)  # Changed to nullable for pending orders
 
     stop_loss = Column(SQLDecimal(18, 8), nullable=True)
     take_profit = Column(SQLDecimal(18, 8), nullable=True)
@@ -455,6 +458,18 @@ class OrderActionHistory(Base):
 
     user_id = Column(Integer, nullable=False)
     user_type = Column(String(10), nullable=False)  # 'live' or 'demo'
+
+    # Add order_id as a required field (not a foreign key since it could be from different tables)
+    order_id = Column(String(64), nullable=False, index=True)
+    
+    # Add cancel_id
+    cancel_id = Column(String(64), nullable=True)
+    
+    # Add close_id
+    close_id = Column(String(64), nullable=True)
+
+    # Add action_type to track what kind of action was performed - now required
+    action_type = Column(String(50), nullable=False)
 
     # New & existing tracked action IDs
     modify_id = Column(String(64), nullable=True)

@@ -158,6 +158,7 @@
 #     order_type: Optional[str] = None # e.g., 'buy', 'sell'
 #     transaction_amount: Decimal = Field(..., decimal_places=8)
 #     description: Optional[str] = None
+#     order_id: Optional[str] = None  # Added order_id field to identify which order's transaction it is
 
 #     class Config:
 #         from_attributes = True # For Pydantic V2+, use from_attributes instead of orm_mode = True
@@ -221,6 +222,7 @@ class WalletBase(BaseModel):
     order_type: Optional[str] = None # e.g., 'buy', 'sell'
     transaction_amount: Decimal = Field(..., decimal_places=8)
     description: Optional[str] = None
+    order_id: Optional[str] = None  # Added order_id field to identify which order's transaction it is
 
     class Config:
         from_attributes = True # For Pydantic V2+, use from_attributes instead of orm_mode = True

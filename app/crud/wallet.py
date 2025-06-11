@@ -50,6 +50,7 @@ async def create_wallet_record(
             transaction_amount=wallet_data.transaction_amount,
             transaction_id=transaction_id,
             description=wallet_data.description,
+            order_id=wallet_data.order_id,  # Include order_id from wallet_data
         )
 
         # Add and flush to prepare for refresh
@@ -95,6 +96,22 @@ async def get_wallet_records_by_user_id(
     )
     return result.scalars().all()
 
+# Function to get wallet records by demo user ID (Async)
+async def get_wallet_records_by_demo_user_id(
+    db: AsyncSession, demo_user_id: int, skip: int = 0, limit: int = 100
+) -> List[Wallet]:
+    """
+    Retrieves wallet transaction records for a specific demo user with pagination.
+    """
+    result = await db.execute(
+        select(Wallet)
+        .filter(Wallet.demo_user_id == demo_user_id)
+        .offset(skip)
+        .limit(limit)
+        .order_by(Wallet.created_at.desc()) # Order by creation time
+    )
+    return result.scalars().all()
+
 # Example function to update wallet record approval status and transaction time (Async)
 async def update_wallet_record_approval(
     db: AsyncSession, transaction_id: str, is_approved: int
@@ -120,6 +137,30 @@ async def update_wallet_record_approval(
     else:
         logger.warning(f"Wallet record with transaction ID {transaction_id} not found for update.")
         return None
+
+# Function to get wallet records by order ID
+async def get_wallet_records_by_order_id(
+    db: AsyncSession, order_id: str, user_id: int = None, demo_user_id: int = None
+) -> List[Wallet]:
+    """
+    Retrieves wallet transaction records for a specific order.
+    If user_id or demo_user_id is provided, only returns records for that user.
+    """
+    query = select(Wallet).filter(Wallet.order_id == order_id)
+    
+    # If user_id is provided, add it to the filter
+    if user_id is not None:
+        query = query.filter(Wallet.user_id == user_id)
+    
+    # If demo_user_id is provided, add it to the filter
+    if demo_user_id is not None:
+        query = query.filter(Wallet.demo_user_id == demo_user_id)
+    
+    # Order by creation time, newest first
+    query = query.order_by(Wallet.created_at.desc())
+    
+    result = await db.execute(query)
+    return result.scalars().all()
 
 # The __main__ block for testing needs to be updated for async as well
 # import asyncio

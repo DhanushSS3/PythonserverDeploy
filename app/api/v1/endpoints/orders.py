@@ -871,7 +871,7 @@ async def close_order(
                         db_user_locked.wallet_balance = (original_wallet_balance + db_order.net_profit - total_commission_for_trade - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
                         transaction_time = datetime.datetime.now(datetime.timezone.utc)
-                        wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time}
+                        wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time, "order_id": db_order.order_id}
                         if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
                         else: wallet_common_data["user_id"] = db_user_locked.id
                         if db_order.net_profit != Decimal("0.0"):
@@ -1038,7 +1038,7 @@ async def close_order(
                 db_user_locked.wallet_balance = (original_wallet_balance + db_order.net_profit - total_commission_for_trade - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
 
                 transaction_time = datetime.datetime.now(datetime.timezone.utc)
-                wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time}
+                wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time, "order_id": db_order.order_id}
                 if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
                 else: wallet_common_data["user_id"] = db_user_locked.id
                 if db_order.net_profit != Decimal("0.0"):
@@ -1197,7 +1197,8 @@ async def modify_pending_order(
             db_order,
             update_fields=update_data,
             user_id=modify_request.user_id,
-            user_type=modify_request.user_type
+            user_type=modify_request.user_type,
+            action_type="MODIFY_PENDING"
         )
 
         # --- Update Redis Cache ---
