@@ -5,14 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError # Import IntegrityError
 from typing import List, Optional
 from typing import Dict
+from redis.asyncio import Redis
 
 from app.database.session import get_db
-from app.database.models import Group, User # Import Group and User models
+from app.database.models import Group, User, DemoUser # Import Group, User and DemoUser models
 from app.schemas.group import GroupCreate, GroupUpdate, GroupResponse # Import Group schemas
 from app.schemas.user import StatusResponse # Import StatusResponse from user schema (assuming it's defined there)
 from app.crud import group as crud_group # Import crud_group
 from app.core.security import get_current_admin_user # Import the admin dependency
 from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
+from app.dependencies.redis_client import get_redis_client
 from decimal import Decimal
 import datetime
 from typing import Any
@@ -37,7 +39,7 @@ from app.crud.group import get_group_by_name
 )
 async def get_all_group_records_with_contract_size(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User | DemoUser = Depends(get_current_user)
 ):
     if not current_user.group_name:
         raise HTTPException(
@@ -62,6 +64,11 @@ async def get_all_group_records_with_contract_size(
             if external_info and external_info.contract_size is not None:
                 contract_size = str(external_info.contract_size)
 
+        # Calculate half_spread using the formula (spread * spread_pip)/2
+        half_spread = None
+        if group.spread is not None and group.spread_pip is not None:
+            half_spread = (group.spread * group.spread_pip) / 2
+
         group_data.append({
             "id": group.id,
             "symbol": group.symbol,
@@ -83,7 +90,8 @@ async def get_all_group_records_with_contract_size(
             "pip_currency": group.pip_currency,
             "created_at": group.created_at.isoformat(),
             "updated_at": group.updated_at.isoformat(),
-            "contract_size": contract_size
+            "contract_size": contract_size,
+            "half_spread": str(half_spread) if half_spread is not None else None
         })
 
     return group_data
@@ -149,6 +157,57 @@ async def read_groups(
 
     groups = await crud_group.get_groups(db, skip=skip, limit=limit, search=search)
     return groups
+
+@router.get("/my-group-spreads", response_model=dict)
+async def get_my_group_spreads(
+    db: AsyncSession = Depends(get_db),
+    current_user: User | DemoUser = Depends(get_current_user),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Get spread values for all symbols in the user's group.
+    Calculates half_spread for each symbol using the formula (spread * spread_pip)/2.
+    """
+    try:
+        # Get the user's group name
+        group_name = current_user.group_name
+        if not group_name:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User is not assigned to any group"
+            )
+        
+        # Get all group records for this group name
+        group_records = await crud_group.get_groups_by_name(db, group_name)
+        if not group_records:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Group '{group_name}' not found"
+            )
+        
+        # Calculate spread values for each symbol
+        spread_values = {}
+        for group_record in group_records:
+            if group_record.symbol:  # Make sure symbol is not None
+                # Calculate half_spread using the formula (spread * spread_pip)/2
+                if group_record.spread is not None and group_record.spread_pip is not None:
+                    half_spread = (group_record.spread * group_record.spread_pip) / 2
+                    # Convert symbol to lowercase and only include half_spread
+                    symbol_key = group_record.symbol.lower() if group_record.symbol else ""
+                    if symbol_key:  # Only add if we have a valid symbol key
+                        spread_values[symbol_key] = float(half_spread)
+        
+        return {
+            "group_name": group_name,
+            "spreads": spread_values
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching group spreads: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching group spreads: {str(e)}"
+        )
 
 # Endpoint to get a single group by ID (Admin Only)
 @router.get(

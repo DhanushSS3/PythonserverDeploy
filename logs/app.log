@@ -35554,3 +35554,304 @@ TypeError: object dict can't be used in 'await' expression
 2025-06-10 22:54:13,955 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
 2025-06-10 22:54:13,959 - INFO - app.main - Redis client connection closed.
 2025-06-10 22:54:13,959 - INFO - app.main - Application shutdown event finished.
+2025-06-10 23:25:05,639 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-10 23:25:05,666 - INFO - app.core.config - .env file loaded successfully.
+2025-06-10 23:25:05,673 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-10 23:25:05,673 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-10 23:25:06,603 - INFO - app.main - Application startup event triggered.
+2025-06-10 23:25:06,648 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-10 23:25:06,648 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-10 23:25:06,689 - INFO - app.main - Redis client initialized successfully.
+2025-06-10 23:25:06,714 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-10 23:25:06,836 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-10 23:25:06,839 - INFO - app.main - Database tables ensured/created.
+2025-06-10 23:25:06,844 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-10 23:25:08,006 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-10 23:25:08,006 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyNDkwNiwiaWF0IjoxNzQ5NjIzMTA2fQ.DwCnl_XGC7RMw4o9bpKvAlPK79GWqr9YE3DiUIlgeU4
+2025-06-10 23:25:08,007 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-10 23:25:08,007 - INFO - app.main - Redis publisher task scheduled.
+2025-06-10 23:25:08,007 - INFO - app.main - Application startup event finished.
+2025-06-10 23:25:08,007 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-10 23:25:08,008 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-10 23:25:08,637 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-10 23:25:08,649 - INFO - app.main - Redis ping response: True
+2025-06-10 23:25:31,893 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-10 23:25:31,950 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-10 23:25:31,975 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-10 23:25:32,008 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-10 23:25:32,047 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-10 23:25:32,201 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-10 23:25:32,230 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-10 23:25:32,286 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-10 23:25:32,329 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-10 23:25:32,374 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-10 23:25:32,423 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-10 23:25:32,469 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-10 23:25:32,505 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-10 23:25:32,545 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-10 23:25:32,577 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-10 23:25:32,607 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-10 23:25:32,631 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-10 23:25:32,664 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-10 23:25:32,708 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-10 23:25:32,779 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-10 23:25:32,848 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-10 23:25:32,883 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-10 23:25:32,927 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-10 23:25:32,973 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-10 23:25:33,014 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-10 23:25:33,063 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-10 23:25:33,087 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-10 23:25:33,124 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-10 23:25:33,176 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-10 23:25:33,226 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-10 23:25:33,268 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-10 23:25:33,313 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-10 23:25:33,347 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-10 23:25:33,397 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-10 23:25:33,446 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-10 23:25:33,491 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-10 23:25:33,533 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-10 23:25:33,556 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-10 23:25:33,602 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-10 23:25:33,660 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-10 23:25:33,671 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-10 23:25:33,694 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-10 23:25:33,747 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-10 23:25:33,838 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-10 23:25:33,854 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-10 23:25:33,876 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-10 23:25:33,937 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-10 23:25:33,975 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-10 23:25:34,018 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-10 23:25:34,066 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-10 23:25:34,102 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-10 23:25:34,131 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-10 23:25:34,185 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-10 23:25:34,204 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-10 23:25:34,267 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-10 23:25:34,319 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-10 23:25:34,359 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-10 23:25:34,400 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-10 23:25:34,439 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-10 23:25:34,456 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-10 23:25:34,489 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-10 23:25:34,534 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-10 23:25:34,585 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-10 23:25:34,627 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-10 23:25:34,670 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-10 23:25:34,725 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-10 23:25:34,813 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-10 23:25:34,955 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-10 23:25:35,078 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-10 23:25:35,114 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-10 23:25:35,138 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-10 23:25:35,148 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-10 23:25:35,193 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-10 23:25:35,279 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-10 23:25:35,307 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-10 23:25:35,345 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-10 23:25:35,387 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-10 23:25:35,431 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-10 23:25:35,470 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-10 23:25:36,615 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:25:38,693 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:25:51,440 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:30:00,773 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-10 23:30:00,773 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyNTIwMCwiaWF0IjoxNzQ5NjIzNDAwfQ.f0ZFdqM9trotfOQ6vNFSDTXWMFLaLqiemC8Tt88-dK4
+2025-06-10 23:30:23,038 - WARNING - app.core.cache - User 4 (type: demo) not found in DB. Cannot cache.
+2025-06-10 23:30:23,142 - INFO - app.core.cache - User data for user 4 (type: live) fetched from DB and cached.
+2025-06-10 23:30:23,879 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:32:20,497 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:32:39,023 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:32:39,069 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 133, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-10 23:32:39,070 - INFO - app.core.firebase - [FIREBASE] Payload being pushed to Firebase (all stringified): {'order_id': '1943369549', 'order_user_id': '4', 'user_id': '4', 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': '0.89073000', 'order_quantity': '2.00000000', 'contract_value': '200000.00000000', 'margin': '1302.09406863', 'stop_loss': '', 'take_profit': '', 'close_price': '', 'net_profit': '', 'swap': '', 'commission': '', 'cancel_message': '', 'close_message': '', 'takeprofit_id': '', 'stoploss_id': '', 'cancel_id': '', 'close_order_id': '', 'modify_id': '', 'stoploss_cancel_id': '', 'takeprofit_cancel_id': '', 'status': 'OPEN', 'timestamp': '2025-06-11T06:32:39.070178', 'account_type': 'live', 'action': ''}
+2025-06-10 23:32:39,380 - INFO - app.core.firebase - Order data (ID: 1943369549) sent to Firebase successfully.
+2025-06-10 23:35:42,350 - INFO - app.services.pending_orders - Pending order 4573979015 added to Redis for user 4 under key pending_orders:AUDCAD:BUY_LIMIT.
+2025-06-10 23:36:16,581 - INFO - app.services.pending_orders - Pending order 5186970569 added to Redis for user 4 under key pending_orders:AUDCAD:BUY_LIMIT.
+2025-06-11 00:00:00,726 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 00:00:00,726 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyNzAwMCwiaWF0IjoxNzQ5NjI1MjAwfQ.Kz6vPVrUI53xZRYHCIfAtnmQXSRs5wHegft5fgkkjWk
+2025-06-11 00:02:21,158 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 00:02:21,159 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 00:02:21,159 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 00:02:21,161 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 00:02:21,944 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 00:02:21,945 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 00:02:21,945 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 00:02:21,951 - INFO - app.main - Redis client connection closed.
+2025-06-11 00:02:21,951 - INFO - app.main - Application shutdown event finished.
+2025-06-11 00:23:34,318 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 00:23:34,391 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 00:23:34,407 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 00:23:34,407 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 00:23:36,031 - INFO - app.main - Application startup event triggered.
+2025-06-11 00:23:36,116 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 00:23:36,117 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 00:23:36,171 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 00:23:36,207 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 00:23:36,325 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 00:23:36,328 - INFO - app.main - Database tables ensured/created.
+2025-06-11 00:23:36,334 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 00:23:37,726 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 00:23:37,727 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyODQxNiwiaWF0IjoxNzQ5NjI2NjE2fQ.dVMWlvJlkJRCXAp_WGewYT4Kd3Qx2EjaeTmEbG0HA60
+2025-06-11 00:23:37,727 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 00:23:37,727 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 00:23:37,727 - INFO - app.main - Application startup event finished.
+2025-06-11 00:23:37,728 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:23:37,728 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 00:23:38,438 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:23:38,442 - INFO - app.main - Redis ping response: True
+2025-06-11 00:25:03,833 - ERROR - app.database.session - Database session error: 403: Not authorized to access this resource. Admin privileges required.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 55, in get_db
+    yield session
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\routing.py", line 291, in app
+    solved_result = await solve_dependencies(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
+    solved = await call(**solved_result.values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 332, in get_current_admin_user
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 403: Not authorized to access this resource. Admin privileges required.
+2025-06-11 00:26:38,220 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 00:26:38,220 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 00:26:38,220 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 00:26:38,221 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 00:26:39,587 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 00:26:39,588 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 00:26:39,589 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 00:26:39,590 - INFO - app.main - Redis client connection closed.
+2025-06-11 00:26:39,590 - INFO - app.main - Application shutdown event finished.
+2025-06-11 00:29:18,339 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 00:29:18,384 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 00:29:18,406 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 00:29:18,406 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 00:29:19,753 - INFO - app.main - Application startup event triggered.
+2025-06-11 00:29:19,814 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 00:29:19,814 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 00:29:19,844 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 00:29:19,881 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 00:29:19,988 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 00:29:19,994 - INFO - app.main - Database tables ensured/created.
+2025-06-11 00:29:20,000 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 00:29:21,271 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 00:29:21,272 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyODc2MCwiaWF0IjoxNzQ5NjI2OTYwfQ.Suaxp7xLdOyLkm-E3FNGgxOa4FnatwSS89JlrcKQcrw
+2025-06-11 00:29:21,272 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 00:29:21,272 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 00:29:21,272 - INFO - app.main - Application startup event finished.
+2025-06-11 00:29:21,273 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:29:21,273 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 00:29:22,007 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:29:22,031 - INFO - app.main - Redis ping response: True
+2025-06-11 00:30:00,386 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 00:30:00,386 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyODgwMCwiaWF0IjoxNzQ5NjI3MDAwfQ.tiJ1x8YR6y1W6alLvrJ02WqJanZu8vBrTrKt7iqiua0
+2025-06-11 00:31:29,609 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 00:31:29,609 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 00:31:29,610 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 00:31:29,614 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 00:31:30,292 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 00:31:30,292 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 00:31:30,292 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 00:31:30,294 - INFO - app.main - Redis client connection closed.
+2025-06-11 00:31:30,294 - INFO - app.main - Application shutdown event finished.
+2025-06-11 00:31:33,060 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 00:31:33,089 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 00:31:33,103 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 00:31:33,103 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 00:31:34,007 - INFO - app.main - Application startup event triggered.
+2025-06-11 00:31:34,066 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 00:31:34,066 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 00:31:34,104 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 00:31:34,165 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 00:31:34,309 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 00:31:34,312 - INFO - app.main - Database tables ensured/created.
+2025-06-11 00:31:34,319 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 00:31:35,404 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 00:31:35,404 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyODg5NCwiaWF0IjoxNzQ5NjI3MDk0fQ.4AR-Qlntj7W1lT5kF9TqIxwFS8JFcEklsoYs1u7yuEY
+2025-06-11 00:31:35,404 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 00:31:35,405 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 00:31:35,405 - INFO - app.main - Application startup event finished.
+2025-06-11 00:31:35,405 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:31:35,406 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 00:31:36,213 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:31:36,234 - INFO - app.main - Redis ping response: True
+2025-06-11 00:31:39,925 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 00:31:39,925 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 00:31:39,925 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 00:31:39,927 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 00:31:41,872 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 00:31:41,872 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 00:31:41,872 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 00:31:41,874 - INFO - app.main - Redis client connection closed.
+2025-06-11 00:31:41,874 - INFO - app.main - Application shutdown event finished.
+2025-06-11 00:33:35,937 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-11 00:33:35,964 - INFO - app.core.config - .env file loaded successfully.
+2025-06-11 00:33:35,978 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-11 00:33:35,978 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-11 00:33:37,244 - INFO - app.main - Application startup event triggered.
+2025-06-11 00:33:37,322 - INFO - app.main - Firebase Admin SDK already initialized.
+2025-06-11 00:33:37,322 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-11 00:33:37,349 - INFO - app.main - Redis client initialized successfully.
+2025-06-11 00:33:37,388 - INFO - app.database.session - Running Base.metadata.create_all...
+2025-06-11 00:33:37,562 - INFO - app.database.session - Base.metadata.create_all finished.
+2025-06-11 00:33:37,568 - INFO - app.main - Database tables ensured/created.
+2025-06-11 00:33:37,577 - INFO - app.main - APScheduler started with jobs for daily swap and JWT rotation.
+2025-06-11 00:33:38,597 - INFO - app.main - Service account JWT pushed to Firebase.
+2025-06-11 00:33:38,597 - INFO - app.main - Generated service account JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwic2VydmljZV9uYW1lIjoicHl0aG9uX2JyaWRnZSIsImV4cCI6MTc0OTYyOTAxNywiaWF0IjoxNzQ5NjI3MjE3fQ.8HvX7y38cfVeZLwkdoP_ejulc32uR-ROcEG3KVVcXp0
+2025-06-11 00:33:38,597 - INFO - app.main - Firebase stream processing task scheduled.
+2025-06-11 00:33:38,597 - INFO - app.main - Redis publisher task scheduled.
+2025-06-11 00:33:38,598 - INFO - app.main - Application startup event finished.
+2025-06-11 00:33:38,598 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:33:38,599 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-11 00:33:39,215 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-11 00:33:39,253 - INFO - app.main - Redis ping response: True
+2025-06-11 00:34:42,734 - INFO - app.main - Application shutdown event triggered.
+2025-06-11 00:34:42,735 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-11 00:34:42,735 - INFO - app.main - Cancelling 2 other background tasks...
+2025-06-11 00:34:42,738 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-11 00:34:44,123 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-11 00:34:44,123 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-11 00:34:44,124 - INFO - app.main - Background task 'firebase_listener' cancelled successfully.
+2025-06-11 00:34:44,125 - INFO - app.main - Redis client connection closed.
+2025-06-11 00:34:44,125 - INFO - app.main - Application shutdown event finished.
