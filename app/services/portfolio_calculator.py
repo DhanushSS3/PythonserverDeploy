@@ -116,11 +116,31 @@ async def calculate_user_portfolio(
     open_positions: List[Dict[str, Any]],
     adjusted_market_prices: Dict[str, Dict[str, Decimal]],
     group_symbol_settings: Dict[str, Any],
-    redis_client: Redis
+    redis_client: Redis,
+    margin_call_threshold: Decimal = Decimal('100.0')  # Default threshold for margin call (100%)
 ) -> Dict[str, Any]:
     """
     Calculates the user's portfolio metrics including equity, margin, and PnL.
     This function focuses on dynamic metrics that change with market prices.
+    
+    Args:
+        user_data: User account information including balance and leverage
+        open_positions: List of open positions
+        adjusted_market_prices: Dictionary of current market prices by symbol
+        group_symbol_settings: Dictionary of symbol settings by group
+        redis_client: Redis client for caching
+        margin_call_threshold: Threshold for margin call (percentage, default 100%)
+        
+    Returns:
+        Dictionary containing portfolio metrics including:
+        - balance: Current wallet balance
+        - equity: Balance + unrealized PnL
+        - margin: Total margin used
+        - free_margin: Equity - margin
+        - profit_loss: Total unrealized PnL
+        - margin_level: Equity / margin * 100 (percentage)
+        - positions: List of positions with PnL
+        - margin_call: Boolean indicating if margin_level is below threshold
     """
     try:
         # Initialize portfolio metrics
@@ -140,7 +160,8 @@ async def calculate_user_portfolio(
                 "free_margin": str(balance),
                 "profit_loss": "0.0",
                 "margin_level": "0.0",
-                "positions": open_positions
+                "positions": open_positions,
+                "margin_call": False
             }
 
         # Process each position to calculate PnL
@@ -259,6 +280,12 @@ async def calculate_user_portfolio(
         equity = balance + total_pnl_usd  # total_pnl_usd already includes commission deduction
         free_margin = equity - overall_hedged_margin_usd
         margin_level = (equity / overall_hedged_margin_usd * 100) if overall_hedged_margin_usd > 0 else Decimal('0.0')
+        
+        # Check for margin call condition
+        margin_call = False
+        if margin_level > Decimal('0') and margin_level < margin_call_threshold:
+            margin_call = True
+            logger.warning(f"MARGIN CALL ALERT: User has margin level {margin_level}% which is below threshold {margin_call_threshold}%")
 
         # Create account summary
         account_summary = {
@@ -268,7 +295,8 @@ async def calculate_user_portfolio(
             "free_margin": str(free_margin),
             "profit_loss": str(total_pnl_usd),  # This is already net of commission
             "margin_level": str(margin_level),
-            "positions": positions_with_pnl  # Include positions with PnL
+            "positions": positions_with_pnl,  # Include positions with PnL
+            "margin_call": margin_call  # Flag indicating if margin call condition is met
         }
 
         return account_summary
@@ -282,5 +310,6 @@ async def calculate_user_portfolio(
             "free_margin": str(balance),
             "profit_loss": "0.0",
             "margin_level": "0.0",
-            "positions": open_positions  # Include positions even in error case
+            "positions": open_positions,  # Include positions even in error case
+            "margin_call": False
         }

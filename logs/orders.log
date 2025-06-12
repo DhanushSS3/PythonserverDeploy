@@ -11561,3 +11561,697 @@ TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
 2025-06-11 04:54:30,216 - INFO - orders - Fetched 2 open orders for user 1
 2025-06-11 04:54:30,224 - INFO - orders - Fetched 3 pending orders for user 1
 2025-06-11 04:54:30,225 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 3 pending orders
+2025-06-11 05:03:02,302 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:03:59,941 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:07:20,724 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:08:09,046 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:08:13,381 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:08:20,519 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 1
+2025-06-11 05:08:20,525 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:08:20,672 - INFO - orders - Calculated contract_value for pending order: 100000.00000000 (contract_size: 100000.00000000 * quantity: 1)
+2025-06-11 05:08:20,672 - INFO - orders - Setting order_status to PENDING for non-Barclays user
+2025-06-11 05:08:20,673 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '6086104174', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('100000.00000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:08:20,673 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:08:20,761 - INFO - orders - Pending order 6086104174 added to Redis for non-Barclays user 4
+2025-06-11 05:08:20,762 - ERROR - orders - Error updating user data cache after pending order placement: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 685, in place_pending_order
+    db_user = await get_user_by_id(db, user_id_for_order)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-06-11 05:08:20,768 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:08:20,768 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:08:20,782 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:08:20,791 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-11 05:08:20,792 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 3 pending orders
+2025-06-11 05:17:10,094 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:17:20,159 - INFO - orders - Cancel pending order request received - Order ID: 6086104174, User ID: 1
+2025-06-11 05:17:20,180 - WARNING - orders - Order 6086104174 not found for user 1
+2025-06-11 05:17:20,180 - ERROR - orders - Error cancelling pending order: 404: Order not found
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1570, in cancel_pending_order
+    raise HTTPException(status_code=404, detail="Order not found")
+fastapi.exceptions.HTTPException: 404: Order not found
+2025-06-11 05:17:47,055 - INFO - orders - Cancel pending order request received - Order ID: 6086104174, User ID: 4
+2025-06-11 05:17:47,055 - WARNING - orders - Unauthorized attempt to cancel order 6086104174 by user 4
+2025-06-11 05:17:47,056 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1555, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:18:01,686 - INFO - orders - Cancel pending order request received - Order ID: 6086104174, User ID: 4
+2025-06-11 05:18:01,687 - WARNING - orders - Unauthorized attempt to cancel order 6086104174 by user 4
+2025-06-11 05:18:01,687 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1555, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:19:56,250 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:19:56,278 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:19:56,327 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:19:56,328 - INFO - orders - Setting order_status to PENDING for non-Barclays user
+2025-06-11 05:19:56,328 - INFO - orders - [DEBUG] Explicitly overriding order_request.order_status to: PENDING
+2025-06-11 05:19:56,329 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '7793541528', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:19:56,329 - INFO - orders - [DEBUG] order_status in prepared data: PENDING
+2025-06-11 05:19:56,329 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:19:56,329 - ERROR - orders - Unexpected error in place_pending_order: 'user_type' is an invalid keyword argument for UserOrder
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 631, in place_pending_order
+    db_order = order_model(**order_data_for_internal_processing)
+  File "<string>", line 4, in __init__
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2173, in _declarative_constructor
+    raise TypeError(
+        "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+    )
+TypeError: 'user_type' is an invalid keyword argument for UserOrder
+2025-06-11 05:20:19,547 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:20:41,969 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:20:46,440 - INFO - orders - Cancel pending order request received - Order ID: 6086104174, User ID: 4
+2025-06-11 05:20:46,441 - WARNING - orders - Unauthorized attempt to cancel order 6086104174 by user 4
+2025-06-11 05:20:46,441 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1555, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:20:58,850 - INFO - orders - Cancel pending order request received - Order ID: 6086104174, User ID: 4
+2025-06-11 05:20:58,850 - WARNING - orders - Unauthorized attempt to cancel order 6086104174 by user 4
+2025-06-11 05:20:58,850 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1555, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:21:03,551 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:21:03,557 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:21:03,620 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:21:03,621 - INFO - orders - Setting order_status to PENDING for non-Barclays user
+2025-06-11 05:21:03,621 - INFO - orders - [DEBUG] Explicitly overriding order_request.order_status to: PENDING
+2025-06-11 05:21:03,621 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '9964653453', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:21:03,622 - INFO - orders - [DEBUG] order_status in prepared data: PENDING
+2025-06-11 05:21:03,622 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:21:03,627 - ERROR - orders - Unexpected error in place_pending_order: 'user_type' is an invalid keyword argument for UserOrder
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 631, in place_pending_order
+    db_order = order_model(**order_data_for_internal_processing)
+  File "<string>", line 4, in __init__
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2173, in _declarative_constructor
+    raise TypeError(
+        "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+    )
+TypeError: 'user_type' is an invalid keyword argument for UserOrder
+2025-06-11 05:21:25,840 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:21:31,160 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:21:31,163 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:21:31,181 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:21:31,181 - INFO - orders - Setting order_status to PENDING for non-Barclays user
+2025-06-11 05:21:31,182 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '9631138251', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:21:31,182 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:21:31,235 - INFO - orders - Pending order 9631138251 added to Redis for non-Barclays user 4
+2025-06-11 05:21:31,235 - ERROR - orders - Error updating user data cache after pending order placement: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 685, in place_pending_order
+    db_user = await get_user_by_id(db, user_id_for_order)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-06-11 05:21:31,237 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:21:31,237 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:21:31,250 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:21:31,259 - INFO - orders - Fetched 4 pending orders for user 4
+2025-06-11 05:21:31,261 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 4 pending orders
+2025-06-11 05:21:51,162 - INFO - orders - Cancel pending order request received - Order ID: 6086104174, User ID: 4
+2025-06-11 05:21:51,162 - WARNING - orders - Unauthorized attempt to cancel order 6086104174 by user 4
+2025-06-11 05:21:51,162 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1533, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:21:57,264 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:21:57,264 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:21:57,264 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1533, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:22:09,763 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:23:10,781 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:23:10,781 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:23:10,782 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1555, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:23:41,968 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:23:41,968 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:23:41,968 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1555, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:24:22,804 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:24:26,901 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:24:29,704 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:24:29,705 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:24:29,705 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1533, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:24:43,011 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:24:45,874 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:24:45,874 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:24:45,875 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1529, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:24:47,852 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:24:54,053 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:24:54,054 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:24:54,054 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1529, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:25:04,214 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:25:08,910 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:25:24,960 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:25:27,508 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:25:27,508 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:25:27,508 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1529, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:25:29,239 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:25:30,955 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:25:30,955 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:25:30,955 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1529, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:26:29,612 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:26:33,867 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:26:38,632 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:26:38,632 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:26:38,632 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1495, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:26:46,650 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:26:46,650 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:26:46,651 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1495, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:28:47,686 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:28:47,687 - WARNING - orders - Unauthorized attempt to cancel order 9631138251 by user 4
+2025-06-11 05:28:47,687 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel this order
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1495, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel this order
+2025-06-11 05:29:57,766 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:30:18,299 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:30:25,274 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:30:28,787 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:30:28,787 - WARNING - orders - User 4 attempted to cancel order for user 1
+2025-06-11 05:30:28,787 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel orders for other users
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1503, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel orders for other users")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel orders for other users
+2025-06-11 05:30:45,766 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:30:45,766 - WARNING - orders - User 4 attempted to cancel order for user 1
+2025-06-11 05:30:45,766 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel orders for other users
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1503, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel orders for other users")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel orders for other users
+2025-06-11 05:30:48,105 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:30:48,105 - WARNING - orders - User 4 attempted to cancel order for user 1
+2025-06-11 05:30:48,105 - ERROR - orders - Error cancelling pending order: 403: Not authorized to cancel orders for other users
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1503, in cancel_pending_order
+    raise HTTPException(status_code=403, detail="Not authorized to cancel orders for other users")
+fastapi.exceptions.HTTPException: 403: Not authorized to cancel orders for other users
+2025-06-11 05:30:55,545 - INFO - orders - Cancel pending order request received - Order ID: 9631138251, User ID: 4
+2025-06-11 05:30:55,564 - INFO - orders - Generated cancel_id: 1636775541 for order 9631138251
+2025-06-11 05:30:55,568 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:30:55,568 - INFO - orders - Non-Barclays user. Cancelling order 9631138251 immediately
+2025-06-11 05:30:55,637 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:30:55,638 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:30:55,648 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:30:55,662 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-11 05:30:55,666 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 3 pending orders
+2025-06-11 05:34:51,089 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:35:57,816 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:36:21,877 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:36:21,923 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:36:21,932 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:36:21,932 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '4348090858', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:36:21,933 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:36:21,992 - INFO - orders - Pending order 4348090858 added to Redis for non-Barclays user.
+2025-06-11 05:36:21,992 - ERROR - orders - Error updating user data cache after pending order placement: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 688, in place_pending_order
+    db_user = await get_user_by_id(db, user_id_for_order)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-06-11 05:36:21,994 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:36:21,995 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:36:22,005 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:36:22,027 - INFO - orders - Fetched 4 pending orders for user 4
+2025-06-11 05:36:22,032 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 4 pending orders
+2025-06-11 05:38:45,655 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:38:45,668 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:38:45,671 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:38:45,671 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '4520916132', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:38:45,674 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:38:45,748 - INFO - orders - Pending order 4520916132 added to Redis for non-Barclays user.
+2025-06-11 05:38:45,748 - ERROR - orders - Error updating user data cache after pending order placement: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 688, in place_pending_order
+    db_user = await get_user_by_id(db, user_id_for_order)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-06-11 05:38:45,753 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:38:45,753 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:38:45,761 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:38:45,772 - INFO - orders - Fetched 5 pending orders for user 4
+2025-06-11 05:38:45,774 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 5 pending orders
+2025-06-11 05:39:01,876 - INFO - orders - Cancel pending order request received - Order ID: 4520916132, User ID: 4
+2025-06-11 05:39:01,887 - INFO - orders - Generated cancel_id: 9240797014 for order 4520916132
+2025-06-11 05:39:01,890 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:39:01,892 - INFO - orders - Non-Barclays user. Cancelling order 4520916132 immediately
+2025-06-11 05:39:01,932 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:39:01,932 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:39:01,941 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:39:01,948 - INFO - orders - Fetched 4 pending orders for user 4
+2025-06-11 05:39:01,953 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 4 pending orders
+2025-06-11 05:39:20,080 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:39:20,096 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:39:20,103 - INFO - orders - User 4 is_barclays_live_user: False
+2025-06-11 05:39:20,103 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '3318596313', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:39:20,112 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:39:20,171 - INFO - orders - Pending order 3318596313 added to Redis for non-Barclays user.
+2025-06-11 05:39:20,171 - ERROR - orders - Error updating user data cache after pending order placement: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 688, in place_pending_order
+    db_user = await get_user_by_id(db, user_id_for_order)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-06-11 05:39:20,173 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:39:20,173 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:39:20,184 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:39:20,192 - INFO - orders - Fetched 5 pending orders for user 4
+2025-06-11 05:39:20,194 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 5 pending orders
+2025-06-11 05:50:22,758 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:50:54,922 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:51:45,886 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:52:44,856 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:53:23,979 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:53:56,219 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:54:30,895 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:55:54,000 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 05:56:26,671 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 05:56:26,698 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 05:56:26,699 - INFO - orders - [DEBUG] User data from cache: {'id': 4, 'email': 'dhanush777ss@gmail.com', 'account_number': 'DYY5A', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'wallet_balance': Decimal('5000.00000000'), 'margin': Decimal('2603.77000000'), 'user_type': 'live', 'first_name': None, 'last_name': None, 'country': 'string', 'phone_number': Decimal('8618025298')}
+2025-06-11 05:56:26,700 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-11 05:56:26,701 - INFO - orders - [DEBUG] Group settings from cache: None
+2025-06-11 05:56:26,722 - INFO - orders - [DEBUG] Group from database: [<app.database.models.Group object at 0x000001F9494946E0>, <app.database.models.Group object at 0x000001F9495DEE90>, <app.database.models.Group object at 0x000001F9495DED50>, <app.database.models.Group object at 0x000001F9495E69E0>, <app.database.models.Group object at 0x000001F9495E6B10>, <app.database.models.Group object at 0x000001F9496EBAD0>, <app.database.models.Group object at 0x000001F9492FB8A0>, <app.database.models.Group object at 0x000001F9492FA250>, <app.database.models.Group object at 0x000001F9492FA470>, <app.database.models.Group object at 0x000001F9492FB9B0>, <app.database.models.Group object at 0x000001F9492FBAC0>, <app.database.models.Group object at 0x000001F9492FBBD0>, <app.database.models.Group object at 0x000001F9492FBCE0>, <app.database.models.Group object at 0x000001F9492FBDF0>, <app.database.models.Group object at 0x000001F9492FBF00>, <app.database.models.Group object at 0x000001F949768050>, <app.database.models.Group object at 0x000001F949768160>, <app.database.models.Group object at 0x000001F949768270>, <app.database.models.Group object at 0x000001F949768380>, <app.database.models.Group object at 0x000001F949768490>, <app.database.models.Group object at 0x000001F9497685A0>, <app.database.models.Group object at 0x000001F9497686B0>, <app.database.models.Group object at 0x000001F9497687C0>, <app.database.models.Group object at 0x000001F9497688D0>, <app.database.models.Group object at 0x000001F9497689E0>, <app.database.models.Group object at 0x000001F949768AF0>, <app.database.models.Group object at 0x000001F949768C00>, <app.database.models.Group object at 0x000001F949768D10>, <app.database.models.Group object at 0x000001F949768E20>, <app.database.models.Group object at 0x000001F949768F30>, <app.database.models.Group object at 0x000001F949769040>, <app.database.models.Group object at 0x000001F949769150>, <app.database.models.Group object at 0x000001F949769260>, <app.database.models.Group object at 0x000001F949769370>, <app.database.models.Group object at 0x000001F949769480>, <app.database.models.Group object at 0x000001F949769590>, <app.database.models.Group object at 0x000001F9497696A0>, <app.database.models.Group object at 0x000001F9497697B0>, <app.database.models.Group object at 0x000001F9497698C0>, <app.database.models.Group object at 0x000001F9497699D0>, <app.database.models.Group object at 0x000001F949769AE0>, <app.database.models.Group object at 0x000001F949769BF0>, <app.database.models.Group object at 0x000001F949769D00>, <app.database.models.Group object at 0x000001F949769E10>, <app.database.models.Group object at 0x000001F949769F20>, <app.database.models.Group object at 0x000001F94976A030>, <app.database.models.Group object at 0x000001F94976A140>, <app.database.models.Group object at 0x000001F94976A250>, <app.database.models.Group object at 0x000001F94976A360>, <app.database.models.Group object at 0x000001F94976A470>, <app.database.models.Group object at 0x000001F94976A580>, <app.database.models.Group object at 0x000001F94976A690>, <app.database.models.Group object at 0x000001F94976A7A0>, <app.database.models.Group object at 0x000001F94976A8B0>, <app.database.models.Group object at 0x000001F94976A9C0>, <app.database.models.Group object at 0x000001F94976AAD0>, <app.database.models.Group object at 0x000001F94976ABE0>, <app.database.models.Group object at 0x000001F94976ACF0>, <app.database.models.Group object at 0x000001F94976AE00>, <app.database.models.Group object at 0x000001F94976AF10>, <app.database.models.Group object at 0x000001F94976B020>, <app.database.models.Group object at 0x000001F94976B130>, <app.database.models.Group object at 0x000001F94976B240>, <app.database.models.Group object at 0x000001F94976B350>, <app.database.models.Group object at 0x000001F94976B460>, <app.database.models.Group object at 0x000001F94976B570>, <app.database.models.Group object at 0x000001F94976B680>, <app.database.models.Group object at 0x000001F94976B790>, <app.database.models.Group object at 0x000001F94976B8A0>, <app.database.models.Group object at 0x000001F94976B9B0>, <app.database.models.Group object at 0x000001F94976BAC0>, <app.database.models.Group object at 0x000001F94976BBD0>, <app.database.models.Group object at 0x000001F94976BCE0>, <app.database.models.Group object at 0x000001F94976BDF0>, <app.database.models.Group object at 0x000001F94976BF00>, <app.database.models.Group object at 0x000001F94977C050>, <app.database.models.Group object at 0x000001F94977C160>, <app.database.models.Group object at 0x000001F94977C270>, <app.database.models.Group object at 0x000001F94977C380>]
+2025-06-11 05:56:26,722 - INFO - orders - [DEBUG] sending_orders from database (list): barclays
+2025-06-11 05:56:26,724 - INFO - orders - [DEBUG] Updated group settings cache with: {'sending_orders': 'barclays'}
+2025-06-11 05:56:26,724 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-11 05:56:26,724 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-11 05:56:26,724 - INFO - orders - User 4 is_barclays_live_user: True (user_type: live, sending_orders_normalized: barclays)
+2025-06-11 05:56:26,724 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '2478894656', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 05:56:26,725 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 05:56:26,850 - INFO - orders - Barclays live user detected. Sending pending order to Firebase.
+2025-06-11 05:56:26,851 - INFO - orders - [FIREBASE] Prepared Firebase payload for pending order: {'order_id': '2478894656', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_status': 'PENDING', 'order_price': '0.88000000', 'order_quantity': '0.10000000', 'contract_value': '10000.00000000', 'margin': None, 'stop_loss': None, 'take_profit': None, 'status': 'PENDING', 'action': 'pending_order', 'timestamp': '2025-06-11T12:56:26.851028+00:00'}
+2025-06-11 05:56:27,134 - INFO - orders - [FIREBASE] Successfully sent pending order 2478894656 to Firebase for Barclays user 4
+2025-06-11 05:56:27,135 - INFO - orders - Skipping Redis storage for Barclays user pending order 2478894656
+2025-06-11 05:56:27,136 - ERROR - orders - Error updating user data cache after pending order placement: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 732, in place_pending_order
+    db_user = await get_user_by_id(db, user_id_for_order)
+                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-06-11 05:56:27,143 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 05:56:27,143 - INFO - orders - Using order model: UserOrder
+2025-06-11 05:56:27,168 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 05:56:27,179 - INFO - orders - Fetched 6 pending orders for user 4
+2025-06-11 05:56:27,181 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 6 pending orders
+2025-06-11 05:57:59,766 - INFO - orders - Cancel pending order request received - Order ID: 2478894656, User ID: 4
+2025-06-11 05:57:59,778 - INFO - orders - Generated cancel_id: 4179369201 for order 2478894656
+2025-06-11 05:57:59,779 - INFO - orders - User 4 is_barclays_live_user: True
+2025-06-11 05:57:59,779 - INFO - orders - Barclays user detected. Sending cancel request to Firebase for order 2478894656
+2025-06-11 05:58:00,440 - INFO - orders - Cancel request sent to Firebase for order 2478894656
+2025-06-11 21:24:55,660 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 21:27:12,690 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 21:27:12,716 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 21:27:12,722 - INFO - orders - [DEBUG] User data from cache: {'id': 1, 'email': 'dhanush777ss@gmail.com', 'account_number': '5O42G', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'wallet_balance': Decimal('83853.93000000'), 'margin': Decimal('1020.64000000'), 'user_type': 'demo', 'first_name': None, 'last_name': None, 'country': None, 'phone_number': Decimal('8618025298')}
+2025-06-11 21:27:12,723 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-11 21:27:12,725 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-06-11 21:27:12,725 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-11 21:27:12,725 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-11 21:27:12,726 - INFO - orders - User 1 is_barclays_live_user: True (user_type: live, sending_orders_normalized: barclays)
+2025-06-11 21:27:12,726 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '6160702896', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 21:27:12,726 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.88
+2025-06-11 21:27:12,780 - ERROR - orders - Unexpected error in place_pending_order: (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`u436589492_forex`.`user_orders`, CONSTRAINT `user_orders_ibfk_1` FOREIGN KEY (`order_user_id`) REFERENCES `users` (`id`))')
+[SQL: INSERT INTO user_orders (status, order_id, order_user_id, order_company_name, order_type, order_status, order_price, order_quantity, contract_value, margin, stop_loss, take_profit, close_price, net_profit, swap, commission, cancel_message, close_message, cancel_id, close_id, modify_id, stoploss_id, takeprofit_id, stoploss_cancel_id, takeprofit_cancel_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: ('PENDING', '6160702896', 1, 'AUDCAD', 'BUY_LIMIT', 'PENDING', Decimal('0.88'), Decimal('0.1'), Decimal('10000.000000000'), None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 97, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 106, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 652, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pymysql\err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.IntegrityError: (1452, 'Cannot add or update a child row: a foreign key constraint fails (`u436589492_forex`.`user_orders`, CONSTRAINT `user_orders_ibfk_1` FOREIGN KEY (`order_user_id`) REFERENCES `users` (`id`))')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 661, in place_pending_order
+    db_order = await crud_order.create_order(db, order_create_internal.model_dump(), order_model)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\crud\crud_order.py", line 74, in create_order
+    await db.commit()
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1014, in commit
+    await greenlet_spawn(self.sync_session.commit)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2032, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4480, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 97, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 106, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\aiomysql\connection.py", line 652, in _read_packet
+    packet.raise_for_error()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pymysql\err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`u436589492_forex`.`user_orders`, CONSTRAINT `user_orders_ibfk_1` FOREIGN KEY (`order_user_id`) REFERENCES `users` (`id`))')
+[SQL: INSERT INTO user_orders (status, order_id, order_user_id, order_company_name, order_type, order_status, order_price, order_quantity, contract_value, margin, stop_loss, take_profit, close_price, net_profit, swap, commission, cancel_message, close_message, cancel_id, close_id, modify_id, stoploss_id, takeprofit_id, stoploss_cancel_id, takeprofit_cancel_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: ('PENDING', '6160702896', 1, 'AUDCAD', 'BUY_LIMIT', 'PENDING', Decimal('0.88'), Decimal('0.1'), Decimal('10000.000000000'), None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-06-11 21:27:54,636 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 21:27:54,668 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 21:27:54,669 - INFO - orders - [DEBUG] User data from cache: {'id': 1, 'email': 'dhanush777ss@gmail.com', 'account_number': '5O42G', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'wallet_balance': Decimal('83853.93000000'), 'margin': Decimal('1020.64000000'), 'user_type': 'demo', 'first_name': None, 'last_name': None, 'country': None, 'phone_number': Decimal('8618025298')}
+2025-06-11 21:27:54,670 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-11 21:27:54,671 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-06-11 21:27:54,671 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-11 21:27:54,671 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-11 21:27:54,671 - INFO - orders - User 1 is_barclays_live_user: False (user_type: demo, sending_orders_normalized: barclays)
+2025-06-11 21:27:54,672 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '1507683451', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 21:27:54,672 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.88
+2025-06-11 21:27:54,765 - INFO - orders - Pending order 1507683451 added to Redis for non-Barclays user.
+2025-06-11 21:27:54,777 - INFO - orders - User data cache updated for user 1 after placing pending order
+2025-06-11 21:27:54,777 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 21:27:54,777 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 21:27:54,790 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-11 21:27:54,803 - INFO - orders - Fetched 4 pending orders for user 1
+2025-06-11 21:27:54,805 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 4 pending orders
+2025-06-11 21:29:32,416 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 21:30:31,751 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 21:31:40,431 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 21:31:51,070 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 21:31:51,070 - ERROR - orders - User type mismatch: Authenticated as demo but request specified live
+2025-06-11 21:31:51,070 - ERROR - orders - Unexpected error in place_pending_order: 400: User type mismatch: You are authenticated as a demo user but trying to place an order as a live user
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 569, in place_pending_order
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 400: User type mismatch: You are authenticated as a demo user but trying to place an order as a live user
+2025-06-11 21:32:34,525 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 21:32:34,525 - ERROR - orders - User type mismatch: Authenticated as live but request specified demo
+2025-06-11 21:32:34,526 - ERROR - orders - Unexpected error in place_pending_order: 400: User type mismatch: You are authenticated as a live user but trying to place an order as a demo user
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 569, in place_pending_order
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 400: User type mismatch: You are authenticated as a live user but trying to place an order as a demo user
+2025-06-11 21:32:48,973 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 21:32:49,026 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 21:32:49,030 - INFO - orders - [DEBUG] User data from cache: {'id': 4, 'email': 'dhanush777ss@gmail.com', 'account_number': 'DYY5A', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'wallet_balance': Decimal('5000.00000000'), 'margin': Decimal('2603.77000000'), 'user_type': 'live', 'first_name': None, 'last_name': None, 'country': 'string', 'phone_number': Decimal('8618025298')}
+2025-06-11 21:32:49,031 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-11 21:32:49,033 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-06-11 21:32:49,033 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-11 21:32:49,033 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-11 21:32:49,034 - INFO - orders - User 4 is_barclays_live_user: True (user_type: live, sending_orders_normalized: barclays)
+2025-06-11 21:32:49,034 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '7099216144', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 21:32:49,034 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 21:32:49,181 - INFO - orders - Barclays live user detected. Sending pending order to Firebase.
+2025-06-11 21:32:49,181 - INFO - orders - [FIREBASE] Prepared Firebase payload for pending order: {'order_id': '7099216144', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_status': 'PENDING', 'order_price': '0.88000000', 'order_quantity': '0.10000000', 'contract_value': '10000.00000000', 'margin': None, 'stop_loss': None, 'take_profit': None, 'status': 'PENDING', 'action': 'pending_order', 'timestamp': '2025-06-12T04:32:49.181528+00:00'}
+2025-06-11 21:32:49,559 - INFO - orders - [FIREBASE] Successfully sent pending order 7099216144 to Firebase for Barclays user 4
+2025-06-11 21:32:49,559 - INFO - orders - Skipping Redis storage for Barclays user pending order 7099216144
+2025-06-11 21:32:49,570 - INFO - orders - User data cache updated for user 4 after placing pending order
+2025-06-11 21:32:49,570 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 21:32:49,570 - INFO - orders - Using order model: UserOrder
+2025-06-11 21:32:49,607 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 21:32:49,655 - INFO - orders - Fetched 7 pending orders for user 4
+2025-06-11 21:32:49,658 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 7 pending orders
+2025-06-11 21:36:11,839 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 21:36:20,953 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.1
+2025-06-11 21:36:20,973 - INFO - orders - Calculated contract_value for pending order: 10000.000000000 (contract_size: 100000.00000000 * quantity: 0.1)
+2025-06-11 21:36:20,975 - INFO - orders - [DEBUG] User data from cache: {'id': 4, 'email': 'dhanush777ss@gmail.com', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'user_type': 'live', 'account_number': 'DYY5A', 'wallet_balance': Decimal('5000.00000000'), 'margin': Decimal('2603.77000000'), 'first_name': None, 'last_name': None, 'country': 'string', 'phone_number': Decimal('8618025298')}
+2025-06-11 21:36:20,975 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-11 21:36:20,976 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-06-11 21:36:20,976 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-11 21:36:20,976 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-11 21:36:20,976 - INFO - orders - User 4 is_barclays_live_user: True (user_type: live, sending_orders_normalized: barclays)
+2025-06-11 21:36:20,976 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '6161017753', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.1'), 'order_price': Decimal('0.88'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': None, 'take_profit': None, 'order_user_id': 4, 'order_status': 'PENDING_PROCESSING', 'contract_value': Decimal('10000.000000000'), 'margin': None, 'open_time': None}
+2025-06-11 21:36:20,976 - INFO - orders - [BARCLAYS] Setting initial order_status to PENDING_PROCESSING for Barclays user. Will be updated to PENDING after service provider confirmation.
+2025-06-11 21:36:20,976 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.88
+2025-06-11 21:36:21,022 - INFO - orders - Barclays live user detected. Sending pending order to Firebase.
+2025-06-11 21:36:21,022 - INFO - orders - [FIREBASE] Prepared Firebase payload for pending order: {'order_id': '6161017753', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_status': 'PENDING_PROCESSING', 'order_price': '0.88000000', 'order_quantity': '0.10000000', 'contract_value': '10000.00000000', 'margin': None, 'stop_loss': None, 'take_profit': None, 'status': 'PENDING', 'action': 'pending_order', 'timestamp': '2025-06-12T04:36:21.022438+00:00'}
+2025-06-11 21:36:21,317 - INFO - orders - [FIREBASE] Successfully sent pending order 6161017753 to Firebase for Barclays user 4
+2025-06-11 21:36:21,317 - INFO - orders - Skipping Redis storage for Barclays user pending order 6161017753
+2025-06-11 21:36:21,327 - INFO - orders - User data cache updated for user 4 after placing pending order
+2025-06-11 21:36:21,327 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 21:36:21,327 - INFO - orders - Using order model: UserOrder
+2025-06-11 21:36:21,338 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 21:36:21,347 - INFO - orders - Fetched 7 pending orders for user 4
+2025-06-11 21:36:21,350 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 7 pending orders
+2025-06-11 22:05:21,237 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:05:50,627 - INFO - orders - Application starting up - Orders logging initialized

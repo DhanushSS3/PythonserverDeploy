@@ -128,9 +128,10 @@ async def trigger_pending_order(
                 logger.error(f"User data not found for user {user_id} when triggering order {order_id}. Skipping.")
                 return
 
-        group_settings = await get_group_settings_cache(redis_client, user_data.group_id)
+        group_name = user_data.get('group_name')
+        group_settings = await get_group_settings_cache(redis_client, group_name)
         if not group_settings:
-            logger.error(f"Group settings not found for group {user_data.group_id} when triggering order {order_id}. Skipping.")
+            logger.error(f"Group settings not found for group {group_name} when triggering order {order_id}. Skipping.")
             return
 
         order_model = get_order_model(user_type)
@@ -140,7 +141,7 @@ async def trigger_pending_order(
             logger.error(f"Database order {order_id} not found when triggering pending order. Skipping.")
             return
 
-        is_barclays_live_user = user_type == 'live' and group_settings.get('is_barclays_live', False)
+        is_barclays_live_user = user_type == 'live' and group_settings.get('sending_orders', '').lower() == 'barclays'
 
         # Ensure atomicity: only update if still PENDING
         if db_order.order_status != 'PENDING':
@@ -148,20 +149,67 @@ async def trigger_pending_order(
             await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id) 
             return
 
+        # Get the adjusted buy price (ask price) for the symbol from cache
+        group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+        adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+        
+        if not adjusted_prices:
+            logger.error(f"Adjusted market prices not found for symbol {symbol} when triggering order {order_id}. Skipping.")
+            return
+        
+        # Use the adjusted buy price for all trigger conditions
+        adjusted_buy_price = adjusted_prices.get('buy')
+        if not adjusted_buy_price:
+            logger.error(f"Adjusted buy price not found for symbol {symbol} when triggering order {order_id}. Skipping.")
+            return
+        
+        order_price = Decimal(str(db_order.order_price))
+        
+        # Check if the order should be triggered based on the order type and adjusted buy price
+        should_trigger = False
+        
+        if order_type_original == 'BUY_LIMIT':
+            # Trigger when adjusted_buy_price falls to or below order_price
+            should_trigger = adjusted_buy_price <= order_price
+            logger.info(f"BUY_LIMIT order {order_id}: adjusted_buy_price ({adjusted_buy_price}) <= order_price ({order_price})? {should_trigger}")
+        
+        elif order_type_original == 'SELL_STOP':
+            # Trigger when adjusted_buy_price falls to or below order_price
+            should_trigger = adjusted_buy_price <= order_price
+            logger.info(f"SELL_STOP order {order_id}: adjusted_buy_price ({adjusted_buy_price}) <= order_price ({order_price})? {should_trigger}")
+        
+        elif order_type_original == 'SELL_LIMIT':
+            # Trigger when adjusted_buy_price rises to or above order_price
+            should_trigger = adjusted_buy_price >= order_price
+            logger.info(f"SELL_LIMIT order {order_id}: adjusted_buy_price ({adjusted_buy_price}) >= order_price ({order_price})? {should_trigger}")
+        
+        elif order_type_original == 'BUY_STOP':
+            # Trigger when adjusted_buy_price rises to or above order_price
+            should_trigger = adjusted_buy_price >= order_price
+            logger.info(f"BUY_STOP order {order_id}: adjusted_buy_price ({adjusted_buy_price}) >= order_price ({order_price})? {should_trigger}")
+        
+        else:
+            logger.error(f"Unknown order type {order_type_original} for order {order_id}. Skipping trigger.")
+            return
+        
+        if not should_trigger:
+            logger.debug(f"Order {order_id} conditions not met for triggering. Skipping.")
+            return
+        
+        logger.info(f"Triggering order {order_id} of type {order_type_original} with price {order_price} (adjusted_buy_price: {adjusted_buy_price})")
+        
         # Calculate margin and contract value based on the current market price at trigger
-        order_price_decimal = Decimal(str(db_order.order_price)) # Use original order price for margin calculation if needed
         order_quantity_decimal = Decimal(str(db_order.order_quantity))
         
-        group_symbol_settings = await get_group_symbol_settings_cache(redis_client, user_data.group_id, symbol)
-        
+        # Use adjusted_buy_price for margin calculation
         margin = calculate_single_order_margin(
-            order_type=db_order.order_type, # Use original order_type for margin calculation
+            order_type=order_type_original, # Use original order_type for margin calculation
             order_quantity=order_quantity_decimal,
-            order_price=current_price, # Margin based on the current trigger price
+            order_price=adjusted_buy_price, # Use adjusted_buy_price for margin calculation
             symbol_settings=group_symbol_settings
         )
         
-        contract_value = (order_quantity_decimal * current_price).quantize(Decimal('0.01'))
+        contract_value = (order_quantity_decimal * adjusted_buy_price).quantize(Decimal('0.01'))
 
         # --- Determine the new order_type for opened order ---
         new_order_type = order_type_original
@@ -171,7 +219,7 @@ async def trigger_pending_order(
             new_order_type = 'SELL'
         
         # Update the DB order object with calculated values and the new order_type
-        db_order.order_price = current_price 
+        db_order.order_price = adjusted_buy_price  # Use adjusted_buy_price as the execution price
         db_order.margin = margin
         db_order.contract_value = contract_value
         db_order.open_time = datetime.now() 
@@ -201,12 +249,12 @@ async def trigger_pending_order(
             logger.info(f"[FIREBASE] Barclays pending order {order_id} sent to Firebase.")
 
         else: # Non-Barclays user
-            current_wallet_balance_decimal = Decimal(str(user_data.wallet.balance)) if user_data.wallet else Decimal('0')
-            current_total_margin_decimal = Decimal(str(user_data.total_margin)) if user_data.total_margin else Decimal('0')
+            current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
+            current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
 
             new_total_margin = current_total_margin_decimal + margin
             if new_total_margin > current_wallet_balance_decimal:
-                db_order.order_status = 'CANCELED'
+                db_order.order_status = 'CANCELLED'
                 db_order.cancel_message = "InsufficientFreeMargin"
                 logger.warning(f"Order {order_id} for user {user_id} canceled due to insufficient margin. Required: {new_total_margin}, Available: {current_wallet_balance_decimal}")
                 await db.commit()

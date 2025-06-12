@@ -39,7 +39,8 @@ from app.core.cache import (
     # New publish functions
     publish_order_update,
     publish_user_data_update,
-    publish_market_data_trigger
+    publish_market_data_trigger,
+    set_group_settings_cache,
 )
 
 from app.utils.validation import enforce_service_user_id_restriction
@@ -402,17 +403,17 @@ async def place_order(
             # Fetch the latest user data from DB to update cache
             db_user = None
             if user_type == 'live':
-                db_user = await get_user_by_id(db, user_id)
+                db_user = await get_user_by_id(db, user_id, user_type=user_type)
             else:
-                db_user = await get_demo_user_by_id(db, user_id)
+                db_user = await get_demo_user_by_id(db, user_id, user_type=user_type)
             
             if db_user:
                 user_data_to_cache = {
                     "id": db_user.id,
-                    "email": db_user.email,
+                    "email": getattr(db_user, 'email', None),
                     "group_name": db_user.group_name,
                     "leverage": db_user.leverage,
-                    "user_type": db_user.user_type,
+                    "user_type": user_type,
                     "account_number": getattr(db_user, 'account_number', None),
                     "wallet_balance": db_user.wallet_balance,
                     "margin": db_user.margin,
@@ -559,7 +560,48 @@ async def place_pending_order(
         orders_logger.info(f"Pending order placement request received - User ID: {current_user.id}, Symbol: {order_request.symbol}, Type: {order_request.order_type}, Quantity: {order_request.order_quantity}")
         
         user_id_for_order = current_user.id
-        user_type = order_request.user_type.lower()
+        authenticated_user_type = 'demo' if isinstance(current_user, DemoUser) else 'live'
+        requested_user_type = order_request.user_type.lower()
+        
+        # Validate user_type matches authenticated user type
+        if authenticated_user_type != requested_user_type:
+            orders_logger.error(f"User type mismatch: Authenticated as {authenticated_user_type} but request specified {requested_user_type}")
+            raise HTTPException(
+                status_code=400, 
+                detail=f"User type mismatch: You are authenticated as a {authenticated_user_type} user but trying to place an order as a {requested_user_type} user"
+            )
+        
+        # Validate user_id if provided in the request
+        if hasattr(order_request, 'user_id') and order_request.user_id is not None:
+            if order_request.user_id != user_id_for_order:
+                orders_logger.error(f"User ID mismatch: Authenticated as {user_id_for_order} but request specified {order_request.user_id}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"User ID mismatch: You are authenticated as user {user_id_for_order} but trying to place an order for user {order_request.user_id}"
+                )
+        
+        # Use the validated user_type
+        user_type = requested_user_type
+
+        # Verify that the user exists in the database before proceeding
+        try:
+            if user_type == 'live':
+                db_user = await get_user_by_id(db, user_id_for_order, user_type=user_type)
+            else:
+                db_user = await get_demo_user_by_id(db, user_id_for_order, user_type=user_type)
+            
+            if not db_user:
+                orders_logger.error(f"User {user_id_for_order} with type {user_type} not found in database")
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"User with ID {user_id_for_order} and type {user_type} not found in database"
+                )
+        except Exception as e:
+            orders_logger.error(f"Error verifying user existence: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Error verifying user existence: {str(e)}"
+            )
 
         # Generate a unique order_id for the new pending order using the async utility
         order_model = get_order_model(user_type)
@@ -579,6 +621,51 @@ async def place_pending_order(
         contract_value = contract_size * order_request.order_quantity
         orders_logger.info(f"Calculated contract_value for pending order: {contract_value} (contract_size: {contract_size} * quantity: {order_request.order_quantity})")
 
+        # Check if user is a Barclays live user
+        user_data = await get_user_data_cache(redis_client, user_id_for_order, db, user_type)
+        orders_logger.info(f"[DEBUG] User data from cache: {user_data}")
+        
+        group_name = user_data.get('group_name') if user_data else None
+        orders_logger.info(f"[DEBUG] Group name: {group_name}")
+        
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        orders_logger.info(f"[DEBUG] Group settings from cache: {group_settings}")
+        
+        # If group settings not found in cache, try to fetch from database
+        if not group_settings and group_name:
+            from app.crud import group as crud_group
+            db_group = await crud_group.get_group_by_name(db, group_name)
+            orders_logger.info(f"[DEBUG] Group from database: {db_group}")
+            
+            if db_group:
+                # Extract sending_orders from database result
+                if isinstance(db_group, list) and len(db_group) > 0:
+                    sending_orders_db = getattr(db_group[0], 'sending_orders', None)
+                    orders_logger.info(f"[DEBUG] sending_orders from database (list): {sending_orders_db}")
+                else:
+                    sending_orders_db = getattr(db_group, 'sending_orders', None)
+                    orders_logger.info(f"[DEBUG] sending_orders from database (single): {sending_orders_db}")
+                
+                # Store in cache for future use
+                if sending_orders_db is not None:
+                    group_settings = {'sending_orders': sending_orders_db}
+                    await set_group_settings_cache(redis_client, group_name, group_settings)
+                    orders_logger.info(f"[DEBUG] Updated group settings cache with: {group_settings}")
+        
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        orders_logger.info(f"[DEBUG] sending_orders value: {sending_orders}, type: {type(sending_orders)}")
+        
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        orders_logger.info(f"[DEBUG] sending_orders_normalized: {sending_orders_normalized}")
+        
+        # TEMPORARY FIX: Force Barclays mode for testing if group_name contains 'barclays' (case insensitive)
+        if group_name and 'barclays' in group_name.lower():
+            orders_logger.info(f"[DEBUG] Forcing Barclays mode for testing because group_name '{group_name}' contains 'barclays'")
+            sending_orders_normalized = 'barclays'
+        
+        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"User {user_id_for_order} is_barclays_live_user: {is_barclays_live_user} (user_type: {user_type}, sending_orders_normalized: {sending_orders_normalized})")
+
         # Prepare order data for internal processing
         order_data_for_internal_processing = {
             'order_id': new_order_id, # Assign the generated order_id
@@ -591,7 +678,7 @@ async def place_pending_order(
             'stop_loss': order_request.stop_loss,
             'take_profit': order_request.take_profit,
             'order_user_id': user_id_for_order,  # Always current_user.id
-            'order_status': order_request.order_status, # This will be PENDING from the schema default
+            'order_status': "PENDING_PROCESSING" if is_barclays_live_user else order_request.order_status, # Use PENDING_PROCESSING for Barclays users
             'contract_value': contract_value, # Store calculated contract_value
             'margin': None,         # Still None for pending orders
             'open_time': None # Not open yet
@@ -599,6 +686,8 @@ async def place_pending_order(
 
         # Log for debugging
         orders_logger.info(f"[DEBUG][pending_order] Prepared order_data_for_internal_processing: {order_data_for_internal_processing}")
+        if is_barclays_live_user:
+            orders_logger.info(f"[BARCLAYS] Setting initial order_status to PENDING_PROCESSING for Barclays user. Will be updated to PENDING after service provider confirmation.")
 
         # Defensive check: ensure user_id is valid
         if not user_id_for_order:
@@ -616,7 +705,44 @@ async def place_pending_order(
         await db.commit()
         await db.refresh(db_order)
 
-        # Add to Redis pending orders
+        # For Barclays live users, send to Firebase
+        if is_barclays_live_user:
+            orders_logger.info(f"Barclays live user detected. Sending pending order to Firebase.")
+            
+            # Prepare data to send to Firebase
+            firebase_order_data = {
+                'order_id': db_order.order_id,
+                'order_user_id': db_order.order_user_id,
+                'order_company_name': db_order.order_company_name,
+                'order_type': db_order.order_type,
+                'order_status': db_order.order_status,  # Will be PENDING_PROCESSING for Barclays users
+                'order_price': str(db_order.order_price),
+                'order_quantity': str(db_order.order_quantity),
+                'contract_value': str(db_order.contract_value),
+                'margin': str(db_order.margin) if db_order.margin else None,
+                'stop_loss': str(db_order.stop_loss) if db_order.stop_loss else None,
+                'take_profit': str(db_order.take_profit) if db_order.take_profit else None,
+                'status': getattr(db_order, 'status', None),
+                'action': 'pending_order',
+                'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }
+            
+            orders_logger.info(f"[FIREBASE] Prepared Firebase payload for pending order: {firebase_order_data}")
+            
+            try:
+                # Send to Firebase
+                # Note: For Barclays users, the order starts with status PENDING_PROCESSING
+                # The service provider should confirm receipt and execution, after which
+                # the status will be changed to PENDING through a separate API call
+                result = await send_order_to_firebase(firebase_order_data, "live")
+                if result:
+                    orders_logger.info(f"[FIREBASE] Successfully sent pending order {db_order.order_id} to Firebase for Barclays user {user_id_for_order}")
+                else:
+                    orders_logger.error(f"[FIREBASE] Failed to send pending order {db_order.order_id} to Firebase for Barclays user {user_id_for_order}")
+            except Exception as e:
+                orders_logger.error(f"[FIREBASE] Exception while sending pending order to Firebase: {str(e)}", exc_info=True)
+        
+        # For non-Barclays users or as a backup for all users, add to Redis pending orders
         # Ensure the order dict passed to add_pending_order has all necessary fields
         order_dict_for_redis = {
             'order_id': db_order.order_id,
@@ -636,17 +762,22 @@ async def place_pending_order(
             'updated_at': getattr(db_order, 'updated_at', None).isoformat() if getattr(db_order, 'updated_at', None) else None,
             # Add any other fields that might be needed by trigger_pending_order
         }
-        await add_pending_order(redis_client, order_dict_for_redis)
-        orders_logger.info(f"Pending order {db_order.order_id} added to Redis.")
+        
+        # Only store non-Barclays users' pending orders in Redis for price comparison
+        if not is_barclays_live_user:
+            await add_pending_order(redis_client, order_dict_for_redis)
+            orders_logger.info(f"Pending order {db_order.order_id} added to Redis for non-Barclays user.")
+        else:
+            orders_logger.info(f"Skipping Redis storage for Barclays user pending order {db_order.order_id}")
 
         # --- Update user data cache after DB update ---
         try:
             # Fetch the latest user data from DB to update cache
             db_user = None
             if user_type == 'live':
-                db_user = await get_user_by_id(db, user_id_for_order)
+                db_user = await get_user_by_id(db, user_id_for_order, user_type=user_type)
             else:
-                db_user = await get_demo_user_by_id(db, user_id_for_order)
+                db_user = await get_demo_user_by_id(db, user_id_for_order, user_type=user_type)
             
             if db_user:
                 user_data_to_cache = {
@@ -1489,10 +1620,18 @@ async def cancel_pending_order(
     try:
         orders_logger.info(f"Cancel pending order request received - Order ID: {cancel_request.order_id}, User ID: {current_user.id}")
         
-        # Determine if user is authorized to cancel this order
-        if cancel_request.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
-            orders_logger.warning(f"Unauthorized attempt to cancel order {cancel_request.order_id} by user {current_user.id}")
-            raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
+        # Use the authenticated user's ID instead of the one from the request
+        user_id_for_operation = current_user.id
+        
+        # Check if user is admin and trying to cancel another user's order
+        if cancel_request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            # Admin can cancel other users' orders
+            user_id_for_operation = cancel_request.user_id
+            orders_logger.info(f"Admin user {current_user.id} cancelling order for user {user_id_for_operation}")
+        elif cancel_request.user_id != user_id_for_operation:
+            # Non-admin users can only cancel their own orders
+            orders_logger.warning(f"User {current_user.id} attempted to cancel order for user {cancel_request.user_id}")
+            raise HTTPException(status_code=403, detail="Not authorized to cancel orders for other users")
         
         # Get the order model based on user type
         order_model = get_order_model(cancel_request.user_type)
@@ -1501,12 +1640,12 @@ async def cancel_pending_order(
         db_order = await crud_order.get_order_by_id_and_user_id(
             db, 
             cancel_request.order_id, 
-            cancel_request.user_id, 
+            user_id_for_operation,  # Use the determined user ID
             order_model
         )
         
         if not db_order:
-            orders_logger.warning(f"Order {cancel_request.order_id} not found for user {cancel_request.user_id}")
+            orders_logger.warning(f"Order {cancel_request.order_id} not found for user {user_id_for_operation}")
             raise HTTPException(status_code=404, detail="Order not found")
         
         # Check if order is in PENDING status
@@ -1519,14 +1658,14 @@ async def cancel_pending_order(
         orders_logger.info(f"Generated cancel_id: {cancel_id} for order {cancel_request.order_id}")
         
         # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, cancel_request.user_id, db, cancel_request.user_type)
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, cancel_request.user_type)
         group_name = user_data.get('group_name') if user_data else None
         group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders = group_settings.get('sending_orders') if group_settings else None
         sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
         
         is_barclays_live_user = (cancel_request.user_type == 'live' and sending_orders_normalized == 'barclays')
-        orders_logger.info(f"User {cancel_request.user_id} is_barclays_live_user: {is_barclays_live_user}")
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
         
         if is_barclays_live_user:
             # For Barclays users, just store cancel_id and send to Firebase
@@ -1543,7 +1682,7 @@ async def cancel_pending_order(
                 db,
                 db_order,
                 update_fields=update_fields,
-                user_id=cancel_request.user_id,
+                user_id=user_id_for_operation,
                 user_type=cancel_request.user_type,
                 action_type="CANCEL_REQUESTED"
             )
@@ -1552,7 +1691,7 @@ async def cancel_pending_order(
             firebase_cancel_data = {
                 "order_id": cancel_request.order_id,
                 "cancel_id": cancel_id,
-                "user_id": cancel_request.user_id,
+                "user_id": user_id_for_operation,
                 "symbol": cancel_request.symbol,
                 "order_type": cancel_request.order_type,
                 "action": "cancel_order",
@@ -1589,7 +1728,7 @@ async def cancel_pending_order(
                 db,
                 db_order,
                 update_fields=update_fields,
-                user_id=cancel_request.user_id,
+                user_id=user_id_for_operation,
                 user_type=cancel_request.user_type,
                 action_type="CANCEL"
             )
@@ -1600,15 +1739,15 @@ async def cancel_pending_order(
                 cancel_request.order_id,
                 cancel_request.symbol,
                 cancel_request.order_type,
-                str(cancel_request.user_id)
+                str(user_id_for_operation)
             )
             
             # Update static orders cache
-            await update_user_static_orders(cancel_request.user_id, db, redis_client, cancel_request.user_type)
+            await update_user_static_orders(user_id_for_operation, db, redis_client, cancel_request.user_type)
             
             # Publish updates to notify WebSocket clients
-            await publish_order_update(redis_client, cancel_request.user_id)
-            await publish_user_data_update(redis_client, cancel_request.user_id)
+            await publish_order_update(redis_client, user_id_for_operation)
+            await publish_user_data_update(redis_client, user_id_for_operation)
             
             return {
                 "order_id": updated_order.order_id,

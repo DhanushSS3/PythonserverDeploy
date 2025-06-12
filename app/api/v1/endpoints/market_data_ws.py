@@ -221,6 +221,91 @@ async def _get_full_portfolio_details(
     return account_data_payload
 
 
+async def check_and_trigger_pending_orders(
+    redis_client: Redis,
+    db: AsyncSession,
+    symbol: str,
+    adjusted_prices: Dict[str, Any],
+    group_name: str
+):
+    """
+    Check if any pending orders should be triggered based on current market prices.
+    This is called when market data updates are received.
+    """
+    try:
+        # Get all pending orders for this symbol from Redis
+        redis_keys = [
+            f"pending_orders:{symbol}:BUY_LIMIT",
+            f"pending_orders:{symbol}:SELL_LIMIT",
+            f"pending_orders:{symbol}:BUY_STOP",
+            f"pending_orders:{symbol}:SELL_STOP"
+        ]
+        
+        adjusted_buy_price = adjusted_prices.get('buy')
+        if not adjusted_buy_price:
+            logger.warning(f"No adjusted buy price available for symbol {symbol}. Skipping pending order check.")
+            return
+        
+        # Check each order type key
+        for redis_key in redis_keys:
+            try:
+                # Get all user orders for this key
+                all_user_orders = await redis_client.hgetall(redis_key)
+                if not all_user_orders:
+                    continue
+                
+                order_type = redis_key.split(":")[-1]
+                logger.debug(f"Checking {len(all_user_orders)} users with {order_type} orders for symbol {symbol}")
+                
+                # Process each user's orders
+                for user_id_bytes, orders_json in all_user_orders.items():
+                    user_id = user_id_bytes.decode('utf-8')
+                    orders_list = json.loads(orders_json)
+                    
+                    # Check each order for this user
+                    for order in orders_list:
+                        order_price = Decimal(str(order.get('order_price', '0')))
+                        
+                        # Apply the trigger logic based on order type
+                        should_trigger = False
+                        
+                        if order_type == 'BUY_LIMIT':
+                            # Trigger when adjusted_buy_price falls to or below order_price
+                            should_trigger = adjusted_buy_price <= order_price
+                        
+                        elif order_type == 'SELL_STOP':
+                            # Trigger when adjusted_buy_price falls to or below order_price
+                            should_trigger = adjusted_buy_price <= order_price
+                        
+                        elif order_type == 'SELL_LIMIT':
+                            # Trigger when adjusted_buy_price rises to or above order_price
+                            should_trigger = adjusted_buy_price >= order_price
+                        
+                        elif order_type == 'BUY_STOP':
+                            # Trigger when adjusted_buy_price rises to or above order_price
+                            should_trigger = adjusted_buy_price >= order_price
+                        
+                        if should_trigger:
+                            logger.info(f"Pending order trigger condition met for order {order.get('order_id')}, type {order_type}, price {order_price}, adjusted_buy_price {adjusted_buy_price}")
+                            
+                            # Import the trigger_pending_order function
+                            from app.services.pending_orders import trigger_pending_order
+                            
+                            # Trigger the order with the current adjusted price
+                            await trigger_pending_order(
+                                db=db,
+                                redis_client=redis_client,
+                                order=order,
+                                current_price=adjusted_buy_price
+                            )
+            
+            except Exception as e:
+                logger.error(f"Error processing pending orders for key {redis_key}: {e}", exc_info=True)
+    
+    except Exception as e:
+        logger.error(f"Error in check_and_trigger_pending_orders for symbol {symbol}: {e}", exc_info=True)
+
+
 async def per_connection_redis_listener(
     websocket: WebSocket,
     user_id: int,
@@ -277,6 +362,16 @@ async def per_connection_redis_listener(
                             group_settings=group_settings,
                             redis_client=redis_client
                         )
+                        
+                        # Check and trigger pending orders based on the updated prices
+                        for symbol, prices in adjusted_prices.items():
+                            await check_and_trigger_pending_orders(
+                                redis_client=redis_client,
+                                db=db,
+                                symbol=symbol,
+                                adjusted_prices=prices,
+                                group_name=group_name
+                            )
                         
                         # Update dynamic portfolio data
                         await process_portfolio_update(

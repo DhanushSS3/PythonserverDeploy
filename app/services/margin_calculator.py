@@ -88,98 +88,32 @@ async def calculate_base_margin_per_lot(
 
 from app.core.cache import get_last_known_price
 
-async def calculate_single_order_margin(
-    redis_client: Redis,
-    symbol: str,
+def calculate_single_order_margin(
     order_type: str,
-    quantity: Decimal,
-    user_leverage: Decimal,
-    group_settings: Dict[str, Any],
-    external_symbol_info: Dict[str, Any],
-    raw_market_data: Dict[str, Any]
-) -> Tuple[Optional[Decimal], Optional[Decimal], Optional[Decimal], Optional[Decimal]]:
+    order_quantity: Decimal,
+    order_price: Decimal,
+    symbol_settings: Dict[str, Any]
+) -> Decimal:
     """
-    Calculate margin for a single order using raw prices.
-    Returns (margin_usd, price, contract_value, commission)
+    Calculate margin for a single order based on order details and symbol settings.
+    This simplified version is used for pending order processing.
+    Returns the calculated margin.
     """
     try:
-        # Get raw prices
-        # Try to get prices from live data, else fallback to last known price in Redis
-        symbol_data = raw_market_data.get(symbol, {})
-        if not symbol_data:
-            symbol_data = await get_last_known_price(redis_client, symbol)
-            if not symbol_data:
-                logger.error(f"No live or cached price found for {symbol}")
-                return None, None, None, None
-        raw_ask_price = Decimal(str(symbol_data.get('b', 0)))  # Ask price
-        raw_bid_price = Decimal(str(symbol_data.get('o', 0)))  # Bid price
-
-        if not raw_ask_price or not raw_bid_price:
-            logger.error(f"Invalid raw prices for {symbol}: ask={raw_ask_price}, bid={raw_bid_price}")
-            return None, None, None, None
-
-        # Calculate contract value and margin using raw prices
-        contract_size = Decimal(str(external_symbol_info.get('contract_size', 100000)))
-        order_type_upper = order_type.upper()
+        # Get required settings from symbol_settings
+        contract_size = Decimal(str(symbol_settings.get('contract_size', 100000)))
+        leverage = Decimal(str(symbol_settings.get('leverage', 1)))
         
-        contract_value = quantity * contract_size
-        adjusted_price = raw_ask_price if order_type_upper in ['BUY', 'BUY_LIMIT', 'BUY_STOP'] else raw_bid_price
-
-        # Calculate margin based on order type
-        if order_type_upper in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-            margin = ((contract_value * raw_ask_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-        else:  # SELL orders
-            margin = ((contract_value * raw_bid_price) / user_leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-
-        # Calculate commission separately
-        commission = Decimal('0.0')
-        commission_type = int(group_settings.get('commision_type', 0))
-        commission_value_type = int(group_settings.get('commision_value_type', 0))
-        commission_rate = Decimal(str(group_settings.get('commision', 0)))
-
-        if commission_type in [0, 1]:  # "Every Trade" or "In"
-            if commission_value_type == 0:  # Per lot
-                commission = quantity * commission_rate
-            elif commission_value_type == 1:  # Percent of price
-                commission = ((commission_rate * adjusted_price) / Decimal("100")) * quantity * contract_size
-
-        commission = commission.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-        # Convert margin to USD if needed
-        profit_currency = external_symbol_info.get('profit_currency', 'USD')
-        if profit_currency != 'USD':
-            try:
-                # Try direct conversion first (e.g., EURUSD)
-                direct_pair = f"{profit_currency}USD"
-                direct_data = raw_market_data.get(direct_pair, {})
-                if not direct_data:
-                    direct_data = await get_last_known_price(redis_client, direct_pair)
-                direct_rate = Decimal(str(direct_data.get('b', 0))) if direct_data else Decimal(0)
-                if direct_rate > 0:
-                    margin_usd = margin * direct_rate
-                else:
-                    # Try indirect conversion (e.g., USDEUR)
-                    indirect_pair = f"USD{profit_currency}"
-                    indirect_data = raw_market_data.get(indirect_pair, {})
-                    if not indirect_data:
-                        indirect_data = await get_last_known_price(redis_client, indirect_pair)
-                    indirect_rate = Decimal(str(indirect_data.get('b', 0))) if indirect_data else Decimal(0)
-                    if indirect_rate > 0:
-                        margin_usd = margin / indirect_rate
-                    else:
-                        logger.error(f"Could not convert margin from {profit_currency} to USD")
-                        return None, None, None, None
-            except Exception as e:
-                logger.error(f"Error converting margin to USD: {e}")
-                return None, None, None, None
-        else:
-            margin_usd = margin
-
-        return margin_usd, adjusted_price, contract_value, commission
-
+        # Calculate contract value
+        contract_value = order_quantity * contract_size * order_price
+        
+        # Calculate margin based on contract value and leverage
+        margin = (contract_value / leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+        
+        return margin
     except Exception as e:
-        logger.error(f"Error calculating margin for {symbol}: {e}", exc_info=True)
-        return None, None, None, None
+        orders_logger.error(f"Error calculating margin for order: {e}", exc_info=True)
+        return Decimal('0')
 
 async def calculate_total_symbol_margin_contribution(
     db: AsyncSession,
