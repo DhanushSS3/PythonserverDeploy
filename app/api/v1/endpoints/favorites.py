@@ -1,0 +1,297 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Union
+import logging
+
+from app.database.session import get_db
+from app.database.models import User, DemoUser, Symbol
+from app.schemas.favorites import (
+    AddFavoriteSymbol, 
+    RemoveFavoriteSymbol, 
+    FavoriteSymbolResponse,
+    FavoriteSymbolsWithDetails,
+    SimpleFavoriteSymbolsList,
+    SymbolDetails
+)
+from app.crud import favorites as crud_favorites
+from app.core.security import get_current_user
+from app.dependencies.redis_client import get_redis_client
+from redis.asyncio import Redis
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(
+    prefix="/favorites",
+    tags=["favorites"]
+)
+
+
+@router.post(
+    "",
+    response_model=FavoriteSymbolResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a symbol to favorites"
+)
+async def add_to_favorites(
+    favorite: AddFavoriteSymbol,
+    current_user: Union[User, DemoUser] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Add a trading symbol to the current user's favorites list.
+    """
+    # Determine user type from the current user
+    user_type = getattr(current_user, 'user_type', 'live')
+    
+    # Find the symbol by name
+    symbol = await crud_favorites.get_symbol_by_name(db, favorite.symbol)
+    if not symbol:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Symbol '{favorite.symbol}' not found"
+        )
+    
+    # Add to favorites
+    user_favorite = await crud_favorites.add_favorite_symbol(
+        db=db,
+        user_id=current_user.id,
+        symbol_id=symbol.id,
+        user_type=user_type,
+        redis_client=redis_client
+    )
+    
+    return {
+        "id": user_favorite.id,
+        "symbol": symbol.name,
+        "symbol_id": symbol.id,
+        "created_at": user_favorite.created_at
+    }
+
+
+@router.delete(
+    "",
+    status_code=status.HTTP_200_OK,
+    summary="Remove a symbol from favorites"
+)
+async def remove_from_favorites(
+    favorite: RemoveFavoriteSymbol,
+    current_user: Union[User, DemoUser] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Remove a trading symbol from the current user's favorites list.
+    """
+    # Determine user type from the current user
+    user_type = getattr(current_user, 'user_type', 'live')
+    
+    # Find the symbol by name
+    symbol = await crud_favorites.get_symbol_by_name(db, favorite.symbol)
+    if not symbol:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Symbol '{favorite.symbol}' not found"
+        )
+    
+    # Remove from favorites
+    success = await crud_favorites.remove_favorite_symbol(
+        db=db,
+        user_id=current_user.id,
+        symbol_id=symbol.id,
+        user_type=user_type,
+        redis_client=redis_client
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Symbol '{favorite.symbol}' is not in your favorites"
+        )
+    
+    return {"message": f"Symbol '{favorite.symbol}' removed from favorites"}
+
+
+@router.get(
+    "/detailed",
+    response_model=FavoriteSymbolsWithDetails,
+    status_code=status.HTTP_200_OK,
+    summary="Get all favorite symbols with details"
+)
+async def get_favorites(
+    current_user: Union[User, DemoUser] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Get all favorite symbols for the current user with their details.
+    """
+    try:
+        # Determine user type from the current user
+        user_type = getattr(current_user, 'user_type', 'live')
+        
+        # Get favorite symbols
+        favorite_symbols = await crud_favorites.get_favorite_symbols(
+            db=db,
+            user_id=current_user.id,
+            user_type=user_type,
+            redis_client=redis_client
+        )
+        
+        # Log the number of symbols found
+        logger.debug(f"Found {len(favorite_symbols)} favorite symbols for user {current_user.id} ({user_type})")
+        
+        # Filter out any symbols with problematic data
+        valid_symbols = []
+        for symbol in favorite_symbols:
+            try:
+                # Validate the datetime fields
+                if (str(symbol.created_at) == '0000-00-00 00:00:00' or 
+                    str(symbol.updated_at) == '0000-00-00 00:00:00'):
+                    # Use now() for invalid dates
+                    from datetime import datetime
+                    symbol.created_at = datetime.now()
+                    symbol.updated_at = datetime.now()
+                valid_symbols.append(symbol)
+            except Exception as e:
+                logger.error(f"Error validating symbol {symbol.id}: {e}")
+                # Skip invalid symbols
+                continue
+        
+        return {
+            "favorites": valid_symbols,
+            "total": len(valid_symbols)
+        }
+    except Exception as e:
+        logger.error(f"Error in get_favorites endpoint: {e}")
+        # Return empty result on error
+        return {
+            "favorites": [],
+            "total": 0
+        }
+
+
+@router.get(
+    "",
+    response_model=SimpleFavoriteSymbolsList,
+    status_code=status.HTTP_200_OK,
+    summary="Get favorite symbols as a simple list"
+)
+async def get_simple_favorites(
+    current_user: Union[User, DemoUser] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Get a simplified list of favorite symbols for the current user (names only).
+    """
+    try:
+        # Determine user type from the current user
+        user_type = getattr(current_user, 'user_type', 'live')
+        
+        # Direct SQL query to get all favorite symbols without user_type filter
+        from sqlalchemy import text
+        sql = text("""
+            SELECT s.name 
+            FROM symbols s
+            JOIN user_favorite_symbols ufs ON s.id = ufs.symbol_id
+            WHERE ufs.user_id = :user_id
+        """)
+        
+        result = await db.execute(sql, {"user_id": current_user.id})
+        symbol_names = [row[0] for row in result.fetchall()]
+        
+        # Log what we found
+        logger.info(f"Direct SQL query found {len(symbol_names)} symbols for user {current_user.id}")
+        logger.info(f"Symbols: {symbol_names}")
+        
+        return {
+            "symbols": symbol_names
+        }
+    except Exception as e:
+        logger.error(f"Error in get_simple_favorites endpoint: {e}")
+        # Return empty result on error
+        return {
+            "symbols": []
+        }
+
+
+@router.get(
+    "/debug",
+    status_code=status.HTTP_200_OK,
+    summary="Debug endpoint to compare favorite symbol retrieval methods"
+)
+async def debug_favorites(
+    current_user: Union[User, DemoUser] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Debug endpoint to compare different methods of retrieving favorite symbols.
+    """
+    try:
+        # Determine user type from the current user
+        user_type = getattr(current_user, 'user_type', 'live')
+        
+        # Check if the user has any favorite symbols at all in the database
+        from sqlalchemy import text
+        sql = text("SELECT user_id, symbol_id, user_type FROM user_favorite_symbols WHERE user_id = :user_id")
+        result = await db.execute(sql, {"user_id": current_user.id})
+        raw_favorites = result.fetchall()
+        
+        # Check all favorite symbols
+        all_sql = text("SELECT user_id, symbol_id, user_type FROM user_favorite_symbols")
+        all_result = await db.execute(all_sql)
+        all_favorites = all_result.fetchall()
+        
+        # Get symbols directly
+        symbols_sql = text("SELECT id, name FROM symbols")
+        symbols_result = await db.execute(symbols_sql)
+        symbols = symbols_result.fetchall()
+        
+        # Get via both methods
+        # Method 1: Full symbols
+        favorite_symbols = await crud_favorites.get_favorite_symbols(
+            db=db,
+            user_id=current_user.id,
+            user_type=user_type,
+            redis_client=None  # Bypass cache for testing
+        )
+        
+        # Method 2: Direct names query
+        symbol_names = await crud_favorites.get_favorite_symbol_names(
+            db=db,
+            user_id=current_user.id,
+            user_type=user_type,
+            redis_client=None  # Bypass cache for testing
+        )
+        
+        # Method 3: Direct SQL query for symbol IDs
+        symbol_ids = await crud_favorites.get_favorite_symbol_ids(
+            db=db,
+            user_id=current_user.id,
+            user_type=user_type
+        )
+        
+        # Extract names from full symbols for comparison
+        full_symbols_names = [s.name for s in favorite_symbols if hasattr(s, 'name')]
+        
+        # Return comparison data
+        return {
+            "user_id": current_user.id,
+            "user_type": user_type,
+            "raw_favorites": [{"user_id": f[0], "symbol_id": f[1], "user_type": f[2]} for f in raw_favorites],
+            "all_favorites_count": len(all_favorites),
+            "symbols_in_db": [{"id": s[0], "name": s[1]} for s in symbols],
+            "method1_count": len(favorite_symbols),
+            "method1_symbols": full_symbols_names,
+            "method2_count": len(symbol_names),
+            "method2_symbols": symbol_names,
+            "method3_count": len(symbol_ids),
+            "method3_ids": symbol_ids
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_favorites endpoint: {e}")
+        return {
+            "error": str(e)
+        } 

@@ -18,8 +18,10 @@ from sqlalchemy import (
 # Import DECIMAL from sqlalchemy.types and alias it as SQLDecimal
 from sqlalchemy.types import DECIMAL as SQLDecimal
 import uuid # Import uuid for handling UUID strings if storing the 'id'
-
+# from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship # Import relationship for defining relationships
+from sqlalchemy.sql.expression import and_
+from sqlalchemy import ForeignKey # Import foreign for relationship annotations
 
 # Assuming you have a base declarative model defined in database/base.py
 from .base import Base # Assuming Base is defined in app/database/base.py
@@ -110,6 +112,10 @@ class User(Base):
     otps = relationship("OTP", back_populates="user")
     money_requests = relationship("MoneyRequest", back_populates="user")
     rock_orders = relationship("RockUserOrder", back_populates="user")
+    # Add back simple relationship without complex conditions
+    user_favorites = relationship("UserFavoriteSymbol", 
+                                foreign_keys="[UserFavoriteSymbol.user_id]",
+                                primaryjoin="User.id == UserFavoriteSymbol.user_id")
 
 
 class DemoUser(Base):
@@ -180,6 +186,10 @@ class DemoUser(Base):
     orders = relationship("DemoUserOrder", back_populates="user")
     wallet_transactions = relationship("Wallet", back_populates="demo_user") # Relationship to Wallet
     otps = relationship("OTP", back_populates="demo_user") # Relationship to OTP
+    # Add back simple relationship without complex conditions 
+    demo_user_favorites = relationship("UserFavoriteSymbol", 
+                                     foreign_keys="[UserFavoriteSymbol.user_id]",
+                                     primaryjoin="DemoUser.id == UserFavoriteSymbol.user_id")
 
 
 class Group(Base):
@@ -258,6 +268,9 @@ class Symbol(Base):
     # Timestamps (Using SQLAlchemy's func.now() for database-side default)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Add back simple relationship
+    favorited_by = relationship("UserFavoriteSymbol", back_populates="symbol")
 
 
 class Wallet(Base):
@@ -576,3 +589,30 @@ class MoneyRequest(Base):
 
     def __repr__(self):
         return f"<MoneyRequest(id={self.id}, user_id={self.user_id}, type='{self.type}', amount={self.amount}, status={self.status})>"
+
+
+class UserFavoriteSymbol(Base):
+    """
+    SQLAlchemy model for the 'user_favorite_symbols' table.
+    Junction table for many-to-many relationship between users and favorite symbols.
+    """
+    __tablename__ = "user_favorite_symbols"
+    
+    # Primary Key
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Foreign Keys - no ondelete cascade as we're not using foreign key constraints
+    user_id = Column(Integer, nullable=False, index=True)
+    symbol_id = Column(Integer, ForeignKey("symbols.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Type field to distinguish between live and demo users
+    user_type = Column(String(10), nullable=False)  # 'live' or 'demo'
+    
+    # Timestamps - only created_at as our table only has this column
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    
+    # Add unique constraint to prevent duplicates
+    __table_args__ = (UniqueConstraint('user_id', 'symbol_id', 'user_type', name='_user_symbol_type_uc'),)
+    
+    # Simple relationship to Symbol
+    symbol = relationship("Symbol", back_populates="favorited_by")

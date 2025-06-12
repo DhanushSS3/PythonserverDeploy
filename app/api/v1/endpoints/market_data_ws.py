@@ -72,7 +72,7 @@ REDIS_MARKET_DATA_CHANNEL = 'market_data_updates'
 
 
 router = APIRouter(
-    tags=["market_data_ws"]
+    tags=["market_data"]
 )
 
 
