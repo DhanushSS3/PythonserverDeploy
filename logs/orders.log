@@ -12255,3 +12255,401 @@ fastapi.exceptions.HTTPException: 400: User type mismatch: You are authenticated
 2025-06-11 21:36:21,350 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 7 pending orders
 2025-06-11 22:05:21,237 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-11 22:05:50,627 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:13:15,709 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:14:14,030 - INFO - orders - Cancel pending order request received - Order ID: 7099216144, User ID: 4
+2025-06-11 22:14:14,053 - INFO - orders - Generated cancel_id: 2600111732 for order 7099216144
+2025-06-11 22:14:14,056 - INFO - orders - User 4 is_barclays_live_user: True
+2025-06-11 22:14:14,056 - INFO - orders - Barclays user detected. Sending cancel request to Firebase for order 7099216144
+2025-06-11 22:14:14,526 - INFO - orders - Cancel request sent to Firebase for order 7099216144
+2025-06-11 22:15:09,640 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:16:14,879 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:16:14,893 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:16:14,894 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:16:14,894 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:16:15,253 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 182, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:16:15,256 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:21:46,909 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:22:47,783 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:22:47,784 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:22:47,784 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:22:47,784 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:22:48,110 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 182, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:22:48,112 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:23:40,633 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:23:40,635 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:23:40,635 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:23:40,635 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:23:40,983 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 182, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:23:40,984 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:23:45,673 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:23:45,689 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:23:45,689 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:23:45,689 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:23:46,103 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 182, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:23:46,105 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:27:22,291 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:27:30,435 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:27:30,439 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:27:30,439 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:27:30,439 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:27:30,770 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 183, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:27:30,775 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:27:51,112 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:27:51,114 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:27:51,114 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:27:51,114 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:27:51,453 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 183, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:27:51,454 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:28:12,855 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:28:12,856 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:28:12,856 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:28:12,856 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:28:13,165 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 183, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:28:13,166 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:28:52,376 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:29:04,277 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:29:27,284 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:29:27,288 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:29:27,289 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:29:27,289 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:29:27,705 - app.services.order_processing - ERROR - Error processing new order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 184, in process_new_order
+    full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        redis_client=redis_client,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        raw_market_data=raw_market_data
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:29:27,709 - ERROR - orders - Order processing error: Failed to process order: calculate_single_order_margin() got an unexpected keyword argument 'redis_client'
+2025-06-11 22:30:59,256 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:31:33,833 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:32:24,244 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:32:31,505 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:32:31,508 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:32:31,508 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:32:31,508 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:32:31,839 - INFO - orders - Calculating margin for US30 BUY order, quantity: 2
+2025-06-11 22:32:31,839 - ERROR - orders - Error calculating margin: get_live_adjusted_buy_price_for_pair() missing 1 required positional argument: 'user_group_name'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 184, in calculate_margin
+    price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_live_adjusted_buy_price_for_pair() missing 1 required positional argument: 'user_group_name'
+2025-06-11 22:32:31,841 - app.services.order_processing - ERROR - Error processing new order: Margin calculation failed
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 269, in process_new_order
+    raise OrderProcessingError("Margin calculation failed")
+app.services.order_processing.OrderProcessingError: Margin calculation failed
+2025-06-11 22:32:31,843 - ERROR - orders - Order processing error: Failed to process order: Margin calculation failed
+2025-06-11 22:33:55,598 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:34:15,295 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:36:47,047 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:36:47,050 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:36:47,050 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:36:47,050 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:36:47,679 - INFO - orders - Calculating margin for US30 BUY order, quantity: 2
+2025-06-11 22:36:47,687 - ERROR - orders - Could not get price for US30 BUY order
+2025-06-11 22:36:47,687 - app.services.order_processing - ERROR - Error processing new order: Margin calculation failed
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 271, in process_new_order
+    raise OrderProcessingError("Margin calculation failed")
+app.services.order_processing.OrderProcessingError: Margin calculation failed
+2025-06-11 22:36:47,688 - ERROR - orders - Order processing error: Failed to process order: Margin calculation failed
+2025-06-11 22:37:27,324 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:37:54,699 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:38:37,055 - INFO - orders - Order placement request received - User ID: 4, Symbol: US30, Type: BUY, Quantity: 2
+2025-06-11 22:38:37,069 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:38:37,070 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:38:37,070 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:38:37,443 - INFO - orders - Calculating margin for US30 BUY order, quantity: 2
+2025-06-11 22:38:37,458 - INFO - orders - Using order_price 42840.55 as fallback for US30 BUY order
+2025-06-11 22:38:37,458 - INFO - orders - Margin calculation results: margin=856.81, price=42840.55, contract_value=85681.1000000000, commission=20.00
+2025-06-11 22:38:37,458 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol US30: Calculated commission=20.00
+2025-06-11 22:38:37,482 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol US30, Positions count: 0
+2025-06-11 22:38:37,483 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol US30. Returning zero margin.
+2025-06-11 22:38:37,483 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol US30, Positions count: 1
+2025-06-11 22:38:37,483 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol US30, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=2, StoredMargin=856.81
+2025-06-11 22:38:37,483 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol US30, Pos 1: MarginPerLot=428.405
+2025-06-11 22:38:37,483 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol US30: TotalBuyQty=2, TotalSellQty=0, NetQty=2
+2025-06-11 22:38:37,484 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol US30: AllMarginsPerLot=[Decimal('428.405')], HighestMarginPerLot=428.405
+2025-06-11 22:38:37,484 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol US30: CalculatedTotalMargin=856.81, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:38:37,484 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol US30: MarginBefore=0.00, MarginAfter=856.81, AdditionalMargin=856.81
+2025-06-11 22:38:37,504 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '5784525260', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'US30', 'order_type': 'BUY', 'order_price': Decimal('42840.55'), 'order_quantity': Decimal('2'), 'contract_value': Decimal('85681.1000000000'), 'margin': Decimal('856.81'), 'commission': Decimal('20.00'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-11 22:38:37,617 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 2603.77000000
+2025-06-11 22:38:37,675 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-11 22:38:37,917 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-11 22:38:38,136 - INFO - orders - [FIREBASE] Payload being sent to Firebase: {'order_id': '5784525260', 'order_user_id': 4, 'order_company_name': 'US30', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': Decimal('42840.55000000'), 'order_quantity': Decimal('2.00000000'), 'contract_value': Decimal('85681.10000000'), 'margin': Decimal('856.81000000'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-11 22:38:38,509 - INFO - orders - [FIREBASE] Barclays order sent to Firebase: 5784525260 (order_status=PROCESSING, margin not updated in DB)
+2025-06-11 22:38:38,515 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-11 22:38:38,516 - INFO - orders - Using order model: UserOrder
+2025-06-11 22:38:38,547 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-11 22:38:38,579 - INFO - orders - Fetched 7 pending orders for user 4
+2025-06-11 22:38:38,583 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 7 pending orders
+2025-06-11 22:45:29,299 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:46:24,577 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:47:38,150 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-11 22:50:59,428 - INFO - orders - Close order request received - Order ID: 4009319950, User ID: 1, User Type: demo
+2025-06-11 22:50:59,428 - INFO - orders - Close request details - Price: 0.89, Type: BUY, Symbol: AUDCAD
+2025-06-11 22:50:59,429 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x00000228ED5F7390>, type: <class 'app.database.models.DemoUser'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-11 22:50:59,429 - INFO - orders - Using order model: demo_user_orders for user 1 (DemoUser)
+2025-06-11 22:50:59,429 - INFO - orders - Request to close order 4009319950 for user 1 (DemoUser) with price 0.89. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-11 22:50:59,464 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-06-11 22:50:59,550 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol US30, Positions count: 1
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol US30, Pos 1 (ID: 166): Type=BUY, Qty=2.00000000, StoredMargin=856.65100000
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol US30, Pos 1: MarginPerLot=428.3255
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol US30: TotalBuyQty=2.00000000, TotalSellQty=0, NetQty=2.00000000
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol US30: AllMarginsPerLot=[Decimal('428.3255')], HighestMarginPerLot=428.3255
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol US30: CalculatedTotalMargin=856.65, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol US30, Positions count: 0
+2025-06-11 22:50:59,551 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol US30. Returning zero margin.
+2025-06-11 22:50:59,693 - INFO - orders - Existing entry commission for order 4009319950: 20.00000000
+2025-06-11 22:50:59,693 - INFO - orders - Commission calculation for order 4009319950: entry=20.00000000, exit=0.0, total=20.00
+2025-06-11 22:50:59,943 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=-75683.32000000, margin=163.99
+2025-06-11 22:50:59,943 - INFO - orders - Setting user data cache for user 1 with wallet_balance=-75683.32000000, margin=163.99
+2025-06-11 22:50:59,945 - INFO - orders - User data cache updated for user 1
+2025-06-11 22:50:59,945 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 22:50:59,945 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 22:50:59,978 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-11 22:50:59,986 - INFO - orders - Fetched 4 pending orders for user 1
+2025-06-11 22:50:59,988 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 4 pending orders
+2025-06-11 22:50:59,988 - INFO - orders - Publishing order update for user 1
+2025-06-11 22:50:59,990 - INFO - orders - Publishing user data update for user 1
+2025-06-11 22:50:59,991 - INFO - orders - Publishing market data trigger
+2025-06-11 22:51:26,797 - INFO - orders - Close order request received - Order ID: 2345068231, User ID: 1, User Type: demo
+2025-06-11 22:51:26,797 - INFO - orders - Close request details - Price: 0.89, Type: BUY, Symbol: AUDCAD
+2025-06-11 22:51:26,797 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x00000228ED821F30>, type: <class 'app.database.models.DemoUser'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-11 22:51:26,798 - INFO - orders - Using order model: demo_user_orders for user 1 (DemoUser)
+2025-06-11 22:51:26,798 - INFO - orders - Request to close order 2345068231 for user 1 (DemoUser) with price 0.89. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-11 22:51:26,865 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-06-11 22:51:27,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol BTCUSD, Positions count: 1
+2025-06-11 22:51:27,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol BTCUSD, Pos 1 (ID: 167): Type=BUY, Qty=0.15000000, StoredMargin=163.98510000
+2025-06-11 22:51:27,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol BTCUSD, Pos 1: MarginPerLot=1093.234
+2025-06-11 22:51:27,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol BTCUSD: TotalBuyQty=0.15000000, TotalSellQty=0, NetQty=0.15000000
+2025-06-11 22:51:27,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol BTCUSD: AllMarginsPerLot=[Decimal('1093.234')], HighestMarginPerLot=1093.234
+2025-06-11 22:51:27,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol BTCUSD: CalculatedTotalMargin=163.99, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:51:27,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol BTCUSD, Positions count: 0
+2025-06-11 22:51:27,198 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol BTCUSD. Returning zero margin.
+2025-06-11 22:51:27,227 - INFO - orders - Existing entry commission for order 2345068231: 1.50000000
+2025-06-11 22:51:27,227 - INFO - orders - Commission calculation for order 2345068231: entry=1.50000000, exit=0.0, total=1.50
+2025-06-11 22:51:27,395 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=-92083.20000000, margin=0
+2025-06-11 22:51:27,395 - INFO - orders - Setting user data cache for user 1 with wallet_balance=-92083.20000000, margin=0
+2025-06-11 22:51:27,402 - INFO - orders - User data cache updated for user 1
+2025-06-11 22:51:27,402 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 22:51:27,402 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 22:51:27,422 - INFO - orders - Fetched 0 open orders for user 1
+2025-06-11 22:51:27,444 - INFO - orders - Fetched 4 pending orders for user 1
+2025-06-11 22:51:27,450 - INFO - orders - Updated static orders cache for user 1 with 0 open orders and 4 pending orders
+2025-06-11 22:51:27,450 - INFO - orders - Publishing order update for user 1
+2025-06-11 22:51:27,454 - INFO - orders - Publishing user data update for user 1
+2025-06-11 22:51:27,463 - INFO - orders - Publishing market data trigger
+2025-06-11 22:54:15,875 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 20
+2025-06-11 22:54:15,876 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:54:15,876 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:54:15,876 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:54:16,694 - INFO - orders - Calculating margin for AUDCAD BUY order, quantity: 20
+2025-06-11 22:54:16,702 - INFO - orders - Using order_price 42840.55 as fallback for AUDCAD BUY order
+2025-06-11 22:54:16,702 - INFO - orders - Margin calculation results: margin=856811000.00, price=42840.55, contract_value=85681100000.0000000000, commission=200.00
+2025-06-11 22:54:16,702 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol AUDCAD: Calculated commission=200.00
+2025-06-11 22:54:16,706 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol AUDCAD. Returning zero margin.
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=20, StoredMargin=856811000.00
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=42840550.00
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=20, TotalSellQty=0, NetQty=20
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('42840550.00')], HighestMarginPerLot=42840550.00
+2025-06-11 22:54:16,707 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=856811000.00, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:54:16,707 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=856811000.00, AdditionalMargin=856811000.00
+2025-06-11 22:54:16,710 - app.services.order_processing - ERROR - Error processing new order: Not enough wallet balance to cover additional margin.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 321, in process_new_order
+    raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
+app.services.order_processing.InsufficientFundsError: Not enough wallet balance to cover additional margin.
+2025-06-11 22:54:16,712 - ERROR - orders - Order processing error: Failed to process order: Not enough wallet balance to cover additional margin.
+2025-06-11 22:54:24,839 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 10
+2025-06-11 22:54:24,841 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:54:24,841 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:54:24,841 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:54:25,182 - INFO - orders - Calculating margin for AUDCAD BUY order, quantity: 10
+2025-06-11 22:54:25,191 - INFO - orders - Using order_price 42840.55 as fallback for AUDCAD BUY order
+2025-06-11 22:54:25,191 - INFO - orders - Margin calculation results: margin=428405500.00, price=42840.55, contract_value=42840550000.0000000000, commission=100.00
+2025-06-11 22:54:25,191 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol AUDCAD: Calculated commission=100.00
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol AUDCAD. Returning zero margin.
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=10, StoredMargin=428405500.00
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=42840550.00
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=10, TotalSellQty=0, NetQty=10
+2025-06-11 22:54:25,195 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('42840550.00')], HighestMarginPerLot=42840550.00
+2025-06-11 22:54:25,196 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=428405500.00, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:54:25,196 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=428405500.00, AdditionalMargin=428405500.00
+2025-06-11 22:54:25,199 - app.services.order_processing - ERROR - Error processing new order: Not enough wallet balance to cover additional margin.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 321, in process_new_order
+    raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
+app.services.order_processing.InsufficientFundsError: Not enough wallet balance to cover additional margin.
+2025-06-11 22:54:25,199 - ERROR - orders - Order processing error: Failed to process order: Not enough wallet balance to cover additional margin.
+2025-06-11 22:55:02,576 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 20
+2025-06-11 22:55:02,578 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:55:02,578 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:55:02,578 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:55:02,876 - INFO - orders - Calculating margin for AUDCAD BUY order, quantity: 20
+2025-06-11 22:55:02,877 - INFO - orders - Margin calculation results: margin=17748.80, price=0.8874400000, contract_value=1774880.000000000000000000, commission=200.00
+2025-06-11 22:55:02,877 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol AUDCAD: Calculated commission=200.00
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol AUDCAD. Returning zero margin.
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=20, StoredMargin=17748.80
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=887.44
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=20, TotalSellQty=0, NetQty=20
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('887.44')], HighestMarginPerLot=887.44
+2025-06-11 22:55:02,884 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=17748.80, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:55:02,884 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=17748.80, AdditionalMargin=17748.80
+2025-06-11 22:55:02,891 - app.services.order_processing - ERROR - Error processing new order: Not enough wallet balance to cover additional margin.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 321, in process_new_order
+    raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
+app.services.order_processing.InsufficientFundsError: Not enough wallet balance to cover additional margin.
+2025-06-11 22:55:02,892 - ERROR - orders - Order processing error: Failed to process order: Not enough wallet balance to cover additional margin.
+2025-06-11 22:55:08,754 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 10
+2025-06-11 22:55:08,756 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:55:08,756 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:55:08,756 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:55:09,132 - INFO - orders - Calculating margin for AUDCAD BUY order, quantity: 10
+2025-06-11 22:55:09,133 - INFO - orders - Margin calculation results: margin=8874.40, price=0.8874400000, contract_value=887440.000000000000000000, commission=100.00
+2025-06-11 22:55:09,133 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol AUDCAD: Calculated commission=100.00
+2025-06-11 22:55:09,139 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 0
+2025-06-11 22:55:09,139 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 1, Symbol AUDCAD. Returning zero margin.
+2025-06-11 22:55:09,139 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-11 22:55:09,139 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=10, StoredMargin=8874.40
+2025-06-11 22:55:09,140 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=887.44
+2025-06-11 22:55:09,140 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=10, TotalSellQty=0, NetQty=10
+2025-06-11 22:55:09,140 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('887.44')], HighestMarginPerLot=887.44
+2025-06-11 22:55:09,140 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=8874.40, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:55:09,140 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=8874.40, AdditionalMargin=8874.40
+2025-06-11 22:55:09,144 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=8874.40
+2025-06-11 22:55:09,184 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '5677797595', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.8874400000'), 'order_quantity': Decimal('10'), 'contract_value': Decimal('887440.000000000000000000'), 'margin': Decimal('8874.40'), 'commission': Decimal('100.00'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-11 22:55:09,222 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 8874.40000000
+2025-06-11 22:55:09,235 - INFO - orders - User data cache updated for user 1 after placing order
+2025-06-11 22:55:09,312 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-11 22:55:09,314 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-11 22:55:09,314 - INFO - orders - Using order model: DemoUserOrder
+2025-06-11 22:55:09,320 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-11 22:55:09,325 - INFO - orders - Fetched 4 pending orders for user 1
+2025-06-11 22:55:09,328 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 4 pending orders
+2025-06-11 22:55:17,186 - INFO - orders - Order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY, Quantity: 5
+2025-06-11 22:55:17,187 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-11 22:55:17,187 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-11 22:55:17,187 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-11 22:55:17,493 - INFO - orders - Calculating margin for AUDCAD BUY order, quantity: 5
+2025-06-11 22:55:17,495 - INFO - orders - Margin calculation results: margin=4437.20, price=0.8874400000, contract_value=443720.000000000000000000, commission=50.00
+2025-06-11 22:55:17,495 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol AUDCAD: Calculated commission=50.00
+2025-06-11 22:55:17,499 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 1
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 172): Type=BUY, Qty=10.00000000, StoredMargin=8874.40000000
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=887.44
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=10.00000000, TotalSellQty=0, NetQty=10.00000000
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('887.44')], HighestMarginPerLot=887.44
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=8874.40, ContributingOrders=1 (based on individual stored margins)
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 1, Symbol AUDCAD, Positions count: 2
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1 (ID: 172): Type=BUY, Qty=10.00000000, StoredMargin=8874.40000000
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 1: MarginPerLot=887.44
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2 (ID: NEW_UNSAVED): Type=BUY, Qty=5, StoredMargin=4437.20
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 1, Symbol AUDCAD, Pos 2: MarginPerLot=887.44
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: TotalBuyQty=15.00000000, TotalSellQty=0, NetQty=15.00000000
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDCAD: AllMarginsPerLot=[Decimal('887.44'), Decimal('887.44')], HighestMarginPerLot=887.44
+2025-06-11 22:55:17,500 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDCAD: CalculatedTotalMargin=13311.60, ContributingOrders=2 (based on individual stored margins)
+2025-06-11 22:55:17,500 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol AUDCAD: MarginBefore=8874.40, MarginAfter=13311.60, AdditionalMargin=4437.20
+2025-06-11 22:55:17,505 - app.services.order_processing - ERROR - Error processing new order: Not enough wallet balance to cover additional margin.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 321, in process_new_order
+    raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
+app.services.order_processing.InsufficientFundsError: Not enough wallet balance to cover additional margin.
+2025-06-11 22:55:17,506 - ERROR - orders - Order processing error: Failed to process order: Not enough wallet balance to cover additional margin.

@@ -36,7 +36,9 @@ async def calculate_base_margin_per_lot(
     redis_client: Redis,
     user_id: int,
     symbol: str,
-    price: Decimal
+    price: Decimal,
+    db: AsyncSession = None,
+    user_type: str = 'live'
 ) -> Optional[Decimal]:
     """
     Calculates a base margin value per standard lot for a given symbol and price,
@@ -85,6 +87,114 @@ async def calculate_base_margin_per_lot(
         orders_logger.error(f"Error calculating base margin per lot (for hedging) for user {user_id}, symbol {symbol}: {e}", exc_info=True)
         return None
 
+async def calculate_single_order_margin(
+    redis_client: Redis,
+    symbol: str,
+    order_type: str,
+    quantity: Decimal,
+    user_leverage: Decimal,
+    group_settings: Dict[str, Any],
+    external_symbol_info: Dict[str, Any],
+    raw_market_data: Dict[str, Any]
+) -> Tuple[Decimal, Decimal, Decimal, Decimal]:
+    """
+    Calculate margin for a single order based on order details and market data.
+    
+    Args:
+        redis_client: Redis client
+        symbol: Trading symbol
+        order_type: Type of order (BUY/SELL)
+        quantity: Order quantity
+        user_leverage: User's leverage
+        group_settings: Group settings for the symbol
+        external_symbol_info: External symbol information
+        raw_market_data: Raw market data
+        
+    Returns:
+        Tuple of (margin, price, contract_value, commission)
+    """
+    try:
+        orders_logger.info(f"Calculating margin for {symbol} {order_type} order, quantity: {quantity}")
+        
+        # Get contract size from external symbol info
+        contract_size = Decimal(str(external_symbol_info.get('contract_size', 100000)))
+        
+        # Get appropriate price based on order type
+        price = None
+        if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+            # For buy orders, use the ask price
+            price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol)
+            if price_data:
+                price = Decimal(str(price_data))
+        elif order_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
+            # For sell orders, use the bid price
+            price_data = await get_live_adjusted_sell_price_for_pair(redis_client, symbol)
+            if price_data:
+                price = Decimal(str(price_data))
+        
+        # If we couldn't get a price from the cache, try to get it from raw market data
+        if price is None:
+            if symbol in raw_market_data:
+                symbol_data = raw_market_data[symbol]
+                if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                    price = Decimal(str(symbol_data.get('ask', '0')))
+                else:
+                    price = Decimal(str(symbol_data.get('bid', '0')))
+            
+            # If we still don't have a price, log an error and return zeros
+            if price is None or price == Decimal('0'):
+                orders_logger.error(f"Could not get price for {symbol} {order_type} order")
+                return None, None, None, None
+        
+        # Calculate contract value
+        contract_value = quantity * contract_size * price
+        
+        # Calculate margin based on contract value and leverage
+        margin = (contract_value / user_leverage).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        # Calculate commission
+        commission = Decimal('0.0')
+        commission_type = int(group_settings.get('commision_type', 0))
+        commission_value_type = int(group_settings.get('commision_value_type', 0))
+        commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
+        
+        if commission_type in [0, 1]:  # "Every Trade" or "In"
+            if commission_value_type == 0:  # Per lot
+                commission = quantity * commission_rate
+            elif commission_value_type == 1:  # Percent of price
+                commission = (commission_rate / Decimal('100')) * contract_value
+        
+        commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        orders_logger.info(f"Margin calculation results: margin={margin}, price={price}, contract_value={contract_value}, commission={commission}")
+        return margin, price, contract_value, commission
+    
+    except Exception as e:
+        orders_logger.error(f"Error calculating margin: {e}", exc_info=True)
+        return None, None, None, None
+
+async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Dict[str, Any]]:
+    """
+    Get external symbol info from the database.
+    """
+    try:
+        from sqlalchemy.future import select
+        from app.database.models import ExternalSymbolInfo
+        
+        stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(symbol))
+        result = await db.execute(stmt)
+        symbol_info = result.scalars().first()
+        
+        if symbol_info:
+            return {
+                'contract_size': symbol_info.contract_size,
+                'profit_currency': symbol_info.profit,
+                'digit': symbol_info.digit
+            }
+        return None
+    except Exception as e:
+        orders_logger.error(f"Error getting external symbol info for {symbol}: {e}", exc_info=True)
+        return None
 
 from app.core.cache import get_last_known_price
 

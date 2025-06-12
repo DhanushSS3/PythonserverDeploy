@@ -15,7 +15,7 @@ async def generate_unique_10_digit_id(db, model, column):
 
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP # Import ROUND_HALF_UP for quantization
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 import uuid # Import uuid
@@ -30,7 +30,13 @@ from app.crud import user as crud_user
 from app.services.margin_calculator import calculate_single_order_margin
 from app.core.logging_config import orders_logger
 from sqlalchemy.future import select
-from app.core.cache import get_user_data_cache, get_group_symbol_settings_cache, set_user_data_cache
+from app.core.cache import (
+    get_user_data_cache, 
+    get_group_symbol_settings_cache, 
+    set_user_data_cache,
+    get_live_adjusted_buy_price_for_pair,
+    get_live_adjusted_sell_price_for_pair
+)
 from app.core.firebase import get_latest_market_data
 
 logger = logging.getLogger(__name__)
@@ -58,7 +64,8 @@ async def calculate_total_symbol_margin_contribution(
     user_id: int,
     symbol: str,
     open_positions_for_symbol: list, # List of order objects or dicts
-    order_model=None
+    order_model=None,
+    user_type: str = 'live'
 ) -> Dict[str, Any]: 
     logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
     # logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] Positions data: {open_positions_for_symbol}") # Can be very verbose
@@ -151,8 +158,84 @@ async def process_new_order(
     is_barclays_live_user: bool = False
 ) -> dict:
     from app.services.portfolio_calculator import calculate_user_portfolio
-    # Removed import: from app.services.margin_calculator import calculate_total_symbol_margin_contribution
     from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
+    
+    # Local helper function to calculate margin
+    async def calculate_margin(
+        symbol: str, 
+        order_type: str, 
+        quantity: Decimal, 
+        leverage: Decimal, 
+        group_settings: Dict[str, Any], 
+        ext_symbol_info: Dict[str, Any], 
+        market_data: Dict[str, Any],
+        group_name: str,
+        order_price: Decimal = None  # Add order_price as a fallback
+    ) -> Tuple[Decimal, Decimal, Decimal, Decimal]:
+        """Local helper to calculate margin without redis_client parameter"""
+        try:
+            orders_logger.info(f"Calculating margin for {symbol} {order_type} order, quantity: {quantity}")
+            
+            # Get contract size from external symbol info
+            contract_size = Decimal(str(ext_symbol_info.get('contract_size', 100000)))
+            
+            # Get appropriate price based on order type
+            price = None
+            if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                # For buy orders, use the ask price
+                price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol, group_name)
+                if price_data:
+                    price = Decimal(str(price_data))
+            elif order_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
+                # For sell orders, use the bid price
+                price_data = await get_live_adjusted_sell_price_for_pair(redis_client, symbol, group_name)
+                if price_data:
+                    price = Decimal(str(price_data))
+            
+            # If we couldn't get a price from the cache, try to get it from raw market data
+            if price is None:
+                if symbol in market_data:
+                    symbol_data = market_data[symbol]
+                    if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                        price = Decimal(str(symbol_data.get('ask', '0')))
+                    else:
+                        price = Decimal(str(symbol_data.get('bid', '0')))
+                
+                # If we still don't have a price, use the order_price if provided
+                if (price is None or price == Decimal('0')) and order_price is not None:
+                    orders_logger.info(f"Using order_price {order_price} as fallback for {symbol} {order_type} order")
+                    price = order_price
+                # If we still don't have a price, log an error and return zeros
+                elif price is None or price == Decimal('0'):
+                    orders_logger.error(f"Could not get price for {symbol} {order_type} order")
+                    return None, None, None, None
+            
+            # Calculate contract value
+            contract_value = quantity * contract_size * price
+            
+            # Calculate margin based on contract value and leverage
+            margin = (contract_value / leverage).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            
+            # Calculate commission
+            commission = Decimal('0.0')
+            commission_type = int(group_settings.get('commision_type', 0))
+            commission_value_type = int(group_settings.get('commision_value_type', 0))
+            commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
+            
+            if commission_type in [0, 1]:  # "Every Trade" or "In"
+                if commission_value_type == 0:  # Per lot
+                    commission = quantity * commission_rate
+                elif commission_value_type == 1:  # Percent of price
+                    commission = (commission_rate / Decimal('100')) * contract_value
+            
+            commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            
+            orders_logger.info(f"Margin calculation results: margin={margin}, price={price}, contract_value={contract_value}, commission={commission}")
+            return margin, price, contract_value, commission
+        
+        except Exception as e:
+            orders_logger.error(f"Error calculating margin: {e}", exc_info=True)
+            return None, None, None, None
 
     try:
         # Step 1: Load user data and settings
@@ -178,16 +261,17 @@ async def process_new_order(
             if not raw_market_data:
                 raise OrderProcessingError("Failed to get market data")
 
-            # Step 2: Calculate standalone margin
-            full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
-                redis_client=redis_client,
+            # Step 2: Calculate standalone margin using local helper
+            full_margin_usd, price, contract_value, commission = await calculate_margin(
                 symbol=symbol,
                 order_type=order_type,
                 quantity=quantity,
-                user_leverage=leverage,
+                leverage=leverage,
                 group_settings=group_settings,
-                external_symbol_info=external_symbol_info,
-                raw_market_data=raw_market_data
+                ext_symbol_info=external_symbol_info,
+                market_data=raw_market_data,
+                group_name=group_name,
+                order_price=order_data.get('order_price')
             )
             if full_margin_usd is None:
                 raise OrderProcessingError("Margin calculation failed")
@@ -203,7 +287,7 @@ async def process_new_order(
             )
 
             margin_before_data = await calculate_total_symbol_margin_contribution(
-                db, redis_client, user_id, symbol, open_orders_for_symbol, order_model
+                db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
             )
             margin_before = margin_before_data["total_margin"]
 
@@ -216,7 +300,7 @@ async def process_new_order(
             margin_after_data = await calculate_total_symbol_margin_contribution(
                 db, redis_client, user_id, symbol,
                 open_orders_for_symbol + [simulated_order],
-                order_model
+                order_model, user_type
             )
             margin_after = margin_after_data["total_margin"]
 
