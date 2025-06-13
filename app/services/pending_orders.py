@@ -55,7 +55,16 @@ async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, 
         order_removed = False
 
         for user_key, orders_list_str in all_user_orders_json.items():
-            current_user_id = user_key.decode('utf-8')
+            # Handle both bytes and string user keys
+            if isinstance(user_key, bytes):
+                current_user_id = user_key.decode('utf-8')
+            else:
+                current_user_id = user_key
+                
+            # Handle both bytes and string order lists
+            if isinstance(orders_list_str, bytes):
+                orders_list_str = orders_list_str.decode('utf-8')
+                
             orders_list = json.loads(orders_list_str)
             
             # Filter out the specific order to be removed
@@ -92,12 +101,19 @@ async def add_pending_order(
     """Adds a pending order to Redis."""
     symbol = pending_order_data['order_company_name']
     order_type = pending_order_data['order_type']
-    user_id = pending_order_data['order_user_id']
+    user_id = str(pending_order_data['order_user_id'])  # Ensure user_id is a string
     redis_key = f"{REDIS_PENDING_ORDERS_PREFIX}:{symbol}:{order_type}"
 
     try:
         all_user_orders_json = await redis_client.hget(redis_key, user_id)
-        current_orders = json.loads(all_user_orders_json) if all_user_orders_json else []
+        
+        # Handle both bytes and string JSON
+        if all_user_orders_json:
+            if isinstance(all_user_orders_json, bytes):
+                all_user_orders_json = all_user_orders_json.decode('utf-8')
+            current_orders = json.loads(all_user_orders_json)
+        else:
+            current_orders = []
 
         # Check if an order with the same ID already exists
         if any(order.get('order_id') == pending_order_data['order_id'] for order in current_orders):
@@ -349,6 +365,62 @@ async def check_and_trigger_stoploss_takeprofit(
         if not redis_client:
             logger.warning("Redis client not available for SL/TP check")
             return
+            
+        # Check for pending orders in Redis
+        try:
+            # List all keys matching the pending_orders pattern
+            pending_keys = await redis_client.keys(f"{REDIS_PENDING_ORDERS_PREFIX}:*")
+            logger.info(f"Found {len(pending_keys)} pending order keys in Redis")
+            
+            # Log details about each key
+            for key in pending_keys:
+                # Handle both bytes and string keys
+                if isinstance(key, bytes):
+                    key_str = key.decode('utf-8')
+                else:
+                    key_str = key  # Already a string
+                
+                # Get all user IDs for this key
+                user_ids = await redis_client.hkeys(key_str)
+                logger.info(f"Key: {key_str}, Users: {len(user_ids)}")
+                
+                # For each user, count their pending orders
+                for user_id in user_ids:
+                    # Handle both bytes and string user IDs
+                    if isinstance(user_id, bytes):
+                        user_id_str = user_id.decode('utf-8')
+                    else:
+                        user_id_str = user_id  # Already a string
+                    
+                    orders_json = await redis_client.hget(key_str, user_id_str)
+                    if orders_json:
+                        # Handle both bytes and string JSON
+                        if isinstance(orders_json, bytes):
+                            orders_json = orders_json.decode('utf-8')
+                            
+                        orders = json.loads(orders_json)
+                        logger.info(f"  User {user_id_str} has {len(orders)} pending orders for {key_str}")
+                        
+                        # Log details about each order
+                        for order in orders:
+                            order_id = order.get('order_id', 'unknown')
+                            order_type = order.get('order_type', 'unknown')
+                            user_type = order.get('user_type', 'unknown')
+                            symbol = order.get('order_company_name', 'unknown')
+                            price = order.get('order_price', 'unknown')
+                            logger.info(f"    Order {order_id}: {symbol} {order_type}, price={price}, user_type={user_type}")
+                            
+                            # Process each pending order
+                            try:
+                                # Get current price for the symbol
+                                current_price = await get_last_known_price(redis_client, symbol)
+                                if current_price:
+                                    # Trigger the order if conditions are met
+                                    await trigger_pending_order(db, redis_client, order, current_price)
+                            except Exception as e:
+                                logger.error(f"Error processing pending order {order_id}: {e}", exc_info=True)
+        except Exception as e:
+            logger.error(f"Error checking pending orders in Redis: {e}", exc_info=True)
             
         # Get all open orders from both user and demo user tables
         from app.database.models import UserOrder, DemoUserOrder

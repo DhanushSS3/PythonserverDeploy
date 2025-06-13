@@ -1,6 +1,6 @@
 # app/api/v1/endpoints/orders.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 import logging
@@ -16,7 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
-from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest
+from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest, CancelStopLossRequest, CancelTakeProfitRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
 from app.core.cache import publish_account_structure_changed_event
@@ -86,6 +86,199 @@ router = APIRouter(
     prefix="/orders",
     tags=["orders"]
 )
+
+# Create a separate router for no-auth endpoints
+no_auth_router = APIRouter(prefix="/noauth")
+
+@no_auth_router.get("/debug/public-check")
+async def noauth_debug_public_check():
+    """
+    Public debug endpoint that doesn't require authentication.
+    """
+    try:
+        orders_logger.info("[NOAUTH_DEBUG_PUBLIC_CHECK] No-auth public debug endpoint accessed")
+        return {
+            "status": "success",
+            "message": "No-auth API is accessible",
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    except Exception as e:
+        orders_logger.error(f"[NOAUTH_DEBUG_PUBLIC_CHECK] Error in no-auth public debug endpoint: {str(e)}", exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+@no_auth_router.get("/debug/check-order/{order_id}")
+async def noauth_debug_check_order(
+    order_id: str,
+    user_type: str = Query(..., description="User type (live or demo)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    No-auth debug endpoint to check if an order exists.
+    """
+    try:
+        orders_logger.info(f"[NOAUTH_DEBUG_CHECK_ORDER] Checking order {order_id} with user_type {user_type}")
+        
+        # Determine the order model based on user type
+        order_model = get_order_model(user_type)
+        orders_logger.info(f"[NOAUTH_DEBUG_CHECK_ORDER] Using order model: {order_model.__name__}")
+        
+        # First try to find the order directly by ID
+        direct_query = await db.execute(select(order_model).where(order_model.order_id == order_id))
+        direct_result = direct_query.scalars().first()
+        
+        if direct_result:
+            orders_logger.info(f"[NOAUTH_DEBUG_CHECK_ORDER] Order found with ID {order_id}, belongs to user {direct_result.order_user_id}")
+            return {
+                "exists": True,
+                "order_id": direct_result.order_id,
+                "user_id": direct_result.order_user_id,
+                "symbol": direct_result.order_company_name,
+                "order_type": direct_result.order_type,
+                "order_status": direct_result.order_status,
+                "order_price": str(direct_result.order_price),
+                "order_quantity": str(direct_result.order_quantity),
+                "stop_loss": str(direct_result.stop_loss) if direct_result.stop_loss else None,
+                "take_profit": str(direct_result.take_profit) if direct_result.take_profit else None,
+                "stoploss_id": direct_result.stoploss_id,
+                "takeprofit_id": direct_result.takeprofit_id
+            }
+        else:
+            orders_logger.error(f"[NOAUTH_DEBUG_CHECK_ORDER] Order {order_id} not found in the database")
+            return {
+                "exists": False,
+                "message": f"Order with ID {order_id} not found"
+            }
+    except Exception as e:
+        orders_logger.error(f"[NOAUTH_DEBUG_CHECK_ORDER] Error checking order: {str(e)}", exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+@no_auth_router.post("/debug/test-stoploss")
+async def noauth_debug_test_stoploss(
+    order_id: str = Body(...),
+    user_id: int = Body(...),
+    user_type: str = Body(...),
+    stop_loss: float = Body(...),
+    symbol: str = Body(...),
+    order_status: str = Body(...),
+    order_type: str = Body(...),
+    order_quantity: float = Body(...),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    No-auth debug endpoint to test the stoploss functionality.
+    """
+    try:
+        orders_logger.info(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Testing stoploss for order {order_id}")
+        
+        # Convert parameters
+        stop_loss_decimal = Decimal(str(stop_loss))
+        order_quantity_decimal = Decimal(str(order_quantity))
+        
+        # Create request object manually
+        request = AddStopLossRequest(
+            order_id=order_id,
+            stop_loss=stop_loss_decimal,
+            user_id=user_id,
+            user_type=user_type,
+            symbol=symbol,
+            order_status=order_status,
+            order_type=order_type,
+            order_quantity=order_quantity_decimal
+        )
+        
+        # Determine the order model based on user type
+        order_model = get_order_model(user_type)
+        orders_logger.info(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Using order model: {order_model.__name__}")
+        
+        # Find the order
+        orders_logger.info(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Searching for order with ID {request.order_id} for user {user_id}")
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db, 
+            request.order_id, 
+            user_id,
+            order_model
+        )
+        
+        if not db_order:
+            orders_logger.error(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Order {request.order_id} not found for user {user_id} using model {order_model.__name__}")
+            # Try direct query for debugging
+            try:
+                direct_query = await db.execute(select(order_model).where(order_model.order_id == request.order_id))
+                direct_result = direct_query.scalars().first()
+                if direct_result:
+                    orders_logger.error(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Order exists but belongs to user {direct_result.order_user_id}, not {user_id}")
+                else:
+                    orders_logger.error(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Order {request.order_id} does not exist in the database at all")
+            except Exception as query_error:
+                orders_logger.error(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Error during direct query: {str(query_error)}")
+            
+            return {
+                "status": "error",
+                "message": f"Order {request.order_id} not found for user {user_id}"
+            }
+        
+        orders_logger.info(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Found order {db_order.order_id} with status {db_order.order_status}")
+        
+        # Check if order is in OPEN status
+        if db_order.order_status != "OPEN":
+            orders_logger.warning(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Cannot add stoploss to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have stoploss.")
+            return {
+                "status": "error",
+                "message": f"Only OPEN orders can have stoploss. Current status: {db_order.order_status}"
+            }
+        
+        # Generate a stoploss_id
+        stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
+        orders_logger.info(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Generated stoploss_id: {stoploss_id} for order {request.order_id}")
+        
+        # Update the order with stop_loss and stoploss_id
+        update_fields = {
+            "stop_loss": request.stop_loss,
+            "stoploss_id": stoploss_id
+        }
+        
+        try:
+            updated_order = await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id,
+                user_type=user_type,
+                action_type="STOPLOSS_ADDED"
+            )
+            orders_logger.info(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Order updated with stop_loss={request.stop_loss} and stoploss_id={stoploss_id}")
+            
+            return {
+                "status": "success",
+                "order_id": updated_order.order_id,
+                "stoploss_id": updated_order.stoploss_id,
+                "stop_loss": str(updated_order.stop_loss),
+                "message": "Stoploss added successfully"
+            }
+        except Exception as update_error:
+            orders_logger.error(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Error updating order with stop_loss: {str(update_error)}")
+            return {
+                "status": "error",
+                "message": f"Error updating order: {str(update_error)}"
+            }
+    except Exception as e:
+        orders_logger.error(f"[NOAUTH_DEBUG_TEST_STOPLOSS] Unhandled error: {str(e)}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Unhandled error: {str(e)}"
+        }
+
+# Include the no-auth router in the main router
+router.include_router(no_auth_router)
 
 async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client: Redis, user_type: str):
     """
@@ -218,83 +411,6 @@ async def get_rejected_orders(
         raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
     orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["REJECTED"], order_model)
     return orders
-
-    from app.core.logging_config import orders_logger
-    orders_logger.info(f"[get_order_model] called with: {repr(user_or_type)} (type: {type(user_or_type)})")
-    # Log attributes if it's an object
-    if not isinstance(user_or_type, str):
-        orders_logger.info(f"[get_order_model] user_or_type.__class__.__name__: {user_or_type.__class__.__name__}")
-        orders_logger.info(f"[get_order_model] user_or_type attributes: {dir(user_or_type)}")
-        user_type_attr = getattr(user_or_type, 'user_type', None)
-        orders_logger.info(f"[get_order_model] user_type attribute value: {user_type_attr}, type: {type(user_type_attr)}")
-    # If a string is passed
-    if isinstance(user_or_type, str):
-        orders_logger.info("[get_order_model] Branch: isinstance(user_or_type, str)")
-        if user_or_type.lower() == 'demo':
-            orders_logger.info("[get_order_model] Branch: user_type string is 'demo' -> DemoUserOrder")
-            return DemoUserOrder
-        orders_logger.info("[get_order_model] Branch: user_type string is not 'demo' -> UserOrder")
-        return UserOrder
-    # If a user object is passed
-    user_type = getattr(user_or_type, 'user_type', None)
-    if user_type and str(user_type).lower() == 'demo':
-        orders_logger.info("[get_order_model] Branch: user_type attribute is 'demo' -> DemoUserOrder")
-        return DemoUserOrder
-    # Fallback: check class name
-    if user_or_type.__class__.__name__ == 'DemoUser':
-        orders_logger.info("[get_order_model] Branch: class name is 'DemoUser' -> DemoUserOrder (FORCED)")
-        return DemoUserOrder
-    orders_logger.info("[get_order_model] Branch: default -> UserOrder")
-    return UserOrder
-    
-class OrderPlacementRequest(BaseModel):
-    # Required fields
-    symbol: str  # Corresponds to order_company_name
-    order_type: str  # E.g., "MARKET", "LIMIT", "STOP", "BUY", "SELL", "BUY_LIMIT", "SELL_LIMIT"
-    order_quantity: Decimal = Field(..., gt=0)
-    order_price: Decimal
-    user_type: str  # "live" or "demo"
-    user_id: int
-
-    # Optional fields with defaults
-    order_status: str = "OPEN"  # Default to OPEN for new orders
-    status: str = "ACTIVE"  # Default to ACTIVE for new orders
-    stop_loss: Optional[Decimal] = None
-    take_profit: Optional[Decimal] = None
-    contract_value: Optional[Decimal] = None
-    margin: Optional[Decimal] = None
-    close_price: Optional[Decimal] = None
-    net_profit: Optional[Decimal] = None
-    swap: Optional[Decimal] = None
-    commission: Optional[Decimal] = None
-    cancel_message: Optional[str] = None
-    close_message: Optional[str] = None
-    cancel_id: Optional[str] = None
-    close_id: Optional[str] = None
-    modify_id: Optional[str] = None
-    stoploss_id: Optional[str] = None
-    takeprofit_id: Optional[str] = None
-    stoploss_cancel_id: Optional[str] = None
-    takeprofit_cancel_id: Optional[str] = None
-
-    @validator('order_type')
-    def validate_order_type(cls, v):
-        valid_types = ["MARKET", "LIMIT", "STOP", "BUY", "SELL", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]
-        if v.upper() not in valid_types:
-            raise ValueError(f"Invalid order type. Must be one of: {', '.join(valid_types)}")
-        return v.upper()
-
-    @validator('user_type')
-    def validate_user_type(cls, v):
-        valid_types = ["live", "demo"]
-        if v.lower() not in valid_types:
-            raise ValueError(f"Invalid user type. Must be one of: {', '.join(valid_types)}")
-        return v.lower()
-
-    class Config:
-        json_encoders = {
-            Decimal: lambda v: str(v),
-        }
 
 @router.post("/", response_model=OrderResponse)
 async def place_order(
@@ -764,9 +880,9 @@ async def place_pending_order(
         }
         
         # Only store non-Barclays users' pending orders in Redis for price comparison
-        if not is_barclays_live_user:
+        if not is_barclays_live_user or user_type == 'demo':
             await add_pending_order(redis_client, order_dict_for_redis)
-            orders_logger.info(f"Pending order {db_order.order_id} added to Redis for non-Barclays user.")
+            orders_logger.info(f"Pending order {db_order.order_id} added to Redis for non-Barclays user or demo user.")
         else:
             orders_logger.info(f"Skipping Redis storage for Barclays user pending order {db_order.order_id}")
 
@@ -1213,7 +1329,7 @@ async def close_order(
                     "first_name": getattr(db_user_locked, 'first_name', None),
                     "last_name": getattr(db_user_locked, 'last_name', None),
                     "country": getattr(db_user_locked, 'country', None),
-                    "phone_number": getattr(db_user_locked, 'phone_number', None)
+                    "phone_number": getattr(db_user_locked, 'phone_number', None),
                 }
                 orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache)
@@ -1421,156 +1537,6 @@ async def modify_pending_order(
 
 
 
-
-
-
-# from fastapi import APIRouter, Depends, HTTPException
-# from sqlalchemy.ext.asyncio import AsyncSession
-# from redis.asyncio import Redis
-# from app.crud import crud_order
-# from app.dependencies.redis_client import get_redis_client
-# from app.database.session import get_db
-# from app.schemas.order import OrderUpdateRequest
-# from app.core.security import get_user_from_service_or_user_token
-
-
-# async def handle_barclays_order_open_transition(
-#     db: AsyncSession,
-#     redis_client: Redis,
-#     db_order,
-#     user_type: str
-# ):
-#     from app.crud import crud_order
-#     from app.crud.user import update_user_margin
-#     from app.services.margin_calculator import calculate_total_symbol_margin_contribution
-#     from app.core.cache import get_user_data_cache
-#     from decimal import Decimal
-#     import logging
-
-#     logger = logging.getLogger(__name__)
-
-#     try:
-#         user_id = db_order.order_user_id
-#         symbol = db_order.order_company_name.upper()
-#         order_model = get_order_model(user_type)
-
-#         # Fetch all current open orders for the symbol (including the one being transitioned)
-#         open_orders = await crud_order.get_open_orders_by_user_id_and_symbol(db, user_id, symbol, order_model)
-#         if db_order not in open_orders:
-#             open_orders.append(db_order)
-
-#         # Calculate total margin using hedging logic
-#         total_margin = await calculate_total_symbol_margin_contribution(
-#             db=db,
-#             redis_client=redis_client,
-#             user_id=user_id,
-#             symbol=symbol,
-#             open_positions_for_symbol=open_orders,
-#             order_model_for_calc=order_model
-#             contract_size = Decimal(str(ext_symbol_info.contract_size))
-#             profit_currency = ext_symbol_info.profit.upper()
-
-#             group_settings = await get_group_symbol_settings_cache(redis_client, user_group_name, order_symbol)
-#             if not group_settings:
-#                 raise HTTPException(status_code=500, detail="Group settings not found for commission calculation.")
-            
-#             commission_type = int(group_settings.get('commision_type', -1))
-#             commission_value_type = int(group_settings.get('commision_value_type', -1))
-#             commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
-#             exit_commission = Decimal("0.0")
-#             if commission_type in [0, 2]:
-#                 if commission_value_type == 0: exit_commission = quantity * commission_rate
-#                 elif commission_value_type == 1:
-#                     calculated_exit_contract_value = quantity * contract_size * close_price
-#                     if calculated_exit_contract_value > Decimal("0.0"):
-#                         exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
-#             entry_commission_for_total = Decimal("0.0")
-#             if commission_type in [0, 1]:
-#                 if commission_value_type == 0: entry_commission_for_total = quantity * commission_rate
-#                 elif commission_value_type == 1:
-#                     initial_contract_value = quantity * contract_size * entry_price
-#                     if initial_contract_value > Decimal("0.0"):
-#                         entry_commission_for_total = (commission_rate / Decimal("100")) * initial_contract_value
-#             total_commission_for_trade = (entry_commission_for_total + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-#             if order_type_db == "BUY": profit = (close_price - entry_price) * quantity * contract_size
-#             elif order_type_db == "SELL": profit = (entry_price - close_price) * quantity * contract_size
-#             else: raise HTTPException(status_code=500, detail="Invalid order type.")
-            
-#             profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db) 
-#             if profit_currency != "USD" and profit_usd == profit: 
-#                 orders_logger.error(f"Order {db_order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
-#                 raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
-
-#                     db_order.order_status = "CLOSED"
-#                     db_order.close_price = close_price
-#                     db_order.net_profit = profit_usd.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-#                     db_order.swap = db_order.swap or Decimal("0.0")
-#                     db_order.commission = total_commission_for_trade
-#                     db_order.close_id = close_id # Save close_id in DB
-
-#                     original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
-#                     swap_amount = db_order.swap
-#                     db_user_locked.wallet_balance = (original_wallet_balance + db_order.net_profit - total_commission_for_trade - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
-
-#                     transaction_time = datetime.datetime.now(datetime.timezone.utc)
-#                     wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time}
-#                     if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
-#                     else: wallet_common_data["user_id"] = db_user_locked.id
-#                     if db_order.net_profit != Decimal("0.0"):
-#                         db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order.net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
-#                     if total_commission_for_trade > Decimal("0.0"):
-#                         db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
-#                     if swap_amount != Decimal("0.0"):
-#                         db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=generate_10_digit_id()))
-
-#                     await db.commit()
-#                     await db.refresh(db_order)
-#                     return OrderResponse.model_validate(db_order, from_attributes=True)        )
-
-#         # Update user total margin in DB
-#         await update_user_margin(db, user_id, user_type, total_margin)
-#         logger.info(f"Margin updated for Barclays user {user_id} on symbol {symbol} to {total_margin}")
-
-#     except Exception as e:
-#         logger.error(f"Error in Barclays margin update during OPEN transition: {e}", exc_info=True)
-#         raise
-
-
-# @router.patch("/orders/{order_id}/status")
-# async def update_order_status(
-#     order_id: str,
-#     update_request: OrderUpdateRequest,
-#     db: AsyncSession = Depends(get_db),
-#     redis_client: Redis = Depends(get_redis_client),
-#     current_user = Depends(get_user_from_service_or_user_token)
-# ):
-#     user_type = current_user.user_type
-#     order_model = get_order_model(user_type)
-
-#     db_order = await crud_order.get_order_by_id(db, order_id, order_model)
-#     if not db_order:
-#         raise HTTPException(status_code=404, detail="Order not found")
-
-#     if db_order.order_user_id != current_user.id and not getattr(current_user, 'is_admin', False):
-#         raise HTTPException(status_code=403, detail="Not authorized to modify this order")
-
-#     # Check and apply transition logic
-#     if db_order.order_status == "PROCESSING" and update_request.order_status == "OPEN":
-#         await handle_barclays_order_open_transition(db, redis_client, db_order, user_type)
-
-#     update_fields = update_request.model_dump(exclude_unset=True)
-#     updated_order = await crud_order.update_order_with_tracking(
-#         db=db,
-#         db_order=db_order,
-#         update_fields=update_fields,
-#         user_id=current_user.id,
-#         user_type=user_type
-#     )
-#     return {"status": "success", "updated_order": updated_order.order_id}
-
-
-
 @router.post("/debug/trigger-order-update/{user_id}")
 async def debug_trigger_order_update(
     user_id: int,
@@ -1604,6 +1570,152 @@ async def debug_trigger_order_update(
     except Exception as e:
         orders_logger.error(f"Error in debug_trigger_order_update: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error triggering order update: {str(e)}")
+
+@router.get("/debug/check-order/{order_id}")
+async def debug_check_order(
+    order_id: str,
+    user_type: str = Query(..., description="User type (live or demo)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Debug endpoint to check if an order exists and return its details.
+    This is useful for troubleshooting issues with stoploss/takeprofit endpoints.
+    """
+    try:
+        orders_logger.info(f"[DEBUG_CHECK_ORDER] Checking order {order_id} with user_type {user_type}")
+        
+        # Determine the order model based on user type
+        order_model = get_order_model(user_type)
+        orders_logger.info(f"[DEBUG_CHECK_ORDER] Using order model: {order_model.__name__}")
+        
+        # First try to find the order directly by ID
+        direct_query = await db.execute(select(order_model).where(order_model.order_id == order_id))
+        direct_result = direct_query.scalars().first()
+        
+        if direct_result:
+            orders_logger.info(f"[DEBUG_CHECK_ORDER] Order found with ID {order_id}, belongs to user {direct_result.order_user_id}")
+            
+            # Check if the order belongs to the current user or if the user is admin
+            if direct_result.order_user_id == current_user.id or getattr(current_user, 'is_admin', False):
+                # Return order details
+                return {
+                    "exists": True,
+                    "order_id": direct_result.order_id,
+                    "user_id": direct_result.order_user_id,
+                    "symbol": direct_result.order_company_name,
+                    "order_type": direct_result.order_type,
+                    "order_status": direct_result.order_status,
+                    "order_price": str(direct_result.order_price),
+                    "order_quantity": str(direct_result.order_quantity),
+                    "stop_loss": str(direct_result.stop_loss) if direct_result.stop_loss else None,
+                    "take_profit": str(direct_result.take_profit) if direct_result.take_profit else None,
+                    "stoploss_id": direct_result.stoploss_id,
+                    "takeprofit_id": direct_result.takeprofit_id,
+                    "created_at": direct_result.created_at.isoformat() if direct_result.created_at else None,
+                    "updated_at": direct_result.updated_at.isoformat() if direct_result.updated_at else None
+                }
+            else:
+                orders_logger.warning(f"[DEBUG_CHECK_ORDER] Order {order_id} exists but belongs to user {direct_result.order_user_id}, not {current_user.id}")
+                return {
+                    "exists": True,
+                    "authorized": False,
+                    "message": f"Order exists but belongs to user {direct_result.order_user_id}, not {current_user.id}"
+                }
+        else:
+            orders_logger.error(f"[DEBUG_CHECK_ORDER] Order {order_id} not found in the database")
+            return {
+                "exists": False,
+                "message": f"Order with ID {order_id} not found"
+            }
+    except Exception as e:
+        orders_logger.error(f"[DEBUG_CHECK_ORDER] Error checking order: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error checking order: {str(e)}")
+
+@router.get("/debug/public-check")
+async def debug_public_check():
+    """
+    Public debug endpoint that doesn't require authentication.
+    Use this to verify the API is accessible and the routes are correctly configured.
+    """
+    try:
+        orders_logger.info("[DEBUG_PUBLIC_CHECK] Public debug endpoint accessed")
+        return {
+            "status": "success",
+            "message": "API is accessible",
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    except Exception as e:
+        orders_logger.error(f"[DEBUG_PUBLIC_CHECK] Error in public debug endpoint: {str(e)}", exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+@router.get("/debug/check-route-registration")
+async def debug_check_route_registration():
+    """
+    Debug endpoint to check if routes are correctly registered.
+    This helps diagnose 404 errors by showing all registered routes.
+    """
+    try:
+        from fastapi import FastAPI
+        import inspect
+        
+        # Get the FastAPI app instance
+        app = None
+        frame = inspect.currentframe()
+        while frame:
+            if 'app' in frame.f_locals and isinstance(frame.f_locals['app'], FastAPI):
+                app = frame.f_locals['app']
+                break
+            frame = frame.f_back
+        
+        if not app:
+            # Try to get from the router
+            app = router.root
+        
+        if app:
+            # Get all routes
+            routes_info = []
+            for route in app.routes:
+                route_info = {
+                    "path": getattr(route, "path", "Unknown"),
+                    "name": getattr(route, "name", "Unnamed"),
+                    "methods": getattr(route, "methods", []),
+                }
+                routes_info.append(route_info)
+            
+            # Also check the router's routes
+            router_routes = []
+            for route in router.routes:
+                route_info = {
+                    "path": getattr(route, "path", "Unknown"),
+                    "name": getattr(route, "name", "Unnamed"),
+                    "methods": getattr(route, "methods", []),
+                }
+                router_routes.append(route_info)
+            
+            return {
+                "status": "success",
+                "app_routes": routes_info,
+                "router_routes": router_routes,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Could not access FastAPI app instance",
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+    except Exception as e:
+        orders_logger.error(f"[DEBUG_CHECK_ROUTE_REGISTRATION] Error: {str(e)}", exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
 
 @router.post("/cancel-pending", response_model=dict)
 async def cancel_pending_order(
@@ -1773,7 +1885,8 @@ async def add_stoploss(
     For non-Barclays users: Update the order directly
     """
     try:
-        orders_logger.info(f"Add stoploss request received - Order ID: {request.order_id}, User ID: {current_user.id}")
+        orders_logger.info(f"[ADD_STOPLOSS] Request received - Order ID: {request.order_id}, User ID: {current_user.id}")
+        orders_logger.info(f"[ADD_STOPLOSS] Request details: symbol={request.symbol}, user_type={request.user_type}, order_status={request.order_status}, stop_loss={request.stop_loss}")
         
         # Use the authenticated user's ID instead of the one from the request
         user_id_for_operation = current_user.id
@@ -1782,16 +1895,18 @@ async def add_stoploss(
         if request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
             # Admin can modify other users' orders
             user_id_for_operation = request.user_id
-            orders_logger.info(f"Admin user {current_user.id} adding stoploss for user {user_id_for_operation}")
+            orders_logger.info(f"[ADD_STOPLOSS] Admin user {current_user.id} adding stoploss for user {user_id_for_operation}")
         elif request.user_id != user_id_for_operation:
             # Non-admin users can only modify their own orders
-            orders_logger.warning(f"User {current_user.id} attempted to add stoploss for user {request.user_id}")
+            orders_logger.warning(f"[ADD_STOPLOSS] User {current_user.id} attempted to add stoploss for user {request.user_id}")
             raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
         
         # Get the order model based on user type
         order_model = get_order_model(request.user_type)
+        orders_logger.info(f"[ADD_STOPLOSS] Using order model: {order_model.__name__}")
         
         # Find the order
+        orders_logger.info(f"[ADD_STOPLOSS] Searching for order with ID {request.order_id} for user {user_id_for_operation}")
         db_order = await crud_order.get_order_by_id_and_user_id(
             db, 
             request.order_id, 
@@ -1800,38 +1915,48 @@ async def add_stoploss(
         )
         
         if not db_order:
-            orders_logger.warning(f"Order {request.order_id} not found for user {user_id_for_operation}")
-            raise HTTPException(status_code=404, detail="Order not found")
+            orders_logger.error(f"[ADD_STOPLOSS] Order {request.order_id} not found for user {user_id_for_operation} using model {order_model.__name__}")
+            # Try direct query for debugging
+            try:
+                direct_query = await db.execute(select(order_model).where(order_model.order_id == request.order_id))
+                direct_result = direct_query.scalars().first()
+                if direct_result:
+                    orders_logger.error(f"[ADD_STOPLOSS] Order exists but belongs to user {direct_result.order_user_id}, not {user_id_for_operation}")
+                else:
+                    orders_logger.error(f"[ADD_STOPLOSS] Order {request.order_id} does not exist in the database at all")
+            except Exception as query_error:
+                orders_logger.error(f"[ADD_STOPLOSS] Error during direct query: {str(query_error)}")
+            
+            raise HTTPException(status_code=404, detail=f"Order {request.order_id} not found for user {user_id_for_operation}")
+        
+        orders_logger.info(f"[ADD_STOPLOSS] Found order {db_order.order_id} with status {db_order.order_status}")
         
         # Check if order is in OPEN status
         if db_order.order_status != "OPEN":
-            orders_logger.warning(f"Cannot add stoploss to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have stoploss.")
-            raise HTTPException(status_code=400, detail="Only OPEN orders can have stoploss")
-        
-        # Validate stop loss based on order type
-        current_price = request.current_price
-        if request.order_type == "BUY" and request.stop_loss >= current_price:
-            raise HTTPException(status_code=400, detail="For BUY orders, stop loss must be below current price")
-        elif request.order_type == "SELL" and request.stop_loss <= current_price:
-            raise HTTPException(status_code=400, detail="For SELL orders, stop loss must be above current price")
+            orders_logger.warning(f"[ADD_STOPLOSS] Cannot add stoploss to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have stoploss.")
+            raise HTTPException(status_code=400, detail=f"Only OPEN orders can have stoploss. Current status: {db_order.order_status}")
         
         # Generate a stoploss_id
         stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
-        orders_logger.info(f"Generated stoploss_id: {stoploss_id} for order {request.order_id}")
+        orders_logger.info(f"[ADD_STOPLOSS] Generated stoploss_id: {stoploss_id} for order {request.order_id}")
         
         # Check if user is a Barclays live user
         user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
         group_name = user_data.get('group_name') if user_data else None
+        orders_logger.info(f"[ADD_STOPLOSS] User group_name: {group_name}")
+        
         group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders = group_settings.get('sending_orders') if group_settings else None
+        orders_logger.info(f"[ADD_STOPLOSS] Group sending_orders setting: {sending_orders}")
+        
         sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
         
         is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
-        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
+        orders_logger.info(f"[ADD_STOPLOSS] User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
         
         if is_barclays_live_user:
             # For Barclays users, just store stoploss_id and send to Firebase
-            orders_logger.info(f"Barclays user detected. Sending stoploss request to Firebase for order {request.order_id}")
+            orders_logger.info(f"[ADD_STOPLOSS] Barclays user detected. Sending stoploss request to Firebase for order {request.order_id}")
             
             # Update the order with stoploss_id without changing stop_loss value
             update_fields = {
@@ -1839,16 +1964,21 @@ async def add_stoploss(
             }
             
             # Update order with tracking
-            await crud_order.update_order_with_tracking(
-                db,
-                db_order,
-                update_fields=update_fields,
-                user_id=user_id_for_operation,
-                user_type=request.user_type,
-                action_type="STOPLOSS_REQUESTED"
-            )
+            try:
+                await crud_order.update_order_with_tracking(
+                    db,
+                    db_order,
+                    update_fields=update_fields,
+                    user_id=user_id_for_operation,
+                    user_type=request.user_type,
+                    action_type="STOPLOSS_REQUESTED"
+                )
+                orders_logger.info(f"[ADD_STOPLOSS] Order updated with stoploss_id in database")
+            except Exception as update_error:
+                orders_logger.error(f"[ADD_STOPLOSS] Error updating order with stoploss_id: {str(update_error)}")
+                raise
             
-            # Get contract value from the order or calculate it if needed
+            # Get contract value from the order
             contract_value = str(db_order.contract_value) if db_order.contract_value else None
             
             # Send to Firebase with all required fields
@@ -1863,12 +1993,16 @@ async def add_stoploss(
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "contract_value": contract_value,
                 "order_quantity": str(request.order_quantity),
-                "order_price": str(request.order_price),
-                "order_status": request.order_status
+                "order_status": request.order_status,
+                "status": request.status
             }
             
-            await send_order_to_firebase(firebase_stoploss_data, "live")
-            orders_logger.info(f"Stoploss request sent to Firebase for order {request.order_id}")
+            try:
+                await send_order_to_firebase(firebase_stoploss_data, "live")
+                orders_logger.info(f"[ADD_STOPLOSS] Stoploss request sent to Firebase for order {request.order_id}")
+            except Exception as firebase_error:
+                orders_logger.error(f"[ADD_STOPLOSS] Error sending to Firebase: {str(firebase_error)}")
+                # Continue even if Firebase fails - we've already updated the database
             
             return {
                 "order_id": db_order.order_id,
@@ -1878,7 +2012,7 @@ async def add_stoploss(
             }
         else:
             # For non-Barclays users, update the order immediately
-            orders_logger.info(f"Non-Barclays user. Adding stoploss to order {request.order_id} immediately")
+            orders_logger.info(f"[ADD_STOPLOSS] Non-Barclays user. Adding stoploss to order {request.order_id} immediately")
             
             # Update the order with stop_loss and stoploss_id
             update_fields = {
@@ -1887,21 +2021,34 @@ async def add_stoploss(
             }
             
             # Update order with tracking
-            updated_order = await crud_order.update_order_with_tracking(
-                db,
-                db_order,
-                update_fields=update_fields,
-                user_id=user_id_for_operation,
-                user_type=request.user_type,
-                action_type="STOPLOSS_ADDED"
-            )
+            try:
+                updated_order = await crud_order.update_order_with_tracking(
+                    db,
+                    db_order,
+                    update_fields=update_fields,
+                    user_id=user_id_for_operation,
+                    user_type=request.user_type,
+                    action_type="STOPLOSS_ADDED"
+                )
+                orders_logger.info(f"[ADD_STOPLOSS] Order updated with stop_loss={request.stop_loss} and stoploss_id={stoploss_id}")
+            except Exception as update_error:
+                orders_logger.error(f"[ADD_STOPLOSS] Error updating order with stop_loss: {str(update_error)}")
+                raise
             
             # Update static orders cache
-            await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
+            try:
+                await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
+                orders_logger.info(f"[ADD_STOPLOSS] Static orders cache updated for user {user_id_for_operation}")
+            except Exception as cache_error:
+                orders_logger.error(f"[ADD_STOPLOSS] Error updating static orders cache: {str(cache_error)}")
             
             # Publish updates to notify WebSocket clients
-            await publish_order_update(redis_client, user_id_for_operation)
-            await publish_user_data_update(redis_client, user_id_for_operation)
+            try:
+                await publish_order_update(redis_client, user_id_for_operation)
+                await publish_user_data_update(redis_client, user_id_for_operation)
+                orders_logger.info(f"[ADD_STOPLOSS] Published order and user data updates to WebSocket")
+            except Exception as ws_error:
+                orders_logger.error(f"[ADD_STOPLOSS] Error publishing WebSocket updates: {str(ws_error)}")
             
             return {
                 "order_id": updated_order.order_id,
@@ -1911,7 +2058,7 @@ async def add_stoploss(
             }
     
     except Exception as e:
-        orders_logger.error(f"Error adding stoploss: {str(e)}", exc_info=True)
+        orders_logger.error(f"[ADD_STOPLOSS] Unhandled error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to add stoploss: {str(e)}")
 
 @router.post("/add-takeprofit", response_model=dict)
@@ -1927,7 +2074,8 @@ async def add_takeprofit(
     For non-Barclays users: Update the order directly
     """
     try:
-        orders_logger.info(f"Add takeprofit request received - Order ID: {request.order_id}, User ID: {current_user.id}")
+        orders_logger.info(f"[ADD_TAKEPROFIT] Request received - Order ID: {request.order_id}, User ID: {current_user.id}")
+        orders_logger.info(f"[ADD_TAKEPROFIT] Request details: symbol={request.symbol}, user_type={request.user_type}, order_status={request.order_status}, take_profit={request.take_profit}")
         
         # Use the authenticated user's ID instead of the one from the request
         user_id_for_operation = current_user.id
@@ -1936,16 +2084,18 @@ async def add_takeprofit(
         if request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
             # Admin can modify other users' orders
             user_id_for_operation = request.user_id
-            orders_logger.info(f"Admin user {current_user.id} adding takeprofit for user {user_id_for_operation}")
+            orders_logger.info(f"[ADD_TAKEPROFIT] Admin user {current_user.id} adding takeprofit for user {user_id_for_operation}")
         elif request.user_id != user_id_for_operation:
             # Non-admin users can only modify their own orders
-            orders_logger.warning(f"User {current_user.id} attempted to add takeprofit for user {request.user_id}")
+            orders_logger.warning(f"[ADD_TAKEPROFIT] User {current_user.id} attempted to add takeprofit for user {request.user_id}")
             raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
         
         # Get the order model based on user type
         order_model = get_order_model(request.user_type)
+        orders_logger.info(f"[ADD_TAKEPROFIT] Using order model: {order_model.__name__}")
         
         # Find the order
+        orders_logger.info(f"[ADD_TAKEPROFIT] Searching for order with ID {request.order_id} for user {user_id_for_operation}")
         db_order = await crud_order.get_order_by_id_and_user_id(
             db, 
             request.order_id, 
@@ -1954,38 +2104,48 @@ async def add_takeprofit(
         )
         
         if not db_order:
-            orders_logger.warning(f"Order {request.order_id} not found for user {user_id_for_operation}")
-            raise HTTPException(status_code=404, detail="Order not found")
+            orders_logger.error(f"[ADD_TAKEPROFIT] Order {request.order_id} not found for user {user_id_for_operation} using model {order_model.__name__}")
+            # Try direct query for debugging
+            try:
+                direct_query = await db.execute(select(order_model).where(order_model.order_id == request.order_id))
+                direct_result = direct_query.scalars().first()
+                if direct_result:
+                    orders_logger.error(f"[ADD_TAKEPROFIT] Order exists but belongs to user {direct_result.order_user_id}, not {user_id_for_operation}")
+                else:
+                    orders_logger.error(f"[ADD_TAKEPROFIT] Order {request.order_id} does not exist in the database at all")
+            except Exception as query_error:
+                orders_logger.error(f"[ADD_TAKEPROFIT] Error during direct query: {str(query_error)}")
+                
+            raise HTTPException(status_code=404, detail=f"Order {request.order_id} not found for user {user_id_for_operation}")
+        
+        orders_logger.info(f"[ADD_TAKEPROFIT] Found order {db_order.order_id} with status {db_order.order_status}")
         
         # Check if order is in OPEN status
         if db_order.order_status != "OPEN":
-            orders_logger.warning(f"Cannot add takeprofit to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have takeprofit.")
-            raise HTTPException(status_code=400, detail="Only OPEN orders can have takeprofit")
-        
-        # Validate take profit based on order type
-        current_price = request.current_price
-        if request.order_type == "BUY" and request.take_profit <= current_price:
-            raise HTTPException(status_code=400, detail="For BUY orders, take profit must be above current price")
-        elif request.order_type == "SELL" and request.take_profit >= current_price:
-            raise HTTPException(status_code=400, detail="For SELL orders, take profit must be below current price")
+            orders_logger.warning(f"[ADD_TAKEPROFIT] Cannot add takeprofit to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have takeprofit.")
+            raise HTTPException(status_code=400, detail=f"Only OPEN orders can have takeprofit. Current status: {db_order.order_status}")
         
         # Generate a takeprofit_id
         takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
-        orders_logger.info(f"Generated takeprofit_id: {takeprofit_id} for order {request.order_id}")
+        orders_logger.info(f"[ADD_TAKEPROFIT] Generated takeprofit_id: {takeprofit_id} for order {request.order_id}")
         
         # Check if user is a Barclays live user
         user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
         group_name = user_data.get('group_name') if user_data else None
+        orders_logger.info(f"[ADD_TAKEPROFIT] User group_name: {group_name}")
+        
         group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders = group_settings.get('sending_orders') if group_settings else None
+        orders_logger.info(f"[ADD_TAKEPROFIT] Group sending_orders setting: {sending_orders}")
+        
         sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
         
         is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
-        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
+        orders_logger.info(f"[ADD_TAKEPROFIT] User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
         
         if is_barclays_live_user:
             # For Barclays users, just store takeprofit_id and send to Firebase
-            orders_logger.info(f"Barclays user detected. Sending takeprofit request to Firebase for order {request.order_id}")
+            orders_logger.info(f"[ADD_TAKEPROFIT] Barclays user detected. Sending takeprofit request to Firebase for order {request.order_id}")
             
             # Update the order with takeprofit_id without changing take_profit value
             update_fields = {
@@ -1993,16 +2153,21 @@ async def add_takeprofit(
             }
             
             # Update order with tracking
-            await crud_order.update_order_with_tracking(
-                db,
-                db_order,
-                update_fields=update_fields,
-                user_id=user_id_for_operation,
-                user_type=request.user_type,
-                action_type="TAKEPROFIT_REQUESTED"
-            )
+            try:
+                await crud_order.update_order_with_tracking(
+                    db,
+                    db_order,
+                    update_fields=update_fields,
+                    user_id=user_id_for_operation,
+                    user_type=request.user_type,
+                    action_type="TAKEPROFIT_REQUESTED"
+                )
+                orders_logger.info(f"[ADD_TAKEPROFIT] Order updated with takeprofit_id in database")
+            except Exception as update_error:
+                orders_logger.error(f"[ADD_TAKEPROFIT] Error updating order with takeprofit_id: {str(update_error)}")
+                raise
             
-            # Get contract value from the order or calculate it if needed
+            # Get contract value from the order
             contract_value = str(db_order.contract_value) if db_order.contract_value else None
             
             # Send to Firebase with all required fields
@@ -2017,12 +2182,16 @@ async def add_takeprofit(
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "contract_value": contract_value,
                 "order_quantity": str(request.order_quantity),
-                "order_price": str(request.order_price),
-                "order_status": request.order_status
+                "order_status": request.order_status,
+                "status": request.status
             }
             
-            await send_order_to_firebase(firebase_takeprofit_data, "live")
-            orders_logger.info(f"Takeprofit request sent to Firebase for order {request.order_id}")
+            try:
+                await send_order_to_firebase(firebase_takeprofit_data, "live")
+                orders_logger.info(f"[ADD_TAKEPROFIT] Takeprofit request sent to Firebase for order {request.order_id}")
+            except Exception as firebase_error:
+                orders_logger.error(f"[ADD_TAKEPROFIT] Error sending to Firebase: {str(firebase_error)}")
+                # Continue even if Firebase fails - we've already updated the database
             
             return {
                 "order_id": db_order.order_id,
@@ -2032,7 +2201,7 @@ async def add_takeprofit(
             }
         else:
             # For non-Barclays users, update the order immediately
-            orders_logger.info(f"Non-Barclays user. Adding takeprofit to order {request.order_id} immediately")
+            orders_logger.info(f"[ADD_TAKEPROFIT] Non-Barclays user. Adding takeprofit to order {request.order_id} immediately")
             
             # Update the order with take_profit and takeprofit_id
             update_fields = {
@@ -2041,21 +2210,34 @@ async def add_takeprofit(
             }
             
             # Update order with tracking
-            updated_order = await crud_order.update_order_with_tracking(
-                db,
-                db_order,
-                update_fields=update_fields,
-                user_id=user_id_for_operation,
-                user_type=request.user_type,
-                action_type="TAKEPROFIT_ADDED"
-            )
+            try:
+                updated_order = await crud_order.update_order_with_tracking(
+                    db,
+                    db_order,
+                    update_fields=update_fields,
+                    user_id=user_id_for_operation,
+                    user_type=request.user_type,
+                    action_type="TAKEPROFIT_ADDED"
+                )
+                orders_logger.info(f"[ADD_TAKEPROFIT] Order updated with take_profit={request.take_profit} and takeprofit_id={takeprofit_id}")
+            except Exception as update_error:
+                orders_logger.error(f"[ADD_TAKEPROFIT] Error updating order with take_profit: {str(update_error)}")
+                raise
             
             # Update static orders cache
-            await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
+            try:
+                await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
+                orders_logger.info(f"[ADD_TAKEPROFIT] Static orders cache updated for user {user_id_for_operation}")
+            except Exception as cache_error:
+                orders_logger.error(f"[ADD_TAKEPROFIT] Error updating static orders cache: {str(cache_error)}")
             
             # Publish updates to notify WebSocket clients
-            await publish_order_update(redis_client, user_id_for_operation)
-            await publish_user_data_update(redis_client, user_id_for_operation)
+            try:
+                await publish_order_update(redis_client, user_id_for_operation)
+                await publish_user_data_update(redis_client, user_id_for_operation)
+                orders_logger.info(f"[ADD_TAKEPROFIT] Published order and user data updates to WebSocket")
+            except Exception as ws_error:
+                orders_logger.error(f"[ADD_TAKEPROFIT] Error publishing WebSocket updates: {str(ws_error)}")
             
             return {
                 "order_id": updated_order.order_id,
@@ -2065,13 +2247,13 @@ async def add_takeprofit(
             }
     
     except Exception as e:
-        orders_logger.error(f"Error adding takeprofit: {str(e)}", exc_info=True)
+        orders_logger.error(f"[ADD_TAKEPROFIT] Unhandled error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to add takeprofit: {str(e)}")
 
 # Endpoints to cancel stoploss and takeprofit
 @router.post("/cancel-stoploss", response_model=dict)
 async def cancel_stoploss(
-    request: dict = Body(...),
+    request: CancelStopLossRequest,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
     current_user: User | DemoUser = Depends(get_current_user)
@@ -2082,28 +2264,24 @@ async def cancel_stoploss(
     For non-Barclays users: Update the order directly
     """
     try:
-        order_id = request.get("order_id")
-        user_id = request.get("user_id", current_user.id)
-        user_type = request.get("user_type", getattr(current_user, "user_type", "live"))
-        
-        orders_logger.info(f"Cancel stoploss request received - Order ID: {order_id}, User ID: {current_user.id}")
+        orders_logger.info(f"Cancel stoploss request received - Order ID: {request.order_id}, User ID: {current_user.id}")
         
         # Use the authenticated user's ID unless admin
         user_id_for_operation = current_user.id
-        if user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
-            user_id_for_operation = user_id
+        if request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            user_id_for_operation = request.user_id
             orders_logger.info(f"Admin user {current_user.id} cancelling stoploss for user {user_id_for_operation}")
-        elif user_id != user_id_for_operation:
-            orders_logger.warning(f"User {current_user.id} attempted to cancel stoploss for user {user_id}")
+        elif request.user_id != user_id_for_operation:
+            orders_logger.warning(f"User {current_user.id} attempted to cancel stoploss for user {request.user_id}")
             raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
         
         # Get the order model based on user type
-        order_model = get_order_model(user_type)
+        order_model = get_order_model(request.user_type)
         
         # Find the order
         db_order = await crud_order.get_order_by_id_and_user_id(
             db, 
-            order_id, 
+            request.order_id, 
             user_id_for_operation,
             order_model
         )
@@ -2118,13 +2296,14 @@ async def cancel_stoploss(
         stoploss_cancel_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_cancel_id')
         
         # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
         group_name = user_data.get('group_name') if user_data else None
         group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders = group_settings.get('sending_orders') if group_settings else None
         sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
         
-        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
         
         if is_barclays_live_user:
             # For Barclays users, just store stoploss_cancel_id and send to Firebase
@@ -2137,25 +2316,30 @@ async def cancel_stoploss(
                 db_order,
                 update_fields=update_fields,
                 user_id=user_id_for_operation,
-                user_type=user_type,
+                user_type=request.user_type,
                 action_type="STOPLOSS_CANCEL_REQUESTED"
             )
             
             # Send to Firebase
             firebase_data = {
-                "order_id": order_id,
+                "order_id": request.order_id,
                 "stoploss_id": db_order.stoploss_id,
                 "stoploss_cancel_id": stoploss_cancel_id,
                 "user_id": user_id_for_operation,
-                "symbol": db_order.order_company_name,
+                "symbol": request.symbol,
+                "order_type": request.order_type,
+                "order_status": request.order_status,
+                "status": request.status or db_order.status,
                 "action": "cancel_stoploss",
+                "cancel_message": request.cancel_message,
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
             }
             
             await send_order_to_firebase(firebase_data, "live")
+            orders_logger.info(f"Stoploss cancel request sent to Firebase for order {request.order_id}")
             
             return {
-                "order_id": order_id,
+                "order_id": request.order_id,
                 "stoploss_cancel_id": stoploss_cancel_id,
                 "status": "PENDING",
                 "message": "Stop loss cancellation request sent to service provider"
@@ -2173,18 +2357,18 @@ async def cancel_stoploss(
                 db_order,
                 update_fields=update_fields,
                 user_id=user_id_for_operation,
-                user_type=user_type,
+                user_type=request.user_type,
                 action_type="STOPLOSS_CANCELLED"
             )
             
             # Update static orders cache
-            await update_user_static_orders(user_id_for_operation, db, redis_client, user_type)
+            await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
             
             # Publish updates to notify WebSocket clients
             await publish_order_update(redis_client, user_id_for_operation)
             
             return {
-                "order_id": order_id,
+                "order_id": request.order_id,
                 "stoploss_cancel_id": stoploss_cancel_id,
                 "message": "Stop loss cancelled successfully"
             }
@@ -2195,7 +2379,7 @@ async def cancel_stoploss(
 
 @router.post("/cancel-takeprofit", response_model=dict)
 async def cancel_takeprofit(
-    request: dict = Body(...),
+    request: CancelTakeProfitRequest,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
     current_user: User | DemoUser = Depends(get_current_user)
@@ -2206,28 +2390,24 @@ async def cancel_takeprofit(
     For non-Barclays users: Update the order directly
     """
     try:
-        order_id = request.get("order_id")
-        user_id = request.get("user_id", current_user.id)
-        user_type = request.get("user_type", getattr(current_user, "user_type", "live"))
-        
-        orders_logger.info(f"Cancel takeprofit request received - Order ID: {order_id}, User ID: {current_user.id}")
+        orders_logger.info(f"Cancel takeprofit request received - Order ID: {request.order_id}, User ID: {current_user.id}")
         
         # Use the authenticated user's ID unless admin
         user_id_for_operation = current_user.id
-        if user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
-            user_id_for_operation = user_id
+        if request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            user_id_for_operation = request.user_id
             orders_logger.info(f"Admin user {current_user.id} cancelling takeprofit for user {user_id_for_operation}")
-        elif user_id != user_id_for_operation:
-            orders_logger.warning(f"User {current_user.id} attempted to cancel takeprofit for user {user_id}")
+        elif request.user_id != user_id_for_operation:
+            orders_logger.warning(f"User {current_user.id} attempted to cancel takeprofit for user {request.user_id}")
             raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
         
         # Get the order model based on user type
-        order_model = get_order_model(user_type)
+        order_model = get_order_model(request.user_type)
         
         # Find the order
         db_order = await crud_order.get_order_by_id_and_user_id(
             db, 
-            order_id, 
+            request.order_id, 
             user_id_for_operation,
             order_model
         )
@@ -2242,13 +2422,14 @@ async def cancel_takeprofit(
         takeprofit_cancel_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_cancel_id')
         
         # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
         group_name = user_data.get('group_name') if user_data else None
         group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
         sending_orders = group_settings.get('sending_orders') if group_settings else None
         sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
         
-        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
         
         if is_barclays_live_user:
             # For Barclays users, just store takeprofit_cancel_id and send to Firebase
@@ -2261,25 +2442,30 @@ async def cancel_takeprofit(
                 db_order,
                 update_fields=update_fields,
                 user_id=user_id_for_operation,
-                user_type=user_type,
+                user_type=request.user_type,
                 action_type="TAKEPROFIT_CANCEL_REQUESTED"
             )
             
             # Send to Firebase
             firebase_data = {
-                "order_id": order_id,
+                "order_id": request.order_id,
                 "takeprofit_id": db_order.takeprofit_id,
                 "takeprofit_cancel_id": takeprofit_cancel_id,
                 "user_id": user_id_for_operation,
-                "symbol": db_order.order_company_name,
+                "symbol": request.symbol,
+                "order_type": request.order_type,
+                "order_status": request.order_status,
+                "status": request.status or db_order.status,
                 "action": "cancel_takeprofit",
+                "cancel_message": request.cancel_message,
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
             }
             
             await send_order_to_firebase(firebase_data, "live")
+            orders_logger.info(f"Takeprofit cancel request sent to Firebase for order {request.order_id}")
             
             return {
-                "order_id": order_id,
+                "order_id": request.order_id,
                 "takeprofit_cancel_id": takeprofit_cancel_id,
                 "status": "PENDING",
                 "message": "Take profit cancellation request sent to service provider"
@@ -2297,18 +2483,18 @@ async def cancel_takeprofit(
                 db_order,
                 update_fields=update_fields,
                 user_id=user_id_for_operation,
-                user_type=user_type,
+                user_type=request.user_type,
                 action_type="TAKEPROFIT_CANCELLED"
             )
             
             # Update static orders cache
-            await update_user_static_orders(user_id_for_operation, db, redis_client, user_type)
+            await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
             
             # Publish updates to notify WebSocket clients
             await publish_order_update(redis_client, user_id_for_operation)
             
             return {
-                "order_id": order_id,
+                "order_id": request.order_id,
                 "takeprofit_cancel_id": takeprofit_cancel_id,
                 "message": "Take profit cancelled successfully"
             }

@@ -107,13 +107,15 @@ app = FastAPI(
 )
 
 # --- CORS Settings ---
-# Define allowed origins - include localhost with different ports and your production domains
+# Define specific origins for better security
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "http://localhost:5500",
     "http://localhost:8000",
     "http://localhost:8080",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:5500",
     "http://127.0.0.1:8000",
     "http://127.0.0.1:8080",
     # Add your production domains here
@@ -122,11 +124,11 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Specific origins for credentials
-    allow_credentials=True,  # Allow credentials for specific origins
+    allow_origins=["*"],  # Use specific origins
+    allow_credentials=False,  # Allow credentials
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],  # Allows all headers
-    expose_headers=["Content-Type", "Authorization", "X-Total-Count"],
+    allow_headers=["*"],
+    expose_headers=["Content-Type", "Authorization", "X-Total-Count"]
 )
 # --- End CORS Settings ---
 

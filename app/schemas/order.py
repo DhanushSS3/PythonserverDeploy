@@ -170,16 +170,13 @@ class OrderUpdateRequest(BaseModel):
 class AddStopLossRequest(BaseModel):
     order_id: str
     stop_loss: Decimal
-    current_price: Decimal  # Current market price for validation
     user_id: int  # User ID (will be validated against authenticated user)
     user_type: str  # 'live' or 'demo'
-    
-    # Additional fields
     symbol: str  # Also known as order_company_name
     order_status: str
     order_type: str
-    order_price: Decimal
     order_quantity: Decimal
+    status: Optional[str] = None
 
     @validator('stop_loss')
     def validate_stop_loss(cls, v):
@@ -202,22 +199,63 @@ class AddStopLossRequest(BaseModel):
 class AddTakeProfitRequest(BaseModel):
     order_id: str
     take_profit: Decimal
-    current_price: Decimal  # Current market price for validation
     user_id: int  # User ID (will be validated against authenticated user)
     user_type: str  # 'live' or 'demo'
-    
-    # Additional fields
     symbol: str  # Also known as order_company_name
     order_status: str
     order_type: str
-    order_price: Decimal
     order_quantity: Decimal
+    status: Optional[str] = None
 
     @validator('take_profit')
     def validate_take_profit(cls, v):
         if v <= 0:
             raise ValueError("Take profit must be greater than zero")
         return v
+
+    @validator('user_type')
+    def validate_user_type(cls, v):
+        if v not in ['live', 'demo']:
+            raise ValueError("User type must be either 'live' or 'demo'")
+        return v
+
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v),
+        }
+
+# --- Cancel Stop Loss Request Schema ---
+class CancelStopLossRequest(BaseModel):
+    order_id: str
+    symbol: str  # Also known as order_company_name
+    order_type: str
+    user_id: int
+    user_type: str
+    order_status: str
+    status: Optional[str] = None
+    cancel_message: Optional[str] = None
+
+    @validator('user_type')
+    def validate_user_type(cls, v):
+        if v not in ['live', 'demo']:
+            raise ValueError("User type must be either 'live' or 'demo'")
+        return v
+
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v),
+        }
+
+# --- Cancel Take Profit Request Schema ---
+class CancelTakeProfitRequest(BaseModel):
+    order_id: str
+    symbol: str  # Also known as order_company_name
+    order_type: str
+    user_id: int
+    user_type: str
+    order_status: str
+    status: Optional[str] = None
+    cancel_message: Optional[str] = None
 
     @validator('user_type')
     def validate_user_type(cls, v):

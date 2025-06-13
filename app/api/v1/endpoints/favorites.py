@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Union
 import logging
@@ -41,32 +42,42 @@ async def add_to_favorites(
     """
     Add a trading symbol to the current user's favorites list.
     """
-    # Determine user type from the current user
-    user_type = getattr(current_user, 'user_type', 'live')
-    
-    # Find the symbol by name
-    symbol = await crud_favorites.get_symbol_by_name(db, favorite.symbol)
-    if not symbol:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Symbol '{favorite.symbol}' not found"
+    try:
+        # Determine user type from the current user
+        user_type = getattr(current_user, 'user_type', 'live')
+        
+        # Log the request payload for debugging
+        logger.info(f"Add to favorites request: {favorite.dict()}")
+        
+        # Find the symbol by name
+        symbol = await crud_favorites.get_symbol_by_name(db, favorite.symbol)
+        if not symbol:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Symbol '{favorite.symbol}' not found"
+            )
+        
+        # Add to favorites
+        user_favorite = await crud_favorites.add_favorite_symbol(
+            db=db,
+            user_id=current_user.id,
+            symbol_id=symbol.id,
+            user_type=user_type,
+            redis_client=redis_client
         )
-    
-    # Add to favorites
-    user_favorite = await crud_favorites.add_favorite_symbol(
-        db=db,
-        user_id=current_user.id,
-        symbol_id=symbol.id,
-        user_type=user_type,
-        redis_client=redis_client
-    )
-    
-    return {
-        "id": user_favorite.id,
-        "symbol": symbol.name,
-        "symbol_id": symbol.id,
-        "created_at": user_favorite.created_at
-    }
+        
+        return {
+            "id": user_favorite.id,
+            "symbol": symbol.name,
+            "symbol_id": symbol.id,
+            "created_at": user_favorite.created_at
+        }
+    except Exception as e:
+        logger.error(f"Error in add_to_favorites: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add symbol to favorites: {str(e)}"
+        )
 
 
 @router.delete(
@@ -83,33 +94,43 @@ async def remove_from_favorites(
     """
     Remove a trading symbol from the current user's favorites list.
     """
-    # Determine user type from the current user
-    user_type = getattr(current_user, 'user_type', 'live')
-    
-    # Find the symbol by name
-    symbol = await crud_favorites.get_symbol_by_name(db, favorite.symbol)
-    if not symbol:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Symbol '{favorite.symbol}' not found"
+    try:
+        # Determine user type from the current user
+        user_type = getattr(current_user, 'user_type', 'live')
+        
+        # Log the request payload for debugging
+        logger.info(f"Remove from favorites request: {favorite.dict()}")
+        
+        # Find the symbol by name
+        symbol = await crud_favorites.get_symbol_by_name(db, favorite.symbol)
+        if not symbol:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Symbol '{favorite.symbol}' not found"
+            )
+        
+        # Remove from favorites
+        success = await crud_favorites.remove_favorite_symbol(
+            db=db,
+            user_id=current_user.id,
+            symbol_id=symbol.id,
+            user_type=user_type,
+            redis_client=redis_client
         )
-    
-    # Remove from favorites
-    success = await crud_favorites.remove_favorite_symbol(
-        db=db,
-        user_id=current_user.id,
-        symbol_id=symbol.id,
-        user_type=user_type,
-        redis_client=redis_client
-    )
-    
-    if not success:
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Symbol '{favorite.symbol}' is not in your favorites"
+            )
+        
+        return {"message": f"Symbol '{favorite.symbol}' removed from favorites"}
+    except Exception as e:
+        logger.error(f"Error in remove_from_favorites: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Symbol '{favorite.symbol}' is not in your favorites"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove symbol from favorites: {str(e)}"
         )
-    
-    return {"message": f"Symbol '{favorite.symbol}' removed from favorites"}
 
 
 @router.get(
@@ -294,4 +315,86 @@ async def debug_favorites(
         logger.error(f"Error in debug_favorites endpoint: {e}")
         return {
             "error": str(e)
-        } 
+        }
+
+
+@router.post(
+    "/debug",
+    status_code=status.HTTP_200_OK,
+    summary="Debug endpoint to check raw request"
+)
+async def debug_favorites_request(
+    request: Request,
+    current_user: Union[User, DemoUser] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Debug endpoint to check the raw request body.
+    """
+    try:
+        # Get raw body
+        body = await request.body()
+        body_text = body.decode('utf-8')
+        
+        # Log the raw request
+        logger.info(f"DEBUG - Raw request body: {body_text}")
+        logger.info(f"DEBUG - Request headers: {request.headers}")
+        
+        # Try to parse as JSON
+        try:
+            import json
+            json_data = json.loads(body_text)
+            logger.info(f"DEBUG - Parsed JSON: {json_data}")
+        except Exception as json_err:
+            logger.error(f"DEBUG - Failed to parse JSON: {json_err}")
+        
+        return {
+            "message": "Debug successful",
+            "raw_body": body_text,
+            "headers": dict(request.headers),
+            "method": request.method
+        }
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
+
+# Add OPTIONS method handlers for CORS preflight requests
+@router.options(
+    "",
+    status_code=status.HTTP_200_OK,
+    summary="CORS preflight for favorites endpoints"
+)
+async def options_favorites(request: Request):
+    """
+    Handle OPTIONS preflight request for favorites endpoints.
+    """
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, DELETE, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    )
+
+@router.options(
+    "/detailed",
+    status_code=status.HTTP_200_OK,
+    summary="CORS preflight for detailed favorites endpoint"
+)
+async def options_detailed_favorites(request: Request):
+    """
+    Handle OPTIONS preflight request for detailed favorites endpoint.
+    """
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        }
+    ) 

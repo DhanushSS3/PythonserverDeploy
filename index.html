@@ -21,7 +21,12 @@
         pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
         .market-data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .market-data-table th, .market-data-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .market-data-table th { background-color: #007bff; color: white; }
+        .market-data-table th { background-color: #007bff; color: white; position: sticky; top: 0; }
+        .market-data-table tr:nth-child(even) { background-color: #f2f2f2; }
+        .market-data-table tr:hover { background-color: #ddd; }
+        .market-data-container { max-height: 500px; overflow-y: auto; }
+        #symbolFilter { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .symbol-count { margin-top: 10px; font-size: 0.9em; color: #666; }
     </style>
 </head>
 <body>
@@ -43,16 +48,22 @@
         <div class="data-section">
             <div class="data-box">
                 <h2>Market Data</h2>
-                <table id="marketDataTable" class="market-data-table">
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Offer (o)</th> <th>Bid (b)</th>   <th>Spread (o-b)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+                <input type="text" id="symbolFilter" placeholder="Filter symbols..." onkeyup="filterSymbols()">
+                <div class="market-data-container">
+                    <table id="marketDataTable" class="market-data-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)">Symbol ↕</th>
+                                <th onclick="sortTable(1)">Offer (o)</th>
+                                <th onclick="sortTable(2)">Bid (b)</th>
+                                <th onclick="sortTable(3)">Spread (o-b)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="symbol-count" id="symbolCount">0 symbols</div>
             </div>
             <div class="data-box">
                 <h2>Account Data</h2>
@@ -68,11 +79,12 @@
         const connectionStatusDiv = document.getElementById('connectionStatus');
         const marketDataTableBody = document.querySelector('#marketDataTable tbody');
         const accountDataJsonPre = document.getElementById('accountDataJson');
+        const symbolCountDiv = document.getElementById('symbolCount');
 
-        // Only AUDJPY will be displayed
-        const orderedSymbols = [
-            "AUDJPY"
-        ];
+        // Remove the orderedSymbols restriction to display all symbols
+        // const orderedSymbols = [
+        //    "AUDJPY"
+        // ];
 
         function connectWebSocket() {
             const baseUrl = websocketUrlInput.value;
@@ -133,7 +145,12 @@
 
         function updateMarketDataDisplay(marketData) {
             let tableRowsHtml = '';
-            orderedSymbols.forEach(symbol => {
+            
+            // Use all symbols from market data instead of filtering by orderedSymbols
+            const symbols = Object.keys(marketData).sort();
+            symbolCountDiv.textContent = `${symbols.length} symbols`;
+            
+            symbols.forEach(symbol => {
                 const symbolData = marketData[symbol];
                 if (symbolData) {
                     let offerPrice = 'N/A';
@@ -168,7 +185,6 @@
                         spreadDisplay = symbolData.spread.toFixed(1) + " pips";
                     }
 
-
                     tableRowsHtml += `
                         <tr>
                             <td>${symbol}</td>
@@ -181,10 +197,67 @@
             });
 
             if (tableRowsHtml === '') {
-                marketDataTableBody.innerHTML = '<tr><td colspan="4">No relevant market data received yet for specified symbols.</td></tr>';
+                marketDataTableBody.innerHTML = '<tr><td colspan="4">No market data received yet.</td></tr>';
             } else {
                 marketDataTableBody.innerHTML = tableRowsHtml;
             }
+            
+            // Apply current filter after updating the table
+            filterSymbols();
+        }
+        
+        function filterSymbols() {
+            const filterText = document.getElementById('symbolFilter').value.toUpperCase();
+            const rows = document.querySelectorAll('#marketDataTable tbody tr');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const symbol = row.cells[0].textContent.toUpperCase();
+                if (symbol.indexOf(filterText) > -1) {
+                    row.style.display = "";
+                    visibleCount++;
+                } else {
+                    row.style.display = "none";
+                }
+            });
+            
+            symbolCountDiv.textContent = `${visibleCount} symbols displayed`;
+        }
+        
+        function sortTable(columnIndex) {
+            const table = document.getElementById('marketDataTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Sort the rows
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent;
+                const bValue = b.cells[columnIndex].textContent;
+                
+                // Handle numeric sorting for price columns
+                if (columnIndex > 0) {
+                    const aNum = parseFloat(aValue);
+                    const bNum = parseFloat(bValue);
+                    
+                    // Handle N/A values
+                    if (isNaN(aNum) && isNaN(bNum)) return 0;
+                    if (isNaN(aNum)) return 1;
+                    if (isNaN(bNum)) return -1;
+                    
+                    return aNum - bNum;
+                }
+                
+                // Text sorting for symbol column
+                return aValue.localeCompare(bValue);
+            });
+            
+            // Remove existing rows
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            
+            // Add sorted rows
+            rows.forEach(row => tbody.appendChild(row));
         }
     </script>
 </body>
