@@ -46729,3 +46729,1536 @@ TypeError: object dict can't be used in 'await' expression
 2025-06-13 03:20:56,937 - INFO - app.main - Background task 'Task-5' cancelled successfully.
 2025-06-13 03:20:56,938 - INFO - app.main - Redis client connection closed.
 2025-06-13 03:20:56,938 - INFO - app.main - Application shutdown event finished.
+2025-06-13 03:32:32,205 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-13 03:32:32,218 - INFO - app.core.config - .env file loaded successfully.
+2025-06-13 03:32:32,222 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-13 03:32:32,223 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-13 03:32:32,709 - INFO - app.main - Application startup event triggered.
+2025-06-13 03:32:32,709 - ERROR - app.main - Error initializing Firebase Admin SDK: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 396, in startup_event
+    cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+2025-06-13 03:32:32,713 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-13 03:32:32,739 - INFO - app.main - Redis connection pool initialized successfully
+2025-06-13 03:32:32,745 - INFO - app.main - APScheduler started successfully with jobs configured
+2025-06-13 03:32:32,746 - INFO - app.main - Firebase events processor background task started
+2025-06-13 03:32:32,746 - INFO - app.main - Redis publisher background task started
+2025-06-13 03:32:32,746 - INFO - app.main - Stop loss/take profit checker background task started
+2025-06-13 03:32:32,746 - ERROR - app.main - Error creating service account token: object str can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 491, in startup_event
+    await create_service_account_token(service_name="python_bridge")
+TypeError: object str can't be used in 'await' expression
+2025-06-13 03:32:32,747 - INFO - app.main - Application startup event finished.
+2025-06-13 03:32:32,748 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:32:32,748 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-13 03:32:33,967 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:33:16,550 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-13 03:33:16,578 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-13 03:33:16,594 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-13 03:33:16,614 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-13 03:33:16,640 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-13 03:33:16,665 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-13 03:33:16,689 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-13 03:33:16,715 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-13 03:33:16,741 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-13 03:33:16,759 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-13 03:33:16,774 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-13 03:33:16,794 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-13 03:33:16,812 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-13 03:33:16,831 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-13 03:33:16,850 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-13 03:33:16,868 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-13 03:33:16,887 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-13 03:33:16,904 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-13 03:33:16,920 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-13 03:33:16,937 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-13 03:33:16,955 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-13 03:33:16,973 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-13 03:33:16,981 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-13 03:33:16,997 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-13 03:33:17,012 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-13 03:33:17,027 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-13 03:33:17,044 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-13 03:33:17,064 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-13 03:33:17,078 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-13 03:33:17,096 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-13 03:33:17,110 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-13 03:33:17,124 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-13 03:33:17,138 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-13 03:33:17,152 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-13 03:33:17,167 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-13 03:33:17,183 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-13 03:33:17,198 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-13 03:33:17,216 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-13 03:33:17,231 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-13 03:33:17,253 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-13 03:33:17,271 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-13 03:33:17,288 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-13 03:33:17,306 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-13 03:33:17,323 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-13 03:33:17,346 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-13 03:33:17,368 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-13 03:33:17,396 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-13 03:33:17,417 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-13 03:33:17,434 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-13 03:33:17,451 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-13 03:33:17,468 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-13 03:33:17,486 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-13 03:33:17,499 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-13 03:33:17,516 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-13 03:33:17,535 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-13 03:33:17,555 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-13 03:33:17,580 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-13 03:33:17,612 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-13 03:33:17,727 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-13 03:33:17,770 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-13 03:33:17,842 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-13 03:33:17,925 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-13 03:33:18,008 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-13 03:33:18,065 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-13 03:33:18,091 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-13 03:33:18,107 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-13 03:33:18,120 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-13 03:33:18,135 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-13 03:33:18,150 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-13 03:33:18,187 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-13 03:33:18,215 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-13 03:33:18,251 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-13 03:33:18,269 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-13 03:33:18,288 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-13 03:33:18,308 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-13 03:33:18,325 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-13 03:33:18,349 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-13 03:33:18,368 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-13 03:33:18,394 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-13 03:33:20,473 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:22,788 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:25,188 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:27,454 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:30,001 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:32,076 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:32,745 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 03:33:32,746 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 03:33:34,431 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:36,809 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:39,122 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:41,358 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:43,713 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:45,803 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:48,164 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:50,424 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:53,041 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:54,866 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:57,278 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:33:58,866 - ERROR - app.database.session - Database session error: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 97, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 273, in get_current_user
+    payload = decode_token(token)
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 102, in decode_token
+    raise JWTError("Could not validate credentials")
+jose.exceptions.JWTError: Could not validate credentials
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 55, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 291, in app
+    solved_result = await solve_dependencies(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
+    solved = await call(**solved_result.values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 318, in get_current_user
+    raise credentials_exception
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2025-06-13 03:33:59,610 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:02,065 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:04,453 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:07,167 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:09,061 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:11,449 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:13,401 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:15,645 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:18,025 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:20,293 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:22,699 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:24,948 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:27,328 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:29,707 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:32,287 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:32,748 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 03:34:32,749 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 03:34:34,222 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:36,609 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:38,927 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:41,203 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:43,594 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:45,705 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:48,128 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:34:48,625 - INFO - app.main - Application shutdown event triggered.
+2025-06-13 03:34:48,625 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-13 03:34:48,625 - INFO - app.main - Cancelling 3 other background tasks...
+2025-06-13 03:34:48,626 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-13 03:34:49,777 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-13 03:34:49,777 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-13 03:34:49,778 - INFO - app.main - Background task 'Task-3' cancelled successfully.
+2025-06-13 03:34:49,779 - INFO - app.main - Background task 'Task-5' cancelled successfully.
+2025-06-13 03:34:49,779 - INFO - app.main - Redis client connection closed.
+2025-06-13 03:34:49,780 - INFO - app.main - Application shutdown event finished.
+2025-06-13 03:37:41,420 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-13 03:37:41,433 - INFO - app.core.config - .env file loaded successfully.
+2025-06-13 03:37:41,438 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-13 03:37:41,438 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-13 03:37:41,940 - INFO - app.main - Application startup event triggered.
+2025-06-13 03:37:41,940 - ERROR - app.main - Error initializing Firebase Admin SDK: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 396, in startup_event
+    cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+2025-06-13 03:37:41,944 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-13 03:37:41,970 - INFO - app.main - Redis connection pool initialized successfully
+2025-06-13 03:37:41,978 - INFO - app.main - APScheduler started successfully with jobs configured
+2025-06-13 03:37:41,978 - INFO - app.main - Firebase events processor background task started
+2025-06-13 03:37:41,978 - INFO - app.main - Redis publisher background task started
+2025-06-13 03:37:41,978 - INFO - app.main - Stop loss/take profit checker background task started
+2025-06-13 03:37:41,979 - ERROR - app.main - Error creating service account token: object str can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 491, in startup_event
+    await create_service_account_token(service_name="python_bridge")
+TypeError: object str can't be used in 'await' expression
+2025-06-13 03:37:41,979 - INFO - app.main - Application startup event finished.
+2025-06-13 03:37:41,979 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:37:41,979 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-13 03:37:43,140 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:38:23,852 - WARNING - app.core.cache - No cached adjusted buy price found for key: adjusted_market_price:Group B:AUDCAD
+2025-06-13 03:38:23,852 - ERROR - app.core.cache - Fallback error fetching from Firebase for AUDCAD: name 'get_latest_market_data' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\cache.py", line 478, in get_live_adjusted_buy_price_for_pair
+    fallback_data = get_latest_market_data(symbol)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_latest_market_data' is not defined
+2025-06-13 03:38:24,154 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:38:41,977 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 03:38:41,978 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 03:38:58,590 - INFO - app.main - Application shutdown event triggered.
+2025-06-13 03:38:58,590 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-13 03:38:58,591 - INFO - app.main - Cancelling 3 other background tasks...
+2025-06-13 03:38:58,591 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-13 03:38:59,014 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-13 03:38:59,015 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-13 03:38:59,015 - INFO - app.main - Background task 'Task-3' cancelled successfully.
+2025-06-13 03:38:59,015 - INFO - app.main - Background task 'Task-5' cancelled successfully.
+2025-06-13 03:38:59,017 - INFO - app.main - Redis client connection closed.
+2025-06-13 03:38:59,017 - INFO - app.main - Application shutdown event finished.
+2025-06-13 03:55:31,164 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-13 03:55:31,187 - INFO - app.core.config - .env file loaded successfully.
+2025-06-13 03:55:31,193 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-13 03:55:31,193 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-13 03:55:31,902 - INFO - app.main - Application startup event triggered.
+2025-06-13 03:55:31,902 - ERROR - app.main - Error initializing Firebase Admin SDK: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 396, in startup_event
+    cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+2025-06-13 03:55:31,910 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-13 03:55:31,952 - INFO - app.main - Redis connection pool initialized successfully
+2025-06-13 03:55:31,960 - INFO - app.main - APScheduler started successfully with jobs configured
+2025-06-13 03:55:31,960 - INFO - app.main - Firebase events processor background task started
+2025-06-13 03:55:31,960 - INFO - app.main - Redis publisher background task started
+2025-06-13 03:55:31,960 - INFO - app.main - Stop loss/take profit checker background task started
+2025-06-13 03:55:31,961 - ERROR - app.main - Error creating service account token: object str can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 491, in startup_event
+    await create_service_account_token(service_name="python_bridge")
+TypeError: object str can't be used in 'await' expression
+2025-06-13 03:55:31,962 - INFO - app.main - Application startup event finished.
+2025-06-13 03:55:31,962 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:55:31,963 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-13 03:55:33,073 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:55:45,974 - ERROR - app.database.session - Database session error: 500: Error in close_order endpoint: 403: Not authorized to specify user_id.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 884, in close_order
+    raise HTTPException(status_code=403, detail="Not authorized to specify user_id.")
+fastapi.exceptions.HTTPException: 403: Not authorized to specify user_id.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 55, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1252, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 403: Not authorized to specify user_id.
+2025-06-13 03:55:57,885 - ERROR - app.database.session - Database session error: 500: Error in close_order endpoint: 500: Error processing close order: name 'user_type' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 908, in close_order
+    is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+                             ^^^^^^^^^
+NameError: name 'user_type' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1249, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: name 'user_type' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 55, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1252, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: name 'user_type' is not defined
+2025-06-13 03:56:17,644 - WARNING - app.core.cache - No cached adjusted buy price found for key: adjusted_market_price:Group B:AUDCAD
+2025-06-13 03:56:17,644 - ERROR - app.core.cache - Fallback error fetching from Firebase for AUDCAD: name 'get_latest_market_data' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\cache.py", line 478, in get_live_adjusted_buy_price_for_pair
+    fallback_data = get_latest_market_data(symbol)
+                    ^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_latest_market_data' is not defined
+2025-06-13 03:56:18,076 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:56:18,346 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 03:56:18,347 - INFO - app.core.firebase - [FIREBASE] Payload being pushed to Firebase (all stringified): {'order_id': '1732810752', 'order_user_id': '4', 'user_id': '4', 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': '0.88000000', 'order_quantity': '0.10000000', 'contract_value': '10000.00000000', 'margin': '64.56204192', 'stop_loss': '', 'take_profit': '', 'close_price': '', 'net_profit': '', 'swap': '', 'commission': '', 'cancel_message': '', 'close_message': '', 'takeprofit_id': '', 'stoploss_id': '', 'cancel_id': '', 'close_order_id': '', 'modify_id': '', 'stoploss_cancel_id': '', 'takeprofit_cancel_id': '', 'status': 'OPEN', 'timestamp': '2025-06-13T10:56:18.347828', 'account_type': 'live', 'action': ''}
+2025-06-13 03:56:18,666 - INFO - app.core.firebase - Order data (ID: 1732810752) sent to Firebase successfully.
+2025-06-13 03:56:29,399 - ERROR - app.database.session - Database session error: 500: Error in close_order endpoint: 500: Error processing close order: name 'user_type' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 908, in close_order
+    is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+                             ^^^^^^^^^
+NameError: name 'user_type' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1249, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: name 'user_type' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 55, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1252, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: name 'user_type' is not defined
+2025-06-13 03:56:31,961 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 03:56:31,962 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 03:57:31,970 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 03:57:31,971 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 03:58:31,961 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 03:58:31,961 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 03:59:29,633 - INFO - app.main - Application shutdown event triggered.
+2025-06-13 03:59:29,634 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-13 03:59:29,634 - INFO - app.main - Cancelling 3 other background tasks...
+2025-06-13 03:59:29,635 - INFO - app.main - Background task 'Task-5' cancelled successfully.
+2025-06-13 03:59:29,636 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-13 03:59:30,438 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-13 03:59:30,438 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-13 03:59:30,438 - INFO - app.main - Background task 'Task-3' cancelled successfully.
+2025-06-13 03:59:30,439 - INFO - app.main - Redis client connection closed.
+2025-06-13 03:59:30,440 - INFO - app.main - Application shutdown event finished.
+2025-06-13 03:59:31,943 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-13 03:59:31,959 - INFO - app.core.config - .env file loaded successfully.
+2025-06-13 03:59:31,967 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-13 03:59:31,967 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-13 03:59:32,556 - INFO - app.main - Application startup event triggered.
+2025-06-13 03:59:32,556 - ERROR - app.main - Error initializing Firebase Admin SDK: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 396, in startup_event
+    cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+2025-06-13 03:59:32,560 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-13 03:59:32,578 - INFO - app.main - Redis connection pool initialized successfully
+2025-06-13 03:59:32,583 - INFO - app.main - APScheduler started successfully with jobs configured
+2025-06-13 03:59:32,583 - INFO - app.main - Firebase events processor background task started
+2025-06-13 03:59:32,583 - INFO - app.main - Redis publisher background task started
+2025-06-13 03:59:32,583 - INFO - app.main - Stop loss/take profit checker background task started
+2025-06-13 03:59:32,584 - ERROR - app.main - Error creating service account token: object str can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 491, in startup_event
+    await create_service_account_token(service_name="python_bridge")
+TypeError: object str can't be used in 'await' expression
+2025-06-13 03:59:32,584 - INFO - app.main - Application startup event finished.
+2025-06-13 03:59:32,585 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:59:32,585 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-13 03:59:33,360 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:59:33,364 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-13 03:59:33,366 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-13 03:59:33,366 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-13 03:59:33,367 - INFO - app.main - Application shutdown event triggered.
+2025-06-13 03:59:33,367 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-13 03:59:33,368 - INFO - app.main - Cancelling 3 other background tasks...
+2025-06-13 03:59:33,371 - INFO - app.main - Background task 'Task-5' cancelled successfully.
+2025-06-13 03:59:33,372 - INFO - app.main - Redis client connection closed.
+2025-06-13 03:59:33,372 - INFO - app.main - Application shutdown event finished.
+2025-06-13 03:59:34,904 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-13 03:59:34,917 - INFO - app.core.config - .env file loaded successfully.
+2025-06-13 03:59:34,922 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-13 03:59:34,922 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-13 03:59:35,386 - INFO - app.main - Application startup event triggered.
+2025-06-13 03:59:35,386 - ERROR - app.main - Error initializing Firebase Admin SDK: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 396, in startup_event
+    cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+2025-06-13 03:59:35,391 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-13 03:59:35,427 - INFO - app.main - Redis connection pool initialized successfully
+2025-06-13 03:59:35,432 - INFO - app.main - APScheduler started successfully with jobs configured
+2025-06-13 03:59:35,432 - INFO - app.main - Firebase events processor background task started
+2025-06-13 03:59:35,432 - INFO - app.main - Redis publisher background task started
+2025-06-13 03:59:35,432 - INFO - app.main - Stop loss/take profit checker background task started
+2025-06-13 03:59:35,434 - ERROR - app.main - Error creating service account token: object str can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 491, in startup_event
+    await create_service_account_token(service_name="python_bridge")
+TypeError: object str can't be used in 'await' expression
+2025-06-13 03:59:35,435 - INFO - app.main - Application startup event finished.
+2025-06-13 03:59:35,435 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:59:35,436 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-13 03:59:36,296 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 03:59:36,318 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-13 03:59:37,317 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-13 05:44:58,757 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-06-13 05:44:58,785 - INFO - app.core.config - .env file loaded successfully.
+2025-06-13 05:44:58,791 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-13 05:44:58,791 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-13 05:44:59,618 - INFO - app.main - Application startup event triggered.
+2025-06-13 05:44:59,619 - ERROR - app.main - Error initializing Firebase Admin SDK: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 396, in startup_event
+    cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'FIREBASE_CREDENTIALS_FILE'
+2025-06-13 05:44:59,627 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-13 05:44:59,702 - INFO - app.main - Redis connection pool initialized successfully
+2025-06-13 05:44:59,720 - INFO - app.main - APScheduler started successfully with jobs configured
+2025-06-13 05:44:59,720 - INFO - app.main - Firebase events processor background task started
+2025-06-13 05:44:59,720 - INFO - app.main - Redis publisher background task started
+2025-06-13 05:44:59,720 - INFO - app.main - Stop loss/take profit checker background task started
+2025-06-13 05:44:59,722 - ERROR - app.main - Error creating service account token: object str can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 491, in startup_event
+    await create_service_account_token(service_name="python_bridge")
+TypeError: object str can't be used in 'await' expression
+2025-06-13 05:44:59,722 - INFO - app.main - Application startup event finished.
+2025-06-13 05:44:59,723 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 05:44:59,723 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-13 05:45:00,931 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-13 05:45:59,714 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 05:45:59,715 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 05:46:57,955 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-13 05:46:57,974 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-13 05:46:57,997 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-13 05:46:58,019 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-13 05:46:58,040 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-13 05:46:58,060 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-13 05:46:58,083 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-13 05:46:58,105 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-13 05:46:58,128 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-13 05:46:58,146 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-13 05:46:58,165 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-13 05:46:58,187 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-13 05:46:58,207 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-13 05:46:58,225 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-13 05:46:58,249 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-13 05:46:58,279 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-13 05:46:58,306 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-13 05:46:58,332 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-13 05:46:58,356 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-13 05:46:58,371 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-13 05:46:58,385 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-13 05:46:58,409 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-13 05:46:58,431 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-13 05:46:58,448 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-13 05:46:58,468 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-13 05:46:58,493 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-13 05:46:58,511 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-13 05:46:58,536 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-13 05:46:58,552 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-13 05:46:58,577 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-13 05:46:58,595 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-13 05:46:58,617 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-13 05:46:58,638 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-13 05:46:58,658 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-13 05:46:58,677 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-13 05:46:58,700 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-13 05:46:58,729 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-13 05:46:58,752 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-13 05:46:58,771 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-13 05:46:58,792 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-13 05:46:58,814 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-13 05:46:58,838 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-13 05:46:58,862 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-13 05:46:58,880 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-13 05:46:58,897 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-13 05:46:58,918 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-13 05:46:58,940 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-13 05:46:58,959 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-13 05:46:58,984 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-13 05:46:59,005 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-13 05:46:59,027 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-13 05:46:59,050 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-13 05:46:59,080 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-13 05:46:59,098 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-13 05:46:59,119 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-13 05:46:59,141 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-13 05:46:59,158 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-13 05:46:59,184 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-13 05:46:59,204 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-13 05:46:59,230 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-13 05:46:59,251 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-13 05:46:59,268 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-13 05:46:59,290 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-13 05:46:59,313 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-13 05:46:59,331 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-13 05:46:59,356 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-13 05:46:59,379 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-13 05:46:59,399 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-13 05:46:59,418 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-13 05:46:59,439 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-13 05:46:59,461 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-13 05:46:59,479 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-13 05:46:59,499 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-13 05:46:59,523 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-13 05:46:59,544 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-13 05:46:59,563 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-13 05:46:59,577 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-13 05:46:59,593 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-13 05:46:59,612 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-13 05:46:59,747 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 05:46:59,781 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 05:47:01,156 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:03,025 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:05,394 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:07,891 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:10,060 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:12,466 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:14,892 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:16,982 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:19,244 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:21,531 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:23,904 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:26,383 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:28,669 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:30,747 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:33,051 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:35,330 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:37,717 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:39,948 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:42,397 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:44,652 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:46,966 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:49,455 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:51,388 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:53,783 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:56,215 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:58,494 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:47:59,730 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 05:47:59,732 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 05:48:01,004 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:03,201 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:05,348 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:07,719 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:09,964 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:12,379 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:14,991 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:17,188 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:19,230 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:21,460 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:23,972 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:26,344 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:28,400 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:30,743 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:33,097 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:35,681 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:37,858 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:40,481 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:42,783 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:44,698 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:46,906 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:49,290 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:51,501 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:53,951 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:56,078 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:58,708 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:48:59,727 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 05:48:59,728 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 05:49:00,994 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:03,195 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:05,448 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:07,670 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:09,835 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:12,528 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:14,878 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:16,901 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:19,462 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:22,161 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:23,942 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:26,268 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:28,679 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:31,155 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:33,636 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:35,525 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:37,734 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:40,207 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:42,485 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:45,174 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:47,200 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:49,508 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:51,656 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:54,038 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:56,621 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:58,780 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:49:59,721 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 05:49:59,722 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 05:50:00,980 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:03,201 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:05,451 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:08,056 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:10,166 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:12,417 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:14,698 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:17,141 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:19,292 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:21,721 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:23,881 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:26,125 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:28,550 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:31,094 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:33,347 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:35,423 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:37,676 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:40,129 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:42,608 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:44,826 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:46,964 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:49,298 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:51,460 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:54,015 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:56,150 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:58,587 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:50:59,722 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-13 05:50:59,723 - ERROR - app.main - Error in update_all_users_dynamic_portfolio job: module 'app.crud.user' has no attribute 'get_all_active_users'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 179, in update_all_users_dynamic_portfolio
+    live_users = await crud_user.get_all_active_users(db)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'app.crud.user' has no attribute 'get_all_active_users'. Did you mean: 'get_all_demo_users'?
+2025-06-13 05:51:00,845 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:02,897 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:05,497 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:07,865 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:10,075 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:12,009 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:14,326 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:16,802 - ERROR - app.services.portfolio_calculator - Error calculating portfolio: object dict can't be used in 'await' expression
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\portfolio_calculator.py", line 168, in calculate_user_portfolio
+    raw_market_data = await get_latest_market_data()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object dict can't be used in 'await' expression
+2025-06-13 05:51:17,787 - INFO - app.main - Application shutdown event triggered.
+2025-06-13 05:51:17,787 - INFO - app.main - APScheduler shut down gracefully.
+2025-06-13 05:51:17,787 - INFO - app.main - Cancelling 3 other background tasks...
+2025-06-13 05:51:17,789 - INFO - app.main - Background task 'Task-5' cancelled successfully.
+2025-06-13 05:51:17,789 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-13 05:51:18,575 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-13 05:51:18,576 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-13 05:51:18,576 - INFO - app.main - Background task 'Task-3' cancelled successfully.
+2025-06-13 05:51:18,578 - INFO - app.main - Redis client connection closed.
+2025-06-13 05:51:18,578 - INFO - app.main - Application shutdown event finished.

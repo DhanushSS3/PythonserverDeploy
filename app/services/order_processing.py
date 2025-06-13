@@ -388,6 +388,15 @@ async def process_new_order(
 
             # Step 5: Return order dict
             order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
+            
+            stoploss_id = None
+            if order_data.get('stop_loss') is not None:
+                stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
+
+            takeprofit_id = None
+            if order_data.get('take_profit') is not None:
+                takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
+
             return {
                 'order_id': await generate_unique_10_digit_id(db, order_model, 'order_id'),
                 'order_status': order_status,
@@ -401,7 +410,8 @@ async def process_new_order(
                 'commission': commission,  # Include the calculated commission
                 'stop_loss': order_data.get('stop_loss'),
                 'take_profit': order_data.get('take_profit'),
-                # 'close_id': await generate_unique_10_digit_id(db, order_model, 'close_id'),
+                'stoploss_id': stoploss_id,
+                'takeprofit_id': takeprofit_id,
                 'status': order_data.get('status'),
             }
     except Exception as e:

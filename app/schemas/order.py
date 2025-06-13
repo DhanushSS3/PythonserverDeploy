@@ -146,6 +146,14 @@ class PendingOrderCancelRequest(BaseModel):
 
 # --- Order PATCH Update Schema ---
 class OrderUpdateRequest(BaseModel):
+    order_id: Optional[str] = None
+    cancel_id: Optional[str] = None
+    close_id: Optional[str] = None
+    stoploss_id: Optional[str] = None
+    takeprofit_id: Optional[str] = None
+    stoploss_cancel_id: Optional[str] = None
+    takeprofit_cancel_id: Optional[str] = None
+    
     order_status: Optional[str] = None
     status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
     order_price: Optional[Decimal] = None
@@ -161,10 +169,15 @@ class OrderUpdateRequest(BaseModel):
     cancel_message: Optional[str] = None
     close_message: Optional[str] = None
 
-    # Tracking Fields
-    stoploss_id: Optional[str] = None
-    takeprofit_id: Optional[str] = None
-    close_id: Optional[str] = None # Added for OrderActionHistory tracking
+    @model_validator(mode='before')
+    def check_at_least_one_id(cls, values):
+        id_fields = [
+            'order_id', 'cancel_id', 'close_id', 'stoploss_id',
+            'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
+        ]
+        if not any(values.get(field) for field in id_fields):
+            raise ValueError(f"At least one of {', '.join(id_fields)} must be provided.")
+        return values
 
 # --- Add Stop Loss Request Schema ---
 class AddStopLossRequest(BaseModel):

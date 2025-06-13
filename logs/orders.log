@@ -14279,3 +14279,227 @@ fastapi.exceptions.HTTPException: 500: Error processing close order: 400: Order 
 2025-06-13 03:19:27,105 - INFO - orders-log - Fetched 1 open orders for user 1
 2025-06-13 03:19:27,116 - INFO - orders-log - Fetched 0 pending orders for user 1
 2025-06-13 03:19:27,120 - INFO - orders-log - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-13 03:32:32,663 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-13 03:33:41,664 - INFO - orders - Add stoploss request received - Order ID: 4285277098, User ID: 1
+2025-06-13 03:33:41,686 - INFO - orders - Generated stoploss_id: 1167974345 for order 4285277098
+2025-06-13 03:33:41,695 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-13 03:33:41,695 - INFO - orders - Non-Barclays user. Adding stoploss to order 4285277098 immediately
+2025-06-13 03:33:41,752 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-13 03:33:41,753 - INFO - orders - Using order model: DemoUserOrder
+2025-06-13 03:33:41,764 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-13 03:33:41,780 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-13 03:33:41,787 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-13 03:34:21,536 - INFO - orders - Cancel stoploss request received - Order ID: 4285277098, User ID: 1
+2025-06-13 03:34:21,600 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-13 03:34:21,642 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-13 03:34:21,643 - INFO - orders - Using order model: DemoUserOrder
+2025-06-13 03:34:21,666 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-13 03:34:21,685 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-13 03:34:21,692 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-13 03:37:41,889 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-13 03:38:23,237 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY, Quantity: 0.1
+2025-06-13 03:38:23,243 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-13 03:38:23,243 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-13 03:38:23,243 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-13 03:38:23,849 - INFO - orders - [ORDER_MARGIN_CALC] Calculating margin for AUDCAD BUY order, quantity: 0.1
+2025-06-13 03:38:23,849 - INFO - orders - [ORDER_MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] No price in cache for AUDCAD, checking raw market data
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] Raw market data for AUDCAD: {'b': '0.8820300000', 'o': '0.8819700000'}
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] Using raw ask price for AUDCAD: 0 (raw: 0)
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] Using order_price 0.88 as fallback for AUDCAD BUY order
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] Contract value calculation for AUDCAD:
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] Contract value = quantity * contract_size = 0.1 * 100000.00000000 = 10000.000000000
+2025-06-13 03:38:23,857 - INFO - orders - [ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = (10000.000000000 * 0.88) / 100.00 = 88.000000000 (rounded to 88.00)
+2025-06-13 03:38:23,858 - INFO - orders - [ORDER_MARGIN_CALC] Commission settings for AUDCAD: type=0, value_type=0, rate=10.0000
+2025-06-13 03:38:23,858 - INFO - orders - [ORDER_MARGIN_CALC] Per lot commission: 0.1 * 10.0000 = 1.00000
+2025-06-13 03:38:23,858 - INFO - orders - [ORDER_MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-06-13 03:38:23,858 - INFO - orders - [ORDER_MARGIN_CALC] Converting margin from CAD to USD: 88.00 CAD
+2025-06-13 03:38:23,858 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 88.00 CAD to USD for margin for AUDCAD BUY order (user_id: 4, position: )
+2025-06-13 03:38:23,858 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-06-13 03:38:23,862 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-13 03:38:23,862 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-06-13 03:38:23,862 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-06-13 03:38:23,865 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3630300000'), 'o': Decimal('1.3630300000')}
+2025-06-13 03:38:23,865 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3630300000
+2025-06-13 03:38:23,865 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 88.00 CAD / 1.3630300000 = 64.56204192130767481273339545 USD
+2025-06-13 03:38:23,865 - INFO - orders - [ORDER_MARGIN_CALC] Margin after USD conversion: 88.00 CAD -> 64.56204192130767481273339545 USD
+2025-06-13 03:38:23,865 - INFO - orders - [ORDER_MARGIN_CALC] Final results for AUDCAD BUY: margin=64.56204192130767481273339545, price=0.88, contract_value=10000.000000000, commission=1.00
+2025-06-13 03:38:23,866 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDCAD: Calculated commission=1.00
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDCAD, Positions count: 2
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1 (ID: 48): Type=BUY, Qty=2.00000000, StoredMargin=1301.76269403
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1: MarginPerLot=650.881347015
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2 (ID: 49): Type=BUY, Qty=2.00000000, StoredMargin=1301.88472416
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2: MarginPerLot=650.94236208
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: TotalBuyQty=4.00000000, TotalSellQty=0, NetQty=4.00000000
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: AllMarginsPerLot=[Decimal('650.881347015'), Decimal('650.94236208')], HighestMarginPerLot=650.94236208
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDCAD: CalculatedTotalMargin=2603.77, ContributingOrders=2 (based on individual stored margins)
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDCAD, Positions count: 3
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1 (ID: 48): Type=BUY, Qty=2.00000000, StoredMargin=1301.76269403
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1: MarginPerLot=650.881347015
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2 (ID: 49): Type=BUY, Qty=2.00000000, StoredMargin=1301.88472416
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2: MarginPerLot=650.94236208
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 3 (ID: NEW_UNSAVED): Type=BUY, Qty=0.1, StoredMargin=64.56204192130767481273339545
+2025-06-13 03:38:23,871 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 3: MarginPerLot=645.6204192130767481273339545
+2025-06-13 03:38:23,872 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: TotalBuyQty=4.10000000, TotalSellQty=0, NetQty=4.10000000
+2025-06-13 03:38:23,872 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: AllMarginsPerLot=[Decimal('650.881347015'), Decimal('650.94236208'), Decimal('645.6204192130767481273339545')], HighestMarginPerLot=650.94236208
+2025-06-13 03:38:23,872 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDCAD: CalculatedTotalMargin=2668.86, ContributingOrders=3 (based on individual stored margins)
+2025-06-13 03:38:23,872 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDCAD: MarginBefore=2603.77, MarginAfter=2668.86, AdditionalMargin=65.09
+2025-06-13 03:38:23,878 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4: OriginalMarginDB=2603.77000000, CalculatedNewMargin=2668.86
+2025-06-13 03:38:23,932 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '1920987108', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.88'), 'order_quantity': Decimal('0.1'), 'contract_value': Decimal('10000.000000000'), 'margin': Decimal('64.56204192130767481273339545'), 'commission': Decimal('1.00'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-13 03:38:23,971 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 2668.86000000
+2025-06-13 03:38:23,992 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-13 03:38:24,159 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-13 03:38:24,161 - INFO - orders - Starting update_user_static_orders for user 4, user_type demo
+2025-06-13 03:38:24,161 - INFO - orders - Using order model: DemoUserOrder
+2025-06-13 03:38:24,167 - INFO - orders - Fetched 0 open orders for user 4
+2025-06-13 03:38:24,173 - INFO - orders - Fetched 0 pending orders for user 4
+2025-06-13 03:38:24,174 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 0 pending orders
+2025-06-13 03:55:31,852 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-13 03:55:45,966 - INFO - orders - Close order request received - Order ID: 1920987108, User ID: 4, User Type: live
+2025-06-13 03:55:45,967 - INFO - orders - Close request details - Price: 0.89, Type: BUY, Symbol: AUDCAD
+2025-06-13 03:55:45,967 - ERROR - orders - Unauthorized user_id specification - Current user: 4, Requested user: 1
+2025-06-13 03:55:45,968 - ERROR - orders - Error in close_order endpoint: 403: Not authorized to specify user_id.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 884, in close_order
+    raise HTTPException(status_code=403, detail="Not authorized to specify user_id.")
+fastapi.exceptions.HTTPException: 403: Not authorized to specify user_id.
+2025-06-13 03:55:57,839 - INFO - orders - Close order request received - Order ID: 1920987108, User ID: 4, User Type: live
+2025-06-13 03:55:57,839 - INFO - orders - Close request details - Price: 0.89, Type: BUY, Symbol: AUDCAD
+2025-06-13 03:55:57,839 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000210D8CE6210>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-13 03:55:57,840 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-13 03:55:57,840 - INFO - orders - Request to close order 1920987108 for user 4 (User) with price 0.89. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-13 03:55:57,871 - INFO - orders - User group: [<app.database.models.Group object at 0x00000210D8B502F0>, <app.database.models.Group object at 0x00000210D8CE5D10>, <app.database.models.Group object at 0x00000210D8CE42D0>, <app.database.models.Group object at 0x00000210D8CAC9D0>, <app.database.models.Group object at 0x00000210D8CAD0F0>, <app.database.models.Group object at 0x00000210D8E48950>, <app.database.models.Group object at 0x00000210D8BF5AE0>, <app.database.models.Group object at 0x00000210D8BF4E20>, <app.database.models.Group object at 0x00000210D8BF47C0>, <app.database.models.Group object at 0x00000210D8BF5BF0>, <app.database.models.Group object at 0x00000210D8BF5D00>, <app.database.models.Group object at 0x00000210D8BF5E10>, <app.database.models.Group object at 0x00000210D8BF5F20>, <app.database.models.Group object at 0x00000210D8BF6030>, <app.database.models.Group object at 0x00000210D8BF6140>, <app.database.models.Group object at 0x00000210D8BF6250>, <app.database.models.Group object at 0x00000210D8BF6360>, <app.database.models.Group object at 0x00000210D8BF6470>, <app.database.models.Group object at 0x00000210D8BF6580>, <app.database.models.Group object at 0x00000210D8BF6690>, <app.database.models.Group object at 0x00000210D8BF67A0>, <app.database.models.Group object at 0x00000210D8BF68B0>, <app.database.models.Group object at 0x00000210D8BF69C0>, <app.database.models.Group object at 0x00000210D8BF6AD0>, <app.database.models.Group object at 0x00000210D8BF6BE0>, <app.database.models.Group object at 0x00000210D8BF6CF0>, <app.database.models.Group object at 0x00000210D8BF6E00>, <app.database.models.Group object at 0x00000210D8BF6F10>, <app.database.models.Group object at 0x00000210D8BF7020>, <app.database.models.Group object at 0x00000210D8BF7130>, <app.database.models.Group object at 0x00000210D8BF7240>, <app.database.models.Group object at 0x00000210D8BF7350>, <app.database.models.Group object at 0x00000210D8BF7460>, <app.database.models.Group object at 0x00000210D8BF7570>, <app.database.models.Group object at 0x00000210D8BF7680>, <app.database.models.Group object at 0x00000210D8BF7790>, <app.database.models.Group object at 0x00000210D8BF78A0>, <app.database.models.Group object at 0x00000210D8BF79B0>, <app.database.models.Group object at 0x00000210D8BF7AC0>, <app.database.models.Group object at 0x00000210D8BF7BD0>, <app.database.models.Group object at 0x00000210D8BF7CE0>, <app.database.models.Group object at 0x00000210D8BF7DF0>, <app.database.models.Group object at 0x00000210D8BF7F00>, <app.database.models.Group object at 0x00000210D8E8C050>, <app.database.models.Group object at 0x00000210D8E8C160>, <app.database.models.Group object at 0x00000210D8E8C270>, <app.database.models.Group object at 0x00000210D8E8C380>, <app.database.models.Group object at 0x00000210D8E8C490>, <app.database.models.Group object at 0x00000210D8E8C5A0>, <app.database.models.Group object at 0x00000210D8E8C6B0>, <app.database.models.Group object at 0x00000210D8E8C7C0>, <app.database.models.Group object at 0x00000210D8E8C8D0>, <app.database.models.Group object at 0x00000210D8E8C9E0>, <app.database.models.Group object at 0x00000210D8E8CAF0>, <app.database.models.Group object at 0x00000210D8E8CC00>, <app.database.models.Group object at 0x00000210D8E8CD10>, <app.database.models.Group object at 0x00000210D8E8CE20>, <app.database.models.Group object at 0x00000210D8E8CF30>, <app.database.models.Group object at 0x00000210D8E8D040>, <app.database.models.Group object at 0x00000210D8E8D150>, <app.database.models.Group object at 0x00000210D8E8D260>, <app.database.models.Group object at 0x00000210D8E8D370>, <app.database.models.Group object at 0x00000210D8E8D480>, <app.database.models.Group object at 0x00000210D8E8D590>, <app.database.models.Group object at 0x00000210D8E8D6A0>, <app.database.models.Group object at 0x00000210D8E8D7B0>, <app.database.models.Group object at 0x00000210D8E8D8C0>, <app.database.models.Group object at 0x00000210D8E8D9D0>, <app.database.models.Group object at 0x00000210D8E8DAE0>, <app.database.models.Group object at 0x00000210D8E8DBF0>, <app.database.models.Group object at 0x00000210D8E8DD00>, <app.database.models.Group object at 0x00000210D8E8DE10>, <app.database.models.Group object at 0x00000210D8E8DF20>, <app.database.models.Group object at 0x00000210D8E8E030>, <app.database.models.Group object at 0x00000210D8E8E140>, <app.database.models.Group object at 0x00000210D8E8E250>, <app.database.models.Group object at 0x00000210D8E8E360>, <app.database.models.Group object at 0x00000210D8E8E470>, <app.database.models.Group object at 0x00000210D8E8E580>]
+2025-06-13 03:55:57,872 - ERROR - orders - Error processing close order: name 'user_type' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 908, in close_order
+    is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+                             ^^^^^^^^^
+NameError: name 'user_type' is not defined
+2025-06-13 03:55:57,879 - ERROR - orders - Error in close_order endpoint: 500: Error processing close order: name 'user_type' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 908, in close_order
+    is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+                             ^^^^^^^^^
+NameError: name 'user_type' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1249, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: name 'user_type' is not defined
+2025-06-13 03:56:16,914 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY, Quantity: 0.1
+2025-06-13 03:56:16,928 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-13 03:56:16,929 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-13 03:56:16,929 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-13 03:56:17,640 - INFO - orders - [ORDER_MARGIN_CALC] Calculating margin for AUDCAD BUY order, quantity: 0.1
+2025-06-13 03:56:17,641 - INFO - orders - [ORDER_MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-06-13 03:56:17,657 - INFO - orders - [ORDER_MARGIN_CALC] No price in cache for AUDCAD, checking raw market data
+2025-06-13 03:56:17,658 - INFO - orders - [ORDER_MARGIN_CALC] Raw market data for AUDCAD: {'b': '0.8819100000', 'o': '0.8818600000'}
+2025-06-13 03:56:17,658 - INFO - orders - [ORDER_MARGIN_CALC] Using raw ask price for AUDCAD: 0 (raw: 0)
+2025-06-13 03:56:17,658 - INFO - orders - [ORDER_MARGIN_CALC] Using order_price 0.88 as fallback for AUDCAD BUY order
+2025-06-13 03:56:17,658 - INFO - orders - [ORDER_MARGIN_CALC] Contract value calculation for AUDCAD:
+2025-06-13 03:56:17,658 - INFO - orders - [ORDER_MARGIN_CALC] Contract value = quantity * contract_size = 0.1 * 100000.00000000 = 10000.000000000
+2025-06-13 03:56:17,659 - INFO - orders - [ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = (10000.000000000 * 0.88) / 100.00 = 88.000000000 (rounded to 88.00)
+2025-06-13 03:56:17,659 - INFO - orders - [ORDER_MARGIN_CALC] Commission settings for AUDCAD: type=0, value_type=0, rate=10.0000
+2025-06-13 03:56:17,660 - INFO - orders - [ORDER_MARGIN_CALC] Per lot commission: 0.1 * 10.0000 = 1.00000
+2025-06-13 03:56:17,660 - INFO - orders - [ORDER_MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-06-13 03:56:17,660 - INFO - orders - [ORDER_MARGIN_CALC] Converting margin from CAD to USD: 88.00 CAD
+2025-06-13 03:56:17,660 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 88.00 CAD to USD for margin for AUDCAD BUY order (user_id: 4, position: )
+2025-06-13 03:56:17,660 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-06-13 03:56:17,664 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-13 03:56:17,664 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-06-13 03:56:17,664 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-06-13 03:56:17,667 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3630300000'), 'o': Decimal('1.3630300000')}
+2025-06-13 03:56:17,667 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3630300000
+2025-06-13 03:56:17,667 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 88.00 CAD / 1.3630300000 = 64.56204192130767481273339545 USD
+2025-06-13 03:56:17,667 - INFO - orders - [ORDER_MARGIN_CALC] Margin after USD conversion: 88.00 CAD -> 64.56204192130767481273339545 USD
+2025-06-13 03:56:17,667 - INFO - orders - [ORDER_MARGIN_CALC] Final results for AUDCAD BUY: margin=64.56204192130767481273339545, price=0.88, contract_value=10000.000000000, commission=1.00
+2025-06-13 03:56:17,668 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDCAD: Calculated commission=1.00
+2025-06-13 03:56:17,679 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDCAD, Positions count: 3
+2025-06-13 03:56:17,680 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1 (ID: 48): Type=BUY, Qty=2.00000000, StoredMargin=1301.76269403
+2025-06-13 03:56:17,680 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1: MarginPerLot=650.881347015
+2025-06-13 03:56:17,680 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2 (ID: 49): Type=BUY, Qty=2.00000000, StoredMargin=1301.88472416
+2025-06-13 03:56:17,681 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2: MarginPerLot=650.94236208
+2025-06-13 03:56:17,681 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 3 (ID: 67): Type=BUY, Qty=0.10000000, StoredMargin=64.56204192
+2025-06-13 03:56:17,681 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 3: MarginPerLot=645.6204192
+2025-06-13 03:56:17,681 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: TotalBuyQty=4.10000000, TotalSellQty=0, NetQty=4.10000000
+2025-06-13 03:56:17,681 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: AllMarginsPerLot=[Decimal('650.881347015'), Decimal('650.94236208'), Decimal('645.6204192')], HighestMarginPerLot=650.94236208
+2025-06-13 03:56:17,681 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDCAD: CalculatedTotalMargin=2668.86, ContributingOrders=3 (based on individual stored margins)
+2025-06-13 03:56:17,682 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDCAD, Positions count: 4
+2025-06-13 03:56:17,682 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1 (ID: 48): Type=BUY, Qty=2.00000000, StoredMargin=1301.76269403
+2025-06-13 03:56:17,682 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 1: MarginPerLot=650.881347015
+2025-06-13 03:56:17,683 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2 (ID: 49): Type=BUY, Qty=2.00000000, StoredMargin=1301.88472416
+2025-06-13 03:56:17,683 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 2: MarginPerLot=650.94236208
+2025-06-13 03:56:17,683 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 3 (ID: 67): Type=BUY, Qty=0.10000000, StoredMargin=64.56204192
+2025-06-13 03:56:17,683 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 3: MarginPerLot=645.6204192
+2025-06-13 03:56:17,684 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 4 (ID: NEW_UNSAVED): Type=BUY, Qty=0.1, StoredMargin=64.56204192130767481273339545
+2025-06-13 03:56:17,684 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCAD, Pos 4: MarginPerLot=645.6204192130767481273339545
+2025-06-13 03:56:17,684 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: TotalBuyQty=4.20000000, TotalSellQty=0, NetQty=4.20000000
+2025-06-13 03:56:17,685 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCAD: AllMarginsPerLot=[Decimal('650.881347015'), Decimal('650.94236208'), Decimal('645.6204192'), Decimal('645.6204192130767481273339545')], HighestMarginPerLot=650.94236208
+2025-06-13 03:56:17,685 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDCAD: CalculatedTotalMargin=2733.96, ContributingOrders=4 (based on individual stored margins)
+2025-06-13 03:56:17,685 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDCAD: MarginBefore=2668.86, MarginAfter=2733.96, AdditionalMargin=65.10
+2025-06-13 03:56:17,702 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '1732810752', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.88'), 'order_quantity': Decimal('0.1'), 'contract_value': Decimal('10000.000000000'), 'margin': Decimal('64.56204192130767481273339545'), 'commission': Decimal('1.00'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-13 03:56:17,843 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 2668.86000000
+2025-06-13 03:56:17,889 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-13 03:56:18,087 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-13 03:56:18,347 - INFO - orders - [FIREBASE] Payload being sent to Firebase: {'order_id': '1732810752', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': Decimal('0.88000000'), 'order_quantity': Decimal('0.10000000'), 'contract_value': Decimal('10000.00000000'), 'margin': Decimal('64.56204192'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-13 03:56:18,667 - INFO - orders - [FIREBASE] Barclays order sent to Firebase: 1732810752 (order_status=PROCESSING, margin not updated in DB)
+2025-06-13 03:56:18,672 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-13 03:56:18,672 - INFO - orders - Using order model: UserOrder
+2025-06-13 03:56:18,682 - INFO - orders - Fetched 3 open orders for user 4
+2025-06-13 03:56:18,696 - INFO - orders - Fetched 7 pending orders for user 4
+2025-06-13 03:56:18,706 - INFO - orders - Updated static orders cache for user 4 with 3 open orders and 7 pending orders
+2025-06-13 03:56:29,351 - INFO - orders - Close order request received - Order ID: 1920987108, User ID: 4, User Type: live
+2025-06-13 03:56:29,352 - INFO - orders - Close request details - Price: 0.89, Type: BUY, Symbol: AUDCAD
+2025-06-13 03:56:29,352 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000210D8CE7250>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-13 03:56:29,352 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-13 03:56:29,352 - INFO - orders - Request to close order 1920987108 for user 4 (User) with price 0.89. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-13 03:56:29,382 - INFO - orders - User group: [<app.database.models.Group object at 0x00000210D8BF5480>, <app.database.models.Group object at 0x00000210D8BF4E20>, <app.database.models.Group object at 0x00000210D8BF48D0>, <app.database.models.Group object at 0x00000210D8BF5150>, <app.database.models.Group object at 0x00000210D8BF6030>, <app.database.models.Group object at 0x00000210D8BF5F20>, <app.database.models.Group object at 0x00000210D8BF6580>, <app.database.models.Group object at 0x00000210D8BF6140>, <app.database.models.Group object at 0x00000210D8BF68B0>, <app.database.models.Group object at 0x00000210D8BF69C0>, <app.database.models.Group object at 0x00000210D8BF6AD0>, <app.database.models.Group object at 0x00000210D8BF6690>, <app.database.models.Group object at 0x00000210D8BF5E10>, <app.database.models.Group object at 0x00000210D8BF6BE0>, <app.database.models.Group object at 0x00000210D8BF6CF0>, <app.database.models.Group object at 0x00000210D8BF6E00>, <app.database.models.Group object at 0x00000210D8BF6F10>, <app.database.models.Group object at 0x00000210D8BF7020>, <app.database.models.Group object at 0x00000210D8BF7130>, <app.database.models.Group object at 0x00000210D8BF7240>, <app.database.models.Group object at 0x00000210D8BF7350>, <app.database.models.Group object at 0x00000210D8BF7460>, <app.database.models.Group object at 0x00000210D8BF7570>, <app.database.models.Group object at 0x00000210D8BF7680>, <app.database.models.Group object at 0x00000210D8BF7790>, <app.database.models.Group object at 0x00000210D8BF78A0>, <app.database.models.Group object at 0x00000210D8BF79B0>, <app.database.models.Group object at 0x00000210D8BF7AC0>, <app.database.models.Group object at 0x00000210D8BF7BD0>, <app.database.models.Group object at 0x00000210D8BF7CE0>, <app.database.models.Group object at 0x00000210D8BF7DF0>, <app.database.models.Group object at 0x00000210D8BF7F00>, <app.database.models.Group object at 0x00000210D8BF57B0>, <app.database.models.Group object at 0x00000210D8BF58C0>, <app.database.models.Group object at 0x00000210D8BF59D0>, <app.database.models.Group object at 0x00000210D8F38050>, <app.database.models.Group object at 0x00000210D8F38160>, <app.database.models.Group object at 0x00000210D8F38270>, <app.database.models.Group object at 0x00000210D8F38380>, <app.database.models.Group object at 0x00000210D8F38490>, <app.database.models.Group object at 0x00000210D8F385A0>, <app.database.models.Group object at 0x00000210D8F386B0>, <app.database.models.Group object at 0x00000210D8F387C0>, <app.database.models.Group object at 0x00000210D8F388D0>, <app.database.models.Group object at 0x00000210D8F389E0>, <app.database.models.Group object at 0x00000210D8F38AF0>, <app.database.models.Group object at 0x00000210D8F38C00>, <app.database.models.Group object at 0x00000210D8F38D10>, <app.database.models.Group object at 0x00000210D8F38E20>, <app.database.models.Group object at 0x00000210D8F38F30>, <app.database.models.Group object at 0x00000210D8F39040>, <app.database.models.Group object at 0x00000210D8F39150>, <app.database.models.Group object at 0x00000210D8F39260>, <app.database.models.Group object at 0x00000210D8F39370>, <app.database.models.Group object at 0x00000210D8F39480>, <app.database.models.Group object at 0x00000210D8F39590>, <app.database.models.Group object at 0x00000210D8F396A0>, <app.database.models.Group object at 0x00000210D8F397B0>, <app.database.models.Group object at 0x00000210D8F398C0>, <app.database.models.Group object at 0x00000210D8F399D0>, <app.database.models.Group object at 0x00000210D8F39AE0>, <app.database.models.Group object at 0x00000210D8F39BF0>, <app.database.models.Group object at 0x00000210D8F39D00>, <app.database.models.Group object at 0x00000210D8F39E10>, <app.database.models.Group object at 0x00000210D8F39F20>, <app.database.models.Group object at 0x00000210D8F3A030>, <app.database.models.Group object at 0x00000210D8F3A140>, <app.database.models.Group object at 0x00000210D8F3A250>, <app.database.models.Group object at 0x00000210D8F3A360>, <app.database.models.Group object at 0x00000210D8F3A470>, <app.database.models.Group object at 0x00000210D8F3A580>, <app.database.models.Group object at 0x00000210D8F3A690>, <app.database.models.Group object at 0x00000210D8F3A7A0>, <app.database.models.Group object at 0x00000210D8F3A8B0>, <app.database.models.Group object at 0x00000210D8F3A9C0>, <app.database.models.Group object at 0x00000210D8F3AAD0>, <app.database.models.Group object at 0x00000210D8F3ABE0>, <app.database.models.Group object at 0x00000210D8F3ACF0>, <app.database.models.Group object at 0x00000210D8F3AE00>]
+2025-06-13 03:56:29,382 - ERROR - orders - Error processing close order: name 'user_type' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 908, in close_order
+    is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+                             ^^^^^^^^^
+NameError: name 'user_type' is not defined
+2025-06-13 03:56:29,390 - ERROR - orders - Error in close_order endpoint: 500: Error processing close order: name 'user_type' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 908, in close_order
+    is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+                             ^^^^^^^^^
+NameError: name 'user_type' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1249, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: name 'user_type' is not defined
+2025-06-13 03:59:32,505 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-13 03:59:35,342 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-13 05:44:59,570 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-13 05:47:45,805 - INFO - orders - Add stoploss request received - Order ID: 4285277098, User ID: 1
+2025-06-13 05:47:45,832 - INFO - orders - Generated stoploss_id: 7632451557 for order 4285277098
+2025-06-13 05:47:45,843 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-13 05:47:45,843 - INFO - orders - Non-Barclays user. Adding stoploss to order 4285277098 immediately
+2025-06-13 05:47:45,939 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-13 05:47:45,939 - INFO - orders - Using order model: DemoUserOrder
+2025-06-13 05:47:45,965 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-13 05:47:45,977 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-13 05:47:45,984 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-13 05:49:05,688 - INFO - orders - Cancel stoploss request received - Order ID: 4285277098, User ID: 1
+2025-06-13 05:49:05,761 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-13 05:49:05,806 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-13 05:49:05,807 - INFO - orders - Using order model: DemoUserOrder
+2025-06-13 05:49:05,822 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-13 05:49:05,834 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-13 05:49:05,844 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-13 05:50:31,781 - INFO - orders - Add stoploss request received - Order ID: 4285277098, User ID: 1
+2025-06-13 05:50:31,806 - INFO - orders - Generated stoploss_id: 4617390000 for order 4285277098
+2025-06-13 05:50:31,831 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-13 05:50:31,831 - INFO - orders - Non-Barclays user. Adding stoploss to order 4285277098 immediately
+2025-06-13 05:50:31,871 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-13 05:50:31,872 - INFO - orders - Using order model: DemoUserOrder
+2025-06-13 05:50:31,908 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-13 05:50:31,945 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-13 05:50:31,950 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
