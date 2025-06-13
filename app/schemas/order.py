@@ -165,3 +165,67 @@ class OrderUpdateRequest(BaseModel):
     stoploss_id: Optional[str] = None
     takeprofit_id: Optional[str] = None
     close_id: Optional[str] = None # Added for OrderActionHistory tracking
+
+# --- Add Stop Loss Request Schema ---
+class AddStopLossRequest(BaseModel):
+    order_id: str
+    stop_loss: Decimal
+    current_price: Decimal  # Current market price for validation
+    user_id: int  # User ID (will be validated against authenticated user)
+    user_type: str  # 'live' or 'demo'
+    
+    # Additional fields
+    symbol: str  # Also known as order_company_name
+    order_status: str
+    order_type: str
+    order_price: Decimal
+    order_quantity: Decimal
+
+    @validator('stop_loss')
+    def validate_stop_loss(cls, v):
+        if v <= 0:
+            raise ValueError("Stop loss must be greater than zero")
+        return v
+
+    @validator('user_type')
+    def validate_user_type(cls, v):
+        if v not in ['live', 'demo']:
+            raise ValueError("User type must be either 'live' or 'demo'")
+        return v
+
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v),
+        }
+
+# --- Add Take Profit Request Schema ---
+class AddTakeProfitRequest(BaseModel):
+    order_id: str
+    take_profit: Decimal
+    current_price: Decimal  # Current market price for validation
+    user_id: int  # User ID (will be validated against authenticated user)
+    user_type: str  # 'live' or 'demo'
+    
+    # Additional fields
+    symbol: str  # Also known as order_company_name
+    order_status: str
+    order_type: str
+    order_price: Decimal
+    order_quantity: Decimal
+
+    @validator('take_profit')
+    def validate_take_profit(cls, v):
+        if v <= 0:
+            raise ValueError("Take profit must be greater than zero")
+        return v
+
+    @validator('user_type')
+    def validate_user_type(cls, v):
+        if v not in ['live', 'demo']:
+            raise ValueError("User type must be either 'live' or 'demo'")
+        return v
+
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: str(v),
+        }

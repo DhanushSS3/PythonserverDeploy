@@ -89,3 +89,17 @@ async def create_all_tables():
 # if __name__ == "__main__":
 #     # Ensure you have an event loop running for async functions
 #     asyncio.run(main())
+
+# Add the async_session_factory function after AsyncSessionLocal definition
+async def async_session_factory() -> AsyncSession:
+    """
+    Creates and returns a new async database session.
+    This is useful for background tasks that need to create their own sessions.
+    """
+    session = AsyncSessionLocal()
+    try:
+        return session
+    except Exception as e:
+        await session.close()
+        logger.error(f"Error creating async session: {e}", exc_info=True)
+        raise

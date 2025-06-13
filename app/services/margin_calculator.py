@@ -1,5 +1,12 @@
 # app/services/margin_calculator.py
 
+# IMPORTANT: Correct formulas for margin calculation:
+# 1. Contract value = contract_size * order_quantity (without price)
+# 2. Margin = (contract_value * order_price) / user_leverage
+# 3. Convert margin to USD if profit_currency != "USD"
+#
+# The contract_size and profit_currency are obtained from ExternalSymbolInfo table
+
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 import logging
 from typing import Optional, Tuple, Dict, Any, List
@@ -95,7 +102,9 @@ async def calculate_single_order_margin(
     user_leverage: Decimal,
     group_settings: Dict[str, Any],
     external_symbol_info: Dict[str, Any],
-    raw_market_data: Dict[str, Any]
+    raw_market_data: Dict[str, Any],
+    db: AsyncSession = None,
+    user_id: int = None
 ) -> Tuple[Decimal, Decimal, Decimal, Decimal]:
     """
     Calculate margin for a single order based on order details and market data.
@@ -109,15 +118,19 @@ async def calculate_single_order_margin(
         group_settings: Group settings for the symbol
         external_symbol_info: External symbol information
         raw_market_data: Raw market data
+        db: Database session (optional, needed for currency conversion)
+        user_id: User ID (optional, needed for currency conversion)
         
     Returns:
         Tuple of (margin, price, contract_value, commission)
     """
     try:
-        orders_logger.info(f"Calculating margin for {symbol} {order_type} order, quantity: {quantity}")
+        orders_logger.info(f"[MARGIN_CALC] Starting margin calculation for {symbol} {order_type} order, quantity: {quantity}")
         
         # Get contract size from external symbol info
-        contract_size = Decimal(str(external_symbol_info.get('contract_size', 100000)))
+        contract_size_raw = external_symbol_info.get('contract_size', 100000)
+        contract_size = Decimal(str(contract_size_raw))
+        orders_logger.info(f"[MARGIN_CALC] Contract size for {symbol}: {contract_size} (raw: {contract_size_raw}, type: {type(contract_size_raw)})")
         
         # Get appropriate price based on order type
         price = None
@@ -126,31 +139,47 @@ async def calculate_single_order_margin(
             price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol)
             if price_data:
                 price = Decimal(str(price_data))
+                orders_logger.info(f"[MARGIN_CALC] Got BUY price for {symbol} from cache: {price}")
         elif order_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
             # For sell orders, use the bid price
             price_data = await get_live_adjusted_sell_price_for_pair(redis_client, symbol)
             if price_data:
                 price = Decimal(str(price_data))
+                orders_logger.info(f"[MARGIN_CALC] Got SELL price for {symbol} from cache: {price}")
         
         # If we couldn't get a price from the cache, try to get it from raw market data
         if price is None:
+            orders_logger.info(f"[MARGIN_CALC] No price in cache for {symbol}, checking raw market data")
             if symbol in raw_market_data:
                 symbol_data = raw_market_data[symbol]
+                orders_logger.info(f"[MARGIN_CALC] Raw market data for {symbol}: {symbol_data}")
                 if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-                    price = Decimal(str(symbol_data.get('ask', '0')))
+                    price_raw = symbol_data.get('ask', '0')
+                    price = Decimal(str(price_raw))
+                    orders_logger.info(f"[MARGIN_CALC] Using raw ask price for {symbol}: {price} (raw: {price_raw})")
                 else:
-                    price = Decimal(str(symbol_data.get('bid', '0')))
+                    price_raw = symbol_data.get('bid', '0')
+                    price = Decimal(str(price_raw))
+                    orders_logger.info(f"[MARGIN_CALC] Using raw bid price for {symbol}: {price} (raw: {price_raw})")
             
             # If we still don't have a price, log an error and return zeros
             if price is None or price == Decimal('0'):
-                orders_logger.error(f"Could not get price for {symbol} {order_type} order")
+                orders_logger.error(f"[MARGIN_CALC] Could not get price for {symbol} {order_type} order")
                 return None, None, None, None
         
-        # Calculate contract value
-        contract_value = quantity * contract_size * price
+        # Calculate contract value using the CORRECT formula
+        # Contract value = contract_size * quantity (without price)
+        contract_value = contract_size * quantity
         
-        # Calculate margin based on contract value and leverage
-        margin = (contract_value / user_leverage).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        orders_logger.info(f"[MARGIN_CALC] Contract value calculation for {symbol}:")
+        orders_logger.info(f"[MARGIN_CALC] Contract value = contract_size * quantity = {contract_size} * {quantity} = {contract_value}")
+        
+        # Calculate margin using the CORRECT formula
+        # Margin = (contract_value * price) / user_leverage
+        margin_raw = (contract_value * price) / user_leverage
+        margin = margin_raw.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        orders_logger.info(f"[MARGIN_CALC] Margin calculation: (contract_value * price) / user_leverage = ({contract_value} * {price}) / {user_leverage} = {margin_raw} (rounded to {margin})")
         
         # Calculate commission
         commission = Decimal('0.0')
@@ -158,19 +187,48 @@ async def calculate_single_order_margin(
         commission_value_type = int(group_settings.get('commision_value_type', 0))
         commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
         
+        orders_logger.info(f"[MARGIN_CALC] Commission settings for {symbol}: type={commission_type}, value_type={commission_value_type}, rate={commission_rate}")
+        
         if commission_type in [0, 1]:  # "Every Trade" or "In"
             if commission_value_type == 0:  # Per lot
                 commission = quantity * commission_rate
+                orders_logger.info(f"[MARGIN_CALC] Per lot commission: {quantity} * {commission_rate} = {commission}")
             elif commission_value_type == 1:  # Percent of price
-                commission = (commission_rate / Decimal('100')) * contract_value
+                commission = (commission_rate / Decimal('100')) * contract_value * price
+                orders_logger.info(f"[MARGIN_CALC] Percent commission: ({commission_rate}/100) * {contract_value} * {price} = {commission}")
         
         commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
-        orders_logger.info(f"Margin calculation results: margin={margin}, price={price}, contract_value={contract_value}, commission={commission}")
+        # Convert margin to USD if profit_currency is not USD
+        profit_currency = external_symbol_info.get('profit', 'USD')  # Get profit currency from external_symbol_info
+        orders_logger.info(f"[MARGIN_CALC] Profit currency for {symbol}: {profit_currency}")
+        
+        if profit_currency != 'USD' and db is not None and user_id is not None:
+            # Use position_id as empty string since we don't have one yet
+            position_id = ""
+            value_description = f"margin for {symbol} {order_type} order"
+            
+            orders_logger.info(f"[MARGIN_CALC] Converting margin from {profit_currency} to USD: {margin} {profit_currency}")
+            
+            # Convert margin to USD
+            margin_usd = await _convert_to_usd(
+                margin, 
+                profit_currency, 
+                user_id, 
+                position_id, 
+                value_description, 
+                db, 
+                redis_client
+            )
+            
+            orders_logger.info(f"[MARGIN_CALC] Margin after USD conversion: {margin} {profit_currency} -> {margin_usd} USD")
+            margin = margin_usd
+
+        orders_logger.info(f"[MARGIN_CALC] Final results for {symbol} {order_type}: margin={margin}, price={price}, contract_value={contract_value}, commission={commission}")
         return margin, price, contract_value, commission
     
     except Exception as e:
-        orders_logger.error(f"Error calculating margin: {e}", exc_info=True)
+        orders_logger.error(f"[MARGIN_CALC] Error calculating margin for {symbol}: {e}", exc_info=True)
         return None, None, None, None
 
 async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Dict[str, Any]]:
@@ -186,43 +244,53 @@ async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Di
         symbol_info = result.scalars().first()
         
         if symbol_info:
+            orders_logger.info(f"[SYMBOL_INFO] Retrieved external symbol info for {symbol}: contract_size={symbol_info.contract_size}, profit_currency={symbol_info.profit}, digit={symbol_info.digit}")
             return {
                 'contract_size': symbol_info.contract_size,
                 'profit_currency': symbol_info.profit,
                 'digit': symbol_info.digit
             }
+        orders_logger.error(f"[SYMBOL_INFO] No external symbol info found for {symbol}")
         return None
     except Exception as e:
-        orders_logger.error(f"Error getting external symbol info for {symbol}: {e}", exc_info=True)
+        orders_logger.error(f"[SYMBOL_INFO] Error getting external symbol info for {symbol}: {e}", exc_info=True)
         return None
 
 from app.core.cache import get_last_known_price
 
-def calculate_single_order_margin(
+def calculate_pending_order_margin(
     order_type: str,
     order_quantity: Decimal,
     order_price: Decimal,
     symbol_settings: Dict[str, Any]
 ) -> Decimal:
     """
-    Calculate margin for a single order based on order details and symbol settings.
+    Calculate margin for a pending order based on order details and symbol settings.
     This simplified version is used for pending order processing.
     Returns the calculated margin.
     """
     try:
         # Get required settings from symbol_settings
-        contract_size = Decimal(str(symbol_settings.get('contract_size', 100000)))
-        leverage = Decimal(str(symbol_settings.get('leverage', 1)))
+        contract_size_raw = symbol_settings.get('contract_size', 100000)
+        contract_size = Decimal(str(contract_size_raw))
+        leverage_raw = symbol_settings.get('leverage', 1)
+        leverage = Decimal(str(leverage_raw))
         
-        # Calculate contract value
-        contract_value = order_quantity * contract_size * order_price
+        orders_logger.info(f"[PENDING_MARGIN_CALC] Calculating margin for pending {order_type} order: quantity={order_quantity}, price={order_price}")
+        orders_logger.info(f"[PENDING_MARGIN_CALC] Settings: contract_size={contract_size} (raw: {contract_size_raw}), leverage={leverage} (raw: {leverage_raw})")
         
-        # Calculate margin based on contract value and leverage
-        margin = (contract_value / leverage).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+        # Calculate contract value using the CORRECT formula
+        contract_value = contract_size * order_quantity
+        orders_logger.info(f"[PENDING_MARGIN_CALC] Contract value = contract_size * order_quantity = {contract_size} * {order_quantity} = {contract_value}")
+        
+        # Calculate margin using the CORRECT formula
+        margin_raw = (contract_value * order_price) / leverage
+        margin = margin_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+        orders_logger.info(f"[PENDING_MARGIN_CALC] Margin = (contract_value * order_price) / leverage = ({contract_value} * {order_price}) / {leverage} = {margin_raw} (rounded to {margin})")
         
         return margin
     except Exception as e:
-        orders_logger.error(f"Error calculating margin for order: {e}", exc_info=True)
+        orders_logger.error(f"[PENDING_MARGIN_CALC] Error calculating margin for pending order: {e}", exc_info=True)
         return Decimal('0')
 
 async def calculate_total_symbol_margin_contribution(
@@ -243,65 +311,84 @@ async def calculate_total_symbol_margin_contribution(
         total_sell_quantity = Decimal('0.0')
         all_margins_per_lot: List[Decimal] = []
 
+        orders_logger.info(f"[MARGIN_CONTRIB] Calculating total margin contribution for user {user_id}, symbol {symbol}, positions: {len(open_positions_for_symbol)}")
+
         # Get user data for leverage
         user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
         if not user_data:
-            logger.error(f"User data not found for user {user_id}")
+            orders_logger.error(f"[MARGIN_CONTRIB] User data not found for user {user_id}")
             return {"total_margin": Decimal('0.0')}
 
-        user_leverage = Decimal(str(user_data.get('leverage', '1.0')))
+        user_leverage_raw = user_data.get('leverage', '1.0')
+        user_leverage = Decimal(str(user_leverage_raw))
+        orders_logger.info(f"[MARGIN_CONTRIB] User leverage: {user_leverage} (raw: {user_leverage_raw})")
+        
         if user_leverage <= 0:
-            logger.error(f"Invalid leverage for user {user_id}: {user_leverage}")
+            orders_logger.error(f"[MARGIN_CONTRIB] Invalid leverage for user {user_id}: {user_leverage}")
             return {"total_margin": Decimal('0.0')}
 
         # Get group settings for margin calculation
         group_name = user_data.get('group_name')
         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
         if not group_settings:
-            logger.error(f"Group settings not found for symbol {symbol}")
+            orders_logger.error(f"[MARGIN_CONTRIB] Group settings not found for symbol {symbol}")
             return {"total_margin": Decimal('0.0')}
 
         # Get external symbol info
         external_symbol_info = await get_external_symbol_info(db, symbol)
         if not external_symbol_info:
-            logger.error(f"External symbol info not found for {symbol}")
+            orders_logger.error(f"[MARGIN_CONTRIB] External symbol info not found for {symbol}")
             return {"total_margin": Decimal('0.0')}
 
         # Get raw market data for price calculations
         raw_market_data = await get_latest_market_data()
         if not raw_market_data:
-            logger.error("Failed to get market data")
+            orders_logger.error("[MARGIN_CONTRIB] Failed to get market data")
             return {"total_margin": Decimal('0.0')}
 
         # Process each position
-        for position in open_positions_for_symbol:
-            position_quantity = Decimal(str(position.order_quantity))
-            position_type = position.order_type.upper()
-            position_margin = Decimal(str(position.margin))
+        for i, position in enumerate(open_positions_for_symbol):
+            try:
+                position_quantity_raw = position.order_quantity
+                position_quantity = Decimal(str(position_quantity_raw))
+                position_type = position.order_type.upper()
+                position_margin_raw = position.margin
+                position_margin = Decimal(str(position_margin_raw))
 
-            if position_quantity > 0:
-                # Calculate margin per lot for this position
-                margin_per_lot = position_margin / position_quantity
-                all_margins_per_lot.append(margin_per_lot)
+                orders_logger.info(f"[MARGIN_CONTRIB] Position {i+1}: type={position_type}, quantity={position_quantity} (raw: {position_quantity_raw}), margin={position_margin} (raw: {position_margin_raw})")
 
-                # Add to total quantities
-                if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-                    total_buy_quantity += position_quantity
-                elif position_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
-                    total_sell_quantity += position_quantity
+                if position_quantity > 0:
+                    # Calculate margin per lot for this position
+                    margin_per_lot_raw = position_margin / position_quantity
+                    margin_per_lot = margin_per_lot_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+                    all_margins_per_lot.append(margin_per_lot)
+                    orders_logger.info(f"[MARGIN_CONTRIB] Position {i+1} margin per lot: {position_margin} / {position_quantity} = {margin_per_lot_raw} (rounded to {margin_per_lot})")
+
+                    # Add to total quantities
+                    if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                        total_buy_quantity += position_quantity
+                    elif position_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
+                        total_sell_quantity += position_quantity
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CONTRIB] Error processing position {i+1}: {e}", exc_info=True)
+                continue
 
         # Calculate net quantity (for hedged positions)
         net_quantity = max(total_buy_quantity, total_sell_quantity)
+        orders_logger.info(f"[MARGIN_CONTRIB] Total buy quantity: {total_buy_quantity}, Total sell quantity: {total_sell_quantity}, Net quantity: {net_quantity}")
         
         # Get the highest margin per lot (for hedged positions)
         highest_margin_per_lot = max(all_margins_per_lot) if all_margins_per_lot else Decimal('0.0')
+        orders_logger.info(f"[MARGIN_CONTRIB] All margins per lot: {all_margins_per_lot}, Highest margin per lot: {highest_margin_per_lot}")
 
         # Calculate total margin contribution
-        total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+        total_margin_raw = highest_margin_per_lot * net_quantity
+        total_margin = total_margin_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+        orders_logger.info(f"[MARGIN_CONTRIB] Total margin calculation: {highest_margin_per_lot} * {net_quantity} = {total_margin_raw} (rounded to {total_margin})")
 
         # Return the result
         return {"total_margin": total_margin, "net_quantity": net_quantity}
 
     except Exception as e:
-        logger.error(f"Error calculating total symbol margin contribution: {e}", exc_info=True)
+        orders_logger.error(f"[MARGIN_CONTRIB] Error calculating total symbol margin contribution: {e}", exc_info=True)
         return {"total_margin": Decimal('0.0')}

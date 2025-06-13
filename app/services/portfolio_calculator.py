@@ -26,56 +26,71 @@ async def _convert_to_usd(
     Converts an amount from a given currency to USD using raw market prices.
     """
     try:
+        orders_logger.info(f"[CURRENCY_CONVERT] Starting conversion of {amount} {from_currency} to USD for {value_description} (user_id: {user_id}, position: {position_id})")
+        
         if from_currency == "USD":
+            orders_logger.info(f"[CURRENCY_CONVERT] Currency is already USD, no conversion needed")
             return amount
 
         # Try direct conversion first (e.g., EURUSD)
         direct_conversion_symbol = f"{from_currency}USD"
+        orders_logger.info(f"[CURRENCY_CONVERT] Trying direct conversion with symbol: {direct_conversion_symbol}")
+        
         raw_direct_prices = await get_last_known_price(redis_client, direct_conversion_symbol)
+        orders_logger.info(f"[CURRENCY_CONVERT] Direct conversion prices from cache: {raw_direct_prices}")
+        
         if raw_direct_prices and 'b' in raw_direct_prices:
             rate_str = raw_direct_prices['b']
-            rate = Decimal(str(rate_str))
-            if rate <= 0:
-                orders_logger.error(f"Invalid direct conversion rate for {direct_conversion_symbol}: {rate}")
-                return amount
-            converted_amount_usd = amount * rate
-            orders_logger.debug(f"Direct conversion for {value_description}: {amount} {from_currency} * {rate} = {converted_amount_usd} USD")
-            return converted_amount_usd
+            orders_logger.info(f"[CURRENCY_CONVERT] Found direct conversion rate (bid): {rate_str}")
+            
+            try:
+                rate = Decimal(str(rate_str))
+                if rate <= 0:
+                    orders_logger.error(f"[CURRENCY_CONVERT] Invalid direct conversion rate for {direct_conversion_symbol}: {rate}")
+                    return amount
+                
+                converted_amount_usd = amount * rate
+                orders_logger.info(f"[CURRENCY_CONVERT] Direct conversion successful: {amount} {from_currency} * {rate} = {converted_amount_usd} USD")
+                return converted_amount_usd
+            except (InvalidOperation, TypeError) as e:
+                orders_logger.error(f"[CURRENCY_CONVERT] Error converting direct rate to Decimal: {e}, rate_str: {rate_str}")
+                # Continue to try inverse conversion
+        else:
+            orders_logger.info(f"[CURRENCY_CONVERT] No direct conversion rate found for {direct_conversion_symbol}, trying inverse")
 
         # Try inverse conversion (e.g., USDCAD)
         inverse_conversion_symbol = f"USD{from_currency}"
+        orders_logger.info(f"[CURRENCY_CONVERT] Trying inverse conversion with symbol: {inverse_conversion_symbol}")
+        
         raw_inverse_prices = await get_last_known_price(redis_client, inverse_conversion_symbol)
+        orders_logger.info(f"[CURRENCY_CONVERT] Inverse conversion prices from cache: {raw_inverse_prices}")
+        
         if raw_inverse_prices and 'b' in raw_inverse_prices:
             rate_str = raw_inverse_prices['b']
-            rate = Decimal(str(rate_str))
-            if rate <= 0:
-                orders_logger.error(f"Invalid inverse conversion rate for {inverse_conversion_symbol}: {rate}")
-                return amount
-            converted_amount_usd = amount / rate
-            orders_logger.debug(f"Inverse conversion for {value_description}: {amount} {from_currency} / {rate} = {converted_amount_usd} USD")
-            return converted_amount_usd
+            orders_logger.info(f"[CURRENCY_CONVERT] Found inverse conversion rate (bid): {rate_str}")
+            
+            try:
+                rate = Decimal(str(rate_str))
+                if rate <= 0:
+                    orders_logger.error(f"[CURRENCY_CONVERT] Invalid inverse conversion rate for {inverse_conversion_symbol}: {rate}")
+                    return amount
+                
+                converted_amount_usd = amount / rate
+                orders_logger.info(f"[CURRENCY_CONVERT] Inverse conversion successful: {amount} {from_currency} / {rate} = {converted_amount_usd} USD")
+                return converted_amount_usd
+            except (InvalidOperation, TypeError) as e:
+                orders_logger.error(f"[CURRENCY_CONVERT] Error converting inverse rate to Decimal: {e}, rate_str: {rate_str}")
+                # Fall through to error case
+        else:
+            orders_logger.info(f"[CURRENCY_CONVERT] No inverse conversion rate found for {inverse_conversion_symbol}")
 
-        orders_logger.error(f"No conversion rate found for {from_currency} to USD for {value_description}")
-        return amount
-
-        # Try indirect conversion through USD (e.g., EUR -> USD -> JPY)
-        indirect_conversion_symbol = f"USD{from_currency}"
-        raw_indirect_prices = raw_market_data.get(indirect_conversion_symbol, {})
-        if raw_indirect_prices and 'a' in raw_indirect_prices:
-            rate_str = raw_indirect_prices['a']
-            rate = Decimal(str(rate_str))
-            if rate <= 0:
-                orders_logger.error(f"Invalid indirect conversion rate for {indirect_conversion_symbol}: {rate}")
-                return amount
-            converted_amount_usd = amount / rate
-            orders_logger.debug(f"Indirect conversion for {value_description}: {amount} {from_currency} / {rate} = {converted_amount_usd} USD")
-            return converted_amount_usd
-
-        orders_logger.error(f"No conversion rate found for {from_currency} to USD for {value_description}")
+        orders_logger.error(f"[CURRENCY_CONVERT] No conversion rate found for {from_currency} to USD for {value_description}")
+        orders_logger.error(f"[CURRENCY_CONVERT] Returning original amount without conversion: {amount} {from_currency}")
         return amount
 
     except Exception as e:
-        orders_logger.error(f"Error converting {value_description} from {from_currency} to USD: {e}", exc_info=True)
+        orders_logger.error(f"[CURRENCY_CONVERT] Error converting {value_description} from {from_currency} to USD: {e}", exc_info=True)
+        orders_logger.error(f"[CURRENCY_CONVERT] Returning original amount due to error: {amount} {from_currency}")
         return amount
 
 async def _calculate_adjusted_prices_from_raw(

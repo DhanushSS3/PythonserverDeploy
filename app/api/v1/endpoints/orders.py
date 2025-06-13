@@ -16,7 +16,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
-from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest
+from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
 from app.core.cache import publish_account_structure_changed_event
@@ -1759,5 +1759,562 @@ async def cancel_pending_order(
     except Exception as e:
         orders_logger.error(f"Error cancelling pending order: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to cancel order: {str(e)}")
+
+@router.post("/add-stoploss", response_model=dict)
+async def add_stoploss(
+    request: AddStopLossRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Add or update stop loss for an existing order.
+    For Barclays users: Store stoploss_id and send to Firebase without changing order
+    For non-Barclays users: Update the order directly
+    """
+    try:
+        orders_logger.info(f"Add stoploss request received - Order ID: {request.order_id}, User ID: {current_user.id}")
+        
+        # Use the authenticated user's ID instead of the one from the request
+        user_id_for_operation = current_user.id
+        
+        # Check if user is admin and trying to modify another user's order
+        if request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            # Admin can modify other users' orders
+            user_id_for_operation = request.user_id
+            orders_logger.info(f"Admin user {current_user.id} adding stoploss for user {user_id_for_operation}")
+        elif request.user_id != user_id_for_operation:
+            # Non-admin users can only modify their own orders
+            orders_logger.warning(f"User {current_user.id} attempted to add stoploss for user {request.user_id}")
+            raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
+        
+        # Get the order model based on user type
+        order_model = get_order_model(request.user_type)
+        
+        # Find the order
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db, 
+            request.order_id, 
+            user_id_for_operation,
+            order_model
+        )
+        
+        if not db_order:
+            orders_logger.warning(f"Order {request.order_id} not found for user {user_id_for_operation}")
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Check if order is in OPEN status
+        if db_order.order_status != "OPEN":
+            orders_logger.warning(f"Cannot add stoploss to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have stoploss.")
+            raise HTTPException(status_code=400, detail="Only OPEN orders can have stoploss")
+        
+        # Validate stop loss based on order type
+        current_price = request.current_price
+        if request.order_type == "BUY" and request.stop_loss >= current_price:
+            raise HTTPException(status_code=400, detail="For BUY orders, stop loss must be below current price")
+        elif request.order_type == "SELL" and request.stop_loss <= current_price:
+            raise HTTPException(status_code=400, detail="For SELL orders, stop loss must be above current price")
+        
+        # Generate a stoploss_id
+        stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
+        orders_logger.info(f"Generated stoploss_id: {stoploss_id} for order {request.order_id}")
+        
+        # Check if user is a Barclays live user
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
+        group_name = user_data.get('group_name') if user_data else None
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        
+        is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
+        
+        if is_barclays_live_user:
+            # For Barclays users, just store stoploss_id and send to Firebase
+            orders_logger.info(f"Barclays user detected. Sending stoploss request to Firebase for order {request.order_id}")
+            
+            # Update the order with stoploss_id without changing stop_loss value
+            update_fields = {
+                "stoploss_id": stoploss_id
+            }
+            
+            # Update order with tracking
+            await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=request.user_type,
+                action_type="STOPLOSS_REQUESTED"
+            )
+            
+            # Get contract value from the order or calculate it if needed
+            contract_value = str(db_order.contract_value) if db_order.contract_value else None
+            
+            # Send to Firebase with all required fields
+            firebase_stoploss_data = {
+                "order_id": request.order_id,
+                "stoploss_id": stoploss_id,
+                "user_id": user_id_for_operation,
+                "symbol": request.symbol,
+                "order_type": request.order_type,
+                "stop_loss": str(request.stop_loss),
+                "action": "add_stoploss",
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "contract_value": contract_value,
+                "order_quantity": str(request.order_quantity),
+                "order_price": str(request.order_price),
+                "order_status": request.order_status
+            }
+            
+            await send_order_to_firebase(firebase_stoploss_data, "live")
+            orders_logger.info(f"Stoploss request sent to Firebase for order {request.order_id}")
+            
+            return {
+                "order_id": db_order.order_id,
+                "stoploss_id": stoploss_id,
+                "status": "PENDING",
+                "message": "Stoploss request sent to service provider"
+            }
+        else:
+            # For non-Barclays users, update the order immediately
+            orders_logger.info(f"Non-Barclays user. Adding stoploss to order {request.order_id} immediately")
+            
+            # Update the order with stop_loss and stoploss_id
+            update_fields = {
+                "stop_loss": request.stop_loss,
+                "stoploss_id": stoploss_id
+            }
+            
+            # Update order with tracking
+            updated_order = await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=request.user_type,
+                action_type="STOPLOSS_ADDED"
+            )
+            
+            # Update static orders cache
+            await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
+            
+            # Publish updates to notify WebSocket clients
+            await publish_order_update(redis_client, user_id_for_operation)
+            await publish_user_data_update(redis_client, user_id_for_operation)
+            
+            return {
+                "order_id": updated_order.order_id,
+                "stoploss_id": updated_order.stoploss_id,
+                "stop_loss": str(updated_order.stop_loss),
+                "message": "Stoploss added successfully"
+            }
+    
+    except Exception as e:
+        orders_logger.error(f"Error adding stoploss: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to add stoploss: {str(e)}")
+
+@router.post("/add-takeprofit", response_model=dict)
+async def add_takeprofit(
+    request: AddTakeProfitRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Add or update take profit for an existing order.
+    For Barclays users: Store takeprofit_id and send to Firebase without changing order
+    For non-Barclays users: Update the order directly
+    """
+    try:
+        orders_logger.info(f"Add takeprofit request received - Order ID: {request.order_id}, User ID: {current_user.id}")
+        
+        # Use the authenticated user's ID instead of the one from the request
+        user_id_for_operation = current_user.id
+        
+        # Check if user is admin and trying to modify another user's order
+        if request.user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            # Admin can modify other users' orders
+            user_id_for_operation = request.user_id
+            orders_logger.info(f"Admin user {current_user.id} adding takeprofit for user {user_id_for_operation}")
+        elif request.user_id != user_id_for_operation:
+            # Non-admin users can only modify their own orders
+            orders_logger.warning(f"User {current_user.id} attempted to add takeprofit for user {request.user_id}")
+            raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
+        
+        # Get the order model based on user type
+        order_model = get_order_model(request.user_type)
+        
+        # Find the order
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db, 
+            request.order_id, 
+            user_id_for_operation,
+            order_model
+        )
+        
+        if not db_order:
+            orders_logger.warning(f"Order {request.order_id} not found for user {user_id_for_operation}")
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Check if order is in OPEN status
+        if db_order.order_status != "OPEN":
+            orders_logger.warning(f"Cannot add takeprofit to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have takeprofit.")
+            raise HTTPException(status_code=400, detail="Only OPEN orders can have takeprofit")
+        
+        # Validate take profit based on order type
+        current_price = request.current_price
+        if request.order_type == "BUY" and request.take_profit <= current_price:
+            raise HTTPException(status_code=400, detail="For BUY orders, take profit must be above current price")
+        elif request.order_type == "SELL" and request.take_profit >= current_price:
+            raise HTTPException(status_code=400, detail="For SELL orders, take profit must be below current price")
+        
+        # Generate a takeprofit_id
+        takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
+        orders_logger.info(f"Generated takeprofit_id: {takeprofit_id} for order {request.order_id}")
+        
+        # Check if user is a Barclays live user
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
+        group_name = user_data.get('group_name') if user_data else None
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        
+        is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
+        
+        if is_barclays_live_user:
+            # For Barclays users, just store takeprofit_id and send to Firebase
+            orders_logger.info(f"Barclays user detected. Sending takeprofit request to Firebase for order {request.order_id}")
+            
+            # Update the order with takeprofit_id without changing take_profit value
+            update_fields = {
+                "takeprofit_id": takeprofit_id
+            }
+            
+            # Update order with tracking
+            await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=request.user_type,
+                action_type="TAKEPROFIT_REQUESTED"
+            )
+            
+            # Get contract value from the order or calculate it if needed
+            contract_value = str(db_order.contract_value) if db_order.contract_value else None
+            
+            # Send to Firebase with all required fields
+            firebase_takeprofit_data = {
+                "order_id": request.order_id,
+                "takeprofit_id": takeprofit_id,
+                "user_id": user_id_for_operation,
+                "symbol": request.symbol,
+                "order_type": request.order_type,
+                "take_profit": str(request.take_profit),
+                "action": "add_takeprofit",
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "contract_value": contract_value,
+                "order_quantity": str(request.order_quantity),
+                "order_price": str(request.order_price),
+                "order_status": request.order_status
+            }
+            
+            await send_order_to_firebase(firebase_takeprofit_data, "live")
+            orders_logger.info(f"Takeprofit request sent to Firebase for order {request.order_id}")
+            
+            return {
+                "order_id": db_order.order_id,
+                "takeprofit_id": takeprofit_id,
+                "status": "PENDING",
+                "message": "Takeprofit request sent to service provider"
+            }
+        else:
+            # For non-Barclays users, update the order immediately
+            orders_logger.info(f"Non-Barclays user. Adding takeprofit to order {request.order_id} immediately")
+            
+            # Update the order with take_profit and takeprofit_id
+            update_fields = {
+                "take_profit": request.take_profit,
+                "takeprofit_id": takeprofit_id
+            }
+            
+            # Update order with tracking
+            updated_order = await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=request.user_type,
+                action_type="TAKEPROFIT_ADDED"
+            )
+            
+            # Update static orders cache
+            await update_user_static_orders(user_id_for_operation, db, redis_client, request.user_type)
+            
+            # Publish updates to notify WebSocket clients
+            await publish_order_update(redis_client, user_id_for_operation)
+            await publish_user_data_update(redis_client, user_id_for_operation)
+            
+            return {
+                "order_id": updated_order.order_id,
+                "takeprofit_id": updated_order.takeprofit_id,
+                "take_profit": str(updated_order.take_profit),
+                "message": "Takeprofit added successfully"
+            }
+    
+    except Exception as e:
+        orders_logger.error(f"Error adding takeprofit: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to add takeprofit: {str(e)}")
+
+# Endpoints to cancel stoploss and takeprofit
+@router.post("/cancel-stoploss", response_model=dict)
+async def cancel_stoploss(
+    request: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Cancel a stop loss for an existing order.
+    For Barclays users: Store stoploss_cancel_id and send to Firebase
+    For non-Barclays users: Update the order directly
+    """
+    try:
+        order_id = request.get("order_id")
+        user_id = request.get("user_id", current_user.id)
+        user_type = request.get("user_type", getattr(current_user, "user_type", "live"))
+        
+        orders_logger.info(f"Cancel stoploss request received - Order ID: {order_id}, User ID: {current_user.id}")
+        
+        # Use the authenticated user's ID unless admin
+        user_id_for_operation = current_user.id
+        if user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            user_id_for_operation = user_id
+            orders_logger.info(f"Admin user {current_user.id} cancelling stoploss for user {user_id_for_operation}")
+        elif user_id != user_id_for_operation:
+            orders_logger.warning(f"User {current_user.id} attempted to cancel stoploss for user {user_id}")
+            raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
+        
+        # Get the order model based on user type
+        order_model = get_order_model(user_type)
+        
+        # Find the order
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db, 
+            order_id, 
+            user_id_for_operation,
+            order_model
+        )
+        
+        if not db_order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        if not db_order.stoploss_id:
+            raise HTTPException(status_code=400, detail="No stop loss exists for this order")
+        
+        # Generate a stoploss_cancel_id
+        stoploss_cancel_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_cancel_id')
+        
+        # Check if user is a Barclays live user
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+        group_name = user_data.get('group_name') if user_data else None
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        
+        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        
+        if is_barclays_live_user:
+            # For Barclays users, just store stoploss_cancel_id and send to Firebase
+            update_fields = {
+                "stoploss_cancel_id": stoploss_cancel_id
+            }
+            
+            await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=user_type,
+                action_type="STOPLOSS_CANCEL_REQUESTED"
+            )
+            
+            # Send to Firebase
+            firebase_data = {
+                "order_id": order_id,
+                "stoploss_id": db_order.stoploss_id,
+                "stoploss_cancel_id": stoploss_cancel_id,
+                "user_id": user_id_for_operation,
+                "symbol": db_order.order_company_name,
+                "action": "cancel_stoploss",
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }
+            
+            await send_order_to_firebase(firebase_data, "live")
+            
+            return {
+                "order_id": order_id,
+                "stoploss_cancel_id": stoploss_cancel_id,
+                "status": "PENDING",
+                "message": "Stop loss cancellation request sent to service provider"
+            }
+        else:
+            # For non-Barclays users, update the order immediately
+            update_fields = {
+                "stop_loss": None,
+                "stoploss_id": None,
+                "stoploss_cancel_id": stoploss_cancel_id
+            }
+            
+            updated_order = await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=user_type,
+                action_type="STOPLOSS_CANCELLED"
+            )
+            
+            # Update static orders cache
+            await update_user_static_orders(user_id_for_operation, db, redis_client, user_type)
+            
+            # Publish updates to notify WebSocket clients
+            await publish_order_update(redis_client, user_id_for_operation)
+            
+            return {
+                "order_id": order_id,
+                "stoploss_cancel_id": stoploss_cancel_id,
+                "message": "Stop loss cancelled successfully"
+            }
+    
+    except Exception as e:
+        orders_logger.error(f"Error cancelling stoploss: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to cancel stop loss: {str(e)}")
+
+@router.post("/cancel-takeprofit", response_model=dict)
+async def cancel_takeprofit(
+    request: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Cancel a take profit for an existing order.
+    For Barclays users: Store takeprofit_cancel_id and send to Firebase
+    For non-Barclays users: Update the order directly
+    """
+    try:
+        order_id = request.get("order_id")
+        user_id = request.get("user_id", current_user.id)
+        user_type = request.get("user_type", getattr(current_user, "user_type", "live"))
+        
+        orders_logger.info(f"Cancel takeprofit request received - Order ID: {order_id}, User ID: {current_user.id}")
+        
+        # Use the authenticated user's ID unless admin
+        user_id_for_operation = current_user.id
+        if user_id != user_id_for_operation and getattr(current_user, 'is_admin', False):
+            user_id_for_operation = user_id
+            orders_logger.info(f"Admin user {current_user.id} cancelling takeprofit for user {user_id_for_operation}")
+        elif user_id != user_id_for_operation:
+            orders_logger.warning(f"User {current_user.id} attempted to cancel takeprofit for user {user_id}")
+            raise HTTPException(status_code=403, detail="Not authorized to modify orders for other users")
+        
+        # Get the order model based on user type
+        order_model = get_order_model(user_type)
+        
+        # Find the order
+        db_order = await crud_order.get_order_by_id_and_user_id(
+            db, 
+            order_id, 
+            user_id_for_operation,
+            order_model
+        )
+        
+        if not db_order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        if not db_order.takeprofit_id:
+            raise HTTPException(status_code=400, detail="No take profit exists for this order")
+        
+        # Generate a takeprofit_cancel_id
+        takeprofit_cancel_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_cancel_id')
+        
+        # Check if user is a Barclays live user
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+        group_name = user_data.get('group_name') if user_data else None
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        
+        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        
+        if is_barclays_live_user:
+            # For Barclays users, just store takeprofit_cancel_id and send to Firebase
+            update_fields = {
+                "takeprofit_cancel_id": takeprofit_cancel_id
+            }
+            
+            await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=user_type,
+                action_type="TAKEPROFIT_CANCEL_REQUESTED"
+            )
+            
+            # Send to Firebase
+            firebase_data = {
+                "order_id": order_id,
+                "takeprofit_id": db_order.takeprofit_id,
+                "takeprofit_cancel_id": takeprofit_cancel_id,
+                "user_id": user_id_for_operation,
+                "symbol": db_order.order_company_name,
+                "action": "cancel_takeprofit",
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }
+            
+            await send_order_to_firebase(firebase_data, "live")
+            
+            return {
+                "order_id": order_id,
+                "takeprofit_cancel_id": takeprofit_cancel_id,
+                "status": "PENDING",
+                "message": "Take profit cancellation request sent to service provider"
+            }
+        else:
+            # For non-Barclays users, update the order immediately
+            update_fields = {
+                "take_profit": None,
+                "takeprofit_id": None,
+                "takeprofit_cancel_id": takeprofit_cancel_id
+            }
+            
+            updated_order = await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_fields,
+                user_id=user_id_for_operation,
+                user_type=user_type,
+                action_type="TAKEPROFIT_CANCELLED"
+            )
+            
+            # Update static orders cache
+            await update_user_static_orders(user_id_for_operation, db, redis_client, user_type)
+            
+            # Publish updates to notify WebSocket clients
+            await publish_order_update(redis_client, user_id_for_operation)
+            
+            return {
+                "order_id": order_id,
+                "takeprofit_cancel_id": takeprofit_cancel_id,
+                "message": "Take profit cancelled successfully"
+            }
+    
+    except Exception as e:
+        orders_logger.error(f"Error cancelling takeprofit: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to cancel take profit: {str(e)}")
 
 

@@ -97,19 +97,36 @@ from app.shared_state import redis_publish_queue
 # Import orders logger
 from app.core.logging_config import orders_logger
 
+# Import stop loss and take profit checker
+from app.services.pending_orders import check_and_trigger_stoploss_takeprofit
+
 settings = get_settings()
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# --- CORS Settings (Allow All Origins) ---
+# --- CORS Settings ---
+# Define allowed origins - include localhost with different ports and your production domains
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8080",
+    # Add your production domains here
+    "https://yourdomain.com"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False, # Must be False if allow_origins is ["*"]
-    allow_methods=["*"],  # Allows all HTTP methods
+    allow_origins=origins,  # Specific origins for credentials
+    allow_credentials=True,  # Allow credentials for specific origins
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],  # Allows all headers
+    expose_headers=["Content-Type", "Authorization", "X-Total-Count"],
 )
 # --- End CORS Settings ---
 
@@ -362,117 +379,119 @@ async def rotate_service_account_jwt():
     except Exception as e:
         logger.error(f"Error generating or pushing service JWT to Firebase: {e}", exc_info=True)
 
+# Add this line after the app initialization
+background_tasks = set()
+
 @app.on_event("startup")
 async def startup_event():
-    global scheduler, global_redis_client_instance
+    global scheduler
+    global background_tasks  # Make sure we're using the global set
+    global global_redis_client_instance
     logger.info("Application startup event triggered.")
-
-    firebase_app_instance = None
+    
+    # Initialize Firebase
     try:
-        cred_path = settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH
+        cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
         if not os.path.exists(cred_path):
-            logger.critical(f"Firebase service account key file not found at: {cred_path}")
+            logger.error(f"Firebase credentials file not found at: {cred_path}")
+            raise FileNotFoundError(f"Firebase credentials file not found at: {cred_path}")
+            
+        cred = credentials.Certificate(cred_path)
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app(cred, {
+                'databaseURL': settings.FIREBASE_DATABASE_URL
+            })
+            logger.info("Firebase Admin SDK initialized successfully")
         else:
-            cred = credentials.Certificate(cred_path)
-            if not firebase_admin._apps:
-                firebase_app_instance = firebase_admin.initialize_app(cred, {
-                    'databaseURL': settings.FIREBASE_DATABASE_URL
-                })
-                logger.info("Firebase Admin SDK initialized successfully.")
+            logger.info("Firebase Admin SDK already initialized")
+    except Exception as e:
+        logger.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
+    
+    # Initialize Redis connection pool
+    redis_available = False
+    try:
+        redis_client = await get_redis_client()
+        if redis_client:
+            ping_result = await redis_client.ping()
+            if ping_result:
+                logger.info("Redis connection pool initialized successfully")
+                redis_available = True
+                global_redis_client_instance = redis_client
             else:
-                firebase_app_instance = firebase_admin.get_app()
-                logger.info("Firebase Admin SDK already initialized.")
+                logger.warning("Redis ping returned False - continuing without Redis")
     except Exception as e:
-        logger.critical(f"Failed to initialize Firebase Admin SDK: {e}", exc_info=True)
-
+        logger.warning(f"Redis connection failed - continuing without Redis: {e}")
+    
+    # Initialize APScheduler
     try:
-        global_redis_client_instance = await get_redis_client()
-        if global_redis_client_instance:
-            logger.info("Redis client initialized successfully.")
-        else:
-            logger.critical("Redis client failed to initialize.")
-    except Exception as e:
-        logger.critical(f"Failed to connect to Redis during startup: {e}", exc_info=True)
-        global_redis_client_instance = None
-
-    try:
-        await create_all_tables()
-        logger.info("Database tables ensured/created.")
-    except Exception as e:
-        logger.critical(f"Failed to create database tables: {e}", exc_info=True)
-
-    # Initialize and Start APScheduler
-    if global_redis_client_instance:
-        scheduler = AsyncIOScheduler(timezone="UTC")
+        scheduler = AsyncIOScheduler()
+        
+        # Add daily swap charges job (runs at 00:05 UTC every day)
         scheduler.add_job(
             daily_swap_charge_job,
-            trigger=CronTrigger(hour=0, minute=0, second=0, timezone="UTC"),
-            id="daily_swap_task",
-            name="Daily Swap Charges",
+            CronTrigger(hour=0, minute=5),  # 00:05 UTC
+            id='daily_swap_charge_job',
             replace_existing=True
         )
-        scheduler.add_job(
-            rotate_service_account_jwt,
-            trigger=CronTrigger(minute="*/30", timezone="UTC"),
-            id="rotate_service_jwt",
-            name="Rotate service account JWT for python_bridge",
-            replace_existing=True
-        )
-        # Add the new dynamic portfolio update job - runs every 5 seconds
+        
+        # Add dynamic portfolio update job (runs every minute)
         scheduler.add_job(
             update_all_users_dynamic_portfolio,
-            trigger=IntervalTrigger(seconds=5, timezone="UTC"),
-            id="dynamic_portfolio_update",
-            name="Update all users' dynamic portfolio data",
+            IntervalTrigger(minutes=1),
+            id='update_all_users_dynamic_portfolio',
             replace_existing=True
         )
-        try:
-            scheduler.start()
-            logger.info("APScheduler started with jobs for daily swap, JWT rotation, and dynamic portfolio updates.")
-            await rotate_service_account_jwt() # Run once on startup
-        except Exception as e:
-            logger.error(f"Failed to start APScheduler: {e}", exc_info=True)
-            scheduler = None
-    else:
-        logger.warning("Scheduler not started: Redis client unavailable.")
-
-    if global_redis_client_instance and firebase_app_instance:
+        
+        # Add service account JWT rotation job (runs every 23 hours)
+        scheduler.add_job(
+            rotate_service_account_jwt,
+            IntervalTrigger(hours=23),
+            id='rotate_service_account_jwt',
+            replace_existing=True
+        )
+        
+        # Start the scheduler
+        scheduler.start()
+        logger.info("APScheduler started successfully with jobs configured")
+    except Exception as e:
+        logger.error(f"Error initializing APScheduler: {e}", exc_info=True)
+    
+    # Start the Firebase events processor background task
+    try:
         firebase_task = asyncio.create_task(process_firebase_events(firebase_db, path=settings.FIREBASE_DATA_PATH))
-        firebase_task.set_name("firebase_listener")
         background_tasks.add(firebase_task)
         firebase_task.add_done_callback(background_tasks.discard)
-        logger.info("Firebase stream processing task scheduled.")
-
-        publisher_task = asyncio.create_task(redis_publisher_task(global_redis_client_instance))
-        publisher_task.set_name("redis_publisher_task")
-        background_tasks.add(publisher_task)
-        publisher_task.add_done_callback(background_tasks.discard)
-        logger.info("Redis publisher task scheduled.")
-
-        # REMOVE broadcaster_task scheduling
-        # broadcaster_task = asyncio.create_task(redis_market_data_broadcaster(global_redis_client_instance))
-        # broadcaster_task.set_name("redis_market_data_broadcaster")
-        # background_tasks.add(broadcaster_task)
-        # broadcaster_task.add_done_callback(background_tasks.discard)
-        # logger.info("Redis market data broadcaster task scheduled.")
-    else:
-        missing_services = []
-        if not global_redis_client_instance:
-            missing_services.append("Redis client")
-        if not firebase_app_instance:
-            missing_services.append("Firebase app instance")
-        logger.warning(f"Other background tasks not started due to missing: {', '.join(missing_services)}.")
-
-    logger.info("Application startup event finished.")
-
-    if global_redis_client_instance:
+        logger.info("Firebase events processor background task started")
+    except Exception as e:
+        logger.error(f"Error starting Firebase events processor: {e}", exc_info=True)
+    
+    # Start Redis-dependent tasks only if Redis is available
+    if redis_available and global_redis_client_instance:
         try:
-            pong = await global_redis_client_instance.ping()
-            logger.info(f"Redis ping response: {pong}")
+            # Start the Redis publisher background task
+            redis_task = asyncio.create_task(redis_publisher_task(global_redis_client_instance))
+            background_tasks.add(redis_task)
+            redis_task.add_done_callback(background_tasks.discard)
+            logger.info("Redis publisher background task started")
+            
+            # Start the stop loss/take profit checker background task
+            stoploss_task = asyncio.create_task(run_stoploss_takeprofit_checker())
+            background_tasks.add(stoploss_task)
+            stoploss_task.add_done_callback(background_tasks.discard)
+            logger.info("Stop loss/take profit checker background task started")
         except Exception as e:
-            logger.critical(f"Redis ping failed post-init: {e}", exc_info=True)
-
-background_tasks = set()
+            logger.error(f"Error starting Redis-dependent tasks: {e}", exc_info=True)
+    else:
+        logger.warning("Redis is not available - skipping Redis-dependent tasks")
+    
+    # Create initial service account token
+    try:
+        await create_service_account_token(service_name="python_bridge")
+        logger.info("Initial service account token created")
+    except Exception as e:
+        logger.error(f"Error creating service account token: {e}", exc_info=True)
+    
+    logger.info("Application startup event finished.")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -514,3 +533,49 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the Trading App Backend!"}
+
+async def run_stoploss_takeprofit_checker():
+    """Background task to continuously check for stop loss and take profit conditions"""
+    logger = logging.getLogger("stoploss_takeprofit_checker")
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.database.session import AsyncSessionLocal
+    
+    logger.info("Starting stop loss/take profit checker background task")
+    
+    while True:
+        try:
+            # Create a new session for each check
+            try:
+                async with AsyncSessionLocal() as db:
+                    # Get Redis client
+                    try:
+                        redis_client = await get_redis_client()
+                        if not redis_client:
+                            logger.warning("Redis client not available for SL/TP check - skipping this cycle")
+                            await asyncio.sleep(10)  # Wait longer if Redis is not available
+                            continue
+                        
+                        # Run the check
+                        from app.services.pending_orders import check_and_trigger_stoploss_takeprofit
+                        await check_and_trigger_stoploss_takeprofit(db, redis_client)
+                    except Exception as e:
+                        logger.error(f"Error getting Redis client for SL/TP check: {e}", exc_info=True)
+                        await asyncio.sleep(10)  # Wait longer if there was an error
+                        continue
+            except Exception as session_error:
+                logger.error(f"Error creating database session: {session_error}", exc_info=True)
+                await asyncio.sleep(10)  # Wait longer if there was a session error
+                continue
+                
+            # Sleep for a short time before the next check
+            await asyncio.sleep(5)  # Check every 5 seconds
+            
+        except Exception as e:
+            logger.error(f"Error in stop loss/take profit checker: {e}", exc_info=True)
+            await asyncio.sleep(10)  # Wait longer if there was an error

@@ -141,7 +141,7 @@ class DemoUser(Base):
     email = Column(String(255), index=True, nullable=False)
     phone_number = Column(String(20), index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False) # Store hashed password
-
+    
     # Other Fields (replicated from User model)
     user_type = Column(String(100), nullable=True) # Optional field, e.g., 'demo'
 
@@ -268,7 +268,7 @@ class Symbol(Base):
     # Timestamps (Using SQLAlchemy's func.now() for database-side default)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-    
+
     # Add back simple relationship
     favorited_by = relationship("UserFavoriteSymbol", back_populates="symbol")
 
@@ -604,15 +604,15 @@ class UserFavoriteSymbol(Base):
     # Foreign Keys - no ondelete cascade as we're not using foreign key constraints
     user_id = Column(Integer, nullable=False, index=True)
     symbol_id = Column(Integer, ForeignKey("symbols.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     # Type field to distinguish between live and demo users
     user_type = Column(String(10), nullable=False)  # 'live' or 'demo'
     
     # Timestamps - only created_at as our table only has this column
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    
+
     # Add unique constraint to prevent duplicates
     __table_args__ = (UniqueConstraint('user_id', 'symbol_id', 'user_type', name='_user_symbol_type_uc'),)
-    
+
     # Simple relationship to Symbol
     symbol = relationship("Symbol", back_populates="favorited_by")
