@@ -230,6 +230,27 @@ async def get_order_by_takeprofit_cancel_id(db: AsyncSession, takeprofit_cancel_
     result = await db.execute(select(order_model).filter(order_model.takeprofit_cancel_id == takeprofit_cancel_id))
     return result.scalars().first()
 
+async def get_order_by_any_id(db: AsyncSession, generic_id: str, order_model: Type[Any]) -> Optional[Any]:
+    """
+    Get order by matching the given ID against any of the possible ID fields.
+    Searches order_id, cancel_id, close_id, stoploss_id, takeprofit_id, etc.
+    """
+    result = await db.execute(
+        select(order_model).filter(
+            or_(
+                order_model.order_id == generic_id,
+                order_model.cancel_id == generic_id,
+                order_model.close_id == generic_id,
+                order_model.modify_id == generic_id,
+                order_model.stoploss_id == generic_id,
+                order_model.takeprofit_id == generic_id,
+                order_model.stoploss_cancel_id == generic_id,
+                order_model.takeprofit_cancel_id == generic_id
+            )
+        )
+    )
+    return result.scalars().first()
+
 async def get_open_orders_by_user_id_and_symbol(
     db: AsyncSession,
     user_id: int,

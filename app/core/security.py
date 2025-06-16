@@ -390,12 +390,17 @@ async def get_user_from_service_or_user_token(
                 logger.warning(f"Target user (ID: {user_id}, Type: {target_user_type}) not found for service account.")
                 raise HTTPException(status_code=404, detail=f"Target user (ID: {user_id}, Type: {target_user_type}) not found.")
             
+            # Attach a flag to the user object to indicate it was authenticated via a service account
+            user.is_service_account = True
+            
             logger.info(f"Service account '{payload.get('service_name')}' successfully identified target user ID: {user_id}, Type: {target_user_type}")
             return user
         else:
             # For regular user tokens, defer to get_current_user (which is now strict on both fields)
             logger.info("Regular user token detected. Deferring to get_current_user.")
             user = await get_current_user(db=db, token=token)
+            # Explicitly mark that this is not a service account call
+            user.is_service_account = False
             logger.info(f"Authenticated user - ID: {user.id}, Type: {user.user_type}, Class: {type(user).__name__}")
             return user
     except HTTPException: # Re-raise HTTPExceptions as they are intended errors
@@ -407,3 +412,4 @@ async def get_user_from_service_or_user_token(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+

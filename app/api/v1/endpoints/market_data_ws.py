@@ -259,7 +259,7 @@ async def check_and_trigger_pending_orders(
                 
                 # Process each user's orders
                 for user_id_bytes, orders_json in all_user_orders.items():
-                    user_id = user_id_bytes.decode('utf-8')
+                    user_id = user_id_bytes # No decode needed, redis-py > 4.2 returns strings
                     orders_list = json.loads(orders_json)
                     
                     # Check each order for this user

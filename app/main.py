@@ -370,14 +370,39 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
     except Exception as e:
         logger.error(f"Error in handle_margin_cutoff for user {user_id}: {e}", exc_info=True)
 
-# --- New JWT Rotation Job ---
+# --- Service Provider JWT Rotation Job ---
 async def rotate_service_account_jwt():
+    """
+    Generates a JWT for the Barclays service provider, prints it to the console,
+    and pushes it to Firebase. This job is scheduled to run periodically.
+    """
     try:
-        token = create_service_account_token("python_bridge", expires_minutes=30)
-        jwt_ref = firebase_db.reference("trade_data/service_auth_token")
-        jwt_ref.set({"token": token})
-        logger.info("Service account JWT pushed to Firebase.")
-        logger.info(f"Generated service account JWT: {token}")
+        service_name = "barclays_service_provider"
+        # Generate a token valid for 35 minutes. It will be refreshed every 30 minutes.
+        token = create_service_account_token(service_name, expires_minutes=35)
+
+        # Path in Firebase to store the token
+        jwt_ref = firebase_db.reference(f"service_provider_credentials/{service_name}")
+        
+        # Payload to store in Firebase
+        payload = {
+            "jwt": token,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        jwt_ref.set(payload)
+        
+        logger.info(f"Service account JWT for '{service_name}' pushed to Firebase.")
+        
+        # Print the token to the console for debugging, as requested
+        print("\n" + "="*50)
+        print("     NEW SERVICE ACCOUNT JWT TOKEN (refreshed)     ")
+        print("="*50)
+        print(f"\nService Name: {service_name}")
+        print(f"Generated at: {datetime.now().isoformat()}")
+        print("\nToken:")
+        print(token)
+        print("\n" + "="*50 + "\n")
+
     except Exception as e:
         logger.error(f"Error generating or pushing service JWT to Firebase: {e}", exc_info=True)
 
@@ -444,10 +469,10 @@ async def startup_event():
             replace_existing=True
         )
         
-        # Add service account JWT rotation job (runs every 23 hours)
+        # Add service account JWT rotation job (runs every 30 minutes)
         scheduler.add_job(
             rotate_service_account_jwt,
-            IntervalTrigger(hours=23),
+            IntervalTrigger(minutes=30),
             id='rotate_service_account_jwt',
             replace_existing=True
         )
@@ -486,12 +511,12 @@ async def startup_event():
     else:
         logger.warning("Redis is not available - skipping Redis-dependent tasks")
     
-    # Create initial service account token
+    # Create initial service account token and push to Firebase on startup
     try:
-        await create_service_account_token(service_name="python_bridge")
-        logger.info("Initial service account token created")
+        logger.info("Generating initial service account token...")
+        await rotate_service_account_jwt()
     except Exception as e:
-        logger.error(f"Error creating service account token: {e}", exc_info=True)
+        logger.error(f"Error creating initial service account token: {e}", exc_info=True)
     
     logger.info("Application startup event finished.")
 
@@ -581,3 +606,27 @@ async def run_stoploss_takeprofit_checker():
         except Exception as e:
             logger.error(f"Error in stop loss/take profit checker: {e}", exc_info=True)
             await asyncio.sleep(10)  # Wait longer if there was an error
+
+# --- New Pending Order Checker Task ---
+async def run_pending_order_checker():
+    """
+    Continuously runs the pending order and SL/TP checker in the background.
+    """
+
+    # Give the application a moment to initialize everything else
+    await asyncio.sleep(5) 
+    logger.info("Starting the pending order and SL/TP checker background task.")
+    
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                if global_redis_client_instance:
+                    logger.debug("Executing check_and_trigger_stoploss_takeprofit...")
+                    await check_and_trigger_stoploss_takeprofit(db, global_redis_client_instance)
+                else:
+                    logger.warning("Pending order checker: Global Redis client not available, skipping run.")
+        except Exception as e:
+            logger.error(f"Error in pending order checker loop: {e}", exc_info=True)
+        
+        # Wait for 1 second before the next check to avoid overloading the system
+        await asyncio.sleep(1)

@@ -144,17 +144,19 @@ class PendingOrderCancelRequest(BaseModel):
     order_quantity: Optional[Decimal] = None  # Order quantity
     order_status: Optional[str] = None  # Order status (PENDING, OPEN, etc.)
 
-# --- Order PATCH Update Schema ---
-class OrderUpdateRequest(BaseModel):
+# --- Service Provider Update Schema (replaces OrderUpdateRequest) ---
+class ServiceProviderUpdateRequest(BaseModel):
     order_id: Optional[str] = None
     cancel_id: Optional[str] = None
     close_id: Optional[str] = None
+    modify_id: Optional[str] = None
     stoploss_id: Optional[str] = None
     takeprofit_id: Optional[str] = None
     stoploss_cancel_id: Optional[str] = None
     takeprofit_cancel_id: Optional[str] = None
     
     order_status: Optional[str] = None
+    order_type: Optional[str] = None
     status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
     order_price: Optional[Decimal] = None
     order_quantity: Optional[Decimal] = None
@@ -167,12 +169,12 @@ class OrderUpdateRequest(BaseModel):
     commission: Optional[Decimal] = None
     swap: Optional[Decimal] = None
     cancel_message: Optional[str] = None
-    close_message: Optional[str] = None
+    close_message: Optional[str] = None # Also used for rejection messages
 
     @model_validator(mode='before')
     def check_at_least_one_id(cls, values):
         id_fields = [
-            'order_id', 'cancel_id', 'close_id', 'stoploss_id',
+            'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
             'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
         ]
         if not any(values.get(field) for field in id_fields):

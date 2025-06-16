@@ -14,9 +14,10 @@ from pydantic import BaseModel, Field, validator
 from sqlalchemy import select
 from fastapi.security import OAuth2PasswordBearer
 
+from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
-from app.schemas.order import OrderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest, CancelStopLossRequest, CancelTakeProfitRequest
+from app.schemas.order import ServiceProviderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest, CancelStopLossRequest, CancelTakeProfitRequest
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
 from app.core.cache import publish_account_structure_changed_event
@@ -68,16 +69,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.schemas.order import OrderResponse
 
 # Robust local get_order_model implementation
-from app.database.models import UserOrder, DemoUserOrder
-
-
+from app.database.models import UserOrder, DemoUserOrder, Wallet
+from app.services.order_processing import generate_unique_10_digit_id
+from app.schemas.wallet import WalletCreate
 
 from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
 from app.crud.group import get_all_symbols_for_group
 from app.firebase_stream import get_latest_market_data
-from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.core.firebase import send_order_to_firebase
-from app.core.logging_config import orders_logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 logger = logging.getLogger(__name__)
@@ -809,8 +808,8 @@ async def place_pending_order(
                     "country": getattr(db_user, 'country', None),
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
-                await set_user_data_cache(redis_client, user_id_for_order, user_data_to_cache)
-                orders_logger.info(f"User data cache updated for user {user_id_for_order} after placing pending order")
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id} after placing pending order")
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after pending order placement: {e}", exc_info=True)
 
@@ -905,12 +904,28 @@ async def close_order(
 
         try:
             if isinstance(user_to_operate_on, User):
-                user_group = await crud_group.get_group_by_name(db, user_to_operate_on.group_name)
-                orders_logger.info(f"User group: {user_group}")
-                # Use is_barclays_live_user to decide Firebase push (never for demo)
+                user_type = 'live'
+                group_name = user_to_operate_on.group_name
+                
+                sending_orders_normalized = None
+                if group_name:
+                    group_settings = await get_group_settings_cache(redis_client, group_name)
+                    sending_orders = group_settings.get('sending_orders') if group_settings else None
+                    if sending_orders:
+                        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+                    else:
+                        # Fallback to DB if not in cache
+                        db_group = await crud_group.get_group_by_name(db, group_name)
+                        if db_group:
+                            sending_orders_db = getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)
+                            if sending_orders_db:
+                                sending_orders_normalized = sending_orders_db.lower() if isinstance(sending_orders_db, str) else sending_orders_db
+
+                orders_logger.info(f"User group: {group_name}, sending_orders setting: {sending_orders_normalized}")
+                
                 is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
                 if is_barclays_live_user:
-                    orders_logger.info(f"Live user {user_to_operate_on.id} from group '{user_group[0].group_name if user_group and isinstance(user_group, list) and len(user_group) > 0 and hasattr(user_group[0], 'group_name') else 'default'}' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.")
+                    orders_logger.info(f"Live user {user_to_operate_on.id} from group '{group_name}' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.")
                     
                     firebase_close_data = {
                         "order_id": close_request.order_id,
@@ -929,28 +944,32 @@ async def close_order(
                     
                     db_order_for_response = await crud_order.get_order_by_id(db, order_id=order_id, order_model=order_model_class)
                     if db_order_for_response:
-                        db_order_for_response.order_status = "PENDING_CLOSE"
-                        db_order_for_response.close_message = "Order sent to service provider for closure."
+                        # Per request, do not change the status. Keep it OPEN until the provider confirms.
+                        # db_order_for_response.order_status = "PENDING_CLOSE" 
+                        db_order_for_response.close_message = "Close request sent to service provider."
                         db_order_for_response.close_id = close_id # Save close_id in DB
                         await db.commit()
                         await db.refresh(db_order_for_response)
                         
                         # Log action in OrderActionHistory
                         user_type_str = "live" if isinstance(user_to_operate_on, User) else "demo"
-                        update_fields_for_history = OrderUpdateRequest(
-                            order_status="PENDING_CLOSE",
-                            close_message="Order sent to service provider for closure.",
-                            close_price=close_price, # Log the requested close price
-                        ).model_dump(exclude_unset=True)
+                        
+                        # The OrderUpdateRequest was not defined; using a dict instead for tracking.
+                        update_fields_for_history = {
+                            "close_id": close_id,
+                            "close_message": "Close request sent to service provider.",
+                            "close_price": close_price,
+                        }
+                        
                         await crud_order.update_order_with_tracking(
                             db,
                             db_order_for_response,
                             update_fields_for_history,
                             user_id=user_to_operate_on.id,
                             user_type=user_type_str,
-                            action_type="CLOSE_REQUESTED" # New action type for history
+                            action_type="CLOSE_REQUESTED"
                         )
-                        await db.commit() # Commit history tracking
+                        await db.commit()
                         await db.refresh(db_order_for_response)
                         return OrderResponse.model_validate(db_order_for_response, from_attributes=True)
                     else:
@@ -2327,7 +2346,7 @@ async def cancel_takeprofit(
 
 @router.post("/service-provider-update", response_model=OrderResponse)
 async def update_order_by_service_provider(
-    update_request: OrderUpdateRequest,
+    update_request: ServiceProviderUpdateRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
@@ -2345,27 +2364,26 @@ async def update_order_by_service_provider(
         
         orders_logger.info(f"Service provider update request received: {update_request.model_dump_json(exclude_unset=True)}")
         
-        # Get the order from the database using any provided ID
-        order_model = UserOrder  # Barclays users are always live users
-        db_order = None
+        # Extract the single ID provided in the request
+        id_to_find = (
+            update_request.order_id or
+            update_request.cancel_id or
+            update_request.close_id or
+            update_request.modify_id or
+            update_request.stoploss_id or
+            update_request.takeprofit_id or
+            update_request.stoploss_cancel_id or
+            update_request.takeprofit_cancel_id
+        )
+        if not id_to_find:
+            raise HTTPException(status_code=400, detail="An order identifier must be provided.")
 
-        if update_request.order_id:
-            db_order = await crud_order.get_order_by_id(db, update_request.order_id, order_model)
-        elif update_request.cancel_id:
-            db_order = await crud_order.get_order_by_cancel_id(db, update_request.cancel_id, order_model)
-        elif update_request.close_id:
-            db_order = await crud_order.get_order_by_close_id(db, update_request.close_id, order_model)
-        elif update_request.stoploss_id:
-            db_order = await crud_order.get_order_by_stoploss_id(db, update_request.stoploss_id, order_model)
-        elif update_request.takeprofit_id:
-            db_order = await crud_order.get_order_by_takeprofit_id(db, update_request.takeprofit_id, order_model)
-        elif update_request.stoploss_cancel_id:
-            db_order = await crud_order.get_order_by_stoploss_cancel_id(db, update_request.stoploss_cancel_id, order_model)
-        elif update_request.takeprofit_cancel_id:
-            db_order = await crud_order.get_order_by_takeprofit_cancel_id(db, update_request.takeprofit_cancel_id, order_model)
+        # Get the order from the database using the new generic search function
+        order_model = UserOrder  # Barclays users are always live users
+        db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
         
         if not db_order:
-            orders_logger.error(f"Order not found with provided identifiers in request: {update_request.model_dump_json(exclude_unset=True)}")
+            orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
             raise HTTPException(status_code=404, detail="Order not found with provided ID")
         
         # Store original status for comparison after update
@@ -2948,5 +2966,470 @@ async def update_order_by_service_provider(
     except Exception as e:
         orders_logger.error(f"Error in service provider update endpoint: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to update order: {str(e)}")
+
+
+
+async def _handle_order_open_transition(
+    db: AsyncSession,
+    redis_client: Redis,
+    db_order: UserOrder,
+    update_fields: Dict[str, Any],
+    current_user: User,
+    action_type: str
+) -> Dict[str, Any]:
+    """
+    Handles the logic for an order transitioning to OPEN status.
+    Calculates margin, commission, and updates user's total margin based on the
+    fields provided in the update_fields dictionary.
+    """
+    user_id = db_order.order_user_id
+    db_user = await get_user_by_id_with_lock(db, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    symbol = db_order.order_company_name
+    # Use the new order_type from the request, or fall back to the one in the DB
+    order_type = update_fields.get('order_type', db_order.order_type)
+    quantity = Decimal(str(db_order.order_quantity)) # Quantity is not updatable at this stage
+
+    # The price must be in the update request for this transition
+    updated_order_price = update_fields.get('order_price')
+    if updated_order_price is None:
+        raise HTTPException(status_code=400, detail="order_price is required for OPEN transition")
+    updated_order_price = Decimal(str(updated_order_price))
+
+
+    symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(symbol))
+    symbol_info_result = await db.execute(symbol_info_stmt)
+    ext_symbol_info = symbol_info_result.scalars().first()
+    if not ext_symbol_info:
+        raise HTTPException(status_code=500, detail=f"Symbol information not found for {symbol}")
+
+    user_data = await get_user_data_cache(redis_client, user_id, db, 'live')
+    group_name = user_data.get('group_name') if user_data else db_user.group_name
+    group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+    if not group_settings:
+        raise HTTPException(status_code=500, detail="Group settings not found")
+
+    user_leverage = Decimal(str(db_user.leverage))
+    contract_size = Decimal(str(ext_symbol_info.contract_size))
+    
+    # Calculate margin, contract value, and commission
+    contract_value = contract_size * quantity
+    margin_raw = (contract_value * updated_order_price) / user_leverage
+    margin = margin_raw.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+    profit_currency = ext_symbol_info.profit.upper()
+    if profit_currency != 'USD':
+        margin = await _convert_to_usd(margin, profit_currency, user_id, db_order.order_id, "margin", db, redis_client)
+
+    commission = Decimal('0.0')
+    commission_type = int(group_settings.get('commision_type', 0))
+    commission_value_type = int(group_settings.get('commision_value_type', 0))
+    commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
+    if commission_type in [0, 1]:
+        if commission_value_type == 0:
+            commission = quantity * commission_rate
+        elif commission_value_type == 1:
+            commission = (commission_rate / Decimal('100')) * contract_value * updated_order_price
+    commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Hedging margin calculation
+    open_orders = await crud_order.get_open_orders_by_user_id_and_symbol(db, user_id, symbol, UserOrder)
+    margin_before_data = await calculate_total_symbol_margin_contribution(db, redis_client, user_id, symbol, open_orders, 'live')
+    margin_before = margin_before_data["total_margin"]
+
+    simulated_order = type('SimulatedOrder', (object,), {'order_quantity': quantity, 'order_type': order_type, 'margin': margin})()
+    margin_after_data = await calculate_total_symbol_margin_contribution(db, redis_client, user_id, symbol, open_orders + [simulated_order], 'live')
+    margin_after = margin_after_data["total_margin"]
+    
+    additional_margin = max(Decimal("0.0"), margin_after - margin_before)
+    
+    original_margin = db_user.margin
+    db_user.margin = (Decimal(str(original_margin)) + additional_margin).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    orders_logger.info(f"Updating user {user_id} margin from {original_margin} to {db_user.margin}")
+
+    # Add calculated fields to the update dictionary from the request
+    update_fields['margin'] = margin
+    update_fields['contract_value'] = contract_value
+    update_fields['commission'] = commission
+    update_fields['order_status'] = 'OPEN'
+
+    updated_order = await crud_order.update_order_with_tracking(db, db_order, update_fields, current_user.id, 'live', action_type=action_type)
+
+    await db.commit()
+    await db.refresh(db_user)
+    await db.refresh(updated_order)
+
+    # Update caches and publish events
+    user_data_to_cache = {
+        "id": db_user.id, "email": getattr(db_user, 'email', None), "group_name": db_user.group_name,
+        "leverage": db_user.leverage, "user_type": 'live', "account_number": getattr(db_user, 'account_number', None),
+        "wallet_balance": db_user.wallet_balance, "margin": db_user.margin, "first_name": getattr(db_user, 'first_name', None),
+        "last_name": getattr(db_user, 'last_name', None), "country": getattr(db_user, 'country', None),
+        "phone_number": getattr(db_user, 'phone_number', None),
+    }
+    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+    await update_user_static_orders(user_id, db, redis_client, 'live')
+    await publish_order_update(redis_client, user_id)
+    await publish_user_data_update(redis_client, user_id)
+    await publish_market_data_trigger(redis_client)
+    
+    return updated_order
+
+
+@router.post("/service-provider/order-execution", response_model=OrderResponse)
+async def service_provider_order_execution(
+    request: ServiceProviderUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User = Depends(get_user_from_service_or_user_token)
+):
+    """
+    Endpoint for service providers to confirm execution of instant or pending orders.
+    - Transitions PROCESSING -> OPEN/REJECTED
+    - Transitions PENDING -> OPEN
+    - Transitions OPEN -> CLOSED
+    """
+    if not getattr(current_user, 'is_service_account', False):
+        orders_logger.error(f"Non-service account attempted to use service provider endpoint: {current_user.id}")
+        raise HTTPException(status_code=403, detail="Only service accounts can use this endpoint")
+
+    order_model = UserOrder
+    
+    # Extract the single ID provided in the request to find the order
+    id_to_find = (
+        request.order_id or
+        request.cancel_id or
+        request.close_id or
+        request.modify_id or
+        request.stoploss_id or
+        request.takeprofit_id or
+        request.stoploss_cancel_id or
+        request.takeprofit_cancel_id
+    )
+    if not id_to_find:
+        raise HTTPException(status_code=400, detail="An order identifier must be provided.")
+
+    db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
+    if not db_order:
+        raise HTTPException(status_code=404, detail=f"Order not found with provided ID: {id_to_find}")
+
+    original_status = db_order.order_status
+    new_status = request.order_status
+    user_id = db_order.order_user_id
+
+    # Logic for handling any field update provided in the request
+    update_fields = request.model_dump(exclude_unset=True)
+    orders_logger.info(f"Service Provider Execution: Received update fields: {update_fields}")
+
+    if new_status == "OPEN" and original_status in ["PROCESSING", "PENDING"]:
+        action_type = "SP_CONFIRM_INSTANT" if original_status == "PROCESSING" else "SP_EXECUTE_PENDING"
+        
+        if original_status == "PENDING":
+             await remove_pending_order(
+                redis_client,
+                db_order.order_id,
+                db_order.order_company_name,
+                db_order.order_type,
+                str(user_id)
+            )
+
+        updated_order = await _handle_order_open_transition(
+            db=db,
+            redis_client=redis_client,
+            db_order=db_order,
+            update_fields=update_fields,
+            current_user=current_user,
+            action_type=action_type
+        )
+        return OrderResponse.model_validate(updated_order, from_attributes=True)
+    
+    elif new_status == "CLOSED" and original_status == "OPEN":
+        updated_order = await _handle_order_close_transition(
+            db=db,
+            redis_client=redis_client,
+            db_order=db_order,
+            update_fields=update_fields,
+            current_user=current_user
+        )
+        return OrderResponse.model_validate(updated_order, from_attributes=True)
+
+    elif new_status == "REJECTED" and original_status == "PROCESSING":
+        # Use close_message for rejection message
+        rejection_message = update_fields.get("close_message", "Order rejected by service provider.")
+        update_fields["close_message"] = rejection_message
+        
+        updated_order = await crud_order.update_order_with_tracking(
+            db, db_order, update_fields, current_user.id, 'live', "SP_REJECT"
+        )
+        await db.commit()
+        await db.refresh(updated_order)
+
+        await update_user_static_orders(user_id, db, redis_client, 'live')
+        await publish_order_update(redis_client, user_id)
+        
+        return OrderResponse.model_validate(updated_order, from_attributes=True)
+    
+    # Generic fallback to update any other fields provided
+    else:
+        orders_logger.info(f"Service Provider Execution: Applying generic update for transition from {original_status} to {new_status or original_status}")
+        updated_order = await crud_order.update_order_with_tracking(
+            db, db_order, update_fields, current_user.id, 'live', "SP_GENERIC_EXECUTION_UPDATE"
+        )
+        await db.commit()
+        await db.refresh(updated_order)
+        await update_user_static_orders(user_id, db, redis_client, 'live')
+        await publish_order_update(redis_client, user_id)
+        return OrderResponse.model_validate(updated_order, from_attributes=True)
+
+
+@router.post("/service-provider/order-update", response_model=OrderResponse)
+async def service_provider_order_update(
+    update_request: ServiceProviderUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User = Depends(get_user_from_service_or_user_token)
+):
+    """
+    Endpoint for service providers to update non-execution related order details.
+    - Cancels pending orders.
+    - Adds/Removes/Updates Stop Loss/Take Profit.
+    - Updates any other specified fields on an order.
+    """
+    if not getattr(current_user, 'is_service_account', False):
+        orders_logger.error(f"Non-service account attempted to use service provider update endpoint: {current_user.id}")
+        raise HTTPException(status_code=403, detail="Only service accounts can use this endpoint")
+
+    orders_logger.info(f"Service provider update request received: {update_request.model_dump_json(exclude_unset=True)}")
+
+    order_model = UserOrder # Service provider updates are for live users
+    
+    # Extract the single ID provided in the request
+    id_to_find = (
+        update_request.order_id or
+        update_request.cancel_id or
+        update_request.close_id or
+        update_request.modify_id or
+        update_request.stoploss_id or
+        update_request.takeprofit_id or
+        update_request.stoploss_cancel_id or
+        update_request.takeprofit_cancel_id
+    )
+    if not id_to_find:
+        raise HTTPException(status_code=400, detail="An order identifier must be provided.")
+
+    # Use the new generic search function to find the order
+    db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
+    
+    if not db_order:
+        orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
+        raise HTTPException(status_code=404, detail="Order not found with provided ID")
+
+    original_status = db_order.order_status
+    update_fields = update_request.model_dump(exclude_unset=True)
+
+    # Specific logic for pending order cancellation
+    if original_status == "PENDING" and update_fields.get("order_status") == "CANCELLED":
+        orders_logger.info(f"Service provider is cancelling pending order {db_order.order_id}")
+        await remove_pending_order(
+            redis_client,
+            db_order.order_id,
+            db_order.order_company_name,
+            db_order.order_type,
+            str(db_order.order_user_id)
+        )
+
+    # Update order in DB
+    updated_order = await crud_order.update_order_with_tracking(
+        db,
+        db_order,
+        update_fields,
+        current_user.id,
+        'live',
+        action_type="SP_UPDATE"
+    )
+
+    await db.commit()
+    await db.refresh(updated_order)
+
+    # Publish updates
+    user_id = updated_order.order_user_id
+    await update_user_static_orders(user_id, db, redis_client, 'live')
+    await publish_order_update(redis_client, user_id)
+    await publish_user_data_update(redis_client, user_id)
+    
+    return OrderResponse.model_validate(updated_order, from_attributes=True)
+
+
+
+async def _handle_order_close_transition(
+    db: AsyncSession,
+    redis_client: Redis,
+    db_order: UserOrder,
+    update_fields: Dict[str, Any],
+    current_user: User
+) -> UserOrder:
+    """
+    Handles the logic for an order transitioning to CLOSED status by a service provider.
+    Calculates P/L, updates user margin and wallet, and cancels any existing SL/TP.
+    """
+    user_id = db_order.order_user_id
+    db_user = await get_user_by_id_with_lock(db, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    order_model = UserOrder # Service provider actions are on live users
+
+    # Store pre-close SL/TP info to send cancellations if they exist
+    original_stop_loss = db_order.stop_loss
+    original_take_profit = db_order.take_profit
+    original_stoploss_id = db_order.stoploss_id
+    original_takeprofit_id = db_order.takeprofit_id
+
+    # --- P&L and Commission Calculation ---
+    symbol = db_order.order_company_name.upper()
+    quantity = Decimal(str(db_order.order_quantity))
+    entry_price = Decimal(str(db_order.order_price))
+    
+    close_price = update_fields.get('close_price')
+    if close_price is None:
+        raise HTTPException(status_code=400, detail="close_price is required to close an order.")
+    close_price = Decimal(str(close_price))
+    
+    symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(symbol))
+    symbol_info_result = await db.execute(symbol_info_stmt)
+    ext_symbol_info = symbol_info_result.scalars().first()
+    if not ext_symbol_info:
+        raise HTTPException(status_code=500, detail=f"Symbol info not found for {symbol}")
+
+    contract_size = Decimal(str(ext_symbol_info.contract_size))
+    profit_currency = ext_symbol_info.profit.upper()
+
+    user_data = await get_user_data_cache(redis_client, user_id, db, 'live')
+    group_name = user_data.get('group_name') if user_data else db_user.group_name
+    group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+    if not group_settings:
+        raise HTTPException(status_code=500, detail="Group settings not found")
+
+    # Profit calculation
+    if db_order.order_type == "BUY":
+        profit = (close_price - entry_price) * quantity * contract_size
+    else: # SELL
+        profit = (entry_price - close_price) * quantity * contract_size
+    profit_usd = await _convert_to_usd(profit, profit_currency, user_id, db_order.order_id, "PnL", db, redis_client)
+
+    # Commission calculation
+    existing_commission = Decimal(str(db_order.commission or "0.0"))
+    exit_commission = Decimal("0.0")
+    commission_type = int(group_settings.get('commision_type', -1))
+    if commission_type in [0, 2]: # Every Trade or Out
+        commission_value_type = int(group_settings.get('commision_value_type', -1))
+        commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
+        if commission_value_type == 0: # Per lot
+            exit_commission = quantity * commission_rate
+        elif commission_value_type == 1: # Percent
+            exit_commission = (commission_rate / Decimal("100")) * (quantity * contract_size * close_price)
+    
+    total_commission = (existing_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    net_profit = (profit_usd - total_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    # --- Margin Recalculation ---
+    all_open_orders = await crud_order.get_open_orders_by_user_id_and_symbol(db, user_id, symbol, order_model)
+    margin_before_dict = await calculate_total_symbol_margin_contribution(db, redis_client, user_id, symbol, all_open_orders, 'live')
+    margin_before = margin_before_dict["total_margin"]
+    
+    non_symbol_margin = Decimal(str(db_user.margin)) - margin_before
+    
+    remaining_orders = [o for o in all_open_orders if o.order_id != db_order.order_id]
+    margin_after_dict = await calculate_total_symbol_margin_contribution(db, redis_client, user_id, symbol, remaining_orders, 'live')
+    margin_after = margin_after_dict["total_margin"]
+
+    db_user.margin = max(Decimal(0), (non_symbol_margin + margin_after).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    
+    swap = Decimal(str(update_fields.get("swap", "0.0")))
+
+    # --- Wallet Update ---
+    db_user.wallet_balance = (Decimal(str(db_user.wallet_balance)) + net_profit - swap).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+    
+    # --- Create Wallet Transactions ---
+    transaction_time = datetime.datetime.now(datetime.timezone.utc)
+    wallet_common = {"symbol": symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time, "order_id": db_order.order_id, "user_id": user_id}
+    if net_profit != Decimal("0.0"):
+        db.add(Wallet(transaction_id=await generate_unique_10_digit_id(db, Wallet, "transaction_id"), **WalletCreate(**wallet_common, transaction_type="Profit/Loss", transaction_amount=net_profit, description=f"P/L for closing order {db_order.order_id}").model_dump(exclude_none=True)))
+    if total_commission > Decimal("0.0"):
+        db.add(Wallet(transaction_id=await generate_unique_10_digit_id(db, Wallet, "transaction_id"), **WalletCreate(**wallet_common, transaction_type="Commission", transaction_amount=-total_commission, description=f"Commission for closing order {db_order.order_id}").model_dump(exclude_none=True)))
+    if swap != Decimal("0.0"):
+        db.add(Wallet(transaction_id=await generate_unique_10_digit_id(db, Wallet, "transaction_id"), **WalletCreate(**wallet_common, transaction_type="Swap", transaction_amount=-swap, description=f"Swap for order {db_order.order_id}").model_dump(exclude_none=True)))
+
+    # --- Update Order Record ---
+    update_fields.update({
+        "order_status": "CLOSED", 
+        "net_profit": net_profit,
+        "swap": swap, 
+        "commission": total_commission,
+        "close_id": await generate_unique_10_digit_id(db, order_model, 'close_id')
+    })
+
+    # Generate SL/TP cancel IDs if needed and add to the update dict
+    stoploss_cancel_id, takeprofit_cancel_id = None, None
+    if original_stop_loss is not None and original_stop_loss > 0:
+        stoploss_cancel_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_cancel_id')
+        update_fields['stoploss_cancel_id'] = stoploss_cancel_id
+    if original_take_profit is not None and original_take_profit > 0:
+        takeprofit_cancel_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_cancel_id')
+        update_fields['takeprofit_cancel_id'] = takeprofit_cancel_id
+
+
+    updated_order = await crud_order.update_order_with_tracking(db, db_order, update_fields, current_user.id, 'live', "SP_CLOSE")
+    
+    await db.commit()
+    await db.refresh(db_user)
+    await db.refresh(updated_order)
+
+    # --- Firebase SL/TP Cancellation ---
+    if stoploss_cancel_id and original_stoploss_id:
+        sl_payload = {
+            "action": "cancel_stoploss",
+            "status": "stoploss-cancel",
+            "order_id": db_order.order_id,
+            "user_id": user_id,
+            "stoploss_id": original_stoploss_id,
+            "stoploss_cancel_id": stoploss_cancel_id,
+            "symbol": symbol,
+            "order_type": db_order.order_type
+        }
+        await send_order_to_firebase(sl_payload, "live")
+        orders_logger.info(f"Sent SL cancellation to Firebase for closed order {db_order.order_id}")
+
+    if takeprofit_cancel_id and original_takeprofit_id:
+        tp_payload = {
+            "action": "cancel_takeprofit",
+            "status": "takeprofit-cancel",
+            "order_id": db_order.order_id,
+            "user_id": user_id,
+            "takeprofit_id": original_takeprofit_id,
+            "takeprofit_cancel_id": takeprofit_cancel_id,
+            "symbol": symbol,
+            "order_type": db_order.order_type
+        }
+        await send_order_to_firebase(tp_payload, "live")
+        orders_logger.info(f"Sent TP cancellation to Firebase for closed order {db_order.order_id}")
+
+    # --- Finalize: Caches and Websockets ---
+    user_data_to_cache = {
+        "id": db_user.id, "email": getattr(db_user, 'email', None), "group_name": db_user.group_name,
+        "leverage": db_user.leverage, "user_type": 'live', "account_number": getattr(db_user, 'account_number', None),
+        "wallet_balance": db_user.wallet_balance, "margin": db_user.margin, "first_name": getattr(db_user, 'first_name', None),
+        "last_name": getattr(db_user, 'last_name', None), "country": getattr(db_user, 'country', None),
+        "phone_number": getattr(db_user, 'phone_number', None),
+    }
+    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+    await update_user_static_orders(user_id, db, redis_client, 'live')
+    await publish_order_update(redis_client, user_id)
+    await publish_user_data_update(redis_client, user_id)
+    await publish_market_data_trigger(redis_client)
+
+    return updated_order
 
 

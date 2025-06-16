@@ -188,23 +188,28 @@ async def trigger_pending_order(
             logger.error(f"Adjusted buy price not found for symbol {symbol} when triggering order {order_id}. Skipping.")
             return
         
+        adjusted_sell_price = adjusted_prices.get('sell')
+        if not adjusted_sell_price:
+            logger.error(f"Adjusted sell price not found for symbol {symbol} when triggering order {order_id}. Skipping.")
+            return
+
         order_price = Decimal(str(db_order.order_price))
         
         # Check if the order should be triggered based on the order type and adjusted buy price
         should_trigger = False
         
         if order_type_original == 'BUY_LIMIT':
-            # Trigger when adjusted_buy_price falls to or below order_price
-            should_trigger = adjusted_buy_price <= order_price
-            logger.info(f"BUY_LIMIT order {order_id}: adjusted_buy_price ({adjusted_buy_price}) <= order_price ({order_price})? {should_trigger}")
+            # Trigger when the market's SELL price (bid) drops to or below the limit price.
+            should_trigger = adjusted_sell_price <= order_price
+            logger.info(f"BUY_LIMIT order {order_id}: adjusted_sell_price ({adjusted_sell_price}) <= order_price ({order_price})? {should_trigger}")
         
         elif order_type_original == 'SELL_STOP':
-            # Trigger when adjusted_buy_price falls to or below order_price
-            should_trigger = adjusted_buy_price <= order_price
-            logger.info(f"SELL_STOP order {order_id}: adjusted_buy_price ({adjusted_buy_price}) <= order_price ({order_price})? {should_trigger}")
+            # Trigger when adjusted_sell_price falls to or below order_price
+            should_trigger = adjusted_sell_price <= order_price
+            logger.info(f"SELL_STOP order {order_id}: adjusted_sell_price ({adjusted_sell_price}) <= order_price ({order_price})? {should_trigger}")
         
         elif order_type_original == 'SELL_LIMIT':
-            # Trigger when adjusted_buy_price rises to or above order_price
+            # Trigger when the market's BUY price (ask) rises to or above the limit price.
             should_trigger = adjusted_buy_price >= order_price
             logger.info(f"SELL_LIMIT order {order_id}: adjusted_buy_price ({adjusted_buy_price}) >= order_price ({order_price})? {should_trigger}")
         
@@ -582,7 +587,7 @@ async def process_order_stoploss_takeprofit(
             # Get the user object
             from app.crud.user import get_user_by_id, get_demo_user_by_id
             if user_type == 'live':
-                user = await get_user_by_id(db, order.order_user_id)
+                user = await get_user_by_id(db, order.order_user_id, user_type=user_type)
             else:
                 user = await get_demo_user_by_id(db, order.order_user_id)
             
@@ -714,7 +719,7 @@ async def get_user_data_cache(redis_client: Redis, user_id: int, db: AsyncSessio
             from app.crud.user import get_user_by_id, get_demo_user_by_id
             
             if user_type == 'live':
-                user = await get_user_by_id(db, user_id)
+                user = await get_user_by_id(db, user_id, user_type=user_type)
             else:
                 user = await get_demo_user_by_id(db, user_id)
                 
@@ -743,7 +748,7 @@ async def get_user_data_cache(redis_client: Redis, user_id: int, db: AsyncSessio
         from app.crud.user import get_user_by_id, get_demo_user_by_id
         
         if user_type == 'live':
-            user = await get_user_by_id(db, user_id)
+            user = await get_user_by_id(db, user_id, user_type=user_type)
         else:
             user = await get_demo_user_by_id(db, user_id)
             
@@ -787,11 +792,14 @@ async def get_group_settings_cache(redis_client: Redis, group_name: str) -> dict
                 group = await get_group_by_name(db, group_name)
                 if not group:
                     return {}
+                
+                # Handle case where get_group_by_name returns a list
+                group_obj = group[0] if isinstance(group, list) else group
                     
                 return {
-                    "id": group.id,
-                    "name": group.name,
-                    "sending_orders": getattr(group, 'sending_orders', None)
+                    "id": group_obj.id,
+                    "name": group_obj.name,
+                    "sending_orders": getattr(group_obj, 'sending_orders', None)
                 }
         
         # Try to get from cache
@@ -814,11 +822,14 @@ async def get_group_settings_cache(redis_client: Redis, group_name: str) -> dict
             group = await get_group_by_name(db, group_name)
             if not group:
                 return {}
+            
+            # Handle case where get_group_by_name returns a list
+            group_obj = group[0] if isinstance(group, list) else group
                 
             group_data = {
-                "id": group.id,
-                "name": group.name,
-                "sending_orders": getattr(group, 'sending_orders', None)
+                "id": group_obj.id,
+                "name": group_obj.name,
+                "sending_orders": getattr(group_obj, 'sending_orders', None)
             }
             
             # Cache the group data
