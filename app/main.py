@@ -96,6 +96,8 @@ from app.shared_state import redis_publish_queue
 
 # Import orders logger
 from app.core.logging_config import orders_logger
+from app.services.order_processing import generate_unique_10_digit_id
+from app.database.models import UserOrder
 
 # Import stop loss and take profit checker
 from app.services.pending_orders import check_and_trigger_stoploss_takeprofit
@@ -281,92 +283,140 @@ async def update_all_users_dynamic_portfolio():
 # --- Auto-cutoff function for margin calls ---
 async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: int, user_type: str, margin_level: Decimal):
     """
-    Handle auto-cutoff for users whose margin level falls below the critical threshold.
-    This function will close all open positions for the user.
-    
-    Args:
-        db: Database session
-        redis_client: Redis client
-        user_id: User ID
-        user_type: User type (live or demo)
-        margin_level: Current margin level
+    Handles auto-cutoff for users whose margin level falls below the critical threshold.
+    - For non-Barclays users, it closes all open positions locally.
+    - For Barclays users, it sends close requests to the service provider via Firebase.
     """
     try:
-        logger.warning(f"AUTO-CUTOFF: Closing all positions for user {user_id} due to low margin level ({margin_level}%)")
-        
-        # Get all open positions for this user
+        logger.warning(f"AUTO-CUTOFF: Initiating for user {user_id} ({user_type}) with margin level {margin_level}%")
+
+        # Determine if the user is a Barclays live user
+        is_barclays_live_user = False
+        user_for_cutoff = None
+        if user_type == "live":
+            user_for_cutoff = await crud_user.get_user_by_id(db, user_id=user_id)
+            if user_for_cutoff and user_for_cutoff.group_name:
+                group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name)
+                if group_settings.get('sending_orders', '').lower() == 'barclays':
+                    is_barclays_live_user = True
+        else: # demo user
+            user_for_cutoff = await crud_user.get_demo_user_by_id(db, user_id)
+
+        if not user_for_cutoff:
+            logger.error(f"AUTO-CUTOFF: Could not find user {user_id} to perform cutoff.")
+            return
+
         order_model = crud_order.get_order_model(user_type)
         open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-        
+
         if not open_orders:
-            logger.info(f"No open positions found for user {user_id} during auto-cutoff")
+            logger.info(f"No open positions found for user {user_id} during auto-cutoff.")
             return
+
+        logger.warning(f"AUTO-CUTOFF: Found {len(open_orders)} positions for user {user_id}. Barclays user: {is_barclays_live_user}")
+
+        # --- Conditional logic based on user type ---
+        if is_barclays_live_user:
+            # For Barclays users, send close requests to Firebase
+            logger.info(f"AUTO-CUTOFF: Processing Barclays user {user_id}. Sending close requests to Firebase.")
+            for order in open_orders:
+                try:
+                    close_id = await generate_unique_10_digit_id(db, UserOrder, 'close_id')
+                    
+                    firebase_close_data = {
+                        "action": "close_order",
+                        "close_id": close_id,
+                        "order_id": order.order_id,
+                        "user_id": user_id,
+                        "symbol": order.order_company_name,
+                        "order_type": order.order_type,
+                        "order_status": order.order_status,
+                        "status": "close", # As requested
+                        "order_quantity": str(order.order_quantity),
+                        "contract_value": str(order.contract_value),
+                        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+                    }
+                    
+                    await send_order_to_firebase(firebase_close_data, "live")
+                    
+                    # Update the local order to reflect the cutoff request
+                    update_fields = {
+                        "close_id": close_id,
+                        "close_message": f"Auto-cutoff triggered at margin level {margin_level}%. Close request sent to provider."
+                    }
+                    await crud_order.update_order_with_tracking(
+                        db, order, update_fields, user_id, user_type, "AUTO_CUTOFF_REQUESTED"
+                    )
+                    await db.commit()
+
+                    logger.info(f"AUTO-CUTOFF: Close request sent for Barclays order {order.order_id} with close_id {close_id}.")
+
+                except Exception as e:
+                    logger.error(f"AUTO-CUTOFF: Error sending close request for Barclays order {order.order_id}: {e}", exc_info=True)
             
-        logger.warning(f"AUTO-CUTOFF: Found {len(open_orders)} positions to close for user {user_id}")
-        
-        # Close each position
-        for order in open_orders:
-            try:
-                # Get current market price for the symbol
-                symbol = order.order_company_name
-                adjusted_prices = await get_adjusted_market_price_cache(redis_client, order.group_name, symbol)
-                
-                # Determine close price based on order type
-                close_price = None
-                if adjusted_prices:
-                    if order.order_type == 'BUY':
-                        close_price = adjusted_prices.get('sell')  # Sell at bid price
-                    else:
-                        close_price = adjusted_prices.get('buy')  # Buy at ask price
-                
-                if not close_price:
-                    # Fallback to last known price
+            # After sending all requests, publish an update to notify the user's frontend.
+            await publish_order_update(redis_client, user_id)
+            logger.warning(f"AUTO-CUTOFF: Finished sending close requests for Barclays user {user_id}.")
+
+        else:
+            # For non-Barclays users (live or demo), close orders directly
+            logger.info(f"AUTO-CUTOFF: Processing non-Barclays user {user_id}. Closing orders locally.")
+            from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
+            
+            total_net_profit = Decimal('0.0')
+
+            for order in open_orders:
+                try:
+                    symbol = order.order_company_name
                     last_price = await get_last_known_price(redis_client, symbol)
-                    if last_price:
-                        if order.order_type == 'BUY':
-                            close_price = last_price.get('o')  # Sell at bid price
-                        else:
-                            close_price = last_price.get('b')  # Buy at ask price
-                
-                if not close_price:
-                    logger.error(f"Cannot close position {order.order_id} - no price available for {symbol}")
-                    continue
-                
-                # Calculate PnL
-                entry_price = order.order_price
-                contract_size = Decimal('100000')  # Default
-                quantity = order.order_quantity
-                
-                # Close the position
-                order.close_price = close_price
-                order.close_time = datetime.now()
-                order.order_status = 'CLOSED'
-                order.close_message = f"Auto-cutoff: margin level {margin_level}% below threshold"
-                
-                # Calculate net profit
-                if order.order_type == 'BUY':
-                    price_diff = close_price - entry_price
-                else:
-                    price_diff = entry_price - close_price
-                
-                net_profit = price_diff * quantity * contract_size
-                order.net_profit = net_profit
-                
-                # Update the database
-                await db.commit()
-                logger.info(f"AUTO-CUTOFF: Closed position {order.order_id} for user {user_id} at price {close_price}")
+                    
+                    if not last_price:
+                        logger.error(f"Cannot close position {order.order_id} - no price available for {symbol}")
+                        continue
+
+                    # Determine close price based on order type
+                    close_price_str = last_price.get('o') if order.order_type == 'BUY' else last_price.get('b')
+                    close_price = Decimal(str(close_price_str))
+
+                    if not close_price or close_price <= 0:
+                        logger.error(f"Cannot close position {order.order_id} - invalid price {close_price} for {symbol}")
+                        continue
+                    
+                    # Simplified P/L calculation for cutoff
+                    entry_price = order.order_price
+                    ext_symbol_info = await get_external_symbol_info_by_symbol(db, symbol)
+                    contract_size = Decimal(str(ext_symbol_info.contract_size)) if ext_symbol_info else Decimal('100000')
+                    quantity = order.order_quantity
+                    
+                    price_diff = (close_price - entry_price) if order.order_type == 'BUY' else (entry_price - close_price)
+                    
+                    # Note: This simplified P/L does not account for commission or currency conversion.
+                    # For a simple cutoff, this is acceptable. The main goal is liquidation.
+                    net_profit = price_diff * quantity * contract_size
+                    
+                    # Update order fields for closure
+                    order.close_price = close_price
+                    order.order_status = 'CLOSED'
+                    order.close_message = f"Auto-cutoff: margin level {margin_level}%"
+                    order.net_profit = net_profit
+                    total_net_profit += net_profit
+                    
+                    logger.info(f"AUTO-CUTOFF: Closing local order {order.order_id} with P/L: {net_profit}")
+
+                except Exception as e:
+                    logger.error(f"Error processing local closure for order {order.order_id}: {e}", exc_info=True)
+
+            # After processing all orders, update user's financials
+            user_for_cutoff.wallet_balance += total_net_profit
+            user_for_cutoff.margin = Decimal('0') # Reset margin to zero
+            await db.commit()
             
-            except Exception as e:
-                logger.error(f"Error closing position {order.order_id} for user {user_id}: {e}", exc_info=True)
-        
-        # Update user's margin
-        await crud_user.update_user_margin(db, redis_client, user_id, Decimal('0'), user_type)
-        
-        # Notify the user via WebSocket
-        await publish_order_update(redis_client, user_id)
-        
-        logger.warning(f"AUTO-CUTOFF: Completed for user {user_id}. All positions closed.")
-        
+            # Notify the user via WebSocket
+            await publish_order_update(redis_client, user_id)
+            await publish_user_data_update(redis_client, user_id)
+            
+            logger.warning(f"AUTO-CUTOFF: Completed for non-Barclays user {user_id}. All positions closed locally.")
+            
     except Exception as e:
         logger.error(f"Error in handle_margin_cutoff for user {user_id}: {e}", exc_info=True)
 

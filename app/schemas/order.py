@@ -282,3 +282,20 @@ class CancelTakeProfitRequest(BaseModel):
         json_encoders = {
             Decimal: lambda v: str(v),
         }
+
+# --- Service Provider Half Spread Calculation Schemas ---
+class HalfSpreadRequest(BaseModel):
+    user_id: int
+    user_type: str
+    symbol: str
+
+    @validator('user_type')
+    def validate_user_type(cls, v):
+        if v.lower() not in ["live", "demo"]:
+            raise ValueError("Invalid user type. Must be 'live' or 'demo'.")
+        return v.lower()
+
+class HalfSpreadResponse(BaseModel):
+    symbol: str
+    half_spread: Decimal
+    calculation_details: dict

@@ -203,7 +203,7 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
         # Define all possible order fields to ensure all are present and sent as strings.
         # This list should be comprehensive for all data structures passed to this function.
         all_order_fields = [
-            "order_id", "order_user_id", "user_id", # user_id can be an alias for order_user_id
+            "order_id", "order_user_id", # user_id can be an alias for order_user_id
             "order_company_name", "order_type", "order_status",
             "order_price", "order_quantity", "contract_value", "margin",
             "stop_loss", "take_profit", "close_price", "net_profit",

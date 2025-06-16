@@ -17,7 +17,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user
 from app.database.models import Group, ExternalSymbolInfo, User, DemoUser, UserOrder, DemoUserOrder, Wallet
-from app.schemas.order import ServiceProviderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest, CancelStopLossRequest, CancelTakeProfitRequest
+from app.schemas.order import ServiceProviderUpdateRequest, OrderPlacementRequest, OrderResponse, CloseOrderRequest, UpdateStopLossTakeProfitRequest, PendingOrderPlacementRequest, PendingOrderCancelRequest, AddStopLossRequest, AddTakeProfitRequest, CancelStopLossRequest, CancelTakeProfitRequest, HalfSpreadRequest, HalfSpreadResponse
 from app.schemas.user import StatusResponse
 from app.schemas.wallet import WalletCreate
 from app.core.cache import publish_account_structure_changed_event
@@ -960,6 +960,8 @@ async def close_order(
                             "close_message": "Close request sent to service provider.",
                             "close_price": close_price,
                         }
+                        if close_request.status is not None:
+                            update_fields_for_history['status'] = close_request.status
                         
                         await crud_order.update_order_with_tracking(
                             db,
@@ -1354,6 +1356,21 @@ async def modify_pending_order(
                 "action": "modify_order"
             }
             await send_order_to_firebase(firebase_modify_data, "live")
+            
+            # Also update the local order with the new status and modify_id
+            update_data = {
+                "modify_id": modify_id,
+                "status": modify_request.status
+            }
+            await crud_order.update_order_with_tracking(
+                db,
+                db_order,
+                update_fields=update_data,
+                user_id=modify_request.user_id,
+                user_type=modify_request.user_type,
+                action_type="MODIFY_PENDING_REQUESTED"
+            )
+            
             return {"message": "Order modification request sent to external service (Barclays)."}
 
         # For non-Barclays users, update the order
@@ -1866,6 +1883,8 @@ async def add_stoploss(
             update_fields = {
                 "stoploss_id": stoploss_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             # Update order with tracking
             await crud_order.update_order_with_tracking(
@@ -1914,6 +1933,8 @@ async def add_stoploss(
                 "stop_loss": request.stop_loss,
                 "stoploss_id": stoploss_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             # Update order with tracking
             updated_order = await crud_order.update_order_with_tracking(
@@ -2013,6 +2034,8 @@ async def add_takeprofit(
             update_fields = {
                 "takeprofit_id": takeprofit_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             # Update order with tracking
             await crud_order.update_order_with_tracking(
@@ -2039,7 +2062,6 @@ async def add_takeprofit(
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "contract_value": contract_value,
                 "order_quantity": str(request.order_quantity),
-                "order_price": str(request.order_price),
                 "order_status": request.order_status,
                 "status": request.status
             }
@@ -2062,6 +2084,8 @@ async def add_takeprofit(
                 "take_profit": request.take_profit,
                 "takeprofit_id": takeprofit_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             # Update order with tracking
             updated_order = await crud_order.update_order_with_tracking(
@@ -2151,6 +2175,8 @@ async def cancel_stoploss(
             update_fields = {
                 "stoploss_cancel_id": stoploss_cancel_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             await crud_order.update_order_with_tracking(
                 db,
@@ -2192,6 +2218,8 @@ async def cancel_stoploss(
                 "stoploss_id": None,
                 "stoploss_cancel_id": stoploss_cancel_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             updated_order = await crud_order.update_order_with_tracking(
                 db,
@@ -2277,6 +2305,8 @@ async def cancel_takeprofit(
             update_fields = {
                 "takeprofit_cancel_id": takeprofit_cancel_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             await crud_order.update_order_with_tracking(
                 db,
@@ -2318,6 +2348,8 @@ async def cancel_takeprofit(
                 "takeprofit_id": None,
                 "takeprofit_cancel_id": takeprofit_cancel_id
             }
+            if request.status is not None:
+                update_fields['status'] = request.status
             
             updated_order = await crud_order.update_order_with_tracking(
                 db,
@@ -3121,6 +3153,16 @@ async def service_provider_order_execution(
 
     # Logic for handling any field update provided in the request
     update_fields = request.model_dump(exclude_unset=True)
+
+    # Do not update any ID fields from the service provider request. They are for lookup only.
+    id_fields_to_ignore = [
+        'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
+        'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
+    ]
+    for field in id_fields_to_ignore:
+        if field in update_fields:
+            del update_fields[field]
+
     orders_logger.info(f"Service Provider Execution: Received update fields: {update_fields}")
 
     if new_status == "OPEN" and original_status in ["PROCESSING", "PENDING"]:
@@ -3228,6 +3270,15 @@ async def service_provider_order_update(
 
     original_status = db_order.order_status
     update_fields = update_request.model_dump(exclude_unset=True)
+
+    # Do not update any ID fields from the service provider request. They are for lookup only.
+    id_fields_to_ignore = [
+        'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
+        'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
+    ]
+    for field in id_fields_to_ignore:
+        if field in update_fields:
+            del update_fields[field]
 
     # Specific logic for pending order cancellation
     if original_status == "PENDING" and update_fields.get("order_status") == "CANCELLED":
@@ -3431,5 +3482,67 @@ async def _handle_order_close_transition(
     await publish_market_data_trigger(redis_client)
 
     return updated_order
+
+
+@router.post("/service-provider/calculate-half-spread", response_model=HalfSpreadResponse, summary="Calculate Half-Spread for a Symbol in a User's Group")
+async def calculate_half_spread_for_service_provider(
+    request: HalfSpreadRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_user_from_service_or_user_token)
+):
+    """
+    Calculates the half-spread for a given symbol based on the user's group settings.
+    This endpoint is for use by service providers.
+    
+    The formula used is: `half_spread = (spread * spread_pip) / 2`
+    """
+    if not getattr(current_user, 'is_service_account', False):
+        orders_logger.error(f"Non-service account attempted to use spread calculation endpoint: {current_user.id}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only service accounts can use this endpoint")
+
+    # 1. Find User to get group_name
+    db_user = None
+    if request.user_type == 'live':
+        db_user = await crud_user.get_user_by_id(db, user_id=request.user_id, user_type=request.user_type)
+    else:  # demo
+        db_user = await crud_user.get_demo_user_by_id(db, demo_user_id=request.user_id, user_type=request.user_type)
+
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {request.user_id} and type '{request.user_type}' not found.")
+
+    group_name = getattr(db_user, 'group_name', None)
+    if not group_name:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {request.user_id} does not belong to any group.")
+
+    # 2. Find Group settings for the specific symbol and group name
+    group_settings = await crud_group.get_group_by_symbol_and_name(db, symbol=request.symbol, name=group_name)
+    if not group_settings:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No specific settings found for symbol '{request.symbol}' in group '{group_name}'.")
+
+    # 3. Extract spread and spread_pip
+    spread = getattr(group_settings, 'spread', None)
+    spread_pip = getattr(group_settings, 'spread_pip', None)
+
+    if spread is None or spread_pip is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Incomplete spread settings for symbol '{request.symbol}' in group '{group_name}'.")
+
+    # 4. Calculate half_spread
+    try:
+        spread_dec = Decimal(str(spread))
+        spread_pip_dec = Decimal(str(spread_pip))
+        half_spread = (spread_dec * spread_pip_dec) / Decimal(2)
+    except (TypeError, InvalidOperation) as e:
+        orders_logger.error(f"Error during spread calculation for symbol '{request.symbol}': {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during spread calculation: {e}")
+
+    # 5. Return response
+    return HalfSpreadResponse(
+        symbol=request.symbol,
+        half_spread=half_spread,
+        calculation_details={
+            "spread_used": spread_dec,
+            "spread_pip_used": spread_pip_dec
+        }
+    )
 
 
