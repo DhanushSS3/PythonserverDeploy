@@ -285,17 +285,15 @@ class CancelTakeProfitRequest(BaseModel):
 
 # --- Service Provider Half Spread Calculation Schemas ---
 class HalfSpreadRequest(BaseModel):
-    user_id: int
-    user_type: str
+    order_id: str
     symbol: str
-
-    @validator('user_type')
-    def validate_user_type(cls, v):
-        if v.lower() not in ["live", "demo"]:
-            raise ValueError("Invalid user type. Must be 'live' or 'demo'.")
-        return v.lower()
 
 class HalfSpreadResponse(BaseModel):
     symbol: str
     half_spread: Decimal
-    calculation_details: dict
+
+# --- Service Provider Order Status Check ---
+class OrderStatusResponse(BaseModel):
+    order_id: str
+    status: Optional[str] = None
+    order_status: Optional[str] = None

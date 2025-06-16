@@ -17505,3 +17505,40 @@ NameError: name 'user_id' is not defined
 2025-06-16 04:58:00,469 - INFO - orders - Fetched 3 open orders for user 4
 2025-06-16 04:58:00,502 - INFO - orders - Fetched 3 pending orders for user 4
 2025-06-16 04:58:00,510 - INFO - orders - Updated static orders cache for user 4 with 3 open orders and 3 pending orders
+2025-06-16 05:09:24,243 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:13:10,179 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:14:20,286 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:16:49,475 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:20:22,519 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:20:37,834 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'OPEN', 'order_type': 'BUY', 'order_price': Decimal('0.8821')}
+2025-06-16 05:20:37,868 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.82 JPY to USD for margin (user_id: 4, position: 1107488801)
+2025-06-16 05:20:37,868 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-06-16 05:20:37,869 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 05:20:37,870 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-06-16 05:20:37,870 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-06-16 05:20:37,871 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.2000000000'), 'o': Decimal('144.1930000000')}
+2025-06-16 05:20:37,871 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.2000000000
+2025-06-16 05:20:37,871 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.82 JPY / 144.2000000000 = 0.06116504854368932038834951456 USD
+2025-06-16 05:20:37,882 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 0
+2025-06-16 05:20:37,882 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol AUDJPY. Returning zero margin.
+2025-06-16 05:20:37,882 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 1
+2025-06-16 05:20:37,882 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=0.01000000, StoredMargin=0.06116504854368932038834951456
+2025-06-16 05:20:37,882 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1: MarginPerLot=6.116504854368932038834951456
+2025-06-16 05:20:37,883 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: TotalBuyQty=0.01000000, TotalSellQty=0, NetQty=0.01000000
+2025-06-16 05:20:37,883 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: AllMarginsPerLot=[Decimal('6.116504854368932038834951456')], HighestMarginPerLot=6.116504854368932038834951456
+2025-06-16 05:20:37,883 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDJPY: CalculatedTotalMargin=0.06, ContributingOrders=1 (based on individual stored margins)
+2025-06-16 05:20:37,883 - INFO - orders - Updating user 4 margin from 1744.41000000 to 1744.47
+2025-06-16 05:20:37,998 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 05:20:37,998 - INFO - orders - Using order model: UserOrder
+2025-06-16 05:20:38,006 - INFO - orders - Fetched 4 open orders for user 4
+2025-06-16 05:20:38,018 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 05:20:38,021 - INFO - orders - Updated static orders cache for user 4 with 4 open orders and 3 pending orders
+2025-06-16 05:23:58,869 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:25:27,634 - INFO - orders - Service provider status request received for ID: 6576627453
+2025-06-16 05:25:27,639 - INFO - orders - Found order 7872796244 with status: 'TAKEPROFIT-CANCEL' and order_status: 'OPEN'
+2025-06-16 05:34:49,606 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:35:53,966 - INFO - orders - Half-spread calculation request for order_id: 6576627453, symbol: AUDCHF
+2025-06-16 05:38:25,117 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:38:47,150 - INFO - orders - Half-spread calculation request for order_id: 6576627453, symbol: AUDCHF
+2025-06-16 05:40:58,007 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 05:41:20,295 - INFO - orders - Half-spread calculation request for order_id: 6576627453, symbol: AUDCHF

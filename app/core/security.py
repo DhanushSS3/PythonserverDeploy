@@ -337,11 +337,16 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
 
 
 # NEW FUNCTION TO SUPPORT SERVICE ACCOUNT JWT
-def create_service_account_token(service_name: str, expires_minutes: int = 60):
-    # Removed redundant import: import datetime
-    # from app.core.security import create_access_token # This would be a circular import if called from outside
-    data = {"sub": "service", "service_name": service_name}
-    return create_access_token(data=data, expires_delta=timedelta(minutes=expires_minutes)) # Corrected
+def create_service_account_token(service_name: str, expires_minutes: int = 60) -> str:
+    """
+    Creates a JWT for a service account.
+    The payload is structured specifically for service account validation.
+    """
+    data = {
+        "sub": service_name,          # The subject is the name of the service
+        "is_service_account": True    # Flag to identify this as a service account token
+    }
+    return create_access_token(data=data, expires_delta=timedelta(minutes=expires_minutes))
 
 # NEW DEPENDENCY FUNCTION - MODIFIED to handle service accounts targeting demo/live users
 async def get_user_from_service_or_user_token(
@@ -412,4 +417,36 @@ async def get_user_from_service_or_user_token(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+async def get_user_from_service_token(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    """
+    Dependency to get a user from a service account token.
+    This is a streamlined version for service-provider-only endpoints.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        service_name: str = payload.get("sub")
+        is_service_account: bool = payload.get("is_service_account", False)
+
+        if service_name is None or not is_service_account:
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+    
+    # For service accounts, we don't need to fetch a full user record from the DB.
+    # We can return a lightweight object representing the service account.
+    # This avoids DB lookups and prevents errors when no user_id is in the request.
+    service_user = User(id=0, email=f"{service_name}@service.account")
+    service_user.is_service_account = True
+    
+    return service_user
 
