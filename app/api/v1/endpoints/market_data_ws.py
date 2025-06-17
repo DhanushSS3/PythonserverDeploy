@@ -347,8 +347,15 @@ async def per_connection_redis_listener(
                 # Handle different message types based on channel
                 if channel == REDIS_MARKET_DATA_CHANNEL:
                     if message_data.get("type") == "market_data_update":
+                        # DIAGNOSTICS: Log delay from Firebase
+                        firebase_ts = message_data.get("_timestamp")
+                        if firebase_ts:
+                            import time
+                            delay = time.time() - firebase_ts
+                            logger.info(f"User {user_id}: Market data delay from Firebase to WS listener entry: {delay:.4f} seconds.")
+
                         # Process market data update (existing code)
-                        price_data_content = {k: v for k, v in message_data.items() if k != "type"}
+                        price_data_content = {k: v for k, v in message_data.items() if k not in ["type", "_timestamp"]}
                         
                         # Get group settings
                         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
@@ -648,10 +655,13 @@ async def process_portfolio_update(
     Process market data updates, update dynamic portfolio data, and send updates to the client.
     """
     try:
-        # Always fetch fresh data from the database for market data updates
-        async with AsyncSessionLocal() as refresh_db:
-            # Get static orders data directly from database
-            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+        # PERFORMANCE FIX: Get static orders from cache. Do NOT fetch from DB on every market tick.
+        # The cache is updated on connection and when an order update event is received.
+        static_orders = await get_user_static_orders_cache(redis_client, user_id)
+        if not static_orders:
+            logger.warning(f"User {user_id}: Static orders cache empty. Forcing a refresh from DB (this should be rare).")
+            async with AsyncSessionLocal() as refresh_db:
+                static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
         
         # Get open positions from static orders
         open_positions = static_orders.get("open_orders", []) if static_orders else []
@@ -960,9 +970,11 @@ async def redis_publisher_task(redis_client: Redis):
                 logger.info("Publisher task received shutdown signal. Exiting.")
                 break
             try:
-                # Filter out the _timestamp key before publishing, ensure "type" is added
-                message_to_publish_data = {k: v for k, v in raw_market_data_message.items() if k != '_timestamp'}
-                if message_to_publish_data: # Ensure there's data other than just timestamp
+                # DIAGNOSTICS: Keep the _timestamp key to measure delays.
+                message_to_publish_data = raw_market_data_message.copy()
+                
+                # Check if there is meaningful data besides the timestamp
+                if any(k != '_timestamp' for k in message_to_publish_data.keys()):
                      message_to_publish_data["type"] = "market_data_update" # Standardize type for raw updates
                      message_to_publish = json.dumps(message_to_publish_data, cls=DecimalEncoder)
                 else: # Skip if only timestamp was present

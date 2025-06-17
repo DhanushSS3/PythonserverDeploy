@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Data WebSocket Viewer</title>
+    <title>Adjusted Market Data Viewer</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
         .container { max-width: 900px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -18,7 +18,7 @@
         .status.disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .data-section { display: flex; gap: 20px; margin-top: 20px; }
         .data-box { flex: 1; background-color: #e9ecef; padding: 15px; border-radius: 6px; overflow-x: auto; }
-        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+        pre { background-color: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
         .market-data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .market-data-table th, .market-data-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
         .market-data-table th { background-color: #007bff; color: white; position: sticky; top: 0; }
@@ -31,7 +31,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Market Data WebSocket Viewer</h1>
+        <h1>Adjusted Market Data Viewer</h1>
 
         <div class="input-group">
             <label for="websocketUrl">WebSocket URL:</label>
@@ -47,26 +47,28 @@
 
         <div class="data-section">
             <div class="data-box">
-                <h2>Market Data</h2>
+                <h2>Adjusted Market Prices</h2>
                 <input type="text" id="symbolFilter" placeholder="Filter symbols..." onkeyup="filterSymbols()">
                 <div class="market-data-container">
                     <table id="marketDataTable" class="market-data-table">
                         <thead>
                             <tr>
-                                <th onclick="sortTable(0)">Symbol ↕</th>
-                                <th onclick="sortTable(1)">Offer (o)</th>
-                                <th onclick="sortTable(2)">Bid (b)</th>
-                                <th onclick="sortTable(3)">Spread (o-b)</th>
+                                <th>Symbol</th>
+                                <th>Sell Price</th>
+                                <th>Buy Price</th>
+                                
+                                <th>Spread</th>
                             </tr>
                         </thead>
                         <tbody>
+                            <tr><td colspan="4">Waiting for data...</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="symbol-count" id="symbolCount">0 symbols</div>
             </div>
             <div class="data-box">
-                <h2>Account Data</h2>
+                <h2>Account Summary</h2>
                 <pre id="accountDataJson">Waiting for data...</pre>
             </div>
         </div>
@@ -81,10 +83,7 @@
         const accountDataJsonPre = document.getElementById('accountDataJson');
         const symbolCountDiv = document.getElementById('symbolCount');
 
-        // Remove the orderedSymbols restriction to display all symbols
-        // const orderedSymbols = [
-        //    "AUDJPY"
-        // ];
+        const adjustedPriceCache = {}; // 🧠 Local cache to persist prices
 
         function connectWebSocket() {
             const baseUrl = websocketUrlInput.value;
@@ -94,170 +93,102 @@
                 alert("Please enter a JWT token.");
                 return;
             }
+
             const fullWsUrl = `${baseUrl}?token=${token}`;
-            if (ws) {
-                ws.close();
-            }
+            if (ws) ws.close();
+
             ws = new WebSocket(fullWsUrl);
 
-            ws.onopen = (event) => {
-                console.log("WebSocket Connected:", event);
+            ws.onopen = () => {
                 connectionStatusDiv.textContent = "Connected";
                 connectionStatusDiv.className = "status connected";
-                marketDataTableBody.innerHTML = '<tr><td colspan="4">Connected, waiting for market data...</td></tr>';
-                accountDataJsonPre.textContent = "Connected, waiting for account data...";
+                marketDataTableBody.innerHTML = '<tr><td colspan="4">Connected, waiting for adjusted market prices...</td></tr>';
+                accountDataJsonPre.textContent = "Connected, waiting for account summary...";
             };
 
             ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log("Received data:", data);
+                const message = JSON.parse(event.data);
+                console.log("Received:", message);
 
-                if (data.type === "market_data_update") {
-                    if (data.market_data) {
-                        updateMarketDataDisplay(data.market_data);
+                if (message.type === "market_update") {
+                    const incomingPrices = message.data?.market_prices;
+                    const accountData = message.data?.account_summary;
+
+                    if (incomingPrices) {
+                        Object.entries(incomingPrices).forEach(([symbol, data]) => {
+                            adjustedPriceCache[symbol] = data;
+                        });
+
+                        updateMarketTable(adjustedPriceCache);
                     }
-                    if (data.account_data) {
-                        accountDataJsonPre.textContent = JSON.stringify(data.account_data, null, 2);
+
+                    if (accountData) {
+                        accountDataJsonPre.textContent = JSON.stringify(accountData, null, 2);
                     }
                 }
             };
 
             ws.onclose = (event) => {
-                console.log("WebSocket Disconnected:", event);
-                connectionStatusDiv.textContent = `Disconnected (Code: ${event.code}, Reason: ${event.reason || 'N/A'})`;
+                connectionStatusDiv.textContent = `Disconnected (Code: ${event.code})`;
                 connectionStatusDiv.className = "status disconnected";
                 marketDataTableBody.innerHTML = '<tr><td colspan="4">Disconnected.</td></tr>';
                 accountDataJsonPre.textContent = "Disconnected.";
             };
 
             ws.onerror = (error) => {
-                console.error("WebSocket Error:", error);
-                connectionStatusDiv.textContent = "Error occurred, check console.";
+                console.error("WebSocket error:", error);
+                connectionStatusDiv.textContent = "WebSocket Error";
                 connectionStatusDiv.className = "status disconnected";
             };
         }
 
         function disconnectWebSocket() {
-            if (ws) {
-                ws.close();
-            }
+            if (ws) ws.close();
         }
 
-        function updateMarketDataDisplay(marketData) {
-            let tableRowsHtml = '';
-            
-            // Use all symbols from market data instead of filtering by orderedSymbols
-            const symbols = Object.keys(marketData).sort();
+        function updateMarketTable(marketPrices) {
+            const symbols = Object.keys(marketPrices).sort();
             symbolCountDiv.textContent = `${symbols.length} symbols`;
-            
+
+            if (symbols.length === 0) {
+                marketDataTableBody.innerHTML = '<tr><td colspan="4">No data.</td></tr>';
+                return;
+            }
+
+            let rows = '';
             symbols.forEach(symbol => {
-                const symbolData = marketData[symbol];
-                if (symbolData) {
-                    let offerPrice = 'N/A';
-                    let bidPrice = 'N/A';
-                    let spreadDisplay = 'N/A';
+                const price = marketPrices[symbol];
+                const buy = price?.buy !== undefined ? Number(price.buy).toFixed(5) : 'N/A';
+                const sell = price?.sell !== undefined ? Number(price.sell).toFixed(5) : 'N/A';
+                const spread = price?.spread !== undefined ? Number(price.spread).toFixed(1) + ' pips' : 'N/A';
 
-                    // Determine Offer Price (prioritize 'buy', then 'o')
-                    if (typeof symbolData.buy === 'number') {
-                        offerPrice = symbolData.buy.toFixed(5);
-                    } else if (typeof symbolData.o === 'number') {
-                        offerPrice = symbolData.o.toFixed(5);
-                    }
-
-                    // Determine Bid Price (prioritize 'sell', then 'b')
-                    if (typeof symbolData.sell === 'number') {
-                        bidPrice = symbolData.sell.toFixed(5);
-                    } else if (typeof symbolData.b === 'number') {
-                        bidPrice = symbolData.b.toFixed(5);
-                    }
-
-                    // Determine Spread Display (prioritize 'spread_value', then calculate from buy/sell or o/b, then 'spread')
-                    if (typeof symbolData.spread_value === 'number') {
-                        spreadDisplay = symbolData.spread_value.toFixed(5);
-                    } else if (offerPrice !== 'N/A' && bidPrice !== 'N/A') {
-                        // Ensure both are valid numbers before calculation
-                        const oNum = parseFloat(offerPrice);
-                        const bNum = parseFloat(bidPrice);
-                        if (!isNaN(oNum) && !isNaN(bNum)) {
-                            spreadDisplay = (oNum - bNum).toFixed(5);
-                        }
-                    } else if (typeof symbolData.spread === 'number') {
-                        spreadDisplay = symbolData.spread.toFixed(1) + " pips";
-                    }
-
-                    tableRowsHtml += `
-                        <tr>
-                            <td>${symbol}</td>
-                            <td>${offerPrice}</td>
-                            <td>${bidPrice}</td>
-                            <td>${spreadDisplay}</td>
-                        </tr>
-                    `;
-                }
+                rows += `
+                    <tr>
+                        <td>${symbol}</td>
+                        <td>${sell}</td>
+                        <td>${buy}</td>
+                        
+                        <td>${spread}</td>
+                    </tr>`;
             });
 
-            if (tableRowsHtml === '') {
-                marketDataTableBody.innerHTML = '<tr><td colspan="4">No market data received yet.</td></tr>';
-            } else {
-                marketDataTableBody.innerHTML = tableRowsHtml;
-            }
-            
-            // Apply current filter after updating the table
+            marketDataTableBody.innerHTML = rows;
             filterSymbols();
         }
-        
+
         function filterSymbols() {
-            const filterText = document.getElementById('symbolFilter').value.toUpperCase();
+            const filter = document.getElementById('symbolFilter').value.toUpperCase();
             const rows = document.querySelectorAll('#marketDataTable tbody tr');
-            let visibleCount = 0;
-            
+            let count = 0;
+
             rows.forEach(row => {
                 const symbol = row.cells[0].textContent.toUpperCase();
-                if (symbol.indexOf(filterText) > -1) {
-                    row.style.display = "";
-                    visibleCount++;
-                } else {
-                    row.style.display = "none";
-                }
+                const show = symbol.includes(filter);
+                row.style.display = show ? '' : 'none';
+                if (show) count++;
             });
-            
-            symbolCountDiv.textContent = `${visibleCount} symbols displayed`;
-        }
-        
-        function sortTable(columnIndex) {
-            const table = document.getElementById('marketDataTable');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            // Sort the rows
-            rows.sort((a, b) => {
-                const aValue = a.cells[columnIndex].textContent;
-                const bValue = b.cells[columnIndex].textContent;
-                
-                // Handle numeric sorting for price columns
-                if (columnIndex > 0) {
-                    const aNum = parseFloat(aValue);
-                    const bNum = parseFloat(bValue);
-                    
-                    // Handle N/A values
-                    if (isNaN(aNum) && isNaN(bNum)) return 0;
-                    if (isNaN(aNum)) return 1;
-                    if (isNaN(bNum)) return -1;
-                    
-                    return aNum - bNum;
-                }
-                
-                // Text sorting for symbol column
-                return aValue.localeCompare(bValue);
-            });
-            
-            // Remove existing rows
-            while (tbody.firstChild) {
-                tbody.removeChild(tbody.firstChild);
-            }
-            
-            // Add sorted rows
-            rows.forEach(row => tbody.appendChild(row));
+
+            symbolCountDiv.textContent = `${count} symbol${count !== 1 ? 's' : ''}`;
         }
     </script>
 </body>
