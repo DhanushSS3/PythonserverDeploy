@@ -363,8 +363,9 @@ async def get_user_from_service_or_user_token(
         payload = decode_token(token)
         logger.info(f"Token payload: {payload}")
         
-        if payload.get("sub") == "service":
-            logger.info(f"Service account token detected for service: {payload.get('service_name')}")
+        if payload.get("is_service_account"):
+            service_name = payload.get("sub")
+            logger.info(f"Service account token detected for service: {service_name}")
             # If a service account token, extract target user_id and user_type from request body or query params
             try:
                 # Attempt to get JSON body if present, else default to empty dict
@@ -398,7 +399,7 @@ async def get_user_from_service_or_user_token(
             # Attach a flag to the user object to indicate it was authenticated via a service account
             user.is_service_account = True
             
-            logger.info(f"Service account '{payload.get('service_name')}' successfully identified target user ID: {user_id}, Type: {target_user_type}")
+            logger.info(f"Service account '{service_name}' successfully identified target user ID: {user_id}, Type: {target_user_type}")
             return user
         else:
             # For regular user tokens, defer to get_current_user (which is now strict on both fields)

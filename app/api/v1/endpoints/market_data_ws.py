@@ -660,8 +660,8 @@ async def process_portfolio_update(
         static_orders = await get_user_static_orders_cache(redis_client, user_id)
         if not static_orders:
             logger.warning(f"User {user_id}: Static orders cache empty. Forcing a refresh from DB (this should be rare).")
-            async with AsyncSessionLocal() as refresh_db:
-                static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+        async with AsyncSessionLocal() as refresh_db:
+            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
         
         # Get open positions from static orders
         open_positions = static_orders.get("open_orders", []) if static_orders else []

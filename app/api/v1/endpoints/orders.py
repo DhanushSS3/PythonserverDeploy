@@ -932,19 +932,26 @@ async def close_order(
                 if is_barclays_live_user:
                     orders_logger.info(f"Live user {user_to_operate_on.id} from group '{group_name}' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.")
                     
+                    # Fetch the order from DB to get all necessary details for Firebase
+                    db_order_for_firebase = await crud_order.get_order_by_id(db, order_id=order_id, order_model=order_model_class)
+                    if not db_order_for_firebase:
+                        raise HTTPException(status_code=404, detail="Order to be closed not found in database for Firebase operation.")
+
                     firebase_close_data = {
-                        "order_id": close_request.order_id,
+                        "order_id": db_order_for_firebase.order_id,
                         "close_price": str(close_request.close_price),
                         "user_id": user_to_operate_on.id,
-                        "order_type": close_request.order_type,
-                        "order_company_name": close_request.order_company_name,
-                        "order_status": close_request.order_status,
-                        "status": close_request.status,
+                        "order_type": db_order_for_firebase.order_type,
+                        "order_company_name": db_order_for_firebase.order_company_name,
+                        "order_quantity": str(db_order_for_firebase.order_quantity),
+                        "contract_value": str(db_order_for_firebase.contract_value),
+                        "order_status": close_request.order_status, # Status from the request indicating the action
+                        "status": close_request.status, # Status from the request
                         "action": "close_order",
-                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                        "close_id": close_id # Include close_id for Firebase
+                        "close_id": close_id
                     }
 
+                    orders_logger.info(f"[FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {firebase_close_data}")
                     background_tasks.add_task(send_order_to_firebase, firebase_close_data, "live")
                     
                     db_order_for_response = await crud_order.get_order_by_id(db, order_id=order_id, order_model=order_model_class)

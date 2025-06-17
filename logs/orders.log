@@ -18432,3 +18432,568 @@ NameError: name 'user_id' is not defined
 2025-06-16 21:34:29,664 - INFO - orders - Request to close order 2147823749 for user 4 (User) with price 94.306. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
 2025-06-16 21:34:29,669 - INFO - orders - User group: Group B, sending_orders setting: barclays
 2025-06-16 21:34:29,669 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:37:05,696 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 21:37:11,728 - INFO - orders - Close order request received - Order ID: 2147823749, User ID: 4, User Type: live
+2025-06-16 21:37:11,730 - INFO - orders - Close request details - Price: 94.32, Type: BUY, Symbol: AUDJPY
+2025-06-16 21:37:11,730 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000002C605256C10>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 21:37:11,731 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 21:37:11,731 - INFO - orders - Request to close order 2147823749 for user 4 (User) with price 94.32. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 21:37:11,746 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 21:37:11,746 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:51:40,708 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 21:52:03,622 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 21:52:11,138 - INFO - orders - Close order request received - Order ID: 2480048137, User ID: 4, User Type: live
+2025-06-16 21:52:11,139 - INFO - orders - Close request details - Price: 0.88694, Type: BUY, Symbol: AUDCAD
+2025-06-16 21:52:11,139 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000171B2126850>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 21:52:11,140 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 21:52:11,140 - INFO - orders - Request to close order 2480048137 for user 4 (User) with price 0.88694. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 21:52:11,160 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 21:52:11,161 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:52:11,173 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '2480048137', 'close_price': '0.88694', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCAD', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '3841743153'}
+2025-06-16 21:52:41,860 - INFO - orders - Close order request received - Order ID: 2480048137, User ID: 4, User Type: live
+2025-06-16 21:52:41,862 - INFO - orders - Close request details - Price: 0.88694, Type: BUY, Symbol: AUDCAD
+2025-06-16 21:52:41,863 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000171B23B3390>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 21:52:41,864 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 21:52:41,865 - INFO - orders - Request to close order 2480048137 for user 4 (User) with price 0.88694. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 21:52:41,897 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 21:52:41,897 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:52:41,914 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '2480048137', 'close_price': '0.88694', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCAD', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '6737329109'}
+2025-06-16 21:53:24,615 - INFO - orders - Close order request received - Order ID: 7872796244, User ID: 4, User Type: live
+2025-06-16 21:53:24,616 - INFO - orders - Close request details - Price: 0.88697, Type: BUY, Symbol: AUDCAD
+2025-06-16 21:53:24,617 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000171B23B2E90>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 21:53:24,618 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 21:53:24,618 - INFO - orders - Request to close order 7872796244 for user 4 (User) with price 0.88697. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 21:53:24,651 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 21:53:24,651 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:53:24,659 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '7872796244', 'close_price': '0.88697', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCAD', 'order_quantity': '1.00000000', 'contract_value': '100000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '6094474229'}
+2025-06-16 21:53:26,571 - INFO - orders - Half-spread calculation request for order_id: 6094474229, symbol: AUDCAD
+2025-06-16 21:53:26,695 - INFO - orders - Service provider status request received for ID: 6094474229
+2025-06-16 21:53:26,704 - INFO - orders - Found order 7872796244 with status: 'CLOSED' and order_status: 'OPEN'
+2025-06-16 21:53:26,932 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'close', 'order_type': 'SELL', 'order_price': Decimal('0.88711')}
+2025-06-16 21:53:26,933 - INFO - orders - Service Provider Execution: Applying generic update for transition from OPEN to close
+2025-06-16 21:53:27,014 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 21:53:27,014 - INFO - orders - Using order model: UserOrder
+2025-06-16 21:53:27,029 - INFO - orders - Fetched 11 open orders for user 4
+2025-06-16 21:53:27,044 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 21:53:27,049 - INFO - orders - Updated static orders cache for user 4 with 11 open orders and 3 pending orders
+2025-06-16 21:54:36,340 - INFO - orders - Close order request received - Order ID: 2480048137, User ID: 4, User Type: live
+2025-06-16 21:54:36,341 - INFO - orders - Close request details - Price: 0.88696, Type: BUY, Symbol: AUDCAD
+2025-06-16 21:54:36,341 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000171B23B2FD0>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 21:54:36,341 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 21:54:36,342 - INFO - orders - Request to close order 2480048137 for user 4 (User) with price 0.88696. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 21:54:36,358 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 21:54:36,358 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:54:36,387 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '2480048137', 'close_price': '0.88696', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCAD', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '1490474254'}
+2025-06-16 21:54:38,095 - INFO - orders - Half-spread calculation request for order_id: 1490474254, symbol: AUDCAD
+2025-06-16 21:54:38,269 - INFO - orders - Service provider status request received for ID: 1490474254
+2025-06-16 21:54:38,282 - INFO - orders - Found order 2480048137 with status: 'CLOSED' and order_status: 'OPEN'
+2025-06-16 21:54:38,481 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'close', 'order_type': 'SELL', 'order_price': Decimal('0.88712')}
+2025-06-16 21:54:38,481 - INFO - orders - Service Provider Execution: Applying generic update for transition from OPEN to close
+2025-06-16 21:54:38,535 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 21:54:38,536 - INFO - orders - Using order model: UserOrder
+2025-06-16 21:54:38,549 - INFO - orders - Fetched 10 open orders for user 4
+2025-06-16 21:54:38,566 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 21:54:38,570 - INFO - orders - Updated static orders cache for user 4 with 10 open orders and 3 pending orders
+2025-06-16 21:54:52,144 - app.api.v1.endpoints.orders - INFO - [get_closed_orders] user_type: live
+2025-06-16 21:57:50,060 - INFO - orders - Close order request received - Order ID: 4256722996, User ID: 4, User Type: live
+2025-06-16 21:57:50,060 - INFO - orders - Close request details - Price: 0.53136, Type: BUY, Symbol: AUDCHF
+2025-06-16 21:57:50,061 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x00000171B23B3C50>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 21:57:50,061 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 21:57:50,061 - INFO - orders - Request to close order 4256722996 for user 4 (User) with price 0.53136. Frontend provided type: BUY, company: AUDCHF, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 21:57:50,126 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 21:57:50,129 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 21:57:50,214 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '4256722996', 'close_price': '0.53136', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCHF', 'order_quantity': '1.00000000', 'contract_value': '100000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '5519955758'}
+2025-06-16 22:02:13,549 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 22:03:35,871 - INFO - orders - Half-spread calculation request for order_id: 6576627453, symbol: SGDJPY
+2025-06-16 22:04:51,299 - INFO - orders - Close order request received - Order ID: 4256722996, User ID: 4, User Type: live
+2025-06-16 22:04:51,299 - INFO - orders - Close request details - Price: 0.53148, Type: BUY, Symbol: AUDCHF
+2025-06-16 22:04:51,300 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9D7D310>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:04:51,300 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:04:51,300 - INFO - orders - Request to close order 4256722996 for user 4 (User) with price 0.53148. Frontend provided type: BUY, company: AUDCHF, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:04:51,315 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:04:51,315 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:04:51,329 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '4256722996', 'close_price': '0.53148', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCHF', 'order_quantity': '1.00000000', 'contract_value': '100000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '1649602099'}
+2025-06-16 22:04:53,426 - INFO - orders - Half-spread calculation request for order_id: 1649602099, symbol: AUDCHF
+2025-06-16 22:04:53,577 - INFO - orders - Service provider status request received for ID: 1649602099
+2025-06-16 22:04:53,582 - INFO - orders - Found order 4256722996 with status: 'CLOSED' and order_status: 'OPEN'
+2025-06-16 22:04:53,795 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'order_type': 'SELL', 'order_price': Decimal('0.53191')}
+2025-06-16 22:09:50,998 - INFO - orders - Close order request received - Order ID: 1107488801, User ID: 4, User Type: live
+2025-06-16 22:09:50,998 - INFO - orders - Close request details - Price: 94.427, Type: BUY, Symbol: AUDJPY
+2025-06-16 22:09:50,998 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9D7E990>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:09:50,998 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:09:50,998 - INFO - orders - Request to close order 1107488801 for user 4 (User) with price 94.427. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:09:51,002 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:09:51,003 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:09:51,008 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '1107488801', 'close_price': '94.427', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '4678244667'}
+2025-06-16 22:09:53,208 - INFO - orders - Half-spread calculation request for order_id: 4678244667, symbol: AUDJPY
+2025-06-16 22:09:53,356 - INFO - orders - Service provider status request received for ID: 4678244667
+2025-06-16 22:09:53,361 - INFO - orders - Found order 1107488801 with status: 'CLOSED' and order_status: 'OPEN'
+2025-06-16 22:09:53,510 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('94.536')}
+2025-06-16 22:09:53,549 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 93653.90000000000000000000000 JPY to USD for PnL (user_id: 4, position: 1107488801)
+2025-06-16 22:09:53,549 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-06-16 22:09:53,553 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 22:09:53,553 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-06-16 22:09:53,553 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-06-16 22:09:53,560 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.5330000000'), 'o': Decimal('144.5280000000')}
+2025-06-16 22:09:53,560 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.5330000000
+2025-06-16 22:09:53,560 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 93653.90000000000000000000000 JPY / 144.5330000000 = 647.9758947783551161326479074 USD
+2025-06-16 22:09:53,571 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 5
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1 (ID: 93): Type=BUY, Qty=0.01000000, StoredMargin=0.06116505
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1: MarginPerLot=6.116505
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 2 (ID: 102): Type=BUY, Qty=0.01000000, StoredMargin=6.53969953
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 2: MarginPerLot=653.969953
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 3 (ID: 103): Type=BUY, Qty=0.01000000, StoredMargin=6.53881444
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 3: MarginPerLot=653.881444
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 4 (ID: 104): Type=BUY, Qty=0.01000000, StoredMargin=6.53941332
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 4: MarginPerLot=653.941332
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 5 (ID: 105): Type=BUY, Qty=0.01000000, StoredMargin=6.54933203
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 5: MarginPerLot=654.933203
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: TotalBuyQty=0.05000000, TotalSellQty=0, NetQty=0.05000000
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: AllMarginsPerLot=[Decimal('6.116505'), Decimal('653.969953'), Decimal('653.881444'), Decimal('653.941332'), Decimal('654.933203')], HighestMarginPerLot=654.933203
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDJPY: CalculatedTotalMargin=32.75, ContributingOrders=5 (based on individual stored margins)
+2025-06-16 22:09:53,572 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 4
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1 (ID: 102): Type=BUY, Qty=0.01000000, StoredMargin=6.53969953
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1: MarginPerLot=653.969953
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 2 (ID: 103): Type=BUY, Qty=0.01000000, StoredMargin=6.53881444
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 2: MarginPerLot=653.881444
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 3 (ID: 104): Type=BUY, Qty=0.01000000, StoredMargin=6.53941332
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 3: MarginPerLot=653.941332
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 4 (ID: 105): Type=BUY, Qty=0.01000000, StoredMargin=6.54933203
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 4: MarginPerLot=654.933203
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: TotalBuyQty=0.04000000, TotalSellQty=0, NetQty=0.04000000
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: AllMarginsPerLot=[Decimal('653.969953'), Decimal('653.881444'), Decimal('653.941332'), Decimal('654.933203')], HighestMarginPerLot=654.933203
+2025-06-16 22:09:53,573 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDJPY: CalculatedTotalMargin=26.20, ContributingOrders=4 (based on individual stored margins)
+2025-06-16 22:09:53,700 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:09:53,700 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:09:53,713 - INFO - orders - Fetched 9 open orders for user 4
+2025-06-16 22:09:53,726 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:09:53,732 - INFO - orders - Updated static orders cache for user 4 with 9 open orders and 3 pending orders
+2025-06-16 22:11:07,693 - app.api.v1.endpoints.orders - INFO - [get_closed_orders] user_type: live
+2025-06-16 22:14:12,975 - INFO - orders - Half-spread calculation request for order_id: 6576627453, symbol: AUDJPY
+2025-06-16 22:18:48,193 - INFO - orders - Half-spread calculation request for order_id: 1107488801, symbol: AUDJPY
+2025-06-16 22:19:11,286 - INFO - orders - Half-spread calculation request for order_id: 1107488801, symbol: AUDJPY
+2025-06-16 22:20:28,484 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:21:46,187 - INFO - orders - Close order request received - Order ID: 1595146711, User ID: 4, User Type: live
+2025-06-16 22:21:46,188 - INFO - orders - Close request details - Price: 38503.61, Type: BUY, Symbol: JP225
+2025-06-16 22:21:46,191 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9D7C7D0>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:21:46,192 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:21:46,193 - INFO - orders - Request to close order 1595146711 for user 4 (User) with price 38503.61. Frontend provided type: BUY, company: JP225, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:21:46,221 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:21:46,221 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:21:46,233 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '1595146711', 'close_price': '38503.61', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'JP225', 'order_quantity': '11.00000000', 'contract_value': '11.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '4387240594'}
+2025-06-16 22:21:48,457 - INFO - orders - Half-spread calculation request for order_id: 4387240594, symbol: JP225
+2025-06-16 22:21:48,661 - INFO - orders - Service provider status request received for ID: 4387240594
+2025-06-16 22:21:48,674 - INFO - orders - Found order 1595146711 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:21:48,823 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('38496.04')}
+2025-06-16 22:21:48,824 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:21:48,895 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:21:48,899 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:21:48,915 - INFO - orders - Fetched 8 open orders for user 4
+2025-06-16 22:21:48,924 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:21:48,932 - INFO - orders - Updated static orders cache for user 4 with 8 open orders and 3 pending orders
+2025-06-16 22:22:12,406 - app.api.v1.endpoints.orders - INFO - [get_closed_orders] user_type: live
+2025-06-16 22:22:27,224 - INFO - orders - Half-spread calculation request for order_id: 1107488801, symbol: JP225
+2025-06-16 22:24:45,505 - INFO - orders - Close order request received - Order ID: 4256722996, User ID: 4, User Type: live
+2025-06-16 22:24:45,505 - INFO - orders - Close request details - Price: 0.53128, Type: BUY, Symbol: AUDCHF
+2025-06-16 22:24:45,505 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9BAF890>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:24:45,505 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:24:45,505 - INFO - orders - Request to close order 4256722996 for user 4 (User) with price 0.53128. Frontend provided type: BUY, company: AUDCHF, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:24:45,523 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:24:45,523 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:24:45,536 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '4256722996', 'close_price': '0.53128', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCHF', 'order_quantity': '1.00000000', 'contract_value': '100000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '1984189559'}
+2025-06-16 22:24:47,638 - INFO - orders - Half-spread calculation request for order_id: 1984189559, symbol: AUDCHF
+2025-06-16 22:24:47,844 - INFO - orders - Service provider status request received for ID: 1984189559
+2025-06-16 22:24:47,850 - INFO - orders - Found order 4256722996 with status: 'CLOSED' and order_status: 'OPEN'
+2025-06-16 22:24:48,054 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('0.53136')}
+2025-06-16 22:24:48,077 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -35074.00000000000000000000000 CHF to USD for PnL (user_id: 4, position: 4256722996)
+2025-06-16 22:24:48,078 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CHFUSD
+2025-06-16 22:24:48,084 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 22:24:48,084 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CHFUSD, trying inverse
+2025-06-16 22:24:48,084 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCHF
+2025-06-16 22:24:48,089 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('0.8134200000'), 'o': Decimal('0.8133800000')}
+2025-06-16 22:24:48,089 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 0.8134200000
+2025-06-16 22:24:48,089 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -35074.00000000000000000000000 CHF / 0.8134200000 = -43119.17582552678812913378083 USD
+2025-06-16 22:24:48,097 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDCHF, Positions count: 1
+2025-06-16 22:24:48,097 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCHF, Pos 1 (ID: 88): Type=BUY, Qty=1.00000000, StoredMargin=1087.93783917
+2025-06-16 22:24:48,097 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDCHF, Pos 1: MarginPerLot=1087.93783917
+2025-06-16 22:24:48,097 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCHF: TotalBuyQty=1.00000000, TotalSellQty=0, NetQty=1.00000000
+2025-06-16 22:24:48,097 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDCHF: AllMarginsPerLot=[Decimal('1087.93783917')], HighestMarginPerLot=1087.93783917
+2025-06-16 22:24:48,098 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDCHF: CalculatedTotalMargin=1087.94, ContributingOrders=1 (based on individual stored margins)
+2025-06-16 22:24:48,098 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDCHF, Positions count: 0
+2025-06-16 22:24:48,098 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol AUDCHF. Returning zero margin.
+2025-06-16 22:24:48,249 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:24:48,249 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:24:48,262 - INFO - orders - Fetched 7 open orders for user 4
+2025-06-16 22:24:48,277 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:24:48,285 - INFO - orders - Updated static orders cache for user 4 with 7 open orders and 3 pending orders
+2025-06-16 22:24:58,889 - INFO - orders - Close order request received - Order ID: 9241860680, User ID: 4, User Type: live
+2025-06-16 22:24:58,890 - INFO - orders - Close request details - Price: 1.2808, Type: BUY, Symbol: USDSGD
+2025-06-16 22:24:58,890 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9BAF250>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:24:58,891 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:24:58,891 - INFO - orders - Request to close order 9241860680 for user 4 (User) with price 1.2808. Frontend provided type: BUY, company: USDSGD, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:24:58,913 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:24:58,913 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:24:58,923 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '9241860680', 'close_price': '1.2808', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'USDSGD', 'order_quantity': '100000.00000000', 'contract_value': '100000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '3316026335'}
+2025-06-16 22:24:59,583 - INFO - orders - Close order request received - Order ID: 7558753063, User ID: 4, User Type: live
+2025-06-16 22:24:59,583 - INFO - orders - Close request details - Price: 9.89841, Type: BUY, Symbol: USDNOK
+2025-06-16 22:24:59,583 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9BAFED0>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:24:59,583 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:24:59,583 - INFO - orders - Request to close order 7558753063 for user 4 (User) with price 9.89841. Frontend provided type: BUY, company: USDNOK, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:24:59,592 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:24:59,592 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:24:59,603 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '7558753063', 'close_price': '9.89841', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'USDNOK', 'order_quantity': '100000.00000000', 'contract_value': '100000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '1983920514'}
+2025-06-16 22:25:00,222 - INFO - orders - Close order request received - Order ID: 3486970445, User ID: 4, User Type: live
+2025-06-16 22:25:00,223 - INFO - orders - Close request details - Price: 112.8555, Type: BUY, Symbol: SGDJPY
+2025-06-16 22:25:00,223 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9BAFD90>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:25:00,223 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:25:00,223 - INFO - orders - Request to close order 3486970445 for user 4 (User) with price 112.8555. Frontend provided type: BUY, company: SGDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:25:00,235 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:25:00,235 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:25:00,243 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '3486970445', 'close_price': '112.8555', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'SGDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '7196307903'}
+2025-06-16 22:25:00,620 - INFO - orders - Half-spread calculation request for order_id: 3316026335, symbol: USDSGD
+2025-06-16 22:25:00,803 - INFO - orders - Service provider status request received for ID: 3316026335
+2025-06-16 22:25:00,809 - INFO - orders - Found order 9241860680 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:00,857 - INFO - orders - Close order request received - Order ID: 2891806822, User ID: 4, User Type: live
+2025-06-16 22:25:00,857 - INFO - orders - Close request details - Price: 94.433, Type: BUY, Symbol: AUDJPY
+2025-06-16 22:25:00,857 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9BAFED0>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:25:00,858 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:25:00,858 - INFO - orders - Request to close order 2891806822 for user 4 (User) with price 94.433. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:25:00,881 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:25:00,881 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:25:00,891 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '2891806822', 'close_price': '94.433', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '1658762723'}
+2025-06-16 22:25:01,265 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('1.2806799999999998')}
+2025-06-16 22:25:01,265 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:01,305 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:01,306 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:01,315 - INFO - orders - Fetched 6 open orders for user 4
+2025-06-16 22:25:01,326 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:01,329 - INFO - orders - Updated static orders cache for user 4 with 6 open orders and 3 pending orders
+2025-06-16 22:25:01,525 - INFO - orders - Close order request received - Order ID: 7692388898, User ID: 4, User Type: live
+2025-06-16 22:25:01,525 - INFO - orders - Close request details - Price: 94.433, Type: BUY, Symbol: AUDJPY
+2025-06-16 22:25:01,526 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9EE2FD0>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:25:01,526 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:25:01,526 - INFO - orders - Request to close order 7692388898 for user 4 (User) with price 94.433. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:25:01,542 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:25:01,542 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:25:01,557 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '7692388898', 'close_price': '94.433', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '2235547261'}
+2025-06-16 22:25:01,990 - INFO - orders - Half-spread calculation request for order_id: 1983920514, symbol: USDNOK
+2025-06-16 22:25:02,113 - INFO - orders - Service provider status request received for ID: 1983920514
+2025-06-16 22:25:02,117 - INFO - orders - Found order 7558753063 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:02,224 - INFO - orders - Close order request received - Order ID: 8438518096, User ID: 4, User Type: live
+2025-06-16 22:25:02,224 - INFO - orders - Close request details - Price: 94.433, Type: BUY, Symbol: AUDJPY
+2025-06-16 22:25:02,224 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9EE3110>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:25:02,224 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:25:02,224 - INFO - orders - Request to close order 8438518096 for user 4 (User) with price 94.433. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:25:02,234 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:25:02,234 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:25:02,244 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '8438518096', 'close_price': '94.433', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '4431981342'}
+2025-06-16 22:25:02,289 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('9.89872')}
+2025-06-16 22:25:02,290 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:02,355 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:02,355 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:02,649 - INFO - orders - Fetched 5 open orders for user 4
+2025-06-16 22:25:02,654 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:02,658 - INFO - orders - Updated static orders cache for user 4 with 5 open orders and 3 pending orders
+2025-06-16 22:25:02,972 - INFO - orders - Close order request received - Order ID: 2147823749, User ID: 4, User Type: live
+2025-06-16 22:25:02,972 - INFO - orders - Close request details - Price: 94.433, Type: BUY, Symbol: AUDJPY
+2025-06-16 22:25:02,972 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000001CFF9EE3D90>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:25:02,973 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:25:02,973 - INFO - orders - Request to close order 2147823749 for user 4 (User) with price 94.433. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:25:02,982 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:25:02,982 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:25:02,994 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '2147823749', 'close_price': '94.433', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '3134337653'}
+2025-06-16 22:25:03,365 - INFO - orders - Half-spread calculation request for order_id: 7196307903, symbol: SGDJPY
+2025-06-16 22:25:03,496 - INFO - orders - Service provider status request received for ID: 7196307903
+2025-06-16 22:25:03,509 - INFO - orders - Found order 3486970445 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:03,686 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('112.84649999999999')}
+2025-06-16 22:25:03,687 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:03,722 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:03,723 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:03,729 - INFO - orders - Fetched 4 open orders for user 4
+2025-06-16 22:25:03,735 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:03,738 - INFO - orders - Updated static orders cache for user 4 with 4 open orders and 3 pending orders
+2025-06-16 22:25:04,349 - INFO - orders - Half-spread calculation request for order_id: 1658762723, symbol: AUDJPY
+2025-06-16 22:25:04,447 - INFO - orders - Service provider status request received for ID: 1658762723
+2025-06-16 22:25:04,452 - INFO - orders - Found order 2891806822 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:04,554 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('94.437')}
+2025-06-16 22:25:04,555 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:04,585 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:04,586 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:04,591 - INFO - orders - Fetched 3 open orders for user 4
+2025-06-16 22:25:04,601 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:04,621 - INFO - orders - Updated static orders cache for user 4 with 3 open orders and 3 pending orders
+2025-06-16 22:25:05,223 - INFO - orders - Half-spread calculation request for order_id: 2235547261, symbol: AUDJPY
+2025-06-16 22:25:05,342 - INFO - orders - Service provider status request received for ID: 2235547261
+2025-06-16 22:25:05,347 - INFO - orders - Found order 7692388898 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:05,452 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('94.437')}
+2025-06-16 22:25:05,452 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:05,490 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:05,490 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:05,498 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-16 22:25:05,509 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:05,517 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 3 pending orders
+2025-06-16 22:25:06,274 - INFO - orders - Half-spread calculation request for order_id: 4431981342, symbol: AUDJPY
+2025-06-16 22:25:06,383 - INFO - orders - Service provider status request received for ID: 4431981342
+2025-06-16 22:25:06,386 - INFO - orders - Found order 8438518096 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:06,495 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('94.437')}
+2025-06-16 22:25:06,496 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:06,534 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:06,534 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:06,541 - INFO - orders - Fetched 1 open orders for user 4
+2025-06-16 22:25:06,549 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:06,552 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 3 pending orders
+2025-06-16 22:25:07,174 - INFO - orders - Half-spread calculation request for order_id: 3134337653, symbol: AUDJPY
+2025-06-16 22:25:07,285 - INFO - orders - Service provider status request received for ID: 3134337653
+2025-06-16 22:25:07,291 - INFO - orders - Found order 2147823749 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:25:07,415 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('94.435')}
+2025-06-16 22:25:07,415 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:25:07,449 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:25:07,450 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:25:07,460 - INFO - orders - Fetched 0 open orders for user 4
+2025-06-16 22:25:07,467 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:25:07,471 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 3 pending orders
+2025-06-16 22:25:22,405 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:26:49,219 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:27:14,498 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDJPY, Type: BUY, Quantity: 0.01
+2025-06-16 22:27:14,506 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-16 22:27:14,506 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-16 22:27:14,506 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-16 22:27:15,285 - INFO - orders - [ORDER_MARGIN_CALC] Calculating margin for AUDJPY BUY order, quantity: 0.01
+2025-06-16 22:27:15,285 - INFO - orders - [ORDER_MARGIN_CALC] Contract size for AUDJPY: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-06-16 22:27:15,288 - INFO - orders - [ORDER_MARGIN_CALC] Got BUY price for AUDJPY from cache: 94.5520000000
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Contract value calculation for AUDJPY:
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Contract value = quantity * contract_size = 0.01 * 100000.00000000 = 1000.0000000000
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = (1000.0000000000 * 94.5520000000) / 100.00 = 945.520000000000000000 (rounded to 945.52)
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Commission settings for AUDJPY: type=0, value_type=0, rate=10.0000
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Profit currency for AUDJPY: JPY
+2025-06-16 22:27:15,289 - INFO - orders - [ORDER_MARGIN_CALC] Converting margin from JPY to USD: 945.52 JPY
+2025-06-16 22:27:15,289 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 945.52 JPY to USD for margin for AUDJPY BUY order (user_id: 4, position: )
+2025-06-16 22:27:15,289 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-06-16 22:27:15,292 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 22:27:15,292 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-06-16 22:27:15,292 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-06-16 22:27:15,295 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.5630000000'), 'o': Decimal('144.5600000000')}
+2025-06-16 22:27:15,295 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.5630000000
+2025-06-16 22:27:15,295 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 945.52 JPY / 144.5630000000 = 6.540539418800107911429618920 USD
+2025-06-16 22:27:15,295 - INFO - orders - [ORDER_MARGIN_CALC] Margin after USD conversion: 945.52 JPY -> 6.540539418800107911429618920 USD
+2025-06-16 22:27:15,295 - INFO - orders - [ORDER_MARGIN_CALC] Final results for AUDJPY BUY: margin=6.540539418800107911429618920, price=94.5520000000, contract_value=1000.0000000000, commission=0.10
+2025-06-16 22:27:15,295 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDJPY: Calculated commission=0.10
+2025-06-16 22:27:15,298 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 0
+2025-06-16 22:27:15,298 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol AUDJPY. Returning zero margin.
+2025-06-16 22:27:15,298 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 1
+2025-06-16 22:27:15,298 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=0.01, StoredMargin=6.540539418800107911429618920
+2025-06-16 22:27:15,298 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1: MarginPerLot=654.0539418800107911429618920
+2025-06-16 22:27:15,299 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: TotalBuyQty=0.01, TotalSellQty=0, NetQty=0.01
+2025-06-16 22:27:15,299 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: AllMarginsPerLot=[Decimal('654.0539418800107911429618920')], HighestMarginPerLot=654.0539418800107911429618920
+2025-06-16 22:27:15,299 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDJPY: CalculatedTotalMargin=6.54, ContributingOrders=1 (based on individual stored margins)
+2025-06-16 22:27:15,299 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDJPY: MarginBefore=0.00, MarginAfter=6.54, AdditionalMargin=6.54
+2025-06-16 22:27:15,307 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '1397469582', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_price': Decimal('94.5520000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.540539418800107911429618920'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-16 22:27:15,354 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 0E-8
+2025-06-16 22:27:15,379 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-16 22:27:15,780 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-16 22:27:15,930 - INFO - orders - [FIREBASE] Payload being sent to Firebase: {'order_id': '1397469582', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': Decimal('94.55200000'), 'order_quantity': Decimal('0.01000000'), 'contract_value': Decimal('1000.00000000'), 'margin': Decimal('6.54053942'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-16 22:27:16,214 - INFO - orders - [FIREBASE] Barclays order sent to Firebase: 1397469582 (order_status=PROCESSING, margin not updated in DB)
+2025-06-16 22:27:16,224 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:27:16,224 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:27:16,232 - INFO - orders - Fetched 0 open orders for user 4
+2025-06-16 22:27:16,241 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:27:16,246 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 3 pending orders
+2025-06-16 22:31:59,802 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 22:35:09,594 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 22:35:39,904 - INFO - orders - Half-spread calculation request for order_id: 1107488801, symbol: JP225
+2025-06-16 22:36:55,800 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:37:00,178 - INFO - orders - Cancel pending order request received - Order ID: 8236815681, User ID: 4
+2025-06-16 22:37:00,191 - INFO - orders - Generated cancel_id: 6357943810 for order 8236815681
+2025-06-16 22:37:00,197 - INFO - orders - User 4 is_barclays_live_user: True
+2025-06-16 22:37:00,197 - INFO - orders - Barclays user detected. Sending cancel request to Firebase for order 8236815681
+2025-06-16 22:37:00,914 - INFO - orders - Cancel request sent to Firebase for order 8236815681
+2025-06-16 22:37:03,737 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:38:43,086 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 22:39:57,398 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDJPY, Type: BUY, Quantity: 0.01
+2025-06-16 22:39:57,408 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-16 22:39:57,408 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-16 22:39:57,408 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-16 22:39:57,737 - INFO - orders - [ORDER_MARGIN_CALC] Calculating margin for AUDJPY BUY order, quantity: 0.01
+2025-06-16 22:39:57,737 - INFO - orders - [ORDER_MARGIN_CALC] Contract size for AUDJPY: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-06-16 22:39:57,740 - INFO - orders - [ORDER_MARGIN_CALC] Got BUY price for AUDJPY from cache: 94.5840000000
+2025-06-16 22:39:57,740 - INFO - orders - [ORDER_MARGIN_CALC] Contract value calculation for AUDJPY:
+2025-06-16 22:39:57,740 - INFO - orders - [ORDER_MARGIN_CALC] Contract value = quantity * contract_size = 0.01 * 100000.00000000 = 1000.0000000000
+2025-06-16 22:39:57,740 - INFO - orders - [ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = (1000.0000000000 * 94.5840000000) / 100.00 = 945.840000000000000000 (rounded to 945.84)
+2025-06-16 22:39:57,740 - INFO - orders - [ORDER_MARGIN_CALC] Commission settings for AUDJPY: type=0, value_type=0, rate=10.0000
+2025-06-16 22:39:57,740 - INFO - orders - [ORDER_MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-16 22:39:57,741 - INFO - orders - [ORDER_MARGIN_CALC] Profit currency for AUDJPY: JPY
+2025-06-16 22:39:57,741 - INFO - orders - [ORDER_MARGIN_CALC] Converting margin from JPY to USD: 945.84 JPY
+2025-06-16 22:39:57,741 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 945.84 JPY to USD for margin for AUDJPY BUY order (user_id: 4, position: )
+2025-06-16 22:39:57,741 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-06-16 22:39:57,742 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 22:39:57,742 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-06-16 22:39:57,742 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-06-16 22:39:57,744 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.6320000000'), 'o': Decimal('144.6260000000')}
+2025-06-16 22:39:57,744 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.6320000000
+2025-06-16 22:39:57,744 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 945.84 JPY / 144.6320000000 = 6.539631616792964212622379556 USD
+2025-06-16 22:39:57,744 - INFO - orders - [ORDER_MARGIN_CALC] Margin after USD conversion: 945.84 JPY -> 6.539631616792964212622379556 USD
+2025-06-16 22:39:57,744 - INFO - orders - [ORDER_MARGIN_CALC] Final results for AUDJPY BUY: margin=6.539631616792964212622379556, price=94.5840000000, contract_value=1000.0000000000, commission=0.10
+2025-06-16 22:39:57,744 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDJPY: Calculated commission=0.10
+2025-06-16 22:39:57,749 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 0
+2025-06-16 22:39:57,749 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol AUDJPY. Returning zero margin.
+2025-06-16 22:39:57,749 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 1
+2025-06-16 22:39:57,749 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=0.01, StoredMargin=6.539631616792964212622379556
+2025-06-16 22:39:57,749 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1: MarginPerLot=653.9631616792964212622379556
+2025-06-16 22:39:57,750 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: TotalBuyQty=0.01, TotalSellQty=0, NetQty=0.01
+2025-06-16 22:39:57,750 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: AllMarginsPerLot=[Decimal('653.9631616792964212622379556')], HighestMarginPerLot=653.9631616792964212622379556
+2025-06-16 22:39:57,750 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDJPY: CalculatedTotalMargin=6.54, ContributingOrders=1 (based on individual stored margins)
+2025-06-16 22:39:57,750 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDJPY: MarginBefore=0.00, MarginAfter=6.54, AdditionalMargin=6.54
+2025-06-16 22:39:57,754 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '7648779493', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_price': Decimal('94.5840000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.539631616792964212622379556'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-16 22:39:57,793 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 0E-8
+2025-06-16 22:39:57,812 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-16 22:39:58,064 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-16 22:39:58,199 - INFO - orders - [FIREBASE] Payload being sent to Firebase: {'order_id': '7648779493', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': Decimal('94.58400000'), 'order_quantity': Decimal('0.01000000'), 'contract_value': Decimal('1000.00000000'), 'margin': Decimal('6.53963162'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-16 22:39:58,487 - INFO - orders - [FIREBASE] Barclays order sent to Firebase: 7648779493 (order_status=PROCESSING, margin not updated in DB)
+2025-06-16 22:39:58,493 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:39:58,493 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:39:58,498 - INFO - orders - Fetched 0 open orders for user 4
+2025-06-16 22:39:58,503 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:39:58,508 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 3 pending orders
+2025-06-16 22:39:59,811 - INFO - orders - Half-spread calculation request for order_id: 7648779493, symbol: AUDJPY
+2025-06-16 22:39:59,912 - INFO - orders - Service provider status request received for ID: 7648779493
+2025-06-16 22:39:59,919 - INFO - orders - Found order 7648779493 with status: 'OPEN' and order_status: 'PROCESSING'
+2025-06-16 22:40:00,042 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'open', 'order_type': 'BUY', 'order_price': Decimal('94.597')}
+2025-06-16 22:40:00,042 - INFO - orders - Service Provider Execution: Applying generic update for transition from PROCESSING to open
+2025-06-16 22:40:00,077 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:40:00,077 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:40:00,083 - INFO - orders - Fetched 1 open orders for user 4
+2025-06-16 22:40:00,089 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:40:00,091 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 3 pending orders
+2025-06-16 22:41:17,536 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:42:25,191 - INFO - orders - Half-spread calculation request for order_id: 1107488801, symbol: AUDJPY
+2025-06-16 22:44:34,357 - INFO - orders - Close order request received - Order ID: 7648779493, User ID: 4, User Type: live
+2025-06-16 22:44:34,357 - INFO - orders - Close request details - Price: 94.453, Type: BUY, Symbol: AUDJPY
+2025-06-16 22:44:34,357 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x0000025C7A333750>, type: <class 'app.database.models.User'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-16 22:44:34,357 - INFO - orders - Using order model: user_orders for user 4 (User)
+2025-06-16 22:44:34,357 - INFO - orders - Request to close order 7648779493 for user 4 (User) with price 94.453. Frontend provided type: BUY, company: AUDJPY, status: CLOSED, frontend_status: CLOSED.
+2025-06-16 22:44:34,367 - INFO - orders - User group: Group B, sending_orders setting: barclays
+2025-06-16 22:44:34,367 - INFO - orders - Live user 4 from group 'Group B' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-06-16 22:44:34,370 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '7648779493', 'close_price': '94.453', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDJPY', 'order_quantity': '0.01000000', 'contract_value': '1000.00000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '2063709657'}
+2025-06-16 22:44:36,651 - INFO - orders - Half-spread calculation request for order_id: 2063709657, symbol: AUDJPY
+2025-06-16 22:44:36,770 - INFO - orders - Service provider status request received for ID: 2063709657
+2025-06-16 22:44:36,775 - INFO - orders - Found order 7648779493 with status: 'CLOSED' and order_status: 'open'
+2025-06-16 22:44:36,926 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'CLOSED', 'close_price': Decimal('94.436')}
+2025-06-16 22:44:36,926 - INFO - orders - Service Provider Execution: Applying generic update for transition from open to CLOSED
+2025-06-16 22:44:36,969 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:44:36,969 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:44:36,978 - INFO - orders - Fetched 0 open orders for user 4
+2025-06-16 22:44:36,986 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:44:36,991 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 3 pending orders
+2025-06-16 22:46:27,903 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-16 22:49:49,617 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-06-16 22:50:09,282 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDJPY, Type: BUY, Quantity: 0.01
+2025-06-16 22:50:09,290 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-16 22:50:09,290 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-16 22:50:09,290 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-16 22:50:09,950 - INFO - orders - [ORDER_MARGIN_CALC] Calculating margin for AUDJPY BUY order, quantity: 0.01
+2025-06-16 22:50:09,950 - INFO - orders - [ORDER_MARGIN_CALC] Contract size for AUDJPY: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Got BUY price for AUDJPY from cache: 94.5420000000
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Contract value calculation for AUDJPY:
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Contract value = quantity * contract_size = 0.01 * 100000.00000000 = 1000.0000000000
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = (1000.0000000000 * 94.5420000000) / 100.00 = 945.420000000000000000 (rounded to 945.42)
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Commission settings for AUDJPY: type=0, value_type=0, rate=10.0000
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Profit currency for AUDJPY: JPY
+2025-06-16 22:50:09,953 - INFO - orders - [ORDER_MARGIN_CALC] Converting margin from JPY to USD: 945.42 JPY
+2025-06-16 22:50:09,953 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 945.42 JPY to USD for margin for AUDJPY BUY order (user_id: 4, position: )
+2025-06-16 22:50:09,953 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-06-16 22:50:09,956 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 22:50:09,957 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-06-16 22:50:09,957 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-06-16 22:50:09,982 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.6480000000'), 'o': Decimal('144.6430000000')}
+2025-06-16 22:50:09,982 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.6480000000
+2025-06-16 22:50:09,982 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 945.42 JPY / 144.6480000000 = 6.536004645760743321718931475 USD
+2025-06-16 22:50:09,982 - INFO - orders - [ORDER_MARGIN_CALC] Margin after USD conversion: 945.42 JPY -> 6.536004645760743321718931475 USD
+2025-06-16 22:50:09,982 - INFO - orders - [ORDER_MARGIN_CALC] Final results for AUDJPY BUY: margin=6.536004645760743321718931475, price=94.5420000000, contract_value=1000.0000000000, commission=0.10
+2025-06-16 22:50:09,982 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDJPY: Calculated commission=0.10
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 0
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol AUDJPY. Returning zero margin.
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol AUDJPY, Positions count: 1
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=0.01, StoredMargin=6.536004645760743321718931475
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol AUDJPY, Pos 1: MarginPerLot=653.6004645760743321718931475
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: TotalBuyQty=0.01, TotalSellQty=0, NetQty=0.01
+2025-06-16 22:50:09,991 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol AUDJPY: AllMarginsPerLot=[Decimal('653.6004645760743321718931475')], HighestMarginPerLot=653.6004645760743321718931475
+2025-06-16 22:50:09,992 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol AUDJPY: CalculatedTotalMargin=6.54, ContributingOrders=1 (based on individual stored margins)
+2025-06-16 22:50:09,992 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDJPY: MarginBefore=0.00, MarginAfter=6.54, AdditionalMargin=6.54
+2025-06-16 22:50:09,997 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '1479698432', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_price': Decimal('94.5420000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.536004645760743321718931475'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-16 22:50:10,063 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 0E-8
+2025-06-16 22:50:10,096 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-16 22:50:10,495 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-16 22:50:10,710 - INFO - orders - [FIREBASE] Payload being sent to Firebase: {'order_id': '1479698432', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': Decimal('94.54200000'), 'order_quantity': Decimal('0.01000000'), 'contract_value': Decimal('1000.00000000'), 'margin': Decimal('6.53600465'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-16 22:50:10,981 - INFO - orders - [FIREBASE] Barclays order sent to Firebase: 1479698432 (order_status=PROCESSING, margin not updated in DB)
+2025-06-16 22:50:10,987 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:50:10,987 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:50:10,992 - INFO - orders - Fetched 0 open orders for user 4
+2025-06-16 22:50:10,996 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:50:11,001 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 3 pending orders
+2025-06-16 22:50:12,507 - INFO - orders - Half-spread calculation request for order_id: 1479698432, symbol: AUDJPY
+2025-06-16 22:50:12,657 - INFO - orders - Service provider status request received for ID: 1479698432
+2025-06-16 22:50:12,662 - INFO - orders - Found order 1479698432 with status: 'OPEN' and order_status: 'PROCESSING'
+2025-06-16 22:50:12,889 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'open', 'order_type': 'BUY', 'order_price': Decimal('94.56099999999999')}
+2025-06-16 22:50:12,889 - INFO - orders - Service Provider Execution: Applying generic update for transition from PROCESSING to open
+2025-06-16 22:50:12,919 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:50:12,920 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:50:12,931 - INFO - orders - Fetched 1 open orders for user 4
+2025-06-16 22:50:12,941 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:50:12,947 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 3 pending orders
+2025-06-16 22:54:42,971 - INFO - orders - Order placement request received - User ID: 4, Symbol: EURCAD, Type: BUY, Quantity: 0.01
+2025-06-16 22:54:42,979 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-16 22:54:42,979 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-16 22:54:42,979 - INFO - orders - Order placement: user_id=4, is_barclays_live_user=True, user_type=live, group_name=Group B, sending_orders_setting=barclays
+2025-06-16 22:54:43,594 - INFO - orders - [ORDER_MARGIN_CALC] Calculating margin for EURCAD BUY order, quantity: 0.01
+2025-06-16 22:54:43,594 - INFO - orders - [ORDER_MARGIN_CALC] Contract size for EURCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-06-16 22:54:43,598 - INFO - orders - [ORDER_MARGIN_CALC] Got BUY price for EURCAD from cache: 1.5689400000
+2025-06-16 22:54:43,598 - INFO - orders - [ORDER_MARGIN_CALC] Contract value calculation for EURCAD:
+2025-06-16 22:54:43,598 - INFO - orders - [ORDER_MARGIN_CALC] Contract value = quantity * contract_size = 0.01 * 100000.00000000 = 1000.0000000000
+2025-06-16 22:54:43,599 - INFO - orders - [ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = (1000.0000000000 * 1.5689400000) / 100.00 = 15.689400000000000000 (rounded to 15.69)
+2025-06-16 22:54:43,599 - INFO - orders - [ORDER_MARGIN_CALC] Commission settings for EURCAD: type=1, value_type=0, rate=10.0000
+2025-06-16 22:54:43,599 - INFO - orders - [ORDER_MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-16 22:54:43,599 - INFO - orders - [ORDER_MARGIN_CALC] Profit currency for EURCAD: CAD
+2025-06-16 22:54:43,599 - INFO - orders - [ORDER_MARGIN_CALC] Converting margin from CAD to USD: 15.69 CAD
+2025-06-16 22:54:43,599 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 15.69 CAD to USD for margin for EURCAD BUY order (user_id: 4, position: )
+2025-06-16 22:54:43,599 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-06-16 22:54:43,605 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-06-16 22:54:43,605 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-06-16 22:54:43,605 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-06-16 22:54:43,608 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3578700000'), 'o': Decimal('1.3578000000')}
+2025-06-16 22:54:43,608 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3578700000
+2025-06-16 22:54:43,609 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 15.69 CAD / 1.3578700000 = 11.55486165833253551518186572 USD
+2025-06-16 22:54:43,609 - INFO - orders - [ORDER_MARGIN_CALC] Margin after USD conversion: 15.69 CAD -> 11.55486165833253551518186572 USD
+2025-06-16 22:54:43,609 - INFO - orders - [ORDER_MARGIN_CALC] Final results for EURCAD BUY: margin=11.55486165833253551518186572, price=1.5689400000, contract_value=1000.0000000000, commission=0.10
+2025-06-16 22:54:43,609 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol EURCAD: Calculated commission=0.10
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol EURCAD, Positions count: 0
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB] No open positions for User 4, Symbol EURCAD. Returning zero margin.
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_ENTRY] User 4, Symbol EURCAD, Positions count: 1
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol EURCAD, Pos 1 (ID: NEW_UNSAVED): Type=BUY, Qty=0.01, StoredMargin=11.55486165833253551518186572
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_POS_DETAIL] User 4, Symbol EURCAD, Pos 1: MarginPerLot=1155.486165833253551518186572
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol EURCAD: TotalBuyQty=0.01, TotalSellQty=0, NetQty=0.01
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_CALC] User 4, Symbol EURCAD: AllMarginsPerLot=[Decimal('1155.486165833253551518186572')], HighestMarginPerLot=1155.486165833253551518186572
+2025-06-16 22:54:43,615 - app.services.order_processing - DEBUG - [MARGIN_TOTAL_CONTRIB_EXIT] User 4, Symbol EURCAD: CalculatedTotalMargin=11.55, ContributingOrders=1 (based on individual stored margins)
+2025-06-16 22:54:43,615 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol EURCAD: MarginBefore=0.00, MarginAfter=11.55, AdditionalMargin=11.55
+2025-06-16 22:54:43,624 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '4695004603', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'EURCAD', 'order_type': 'BUY', 'order_price': Decimal('1.5689400000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('11.55486165833253551518186572'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-16 22:54:43,688 - INFO - orders - [MARGIN_COMMIT_CHECK] User 4 margin in session BEFORE commit: 0E-8
+2025-06-16 22:54:43,711 - INFO - orders - User data cache updated for user 4 after placing order
+2025-06-16 22:54:44,039 - INFO - orders - Portfolio cache updated and websocket event published for user 4 after placing order.
+2025-06-16 22:54:44,196 - INFO - orders - [FIREBASE] Payload being sent to Firebase: {'order_id': '4695004603', 'order_user_id': 4, 'order_company_name': 'EURCAD', 'order_type': 'BUY', 'order_status': 'PROCESSING', 'order_price': Decimal('1.56894000'), 'order_quantity': Decimal('0.01000000'), 'contract_value': Decimal('1000.00000000'), 'margin': Decimal('11.55486166'), 'stop_loss': None, 'take_profit': None, 'status': 'OPEN'}
+2025-06-16 22:54:44,482 - INFO - orders - [FIREBASE] Barclays order sent to Firebase: 4695004603 (order_status=PROCESSING, margin not updated in DB)
+2025-06-16 22:54:44,509 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:54:44,510 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:54:44,524 - INFO - orders - Fetched 1 open orders for user 4
+2025-06-16 22:54:44,534 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:54:44,547 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 3 pending orders
+2025-06-16 22:54:45,946 - INFO - orders - Half-spread calculation request for order_id: 4695004603, symbol: EURCAD
+2025-06-16 22:54:46,091 - INFO - orders - Service provider status request received for ID: 4695004603
+2025-06-16 22:54:46,100 - INFO - orders - Found order 4695004603 with status: 'OPEN' and order_status: 'PROCESSING'
+2025-06-16 22:54:46,279 - INFO - orders - Service Provider Execution: Received update fields: {'order_status': 'open', 'order_type': 'BUY', 'order_price': Decimal('1.56894')}
+2025-06-16 22:54:46,280 - INFO - orders - Service Provider Execution: Applying generic update for transition from PROCESSING to open
+2025-06-16 22:54:46,329 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-06-16 22:54:46,329 - INFO - orders - Using order model: UserOrder
+2025-06-16 22:54:46,335 - INFO - orders - Fetched 2 open orders for user 4
+2025-06-16 22:54:46,343 - INFO - orders - Fetched 3 pending orders for user 4
+2025-06-16 22:54:46,349 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 3 pending orders

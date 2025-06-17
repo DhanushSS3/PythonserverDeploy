@@ -69,7 +69,7 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
             "order_price", "order_quantity", "contract_value", "margin",
             "stop_loss", "take_profit", "close_price", "net_profit",
             "swap", "commission", "cancel_message", "close_message",
-            "takeprofit_id", "stoploss_id", "cancel_id", "close_order_id", "modify_id",
+            "takeprofit_id", "stoploss_id", "cancel_id", "close_id", "modify_id",
             "stoploss_cancel_id", "takeprofit_cancel_id", "status",
             "timestamp", "account_type", "action"
         ]
