@@ -107,6 +107,10 @@ async def calculate_single_order_margin(
     user_id: int = None
 ) -> Tuple[Decimal, Decimal, Decimal, Decimal]:
     """
+    IMPORTANT: The user_leverage parameter should be a reasonable value (typically 100 or 200).
+    If a value of 1 is passed, this function will attempt to get the actual leverage from the user's data.
+    """
+    """
     Calculate margin for a single order based on order details and market data.
     
     Args:
@@ -127,6 +131,19 @@ async def calculate_single_order_margin(
     try:
         orders_logger.info(f"[MARGIN_CALC] Starting margin calculation for {symbol} {order_type} order, quantity: {quantity}")
         
+        # Set default group_name if it's not in the group_settings
+        if 'group_name' not in group_settings and user_id is not None:
+            # Try to get user data to find group_name
+            orders_logger.info(f"[MARGIN_CALC] No group_name in settings, fetching for user {user_id}")
+            try:
+                from app.crud.user import get_user_by_id
+                user = await get_user_by_id(db, user_id, user_type='live')
+                if user and user.group_name:
+                    group_settings['group_name'] = user.group_name
+                    orders_logger.info(f"[MARGIN_CALC] Got group_name from database: {user.group_name}")
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CALC] Error getting user group name: {e}")
+        
         # Get contract size from external symbol info
         contract_size_raw = external_symbol_info.get('contract_size', 100000)
         contract_size = Decimal(str(contract_size_raw))
@@ -134,18 +151,27 @@ async def calculate_single_order_margin(
         
         # Get appropriate price based on order type
         price = None
+        # Get user_group_name from the group_settings
+        user_group_name = group_settings.get('group_name', 'default')
+        
         if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
             # For buy orders, use the ask price
-            price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol)
-            if price_data:
-                price = Decimal(str(price_data))
-                orders_logger.info(f"[MARGIN_CALC] Got BUY price for {symbol} from cache: {price}")
+            try:
+                price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol, user_group_name)
+                if price_data:
+                    price = Decimal(str(price_data))
+                    orders_logger.info(f"[MARGIN_CALC] Got BUY price for {symbol} from cache: {price}")
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CALC] Error getting BUY price from cache: {e}")
         elif order_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
             # For sell orders, use the bid price
-            price_data = await get_live_adjusted_sell_price_for_pair(redis_client, symbol)
-            if price_data:
-                price = Decimal(str(price_data))
-                orders_logger.info(f"[MARGIN_CALC] Got SELL price for {symbol} from cache: {price}")
+            try:
+                price_data = await get_live_adjusted_sell_price_for_pair(redis_client, symbol, user_group_name)
+                if price_data:
+                    price = Decimal(str(price_data))
+                    orders_logger.info(f"[MARGIN_CALC] Got SELL price for {symbol} from cache: {price}")
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CALC] Error getting SELL price from cache: {e}")
         
         # If we couldn't get a price from the cache, try to get it from raw market data
         if price is None:
@@ -162,9 +188,25 @@ async def calculate_single_order_margin(
                     price = Decimal(str(price_raw))
                     orders_logger.info(f"[MARGIN_CALC] Using raw bid price for {symbol}: {price} (raw: {price_raw})")
             
+            # If we still don't have a price, try last known price from cache
+        if price is None or price == Decimal('0'):
+            try:
+                orders_logger.warning(f"[MARGIN_CALC] No price from market data for {symbol}, trying last known price")
+                last_price = await get_last_known_price(redis_client, symbol)
+                if last_price:
+                    if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                        price_raw = last_price.get('o', last_price.get('ask', '0'))
+                    else:
+                        price_raw = last_price.get('b', last_price.get('bid', '0'))
+                    
+                    price = Decimal(str(price_raw))
+                    orders_logger.info(f"[MARGIN_CALC] Using last known price for {symbol}: {price}")
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CALC] Error getting last known price: {e}")
+            
             # If we still don't have a price, log an error and return zeros
             if price is None or price == Decimal('0'):
-                orders_logger.error(f"[MARGIN_CALC] Could not get price for {symbol} {order_type} order")
+                orders_logger.error(f"[MARGIN_CALC] Could not get any price for {symbol} {order_type} order")
                 return None, None, None, None
         
         # Calculate contract value using the CORRECT formula
@@ -176,10 +218,29 @@ async def calculate_single_order_margin(
         
         # Calculate margin using the CORRECT formula
         # Margin = (contract_value * price) / user_leverage
-        margin_raw = (contract_value * price) / user_leverage
+        # Ensure user_leverage is at least 1 to avoid division by zero
+        effective_leverage = max(user_leverage, Decimal('1'))
+        # For live users, leverage is typically 100 or 200
+        if user_leverage <= Decimal('1') and user_id is not None:
+            # Try to get user data to find proper leverage
+            try:
+                from app.crud.user import get_user_by_id
+                user = await get_user_by_id(db, user_id, user_type='live')
+                if user and user.leverage and user.leverage > Decimal('1'):
+                    effective_leverage = user.leverage
+                    orders_logger.info(f"[MARGIN_CALC] Using user's actual leverage from DB: {effective_leverage}")
+                else:
+                    # Default to 100 if we can't find a proper leverage
+                    effective_leverage = Decimal('100')
+                    orders_logger.info(f"[MARGIN_CALC] Using default leverage: {effective_leverage}")
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CALC] Error getting user leverage: {e}")
+                effective_leverage = Decimal('100')  # Default to 100
+                
+        margin_raw = (contract_value * price) / effective_leverage
         margin = margin_raw.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
-        orders_logger.info(f"[MARGIN_CALC] Margin calculation: (contract_value * price) / user_leverage = ({contract_value} * {price}) / {user_leverage} = {margin_raw} (rounded to {margin})")
+        orders_logger.info(f"[MARGIN_CALC] Margin calculation: (contract_value * price) / effective_leverage = ({contract_value} * {price}) / {effective_leverage} = {margin_raw} (rounded to {margin})")
         
         # Calculate commission
         commission = Decimal('0.0')
@@ -200,7 +261,7 @@ async def calculate_single_order_margin(
         commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
         # Convert margin to USD if profit_currency is not USD
-        profit_currency = external_symbol_info.get('profit', 'USD')  # Get profit currency from external_symbol_info
+        profit_currency = external_symbol_info.get('profit_currency', 'USD')  # Get profit currency from external_symbol_info
         orders_logger.info(f"[MARGIN_CALC] Profit currency for {symbol}: {profit_currency}")
         
         if profit_currency != 'USD' and db is not None and user_id is not None:
@@ -257,6 +318,7 @@ async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Di
         return None
 
 from app.core.cache import get_last_known_price
+from app.firebase_stream import get_latest_market_data
 
 def calculate_pending_order_margin(
     order_type: str,

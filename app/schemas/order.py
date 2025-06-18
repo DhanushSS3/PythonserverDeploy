@@ -68,7 +68,7 @@ class OrderResponse(BaseModel):
     updated_at: Optional[Any] = None # datetime will be serialized by FastAPI/Pydantic
     stoploss_id: Optional[str] = None
     takeprofit_id: Optional[str] = None
-    close_order_id: Optional[str] = None # Added for tracking closed orders
+    close_id: Optional[str] = None # Added for tracking closed orders
 
 
 # --- Close Order Request Schema ---

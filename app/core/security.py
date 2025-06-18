@@ -36,10 +36,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Get application settings
 settings = get_settings()
 
-# Use settings for SECRET_KEY and ALGORITHM for consistency
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = settings.ALGORITHM
-
 # --- Password Hashing Functions ---
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -65,12 +61,12 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode.update({"exp": expire, "iat": datetime.utcnow()})
 
     logger.debug(f"\n--- Token Creation Details ---")
-    logger.debug(f"SECRET_KEY used for encoding: '{SECRET_KEY}'")
-    logger.debug(f"ALGORITHM used for encoding: '{ALGORITHM}'")
+    logger.debug(f"Using SECRET_KEY: {str(settings.SECRET_KEY)[:5]}... for encoding")
+    logger.debug(f"ALGORITHM used for encoding: '{settings.ALGORITHM}'")
     logger.debug(f"Payload to encode: {to_encode}")
 
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    logger.debug(f"Generated JWT: {encoded_jwt}\n")
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    logger.debug(f"Generated JWT: {encoded_jwt[:30]}...\n")
     return encoded_jwt
 
 
@@ -84,7 +80,7 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> 
     else:
         expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "iat": datetime.utcnow()})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM) # Use SECRET_KEY and ALGORITHM from settings
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 def decode_token(token: str) -> dict[str, Any]:
@@ -93,7 +89,7 @@ def decode_token(token: str) -> dict[str, Any]:
     """
     try:
         logger.debug(f"Attempting to decode token: {token[:30]}...")
-        logger.debug(f"Using SECRET_KEY: {settings.SECRET_KEY[:5]}... ALGORITHM: {settings.ALGORITHM}")
+        logger.debug(f"Using SECRET_KEY: {str(settings.SECRET_KEY)[:5]}... for decoding")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         logger.debug(f"Token decoded successfully. Payload: {payload}")
         return payload
@@ -124,7 +120,8 @@ async def connect_to_redis() -> Optional[aioredis.Redis]:
             f"  Resolved IP: {resolved_ip}\n"
             f"  Port: {redis_port}\n"
             f"  DB: {settings.REDIS_DB}\n"
-            f"  Password: {'<set>' if settings.REDIS_PASSWORD else '<not set>'}"
+            f"  Password: {'<set>' if settings.REDIS_PASSWORD else '<not set>'}\n"
+            f"  Persistence: AOF enabled (appendonly.aof)"
         )
 
         client = aioredis.Redis(
@@ -135,6 +132,17 @@ async def connect_to_redis() -> Optional[aioredis.Redis]:
             decode_responses=True
         )
         await client.ping()
+        
+        # Ensure AOF persistence is enabled
+        config_get = await client.config_get('appendonly')
+        if config_get and config_get.get('appendonly') != 'yes':
+            logger.warning("AOF persistence is not enabled in Redis. Attempting to enable it...")
+            await client.config_set('appendonly', 'yes')
+            await client.config_set('appendfsync', 'everysec')
+            logger.info("AOF persistence has been enabled with appendfsync=everysec")
+        else:
+            logger.info("✅ AOF persistence is correctly configured")
+            
         logger.info(f"✅ Connected to Redis at {redis_host} ({resolved_ip}):{redis_port}")
         return client
 
@@ -433,7 +441,7 @@ async def get_user_from_service_token(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         service_name: str = payload.get("sub")
         is_service_account: bool = payload.get("is_service_account", False)
 

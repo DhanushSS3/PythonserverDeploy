@@ -44,8 +44,12 @@ logger = logging.getLogger(__name__)
 def get_order_model(user_type: str):
     """
     Get the appropriate order model based on user type.
+    
+    NOTE: This is a simplified version. When possible, use the more comprehensive
+    get_order_model function from app.api.v1.endpoints.orders which handles
+    both string and User/DemoUser objects.
     """
-    if user_type.lower() == 'demo':
+    if isinstance(user_type, str) and user_type.lower() == 'demo':
         return DemoUserOrder
     return UserOrder
 

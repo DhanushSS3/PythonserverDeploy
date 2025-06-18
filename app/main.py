@@ -1,5 +1,10 @@
 # app/main.py
 
+# --- Environment Variable Loading ---
+# This must be at the very top, before any other app modules are imported.
+from dotenv import load_dotenv
+load_dotenv()
+
 # Import necessary components from fastapi
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +13,6 @@ import asyncio
 import os
 import json
 from typing import Optional, Any
-from dotenv import load_dotenv
 from datetime import datetime
 from decimal import Decimal
 from redis.asyncio import Redis
@@ -135,8 +139,6 @@ app.add_middleware(
 # --- End CORS Settings ---
 
 scheduler: Optional[AsyncIOScheduler] = None
-
-load_dotenv() 
 
 # Now, you can safely print and access them
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -426,6 +428,7 @@ async def rotate_service_account_jwt():
     Generates a JWT for the Barclays service provider, prints it to the console,
     and pushes it to Firebase. This job is scheduled to run periodically.
     """
+    logger.info("APScheduler: Starting rotate_service_account_jwt job...")
     try:
         service_name = "barclays_service_provider"
         # Generate a token valid for 35 minutes. It will be refreshed every 30 minutes.
@@ -441,7 +444,7 @@ async def rotate_service_account_jwt():
         }
         jwt_ref.set(payload)
         
-        logger.info(f"Service account JWT for '{service_name}' pushed to Firebase.")
+        logger.info(f"SUCCESS: Service account JWT for '{service_name}' was generated and pushed to Firebase.")
         
         # Print the token to the console for debugging, as requested
         print("\n" + "="*50)
@@ -452,9 +455,10 @@ async def rotate_service_account_jwt():
         print("\nToken:")
         print(token)
         print("\n" + "="*50 + "\n")
+        logger.info("APScheduler: Finished rotate_service_account_jwt job successfully.")
 
     except Exception as e:
-        logger.error(f"Error generating or pushing service JWT to Firebase: {e}", exc_info=True)
+        logger.error(f"FAILURE: Error in rotate_service_account_jwt job. Could not push token to Firebase: {e}", exc_info=True)
 
 # Add this line after the app initialization
 background_tasks = set()
