@@ -55,14 +55,18 @@ async def create_wallet_record(
 
         # Add and flush to prepare for refresh
         db.add(wallet_record)
-        await db.flush()                 # ✅ Safe flush instead of commit
-        await db.refresh(wallet_record)  # ✅ Still inside open transaction
-
-        logger.info(
-            f"Wallet record created successfully for user {wallet_data.user_id} "
-            f"with transaction ID {transaction_id}."
-        )
-        return wallet_record
+        # Safe transaction handling with flush and refresh
+        try:
+            await db.flush()                 # Safe flush instead of commit
+            await db.refresh(wallet_record)  # Still inside open transaction
+            logger.info(
+                f"Wallet record created successfully for user {wallet_data.user_id} "
+                f"with transaction ID {transaction_id}."
+            )
+            return wallet_record
+        except Exception as e:
+            await db.rollback()
+            raise e
 
     except SQLAlchemyError as e:
         logger.error(

@@ -311,7 +311,11 @@ async def place_order(
     """
     Place a new order.
     """
+    from app.core.logging_config import frontend_orders_logger, error_logger
+    
     try:
+        # Log the incoming request
+        frontend_orders_logger.info(f"FRONTEND ORDER PLACEMENT - REQUEST: {json.dumps(order_request.dict(), default=str)}")
         orders_logger.info(f"Order placement request received - User ID: {current_user.id}, Symbol: {order_request.symbol}, Type: {order_request.order_type}, Quantity: {order_request.order_quantity}")
         
         # Convert order request to dict
@@ -814,8 +818,8 @@ async def place_pending_order(
                     "country": getattr(db_user, 'country', None),
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
-                await set_user_data_cache(redis_client, user_id_for_order, user_data_to_cache)
-                orders_logger.info(f"User data cache updated for user {user_id_for_order} after placing pending order")
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id} after placing pending order")
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after pending order placement: {e}", exc_info=True)
 
@@ -861,12 +865,21 @@ async def close_order(
     token: str = Depends(oauth2_scheme)
 ):
     """
-    Close an open order, updates its status to 'CLOSED', and adjusts the user's overall margin.
+    Close an existing order.
     """
+    from app.core.logging_config import frontend_orders_logger, error_logger
+    
     try:
-        orders_logger.info(f"Close order request received - Order ID: {close_request.order_id}, User ID: {current_user.id}, User Type: {current_user.user_type}")
-        orders_logger.info(f"Close request details - Price: {close_request.close_price}, Type: {close_request.order_type}, Symbol: {close_request.order_company_name}")
-
+        # Log the incoming request
+        frontend_orders_logger.info(f"FRONTEND ORDER CLOSE - REQUEST: {json.dumps(close_request.dict(), default=str)}")
+        orders_logger.info(f"Order close request received - Order ID: {close_request.order_id}, User ID: {close_request.user_id}, Close Price: {close_request.close_price}")
+        
+        # Validate the request
+        if not close_request.order_id:
+            error_msg = "Order ID is required"
+            frontend_orders_logger.error(f"FRONTEND ORDER CLOSE ERROR: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
         target_user_id_to_operate_on = current_user.id
         user_to_operate_on = current_user
 
@@ -3310,120 +3323,99 @@ async def service_provider_order_execution(
     current_user: User = Depends(get_user_from_service_token)
 ):
     """
-    Endpoint for service providers to confirm execution of instant or pending orders.
-    - Transitions PROCESSING -> OPEN/REJECTED
-    - Transitions PENDING -> OPEN
-    - Transitions OPEN -> CLOSED
+    Endpoint for service providers to execute orders.
+    This handles both opening new orders and closing existing ones.
     """
-    if not getattr(current_user, 'is_service_account', False):
-        orders_logger.error(f"Non-service account attempted to use service provider endpoint: {current_user.id}")
-        raise HTTPException(status_code=403, detail="Only service accounts can use this endpoint")
-
-    order_model = UserOrder
+    from app.core.logging_config import service_provider_logger, frontend_orders_logger, error_logger
     
-    # Extract the single ID provided in the request to find the order
-    id_to_find = (
-        request.order_id or
-        request.cancel_id or
-        request.close_id or
-        request.modify_id or
-        request.stoploss_id or
-        request.takeprofit_id or
-        request.stoploss_cancel_id or
-        request.takeprofit_cancel_id
-    )
-    if not id_to_find:
-        raise HTTPException(status_code=400, detail="An order identifier must be provided.")
-
-    db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
-    if not db_order:
-        raise HTTPException(status_code=404, detail=f"Order not found with provided ID: {id_to_find}")
-
-    original_status = db_order.order_status
+    # Log the incoming request
+    service_provider_logger.info(f"SERVICE PROVIDER ORDER EXECUTION - REQUEST: {json.dumps(request.dict(), default=str)}")
     
-    # Normalize order status to uppercase for consistent handling
-    if request.order_status:
-        request.order_status = request.order_status.upper()
-    
-    new_status = request.order_status
-    user_id = db_order.order_user_id
+    try:
+        # Extract the ID to find the order
+        id_to_find = request.order_id
+        if not id_to_find:
+            error_msg = "No order_id provided in request"
+            service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
 
-    # Logic for handling any field update provided in the request
-    update_fields = request.model_dump(exclude_unset=True)
+        # Find the order by ID (could be any ID field)
+        db_order = await crud_order.get_order_by_any_id(db, id_to_find, UserOrder)
+        if not db_order:
+            error_msg = f"Order with ID {id_to_find} not found"
+            service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
+            raise HTTPException(status_code=404, detail=error_msg)
 
-    # Do not update any ID fields from the service provider request. They are for lookup only.
-    id_fields_to_ignore = [
-        'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
-        'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
-    ]
-    for field in id_fields_to_ignore:
-        if field in update_fields:
-            del update_fields[field]
-
-    orders_logger.info(f"Service Provider Execution: Received update fields: {update_fields}")
-
-    if new_status == "OPEN" and original_status in ["PROCESSING", "PENDING"]:
-        action_type = "SP_CONFIRM_INSTANT" if original_status == "PROCESSING" else "SP_EXECUTE_PENDING"
+        # Log the found order
+        service_provider_logger.info(f"SERVICE PROVIDER ORDER FOUND: order_id={db_order.order_id}, status={db_order.order_status}, user_id={db_order.order_user_id}")
         
-        if original_status == "PENDING":
-             await remove_pending_order(
-                redis_client,
-                db_order.order_id,
-                db_order.order_company_name,
-                db_order.order_type,
-                str(user_id)
-            )
+        # Extract the original status for comparison
+        original_status = db_order.order_status
+        
+        # Extract fields to update from the request
+        update_fields = request.dict(exclude_unset=True)
+        new_status = update_fields.get("order_status", original_status)
+        
+        # Log the status transition
+        service_provider_logger.info(f"SERVICE PROVIDER STATUS TRANSITION: {original_status} -> {new_status}")
 
-        updated_order = await _handle_order_open_transition(
-            db=db,
-            redis_client=redis_client,
-            db_order=db_order,
-            update_fields=update_fields,
-            current_user=current_user,
-            action_type=action_type
-        )
-        return OrderResponse.model_validate(updated_order, from_attributes=True)
-    
-    elif new_status == "CLOSED" and original_status == "OPEN":
+        # Do not update any ID fields from the service provider request. They are for lookup only.
+        id_fields_to_ignore = [
+            'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
+            'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
+        ]
+        for field in id_fields_to_ignore:
+            if field in update_fields:
+                del update_fields[field]
+
         # Add id_to_find to update_fields for _handle_order_close_transition
         update_fields["_id_used_for_lookup"] = id_to_find
         
-        updated_order = await _handle_order_close_transition(
-            db=db,
-            redis_client=redis_client,
-            db_order=db_order,
-            update_fields=update_fields,
-            current_user=current_user
-        )
-        return OrderResponse.model_validate(updated_order, from_attributes=True)
-
-    elif new_status == "REJECTED" and original_status == "PROCESSING":
-        # Use close_message for rejection message
-        rejection_message = update_fields.get("close_message", "Order rejected by service provider.")
-        update_fields["close_message"] = rejection_message
-        
-        updated_order = await crud_order.update_order_with_tracking(
-            db, db_order, update_fields, current_user.id, 'live', "SP_REJECT"
-        )
-        await db.commit()
-        await db.refresh(updated_order)
-
-        await update_user_static_orders(user_id, db, redis_client, 'live')
-        await publish_order_update(redis_client, user_id)
-        
-        return OrderResponse.model_validate(updated_order, from_attributes=True)
-    
-    # Generic fallback to update any other fields provided
-    else:
-        orders_logger.info(f"Service Provider Execution: Applying generic update for transition from {original_status} to {new_status or original_status}")
-        updated_order = await crud_order.update_order_with_tracking(
-            db, db_order, update_fields, current_user.id, 'live', "SP_GENERIC_EXECUTION_UPDATE"
-        )
-        await db.commit()
-        await db.refresh(updated_order)
-        await update_user_static_orders(user_id, db, redis_client, 'live')
-        await publish_order_update(redis_client, user_id)
-        return OrderResponse.model_validate(updated_order, from_attributes=True)
+        # Handle different status transitions
+        if new_status == "OPEN" and original_status in ["PROCESSING", "PENDING"]:
+            updated_order = await _handle_order_open_transition(
+                db=db,
+                redis_client=redis_client,
+                db_order=db_order,
+                update_fields=update_fields,
+                current_user=current_user,
+                action_type="SERVICE_PROVIDER_EXECUTION"
+            )
+            response = OrderResponse.model_validate(updated_order, from_attributes=True)
+            service_provider_logger.info(f"SERVICE PROVIDER ORDER OPENED: order_id={response.order_id}, status={response.order_status}")
+            return response
+        elif new_status == "CLOSED" and original_status == "OPEN":
+            updated_order = await _handle_order_close_transition(
+                db=db,
+                redis_client=redis_client,
+                db_order=db_order,
+                update_fields=update_fields,
+                current_user=current_user
+            )
+            response = OrderResponse.model_validate(updated_order, from_attributes=True)
+            service_provider_logger.info(f"SERVICE PROVIDER ORDER CLOSED: order_id={response.order_id}, status={response.order_status}, net_profit={response.net_profit}")
+            return response
+        elif new_status == "REJECTED" and original_status in ["PROCESSING", "PENDING"]:
+            # Handle rejection (update status and potentially release margin)
+            db_order.order_status = "REJECTED"
+            db_order.cancel_message = update_fields.get("cancel_message", "Rejected by service provider")
+            db_order.cancel_id = await generate_unique_10_digit_id(db, UserOrder, 'cancel_id')
+            
+            await db.commit()
+            await db.refresh(db_order)
+            
+            response = OrderResponse.model_validate(db_order, from_attributes=True)
+            service_provider_logger.info(f"SERVICE PROVIDER ORDER REJECTED: order_id={response.order_id}, reason={db_order.cancel_message}")
+            return response
+        else:
+            error_msg = f"Invalid status transition from {original_status} to {new_status}"
+            service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+    except Exception as e:
+        error_msg = f"Error in service_provider_order_execution: {str(e)}"
+        error_logger.error(error_msg, exc_info=True)
+        service_provider_logger.error(f"SERVICE PROVIDER EXCEPTION: {error_msg}", exc_info=True)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.post("/service-provider/order-update", response_model=OrderResponse)
@@ -3434,96 +3426,100 @@ async def service_provider_order_update(
     current_user: User = Depends(get_user_from_service_token)
 ):
     """
-    Endpoint for service providers to update non-execution related order details.
-    - Cancels pending orders.
-    - Adds/Removes/Updates Stop Loss/Take Profit.
-    - Updates any other specified fields on an order.
+    Endpoint for service providers to update orders.
+    This can handle various updates including status changes, price updates, etc.
     """
-    if not getattr(current_user, 'is_service_account', False):
-        orders_logger.error(f"Non-service account attempted to use service provider update endpoint: {current_user.id}")
-        raise HTTPException(status_code=403, detail="Only service accounts can use this endpoint")
-
-    orders_logger.info(f"Service provider update request received: {update_request.model_dump_json(exclude_unset=True)}")
-
-    order_model = UserOrder # Service provider updates are for live users
+    from app.core.logging_config import service_provider_logger, frontend_orders_logger, error_logger
     
-    # Extract the single ID provided in the request
-    id_to_find = (
-        update_request.order_id or
-        update_request.cancel_id or
-        update_request.close_id or
-        update_request.modify_id or
-        update_request.stoploss_id or
-        update_request.takeprofit_id or
-        update_request.stoploss_cancel_id or
-        update_request.takeprofit_cancel_id
-    )
-    if not id_to_find:
-        raise HTTPException(status_code=400, detail="An order identifier must be provided.")
-
-    # Use the new generic search function to find the order
-    db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
+    # Log the incoming request
+    service_provider_logger.info(f"SERVICE PROVIDER ORDER UPDATE - REQUEST: {json.dumps(update_request.dict(), default=str)}")
     
-    if not db_order:
-        orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
-        raise HTTPException(status_code=404, detail="Order not found with provided ID")
-
-    original_status = db_order.order_status
-    update_fields = update_request.model_dump(exclude_unset=True)
-
-    # Do not update any ID fields from the service provider request. They are for lookup only.
-    id_fields_to_ignore = [
-        'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
-        'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
-    ]
-    for field in id_fields_to_ignore:
-        if field in update_fields:
-            del update_fields[field]
-
-    # If order is being closed, add the id_to_find to update_fields for SL/TP cancellation checks
-    if update_fields.get("order_status") == "CLOSED" and original_status == "OPEN":
-        update_fields["_id_used_for_lookup"] = id_to_find
-        orders_logger.info(f"Service provider is closing order {db_order.order_id}. Calling _handle_order_close_transition.")
-        updated_order = await _handle_order_close_transition(
-            db=db,
-            redis_client=redis_client,
-            db_order=db_order,
-            update_fields=update_fields,
-            current_user=current_user
-        )
-        return OrderResponse.model_validate(updated_order, from_attributes=True)
+    try:
+        # Find the order by any ID field
+        id_to_find = None
+        for id_field in ['order_id', 'close_id', 'cancel_id', 'modify_id', 'stoploss_id', 'takeprofit_id']:
+            if hasattr(update_request, id_field) and getattr(update_request, id_field):
+                id_to_find = getattr(update_request, id_field)
+                break
         
-    # Specific logic for pending order cancellation
-    if original_status == "PENDING" and update_fields.get("order_status") == "CANCELLED":
-        orders_logger.info(f"Service provider is cancelling pending order {db_order.order_id}")
-        await remove_pending_order(
-            redis_client,
-            db_order.order_id,
-            db_order.order_company_name,
-            db_order.order_type,
-            str(db_order.order_user_id)
-        )
+        if not id_to_find:
+            error_msg = "No valid ID field provided in update request"
+            service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        db_order = await crud_order.get_order_by_any_id(db, id_to_find, UserOrder)
+        if not db_order:
+            error_msg = f"Order with ID {id_to_find} not found"
+            service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
+            raise HTTPException(status_code=404, detail=error_msg)
+        
+        # Log the found order
+        service_provider_logger.info(f"SERVICE PROVIDER ORDER FOUND: order_id={db_order.order_id}, status={db_order.order_status}, user_id={db_order.order_user_id}")
+        
+        # Extract the original status for comparison
+        original_status = db_order.order_status
+        
+        # Extract fields to update from the request
+        update_fields = update_request.dict(exclude_unset=True)
+        new_status = update_fields.get("order_status", original_status)
+        
+        # Log the status transition if status is changing
+        if new_status != original_status:
+            service_provider_logger.info(f"SERVICE PROVIDER STATUS TRANSITION: {original_status} -> {new_status}")
+        
+        # Do not update any ID fields from the service provider request. They are for lookup only.
+        id_fields_to_ignore = [
+            'order_id', 'cancel_id', 'close_id', 'modify_id', 'stoploss_id',
+            'takeprofit_id', 'stoploss_cancel_id', 'takeprofit_cancel_id'
+        ]
+        for field in id_fields_to_ignore:
+            if field in update_fields:
+                del update_fields[field]
 
-    # Update order in DB
-    updated_order = await crud_order.update_order_with_tracking(
-        db,
-        db_order,
-        update_fields,
-        current_user.id,
-        'live',
-        action_type="SP_UPDATE"
-    )
-
-    await db.commit()
-    await db.refresh(updated_order)
-
-    # Publish updates
-    user_id = updated_order.order_user_id
-    await update_user_static_orders(user_id, db, redis_client, 'live')
-    await publish_order_update(redis_client, user_id)
-    await publish_user_data_update(redis_client, user_id)
-    
-    return OrderResponse.model_validate(updated_order, from_attributes=True)
+        # If order is being closed, add the id_to_find to update_fields for SL/TP cancellation checks
+        if update_fields.get("order_status") == "CLOSED" and original_status == "OPEN":
+            update_fields["_id_used_for_lookup"] = id_to_find
+            orders_logger.info(f"Service provider is closing order {db_order.order_id}. Calling _handle_order_close_transition.")
+            updated_order = await _handle_order_close_transition(
+                db=db,
+                redis_client=redis_client,
+                db_order=db_order,
+                update_fields=update_fields,
+                current_user=current_user
+            )
+            response = OrderResponse.model_validate(updated_order, from_attributes=True)
+            service_provider_logger.info(f"SERVICE PROVIDER ORDER CLOSED: order_id={response.order_id}, status={response.order_status}, net_profit={response.net_profit}")
+            return response
+            
+        # Specific logic for pending order cancellation
+        if update_fields.get("order_status") == "CANCELLED" and original_status == "PENDING":
+            db_order.order_status = "CANCELLED"
+            db_order.cancel_message = update_fields.get("cancel_message", "Cancelled by service provider")
+            db_order.cancel_id = await generate_unique_10_digit_id(db, UserOrder, 'cancel_id')
+            
+            await db.commit()
+            await db.refresh(db_order)
+            
+            response = OrderResponse.model_validate(db_order, from_attributes=True)
+            service_provider_logger.info(f"SERVICE PROVIDER PENDING ORDER CANCELLED: order_id={response.order_id}")
+            return response
+        
+        # For other updates, apply them directly
+        for key, value in update_fields.items():
+            if hasattr(db_order, key):
+                setattr(db_order, key, value)
+        
+        await db.commit()
+        await db.refresh(db_order)
+        
+        response = OrderResponse.model_validate(db_order, from_attributes=True)
+        service_provider_logger.info(f"SERVICE PROVIDER ORDER UPDATED: order_id={response.order_id}, status={response.order_status}")
+        return response
+    except Exception as e:
+        error_msg = f"Error in service_provider_order_update: {str(e)}"
+        error_logger.error(error_msg, exc_info=True)
+        service_provider_logger.error(f"SERVICE PROVIDER EXCEPTION: {error_msg}", exc_info=True)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 

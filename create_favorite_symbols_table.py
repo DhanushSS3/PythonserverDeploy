@@ -32,22 +32,20 @@ async def create_table_manually():
             
             # Create the table using raw SQL
             create_table_sql = """
-            CREATE TABLE user_favorite_symbols (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                symbol_id INT NOT NULL,
-                user_type VARCHAR(10) NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                UNIQUE KEY _user_symbol_type_uc (user_id, symbol_id, user_type),
-                INDEX (user_id),
-                INDEX (symbol_id)
-            )
+            CREATE TABLE IF NOT EXISTS user_favorite_symbols (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                symbol VARCHAR(30) NOT NULL,
+                is_demo BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, symbol, is_demo)
+            );
             """
             
             logger.info("Creating user_favorite_symbols table...")
             await conn.execute(text(create_table_sql))
             
-            logger.info("✅ user_favorite_symbols table created successfully")
+            logger.info("[SUCCESS] user_favorite_symbols table created successfully")
         
         # Properly dispose the engine
         await engine.dispose()

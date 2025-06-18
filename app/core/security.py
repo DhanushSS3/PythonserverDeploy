@@ -141,9 +141,9 @@ async def connect_to_redis() -> Optional[aioredis.Redis]:
             await client.config_set('appendfsync', 'everysec')
             logger.info("AOF persistence has been enabled with appendfsync=everysec")
         else:
-            logger.info("✅ AOF persistence is correctly configured")
+            logger.info("[SUCCESS] AOF persistence is correctly configured")
             
-        logger.info(f"✅ Connected to Redis at {redis_host} ({resolved_ip}):{redis_port}")
+        logger.info(f"[SUCCESS] Connected to Redis at {redis_host} ({resolved_ip}):{redis_port}")
         return client
 
     except Exception as e:

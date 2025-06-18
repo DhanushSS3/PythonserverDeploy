@@ -40,6 +40,9 @@ if not firebase_admin._apps:
 # Use the logger defined for this module
 logger = logging.getLogger(__name__)
 
+# Import the specialized firebase communication logger
+from app.core.logging_config import firebase_comm_logger
+
 def _stringify_value(value: Any) -> str:
     """
     Converts a single value to its string representation.
@@ -61,6 +64,9 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
     Returns True if successful, False otherwise.
     """
     try:
+        # Log the original order data received
+        firebase_comm_logger.info(f"OUTGOING ORDER DATA: {json.dumps(order_data, default=str)}")
+        
         # Define all possible order fields to ensure all are present and sent as strings.
         # This list should be comprehensive for all data structures passed to this function.
         all_order_fields = [
@@ -92,9 +98,16 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
         # Log the fully stringified payload that will be pushed to Firebase.
         logger.info(f"[FIREBASE] Payload being pushed to Firebase (all stringified): {payload}")
         
+        # Log to specialized firebase_comm logger
+        firebase_comm_logger.info(f"FIREBASE PUSH: trade_data/{account_type} - {json.dumps(payload, default=str)}")
+        
         # Ensure firebase_db is the correct Realtime Database reference
         firebase_database_ref = db.reference("trade_data") # Use the db from firebase_admin
-        firebase_database_ref.push(payload) # Single push operation
+        push_result = firebase_database_ref.push(payload) # Single push operation
+        
+        # Log the push result with the generated key
+        if push_result and hasattr(push_result, 'key'):
+            firebase_comm_logger.info(f"FIREBASE PUSH RESULT: Key={push_result.key}")
         
         # Use a consistent key for logging the order identifier
         log_order_id = order_data.get('order_id') or order_data.get('user_id', 'N/A')
@@ -102,8 +115,9 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
         return True
     except Exception as e:
         # Log the specific order_data as well for better debugging if it's not too large
-        logger.error(f"Error sending order data to Firebase (ID: {order_data.get('order_id', 'N/A')}): {e}", exc_info=True)
-        # logger.debug(f"Problematic order_data: {order_data}") # Uncomment for verbose debugging
+        error_msg = f"Error sending order data to Firebase (ID: {order_data.get('order_id', 'N/A')}): {e}"
+        logger.error(error_msg, exc_info=True)
+        firebase_comm_logger.error(f"FIREBASE ERROR: {error_msg}", exc_info=True)
         return False
 
 async def get_latest_market_data(symbol: str = None) -> Optional[Dict[str, Any]]:
@@ -115,13 +129,20 @@ async def get_latest_market_data(symbol: str = None) -> Optional[Dict[str, Any]]
         # Ensure db refers to firebase_admin.db
         ref = db.reference('datafeeds')
         if symbol:
+            firebase_comm_logger.debug(f"FIREBASE GET: datafeeds/{symbol.upper()}")
             data = ref.child(symbol.upper()).get()
+            firebase_comm_logger.debug(f"FIREBASE RESPONSE: datafeeds/{symbol.upper()} - {json.dumps(data, default=str)}")
             return data
         else:
+            firebase_comm_logger.debug(f"FIREBASE GET: datafeeds (all symbols)")
             data = ref.get()
+            # Don't log the full response as it could be very large
+            firebase_comm_logger.debug(f"FIREBASE RESPONSE: datafeeds - received data for {len(data) if data else 0} symbols")
             return data
     except Exception as e:
-        logger.error(f"Error getting market data from Firebase: {e}", exc_info=True)
+        error_msg = f"Error getting market data from Firebase: {e}"
+        logger.error(error_msg, exc_info=True)
+        firebase_comm_logger.error(f"FIREBASE ERROR: {error_msg}", exc_info=True)
         return None
 
 def get_latest_market_data_sync(symbol: str = None) -> Optional[Dict[str, Any]]:
@@ -134,11 +155,18 @@ def get_latest_market_data_sync(symbol: str = None) -> Optional[Dict[str, Any]]:
         # Ensure db refers to firebase_admin.db
         ref = db.reference('datafeeds')
         if symbol:
+            firebase_comm_logger.debug(f"FIREBASE GET (sync): datafeeds/{symbol.upper()}")
             data = ref.child(symbol.upper()).get()
+            firebase_comm_logger.debug(f"FIREBASE RESPONSE (sync): datafeeds/{symbol.upper()} - {json.dumps(data, default=str)}")
             return data
         else:
+            firebase_comm_logger.debug(f"FIREBASE GET (sync): datafeeds (all symbols)")
             data = ref.get()
+            # Don't log the full response as it could be very large
+            firebase_comm_logger.debug(f"FIREBASE RESPONSE (sync): datafeeds - received data for {len(data) if data else 0} symbols")
             return data
     except Exception as e:
-        logger.error(f"Error getting market data from Firebase: {e}", exc_info=True)
+        error_msg = f"Error getting market data from Firebase: {e}"
+        logger.error(error_msg, exc_info=True)
+        firebase_comm_logger.error(f"FIREBASE ERROR (sync): {error_msg}", exc_info=True)
         return None
