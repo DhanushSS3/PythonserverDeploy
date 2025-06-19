@@ -298,7 +298,7 @@ async def refresh_access_token(
 
         logger.info(f"Refresh token decoded. User ID from token payload: {user_id_from_payload_str}")
 
-        redis_token_data = await get_refresh_token_data(client=redis_client, refresh_token=token_refresh.refresh_token)
+        redis_token_data = await get_refresh_token_data(client=redis_client, refresh_token=refresh_token)
 
         if redis_token_data:
              logger.debug(f"Comparing Redis user_id (type: {type(redis_token_data.get('user_id'))}, value: {redis_token_data.get('user_id')}) with decoded user_id (type: {type(user_id_from_payload_str)}, value: {user_id_from_payload_str})")
@@ -315,12 +315,14 @@ async def refresh_access_token(
 
         logger.info(f"Refresh token validated successfully for user ID: {user_id_from_payload_str}")
 
-        user = await crud_user.get_user_by_id(db, user_id=int(user_id_from_payload_str))
+        user_type = payload.get("user_type", "live")
+        account_number = payload.get("account_number", None)
+        user = await crud_user.get_user_by_id(db, user_id=int(user_id_from_payload_str), user_type=user_type)
 
         if user is None or getattr(user, 'isActive', 0) != 1:
              logger.warning(f"Refresh token valid, but user ID {user_id_from_payload_str} not found or inactive.")
              try:
-                 await delete_refresh_token(client=redis_client, refresh_token=token_refresh.refresh_token)
+                 await delete_refresh_token(client=redis_client, refresh_token=refresh_token)
                  logger.info(f"Invalidated refresh token for invalid user ID {user_id_from_payload_str}.")
              except Exception as delete_e:
                  logger.error(f"Error deleting invalid refresh token for user ID {user_id_from_payload_str}: {delete_e}", exc_info=True)
@@ -333,8 +335,6 @@ async def refresh_access_token(
         access_token_expires = datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         refresh_token_expires = datetime.timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
         # Optionally, include user_type if present in the original token
-        user_type = payload.get("user_type", getattr(user, "user_type", "live"))
-        account_number = payload.get("account_number", getattr(user, "account_number", None))
         new_access_token = create_access_token(
             data={"sub": str(user.id), "user_type": user_type, "account_number": account_number},
             expires_delta=access_token_expires
@@ -355,7 +355,8 @@ async def refresh_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
-        logger.error(f"Unexpected error during refresh token process for token: {token_refresh.refresh_token[:20]}... : {e}", exc_info=True)
+        print("DEBUG REFRESH ERROR:", repr(e))
+        logger.error(f"Unexpected error during refresh token process for token: {refresh_token[:20]}... : {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while refreshing token."

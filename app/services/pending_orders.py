@@ -200,12 +200,12 @@ async def trigger_pending_order(
         
         if order_type_original == 'BUY_LIMIT':
             # Trigger when the market's SELL price (bid) drops to or below the limit price.
-            should_trigger = adjusted_sell_price <= order_price
+            should_trigger = adjusted_buy_price <= order_price
             logger.info(f"BUY_LIMIT order {order_id}: adjusted_sell_price ({adjusted_sell_price}) <= order_price ({order_price})? {should_trigger}")
         
         elif order_type_original == 'SELL_STOP':
             # Trigger when adjusted_sell_price falls to or below order_price
-            should_trigger = adjusted_sell_price <= order_price
+            should_trigger = adjusted_buy_price <= order_price
             logger.info(f"SELL_STOP order {order_id}: adjusted_sell_price ({adjusted_sell_price}) <= order_price ({order_price})? {should_trigger}")
         
         elif order_type_original == 'SELL_LIMIT':

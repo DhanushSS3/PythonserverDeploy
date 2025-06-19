@@ -463,3 +463,36 @@ async def generate_unique_demo_account_number(db: AsyncSession) -> str:
 #         raise ValueError("OTP record must be associated with either a user or a demo user.")
 #     # ... rest of the function ...
 
+async def get_all_active_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[User]:
+    """
+    Retrieves a list of all active live users from the database with pagination.
+    """
+    result = await db.execute(
+        select(User)
+        .filter(User.status == 1)
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+async def get_all_active_demo_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[DemoUser]:
+    """
+    Retrieves a list of all active demo users from the database with pagination.
+    """
+    result = await db.execute(
+        select(DemoUser)
+        .filter(DemoUser.status == 1)
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+async def get_all_active_users_both(db: AsyncSession, skip: int = 0, limit: int = 100):
+    """
+    Retrieves all active users from both live and demo tables.
+    Returns a tuple: (live_users, demo_users)
+    """
+    live_users = await get_all_active_users(db, skip, limit)
+    demo_users = await get_all_active_demo_users(db, skip, limit)
+    return live_users, demo_users
+

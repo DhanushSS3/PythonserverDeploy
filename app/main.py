@@ -179,9 +179,8 @@ async def update_all_users_dynamic_portfolio():
                 logger.error("Cannot update dynamic portfolios - Redis client not available")
                 return
                 
-            # Get all active users (both live and demo)
-            live_users = await crud_user.get_all_active_users(db)
-            demo_users = await crud_user.get_all_active_demo_users(db)
+            # Get all active users (both live and demo) using the new unified function
+            live_users, demo_users = await crud_user.get_all_active_users_both(db)
             
             all_users = []
             for user in live_users:
@@ -239,7 +238,6 @@ async def update_all_users_dynamic_portfolio():
                                 }
                     
                     # Define margin thresholds based on group settings or defaults
-                    # These could be stored in the database or group settings
                     margin_call_threshold = Decimal('100.0')  # Default 100%
                     margin_cutoff_threshold = Decimal('50.0')  # Default 50%
                     
@@ -472,7 +470,7 @@ async def startup_event():
     
     # Initialize Firebase
     try:
-        cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_CREDENTIALS_FILE)
+        cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)
         if not os.path.exists(cred_path):
             logger.error(f"Firebase credentials file not found at: {cred_path}")
             raise FileNotFoundError(f"Firebase credentials file not found at: {cred_path}")

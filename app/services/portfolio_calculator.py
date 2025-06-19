@@ -165,7 +165,7 @@ async def calculate_user_portfolio(
         total_pnl_usd = Decimal('0.0')
 
         # Get raw market data
-        raw_market_data = await get_latest_market_data()
+        raw_market_data =  get_latest_market_data()
         if not raw_market_data:
             logger.error("Failed to get raw market data")
             return {
