@@ -453,8 +453,11 @@ async def trigger_pending_order(
         try:
             new_order_type = 'BUY' if order_type_original in ['BUY_LIMIT', 'BUY_STOP'] else 'SELL'
             db_order.open_time = datetime.now() 
-            db_order.order_type = new_order_type 
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with new values")
+            db_order.order_type = new_order_type
+            # Set stop_loss and take_profit to None
+            db_order.stop_loss = None
+            db_order.take_profit = None
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with new values and cleared SL/TP")
         except Exception as update_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating order object with new values: {str(update_error)}", exc_info=True)
             return

@@ -2041,6 +2041,17 @@ async def add_stoploss(
         if db_order.order_status != "OPEN":
             orders_logger.warning(f"Cannot add stoploss to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have stoploss.")
             raise HTTPException(status_code=400, detail="Only OPEN orders can have stoploss")
+
+        # Validate stop loss based on order type
+        order_price = Decimal(str(db_order.order_price))
+        stop_loss = Decimal(str(request.stop_loss))
+        
+        if db_order.order_type == "BUY" and stop_loss >= order_price:
+            orders_logger.warning(f"Invalid stop loss {stop_loss} for BUY order {request.order_id}. Stop loss must be lower than order price {order_price}")
+            raise HTTPException(status_code=400, detail=f"For BUY orders, stop loss ({stop_loss}) must be lower than order price ({order_price})")
+        elif db_order.order_type == "SELL" and stop_loss <= order_price:
+            orders_logger.warning(f"Invalid stop loss {stop_loss} for SELL order {request.order_id}. Stop loss must be greater than order price {order_price}")
+            raise HTTPException(status_code=400, detail=f"For SELL orders, stop loss ({stop_loss}) must be greater than order price ({order_price})")
         
         # Generate a stoploss_id
         stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
@@ -2192,6 +2203,17 @@ async def add_takeprofit(
         if db_order.order_status != "OPEN":
             orders_logger.warning(f"Cannot add takeprofit to order {request.order_id} with status {db_order.order_status}. Only OPEN orders can have takeprofit.")
             raise HTTPException(status_code=400, detail="Only OPEN orders can have takeprofit")
+
+        # Validate take profit based on order type
+        order_price = Decimal(str(db_order.order_price))
+        take_profit = Decimal(str(request.take_profit))
+        
+        if db_order.order_type == "BUY" and take_profit <= order_price:
+            orders_logger.warning(f"Invalid take profit {take_profit} for BUY order {request.order_id}. Take profit must be greater than order price {order_price}")
+            raise HTTPException(status_code=400, detail=f"For BUY orders, take profit ({take_profit}) must be greater than order price ({order_price})")
+        elif db_order.order_type == "SELL" and take_profit >= order_price:
+            orders_logger.warning(f"Invalid take profit {take_profit} for SELL order {request.order_id}. Take profit must be lower than order price {order_price}")
+            raise HTTPException(status_code=400, detail=f"For SELL orders, take profit ({take_profit}) must be lower than order price ({order_price})")
         
         # Generate a takeprofit_id
         takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
