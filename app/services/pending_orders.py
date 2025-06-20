@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import json
 from pydantic import BaseModel 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select  # Add this import
 import asyncio
 import time
 import uuid
@@ -27,7 +28,8 @@ from app.core.cache import (
     publish_market_data_trigger,
     set_user_static_orders_cache,
     get_user_static_orders_cache,
-    get_user_dynamic_portfolio_cache
+    get_user_dynamic_portfolio_cache,
+    DecimalEncoder  # Import for JSON serialization of decimals
 )
 from app.services.margin_calculator import calculate_single_order_margin, calculate_pending_order_margin, get_external_symbol_info
 from app.services.portfolio_calculator import calculate_user_portfolio, _convert_to_usd
@@ -366,6 +368,44 @@ async def trigger_pending_order(
                 user_id=user_id
             )
             orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin calculated successfully for order {order_id}: margin={margin}, exec_price={exec_price}, contract_value={contract_value}")
+            
+            # Implement hedging logic: check for hedging positions that would reduce required margin
+            try:
+                # For hedging: Check if there are existing positions for the same symbol with opposite direction
+                open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                hedge_offset = Decimal('0')
+                
+                # Get the direction of the current order for comparison
+                is_buy = order_type_original.startswith('BUY')
+                is_sell = order_type_original.startswith('SELL')
+                
+                # Check for opposing positions
+                for existing_order in open_orders:
+                    if existing_order.order_company_name == symbol:
+                        existing_is_buy = existing_order.order_type.startswith('BUY')
+                        existing_is_sell = existing_order.order_type.startswith('SELL')
+                        
+                        # If directions are opposite, we have a hedging situation
+                        if (is_buy and existing_is_sell) or (is_sell and existing_is_buy):
+                            # For a hedge position, reduce the margin by the minimum of the two quantities
+                            hedge_quantity = min(order_quantity_decimal, existing_order.order_quantity)
+                            hedge_margin = (hedge_quantity / order_quantity_decimal) * margin
+                            hedge_offset += hedge_margin
+                            
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Found hedging position for order {order_id}: "
+                                             f"existing order {existing_order.order_id} with {existing_order.order_type}, "
+                                             f"reducing margin by {hedge_margin} (hedge ratio: {hedge_quantity}/{order_quantity_decimal})")
+                
+                # Apply the hedge offset to reduce required margin
+                if hedge_offset > Decimal('0'):
+                    original_margin = margin
+                    # Don't let hedge_offset reduce margin below zero
+                    margin = max(margin - hedge_offset, Decimal('0'))
+                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Applied hedging offset: original margin={original_margin}, "
+                                     f"hedge offset={hedge_offset}, final margin={margin}")
+            except Exception as hedge_error:
+                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating hedge offset for user {user_id}: {str(hedge_error)}", exc_info=True)
+                # Continue with original margin if hedging calculation fails
         except Exception as margin_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating margin for order {order_id}: {str(margin_error)}", exc_info=True)
             return
@@ -379,20 +419,9 @@ async def trigger_pending_order(
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error fetching dynamic portfolio for user {user_id}: {str(portfolio_error)}", exc_info=True)
             return
         
-        if margin is None or user_free_margin == 'N/A':
-            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Cannot validate margin for order {order_id}: margin={margin}, free_margin={user_free_margin}")
-            return
-        try:
-            if Decimal(str(user_free_margin)) < Decimal(str(margin)):
-                orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Insufficient free margin for user {user_id} to execute order {order_id}. Required: {margin}, Available: {user_free_margin}. Skipping execution.")
-                return
-            else:
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Free margin sufficient for user {user_id} to execute order {order_id}. Proceeding with execution.")
-                # Move this line after order execution is complete - it might be causing the order to disappear before being processed
-                # await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
-        except Exception as e:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error validating free margin for user {user_id} on order {order_id}: {e}")
-            return
+        # We'll skip the free margin check since we're already handling the hedging logic
+        # and checking against wallet_balance later in the function
+        
         orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Executing order {order_id} for user {user_id} at price {adjusted_buy_price_normalized} (order_price={order_price_normalized}, type={order_type_original})")
         
         # Get contract size and profit currency from symbol settings
@@ -403,20 +432,26 @@ async def trigger_pending_order(
         contract_value = order_quantity_decimal * contract_size
         orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Contract value calculated: {contract_value}")
 
-        # --- Determine the new order_type for opened order ---
-        new_order_type = order_type_original
-        if order_type_original == 'BUY_LIMIT' or order_type_original == 'BUY_STOP':
-            new_order_type = 'BUY'
-        elif order_type_original == 'SELL_LIMIT' or order_type_original == 'SELL_STOP':
-            new_order_type = 'SELL'
-        
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order type conversion: {order_type_original} -> {new_order_type}")
-        
-        # Update the DB order object with calculated values and the new order_type
+        # Update the order properties with the calculated values
         try:
-            db_order.order_price = adjusted_buy_price_normalized  # Use adjusted_buy_price as the execution price
+            # Store the original values for logging
+            original_margin = db_order.margin if db_order.margin else "None"
+            
+            # Update the order with calculated values from margin calculation
             db_order.margin = margin
             db_order.contract_value = contract_value
+            db_order.commission = commission
+            db_order.order_price = exec_price  # Use the execution price from margin calculation
+            
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with calculated values: " 
+                             f"margin={margin} (was {original_margin}), contract_value={contract_value}, "
+                             f"commission={commission}, execution_price={exec_price}")
+        except Exception as value_update_error:
+            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating order with calculated values: {str(value_update_error)}", exc_info=True)
+
+        # Determine the new order type (removing LIMIT/STOP)
+        try:
+            new_order_type = 'BUY' if order_type_original in ['BUY_LIMIT', 'BUY_STOP'] else 'SELL'
             db_order.open_time = datetime.now() 
             db_order.order_type = new_order_type 
             orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with new values")
@@ -430,6 +465,7 @@ async def trigger_pending_order(
 
         new_total_margin = current_total_margin_decimal + margin
         orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin check: current_margin={current_total_margin_decimal}, new_margin={new_total_margin}, wallet_balance={current_wallet_balance_decimal}")
+        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using margin with hedging applied: {margin}. Adding to current total margin: {current_total_margin_decimal}")
         
         if new_total_margin > current_wallet_balance_decimal:
             orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} for user {user_id} canceled due to insufficient margin. Required: {new_total_margin}, Available: {current_wallet_balance_decimal}")
@@ -444,13 +480,46 @@ async def trigger_pending_order(
             return
 
         try:
+            # Update user's margin with the new total that includes hedging adjustments
             await update_user_margin(
                 db,
                 user_id,
                 user_type,
                 new_total_margin
             )
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] User margin updated successfully for user {user_id}: {new_total_margin}")
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] User margin updated successfully for user {user_id}: {new_total_margin} (includes hedging adjustments)")
+            
+            # Refresh user data in the cache to reflect the updated margin
+            try:
+                # Get updated user data from the database
+                user_model = User if user_type == 'live' else DemoUser
+                updated_user = await db.execute(select(user_model).filter(user_model.id == user_id))
+                updated_user = updated_user.scalars().first()
+                
+                if updated_user:
+                    # Update the user data cache with fresh data from database
+                    user_data_to_cache = {
+                        "id": updated_user.id,
+                        "email": getattr(updated_user, 'email', None),
+                        "group_name": updated_user.group_name,
+                        "leverage": updated_user.leverage,
+                        "user_type": user_type,
+                        "account_number": getattr(updated_user, 'account_number', None),
+                        "wallet_balance": updated_user.wallet_balance,
+                        "margin": updated_user.margin,  # This contains the new margin value
+                        "first_name": getattr(updated_user, 'first_name', None),
+                        "last_name": getattr(updated_user, 'last_name', None),
+                        "country": getattr(updated_user, 'country', None),
+                        "phone_number": getattr(updated_user, 'phone_number', None),
+                    }
+                    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated user data cache with new margin value: {updated_user.margin}")
+            except Exception as cache_error:
+                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating user data cache: {str(cache_error)}", exc_info=True)
+            
+            # Publish user data update notification to WebSocket clients using the existing cache function
+            await publish_user_data_update(redis_client, user_id)
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Published user data update notification for user {user_id}")
         except Exception as margin_update_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating user margin: {str(margin_update_error)}", exc_info=True)
             return
@@ -521,12 +590,44 @@ async def trigger_pending_order(
         try:
             await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
             orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Successfully removed order {order_id} from Redis pending orders")
+            
+            # Notify clients about order execution through websockets
+            await publish_order_execution_notification(redis_client, user_id, order_id, symbol, new_order_type, exec_price)
         except Exception as remove_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error removing order from Redis: {str(remove_error)}", exc_info=True)
 
     except Exception as e:
         orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Critical error in trigger_pending_order for order {order.get('order_id', 'N/A')}: {str(e)}", exc_info=True)
         raise
+
+# New function to publish order execution notification
+async def publish_order_execution_notification(redis_client: Redis, user_id: str, order_id: str, symbol: str, order_type: str, execution_price: Decimal):
+    """
+    Publishes a notification that a pending order has been executed to the Redis pub/sub channel.
+    This allows websocket clients to be notified of order execution in real-time.
+    """
+    try:
+        from app.core.logging_config import orders_logger
+        
+        # Create the notification payload
+        notification = {
+            "event": "pending_order_executed",
+            "user_id": user_id,
+            "order_id": order_id,
+            "symbol": symbol,
+            "order_type": order_type,
+            "execution_price": str(execution_price),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Publish to the user's channel
+        channel = f"user:{user_id}:notifications"
+        await redis_client.publish(channel, json.dumps(notification))
+        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Published order execution notification for order {order_id} to channel {channel}")
+    
+    except Exception as e:
+        from app.core.logging_config import orders_logger
+        orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error publishing order execution notification: {str(e)}", exc_info=True)
 
 async def check_and_trigger_stoploss_takeprofit(
     db: AsyncSession,
