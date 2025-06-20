@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 from redis.asyncio import Redis
 import decimal # Import Decimal for type hinting and serialization
 import datetime
-
+from app.firebase_stream import get_latest_market_data
 
 logger = logging.getLogger(__name__)
 
@@ -295,6 +295,9 @@ async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
     If symbol is "ALL", retrieves settings for all symbols for the group.
     Returns None if no settings found for the specified symbol or group.
     """
+    if not group_name:
+        logger.warning(f"get_group_symbol_settings_cache called with group_name=None. Returning None.")
+        return None
     if not redis_client:
         logger.warning(f"Redis client not available for getting group-symbol settings cache for group '{group_name}', symbol '{symbol}'.")
         return None

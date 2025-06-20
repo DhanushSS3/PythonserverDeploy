@@ -3,7 +3,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query, WebSocketException, Depends, HTTPException
 import asyncio
 import logging
-from app.core.logging_config import websocket_logger
+from app.core.logging_config import websocket_logger, orders_logger
 
 from app.crud.crud_order import get_order_model
 import json
@@ -243,7 +243,7 @@ async def check_and_trigger_pending_orders(
         
         adjusted_buy_price = adjusted_prices.get('buy')
         if not adjusted_buy_price:
-            logger.warning(f"No adjusted buy price available for symbol {symbol}. Skipping pending order check.")
+            orders_logger.error(f"[PENDING_ORDER_EXECUTION] Adjusted buy price missing for symbol {symbol} in check_and_trigger_pending_orders. Skipping all pending orders for this symbol.")
             return
         
         # Check each order type key
@@ -259,45 +259,89 @@ async def check_and_trigger_pending_orders(
                 
                 # Process each user's orders
                 for user_id_bytes, orders_json in all_user_orders.items():
-                    user_id = user_id_bytes # No decode needed, redis-py > 4.2 returns strings
+                    user_id = user_id_bytes
                     orders_list = json.loads(orders_json)
-                    
-                    # Check each order for this user
                     for order in orders_list:
-                        order_price = Decimal(str(order.get('order_price', '0')))
+                        # Normalize decimal values for comparison - round to 5 decimal places
+                        try:
+                            order_price = Decimal(str(order.get('order_price', '0')))
+                            adjusted_buy_price_str = str(adjusted_buy_price)
+                            
+                            # Ensure the adjusted_buy_price has at least 5 decimal places
+                            if '.' in adjusted_buy_price_str:
+                                integer_part, decimal_part = adjusted_buy_price_str.split('.')
+                                if len(decimal_part) < 5:
+                                    decimal_part = decimal_part.ljust(5, '0')
+                                adjusted_buy_price_str = f"{integer_part}.{decimal_part}"
+                            
+                            # Round to 5 decimal places for consistent comparison
+                            order_price_normalized = Decimal(str(round(order_price, 5)))
+                            adjusted_buy_price_normalized = Decimal(str(round(Decimal(adjusted_buy_price_str), 5)))
+                            
+                            # Log the raw values
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Raw values - order_price: {order_price}, adjusted_buy_price: {adjusted_buy_price}")
+                        except Exception as e:
+                            orders_logger.error(f"[PENDING_ORDER_EXECUTION] Error normalizing decimal values: {str(e)}", exc_info=True)
+                            continue
                         
-                        # Apply the trigger logic based on order type
                         should_trigger = False
+                        if order_type in ['BUY_LIMIT', 'SELL_STOP']:
+                            should_trigger = adjusted_buy_price_normalized <= order_price_normalized
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP check: {adjusted_buy_price_normalized} <= {order_price_normalized} = {should_trigger}")
+                        elif order_type in ['SELL_LIMIT', 'BUY_STOP']:
+                            should_trigger = adjusted_buy_price_normalized >= order_price_normalized
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP check: {adjusted_buy_price_normalized} >= {order_price_normalized} = {should_trigger}")
+                        else:
+                            orders_logger.error(f"[PENDING_ORDER_EXECUTION] Unknown order type {order_type} for order {order.get('order_id')}. Skipping.")
+                            continue
                         
-                        if order_type == 'BUY_LIMIT':
-                            # Trigger when adjusted_buy_price falls to or below order_price
-                            should_trigger = adjusted_buy_price <= order_price
+                        # Additional debug logging for price comparison
+                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Price comparison values - adjusted_buy_price_normalized: {adjusted_buy_price_normalized} ({type(adjusted_buy_price_normalized)}), order_price_normalized: {order_price_normalized} ({type(order_price_normalized)})")
                         
-                        elif order_type == 'SELL_STOP':
-                            # Trigger when adjusted_buy_price falls to or below order_price
-                            should_trigger = adjusted_buy_price <= order_price
+                        # Compare as strings for consistent comparison
+                        adjusted_price_str = str(adjusted_buy_price_normalized)
+                        order_price_str = str(order_price_normalized)
+                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] String comparison for prices: '{adjusted_price_str}' vs '{order_price_str}'")
                         
-                        elif order_type == 'SELL_LIMIT':
-                            # Trigger when adjusted_buy_price rises to or above order_price
-                            should_trigger = adjusted_buy_price >= order_price
+                        # Compare numeric difference
+                        price_diff = abs(adjusted_buy_price_normalized - order_price_normalized)
+                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Absolute price difference: {price_diff}")
                         
-                        elif order_type == 'BUY_STOP':
-                            # Trigger when adjusted_buy_price rises to or above order_price
-                            should_trigger = adjusted_buy_price >= order_price
+                        # Compare with small epsilon tolerance to catch very close values
+                        epsilon = Decimal('0.00001')  # Small tolerance
+                        is_close = price_diff < epsilon
+                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Prices within epsilon tolerance: {is_close} (epsilon={epsilon})")
                         
+                        # Consider using epsilon for near-exact matches
+                        should_trigger_with_epsilon = False
+                        if order_type in ['BUY_LIMIT', 'SELL_STOP']:
+                            should_trigger_with_epsilon = (adjusted_buy_price_normalized <= order_price_normalized) or is_close
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP with epsilon: {should_trigger_with_epsilon}")
+                        elif order_type in ['SELL_LIMIT', 'BUY_STOP']:
+                            should_trigger_with_epsilon = (adjusted_buy_price_normalized >= order_price_normalized) or is_close
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP with epsilon: {should_trigger_with_epsilon}")
+                        
+                        # Use the epsilon-based trigger when prices are very close
+                        if should_trigger_with_epsilon and not should_trigger:
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Using epsilon-based trigger since prices are very close")
+                            should_trigger = True
+                        
+                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Checking order {order.get('order_id')}: type={order_type}, adjusted_buy_price={adjusted_buy_price_normalized}, order_price={order_price_normalized}, should_trigger={should_trigger}")
                         if should_trigger:
-                            logger.info(f"Pending order trigger condition met for order {order.get('order_id')}, type {order_type}, price {order_price}, adjusted_buy_price {adjusted_buy_price}")
-                            
-                            # Import the trigger_pending_order function
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Trigger condition met for order {order.get('order_id')}. Executing trigger_pending_order.")
                             from app.services.pending_orders import trigger_pending_order
-                            
-                            # Trigger the order with the current adjusted price
-                            await trigger_pending_order(
-                                db=db,
-                                redis_client=redis_client,
-                                order=order,
-                                current_price=adjusted_buy_price
-                            )
+                            # Use a new database session for trigger_pending_order to ensure fresh data
+                            from app.database.session import AsyncSessionLocal
+                            async with AsyncSessionLocal() as trigger_db:
+                                from app.services.pending_orders import trigger_pending_order
+                                await trigger_pending_order(
+                                    db=trigger_db,
+                                    redis_client=redis_client,
+                                    order=order,
+                                    current_price=adjusted_buy_price_normalized
+                                )
+                        else:
+                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Order {order.get('order_id')} conditions not met for execution. Skipping.")
             
             except Exception as e:
                 logger.error(f"Error processing pending orders for key {redis_key}: {e}", exc_info=True)

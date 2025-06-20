@@ -13,6 +13,7 @@ import time
 from pydantic import BaseModel, Field, validator
 from sqlalchemy import select
 from fastapi.security import OAuth2PasswordBearer
+import asyncio
 
 from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user, get_user_from_service_token
@@ -612,6 +613,61 @@ async def place_pending_order(
                 detail=f"Error verifying user existence: {str(e)}"
             )
 
+        # Get user data for group name
+        user_data = await get_user_data_cache(redis_client, user_id_for_order, db, user_type)
+        group_name = user_data.get('group_name') if user_data else None
+        
+        # Check if user is a Barclays live user
+        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        sending_orders = group_settings.get('sending_orders') if group_settings else None
+        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
+        is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        
+        # For non-Barclays users, validate the pending order price based on order type
+        if not is_barclays_live_user:
+            symbol = order_request.symbol
+            order_type = order_request.order_type
+            order_price = order_request.order_price
+            
+            # Get current market prices
+            current_buy_price = await get_live_adjusted_buy_price_for_pair(redis_client, symbol, group_name)
+            current_sell_price = await get_live_adjusted_sell_price_for_pair(redis_client, symbol, group_name)
+            
+            if current_buy_price is None or current_sell_price is None:
+                orders_logger.error(f"Could not get current market prices for {symbol}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Could not get current market prices for {symbol}"
+                )
+            
+            orders_logger.info(f"Validating pending order price: Order type={order_type}, Order price={order_price}, Current buy price={current_buy_price}, Current sell price={current_sell_price}")
+            
+            # Validate price based on order type
+            if order_type == 'BUY_LIMIT' and order_price >= current_buy_price:
+                orders_logger.error(f"Invalid BUY_LIMIT price: {order_price} must be less than current buy price {current_buy_price}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"BUY_LIMIT price must be less than the current market price. Your price: {order_price}, Current price: {current_buy_price}"
+                )
+            elif order_type == 'SELL_STOP' and order_price >= current_sell_price:
+                orders_logger.error(f"Invalid SELL_STOP price: {order_price} must be less than current sell price {current_sell_price}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"SELL_STOP price must be less than the current market price. Your price: {order_price}, Current price: {current_sell_price}"
+                )
+            elif order_type == 'SELL_LIMIT' and order_price <= current_sell_price:
+                orders_logger.error(f"Invalid SELL_LIMIT price: {order_price} must be greater than current sell price {current_sell_price}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"SELL_LIMIT price must be greater than the current market price. Your price: {order_price}, Current price: {current_sell_price}"
+                )
+            elif order_type == 'BUY_STOP' and order_price <= current_buy_price:
+                orders_logger.error(f"Invalid BUY_STOP price: {order_price} must be greater than current buy price {current_buy_price}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"BUY_STOP price must be greater than the current market price. Your price: {order_price}, Current price: {current_buy_price}"
+                )
+
         # Generate a unique order_id for the new pending order using the async utility
         order_model = get_order_model(user_type)
         new_order_id = await generate_unique_10_digit_id(db, order_model, 'order_id')
@@ -724,6 +780,34 @@ async def place_pending_order(
         db_order = await crud_order.create_order(db, order_create_internal.model_dump(), order_model) 
         await db.commit()
         await db.refresh(db_order)
+        
+        # Ensure the database transaction is fully committed before proceeding
+        # Use a more robust verification approach with multiple retries
+        max_verification_attempts = 3
+        verification_delay = 0.5
+        verification_order = None
+        
+        for attempt in range(max_verification_attempts):
+            try:
+                # Create a new connection to the database to verify the order is truly committed
+                from app.database.session import AsyncSessionLocal
+                async with AsyncSessionLocal() as verify_db:
+                    verification_order = await crud_order.get_order_by_id(verify_db, db_order.order_id, order_model)
+                    if verification_order:
+                        orders_logger.info(f"Order {db_order.order_id} verified in database on attempt {attempt + 1} before adding to Redis.")
+                        break
+            except Exception as e:
+                orders_logger.error(f"Error during verification attempt {attempt + 1}: {str(e)}", exc_info=True)
+            
+            # If verification failed and we have more attempts, wait and try again
+            if attempt < max_verification_attempts - 1:
+                orders_logger.warning(f"Order {db_order.order_id} not verified on attempt {attempt + 1}, waiting {verification_delay}s before retry...")
+                await asyncio.sleep(verification_delay)
+                verification_delay *= 2  # Exponential backoff for verification
+        
+        if not verification_order:
+            orders_logger.error(f"Order {db_order.order_id} could not be verified in database after {max_verification_attempts} attempts. Not adding to Redis.")
+            raise HTTPException(status_code=500, detail="Order created but could not be verified in database.")
 
         # For Barclays live users, send to Firebase
         if is_barclays_live_user:
@@ -787,6 +871,7 @@ async def place_pending_order(
             # Add any other fields that might be needed by trigger_pending_order
         }
         
+        # We've already verified the order exists, so we can proceed with adding to Redis
         # Only store non-Barclays users' pending orders in Redis for price comparison
         if not is_barclays_live_user or user_type == 'demo':
             await add_pending_order(redis_client, order_dict_for_redis)
@@ -818,8 +903,8 @@ async def place_pending_order(
                     "country": getattr(db_user, 'country', None),
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
-                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                orders_logger.info(f"User data cache updated for user {user_id} after placing pending order")
+                await set_user_data_cache(redis_client, user_id_for_order, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id_for_order} after placing pending order")
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after pending order placement: {e}", exc_info=True)
 

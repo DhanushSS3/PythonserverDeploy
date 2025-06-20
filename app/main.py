@@ -204,6 +204,9 @@ async def update_all_users_dynamic_portfolio():
                         continue
                     
                     # Get group symbol settings
+                    if not group_name:
+                        logger.warning(f"User {user_id} has no group_name set. Skipping portfolio update.")
+                        continue
                     group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
                     if not group_symbol_settings:
                         logger.warning(f"No group settings found for group {group_name}. Skipping portfolio update for user {user_id}.")
@@ -271,6 +274,9 @@ async def update_all_users_dynamic_portfolio():
                         await handle_margin_cutoff(db, global_redis_client_instance, user_id, user_type, margin_level)
                     elif portfolio_metrics.get("margin_call", False):
                         logger.warning(f"User {user_id} has margin call condition: margin level {margin_level}%")
+                    
+                    # After portfolio update or order execution, log details if relevant
+                    orders_logger.info(f"[PENDING_ORDER_EXECUTION][PORTFOLIO_UPDATE] user_id={user_id}, user_type={user_type}, group_name={group_name}, free_margin={dynamic_portfolio_data.get('free_margin', 'N/A')}, margin_level={dynamic_portfolio_data.get('margin_level', 'N/A')}, balance={dynamic_portfolio_data.get('balance', 'N/A')}, equity={dynamic_portfolio_data.get('equity', 'N/A')}")
                     
                 except Exception as user_error:
                     logger.error(f"Error updating portfolio for user {user_id}: {user_error}", exc_info=True)
