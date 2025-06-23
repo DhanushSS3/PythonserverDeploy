@@ -6,7 +6,8 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import for raw market data
-from app.firebase_stream import get_latest_market_data
+# from app.firebase_stream import get_latest_market_data
+from app.core.firebase import get_latest_market_data
 from app.core.cache import get_adjusted_market_price_cache, get_last_known_price
 from redis import Redis
 from app.core.logging_config import orders_logger
@@ -165,7 +166,7 @@ async def calculate_user_portfolio(
         total_pnl_usd = Decimal('0.0')
 
         # Get raw market data
-        raw_market_data =  get_latest_market_data()
+        raw_market_data = await get_latest_market_data()
         if not raw_market_data:
             logger.error("Failed to get raw market data")
             return {
@@ -211,8 +212,8 @@ async def calculate_user_portfolio(
                 positions_with_pnl.append(position_with_pnl)
                 continue
 
-            current_buy = current_prices.get('buy', Decimal('0'))
-            current_sell = current_prices.get('sell', Decimal('0'))
+            current_buy = Decimal(str(current_prices.get('buy', '0')))
+            current_sell = Decimal(str(current_prices.get('sell', '0')))
 
             if current_buy <= 0 or current_sell <= 0:
                 logger.warning(f"Invalid current prices for {symbol}: buy={current_buy}, sell={current_sell}")

@@ -215,7 +215,22 @@ async def update_all_users_dynamic_portfolio():
                     # Get open orders for this user
                     order_model = crud_order.get_order_model(user_type)
                     open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                    open_positions = [o.to_dict() for o in open_orders_orm]
+                    open_positions = []
+                    for o in open_orders_orm:
+                        open_positions.append({
+                            'order_id': getattr(o, 'order_id', None),
+                            'order_company_name': getattr(o, 'order_company_name', None),
+                            'order_type': getattr(o, 'order_type', None),
+                            'order_quantity': getattr(o, 'order_quantity', None),
+                            'order_price': getattr(o, 'order_price', None),
+                            'margin': getattr(o, 'margin', None),
+                            'contract_value': getattr(o, 'contract_value', None),
+                            'stop_loss': getattr(o, 'stop_loss', None),
+                            'take_profit': getattr(o, 'take_profit', None),
+                            'commission': getattr(o, 'commission', None),
+                            'order_status': getattr(o, 'order_status', None),
+                            'order_user_id': getattr(o, 'order_user_id', None)
+                        })
                     
                     if not open_positions:
                         # Skip portfolio calculation for users without open positions

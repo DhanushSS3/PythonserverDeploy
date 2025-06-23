@@ -59,6 +59,9 @@ from app.services.portfolio_calculator import calculate_user_portfolio
 # Import the Symbol and ExternalSymbolInfo models
 from app.database.models import Symbol, ExternalSymbolInfo, User, DemoUser # Import User/DemoUser for type hints
 from sqlalchemy.future import select
+from app.services.pending_orders import process_order_stoploss_takeprofit
+from app.crud.crud_order import get_all_open_orders_by_user_id, get_order_model
+from app.database.models import UserOrder, DemoUserOrder
 
 # Configure logging for this module
 logger = websocket_logger
@@ -350,6 +353,50 @@ async def check_and_trigger_pending_orders(
         logger.error(f"Error in check_and_trigger_pending_orders for symbol {symbol}: {e}", exc_info=True)
 
 
+async def check_and_trigger_sl_tp_orders(redis_client, db, symbol, adjusted_prices, group_name):
+    """
+    For each open order (live and demo) for the symbol, check if SL/TP should trigger using adjusted prices.
+    Always fetches latest open orders from DB and refreshes each order before checking.
+    """
+    from app.database.models import User, DemoUser, UserOrder, DemoUserOrder
+    from app.services.pending_orders import process_order_stoploss_takeprofit
+    from sqlalchemy.future import select
+    import logging
+    logger = logging.getLogger("orders")
+
+    # LIVE ORDERS
+    live_open_orders = (await db.execute(
+        select(UserOrder).join(User).where(
+            UserOrder.order_company_name == symbol,
+            UserOrder.order_status == 'OPEN',
+            User.group_name == group_name
+        )
+    )).scalars().all()
+    for order in live_open_orders:
+        await db.refresh(order)
+        if order.order_status != 'OPEN':
+            logger.info(f"[SLTP_FLOW] Skipping order {order.order_id} as it is not OPEN (status={order.order_status})")
+            continue
+        logger.info(f"[SLTP_FLOW] After refresh: order {order.order_id} stop_loss={order.stop_loss}, take_profit={order.take_profit}")
+        await process_order_stoploss_takeprofit(db, redis_client, order, user_type='live')
+
+    # DEMO ORDERS
+    demo_open_orders = (await db.execute(
+        select(DemoUserOrder).join(DemoUser).where(
+            DemoUserOrder.order_company_name == symbol,
+            DemoUserOrder.order_status == 'OPEN',
+            DemoUser.group_name == group_name
+        )
+    )).scalars().all()
+    for order in demo_open_orders:
+        await db.refresh(order)
+        if order.order_status != 'OPEN':
+            logger.info(f"[SLTP_FLOW] Skipping order {order.order_id} as it is not OPEN (status={order.order_status})")
+            continue
+        logger.info(f"[SLTP_FLOW] After refresh: order {order.order_id} stop_loss={order.stop_loss}, take_profit={order.take_profit}")
+        await process_order_stoploss_takeprofit(db, redis_client, order, user_type='demo')
+
+
 async def per_connection_redis_listener(
     websocket: WebSocket,
     user_id: int,
@@ -417,6 +464,14 @@ async def per_connection_redis_listener(
                         # Check and trigger pending orders based on the updated prices
                         for symbol, prices in adjusted_prices.items():
                             await check_and_trigger_pending_orders(
+                                redis_client=redis_client,
+                                db=db,
+                                symbol=symbol,
+                                adjusted_prices=prices,
+                                group_name=group_name
+                            )
+                            # --- Add SL/TP trigger check ---
+                            await check_and_trigger_sl_tp_orders(
                                 redis_client=redis_client,
                                 db=db,
                                 symbol=symbol,
