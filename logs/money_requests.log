@@ -92,3 +92,24 @@ Exception: Failed to create wallet transaction record.
 2025-06-26 02:19:38,759 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 18 approval.
 2025-06-26 02:19:38,760 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
 2025-06-26 02:19:38,764 - INFO - money_requests - Money request ID 18 status updated successfully to 1
+2025-06-26 04:22:44,286 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 133
+2025-06-26 04:22:44,287 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 04:22:44,288 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=133
+2025-06-26 04:22:44,288 - DEBUG - money_requests - Added money request to session
+2025-06-26 04:22:44,312 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 04:22:44,323 - INFO - money_requests - Money request created successfully: ID 19, User ID 4, Type withdraw, Amount 133
+2025-06-26 04:23:13,725 - INFO - money_requests - Starting money request status update - ID: 19, New Status: 2, Admin ID: 10
+2025-06-26 04:23:13,738 - INFO - money_requests - Money request ID 19 rejected by admin ID 10.
+2025-06-26 04:23:13,744 - INFO - money_requests - Money request ID 19 status updated successfully to 2
+2025-06-26 04:38:07,523 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 199
+2025-06-26 04:38:07,524 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 04:38:07,525 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=199
+2025-06-26 04:38:07,525 - DEBUG - money_requests - Added money request to session
+2025-06-26 04:38:07,550 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 04:38:07,574 - INFO - money_requests - Money request created successfully: ID 20, User ID 4, Type withdraw, Amount 199
+2025-06-26 04:38:14,112 - INFO - money_requests - Starting money request status update - ID: 19, New Status: 2, Admin ID: 10
+2025-06-26 04:38:14,115 - DEBUG - money_requests - Updated money request ID 19 status from 0 to 2 and marked for commit
+2025-06-26 04:38:14,116 - INFO - money_requests - Money request ID 19 rejected by admin ID 10.
+2025-06-26 04:38:14,180 - INFO - money_requests - Wallet record created for rejected money request ID 19, transaction ID: 5636966403
+2025-06-26 04:38:14,190 - INFO - money_requests - Published user data update for user ID 4 after money request rejection.
+2025-06-26 04:38:14,199 - INFO - money_requests - Money request ID 19 status updated successfully to 2

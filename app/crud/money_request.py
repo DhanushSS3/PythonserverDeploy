@@ -124,7 +124,11 @@ async def update_money_request_status(
 
     original_status = money_request.status
     money_request.status = new_status
-    money_request.updated_at = datetime.datetime.utcnow() 
+    money_request.updated_at = datetime.datetime.utcnow()
+    
+    # Explicitly add the money_request object to the session to mark it as modified
+    db.add(money_request)
+    money_requests_logger.debug(f"Updated money request ID {request_id} status from {original_status} to {new_status} and marked for commit")
 
     if new_status == 1:  # Approved
         money_requests_logger.info(f"Money request ID {request_id} approved by admin ID {admin_id if admin_id else 'N/A'}. Processing wallet update for user ID {money_request.user_id}.")
@@ -193,15 +197,43 @@ async def update_money_request_status(
 
     elif new_status == 2: # Rejected
         money_requests_logger.info(f"Money request ID {request_id} rejected by admin ID {admin_id if admin_id else 'N/A'}.")
-        # No wallet action needed for rejection.
-    
+        # Create a wallet transaction record for the rejected request
+        try:
+            from app.schemas.wallet import WalletCreate
+            from app.crud.wallet import create_wallet_record
+            
+            transaction_description = f"Money request ID {money_request.id} (type: {money_request.type}) rejected by admin."
+            
+            # Create a wallet record for tracking purposes, with is_approved=0
+            wallet_data = WalletCreate(
+                user_id=money_request.user_id,
+                transaction_type=money_request.type,
+                transaction_amount=money_request.amount,
+                description=transaction_description,
+                is_approved=0  # Set to 0 for rejected transactions
+            )
+            
+            wallet_record = await create_wallet_record(db, wallet_data)
+            if wallet_record:
+                money_requests_logger.info(f"Wallet record created for rejected money request ID {request_id}, transaction ID: {wallet_record.transaction_id}")
+            else:
+                money_requests_logger.warning(f"Failed to create wallet record for rejected money request ID {request_id}")
+            
+            # Publish user data update to WebSocket clients if Redis client is available
+            if redis_client:
+                try:
+                    await publish_user_data_update(redis_client, money_request.user_id)
+                    money_requests_logger.info(f"Published user data update for user ID {money_request.user_id} after money request rejection.")
+                except Exception as e:
+                    money_requests_logger.warning(f"Failed to publish user data update for user ID {money_request.user_id}: {e}")
+        except Exception as e:
+            money_requests_logger.error(f"Error creating wallet record for rejected money request ID {request_id}: {e}", exc_info=True)
+            # Continue processing, don't fail the whole transaction if wallet record creation fails
+
     # If new_status is 0 (back to requested), it's unusual for an admin action but handled.
     elif new_status == 0 and original_status != 0:
          money_requests_logger.info(f"Money request ID {request_id} status changed to 'requested' by admin ID {admin_id if admin_id else 'N/A'}.")
 
-    # Add to session to mark as dirty for the status update
-    db.add(money_request)
-    
     # Refresh to get the latest state from the DB
     await db.refresh(money_request)
     money_requests_logger.info(f"Money request ID {request_id} status updated successfully to {new_status}")

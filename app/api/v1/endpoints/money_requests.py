@@ -55,6 +55,10 @@ async def admin_update_money_request_status(
     """
     # Pydantic already validates status_update.status is 0, 1, or 2 based on schema
     
+    # Enhanced logging: Get request state before update
+    before_request = await crud_money_request.get_money_request_by_id(db, request_id)
+    logger.info(f"Processing status update for money request ID {request_id}: current status={before_request.status if before_request else 'not found'}, new status={status_update.status}")
+    
     try:
         updated_request = await crud_money_request.update_money_request_status(
             db=db,
@@ -69,6 +73,7 @@ async def admin_update_money_request_status(
             # The CRUD function logs specifics. We check the DB state to provide a more accurate HTTP error.
             db_request_check = await crud_money_request.get_money_request_by_id(db, request_id)
             if not db_request_check:
+                logger.warning(f"Money request ID {request_id} not found after attempted update.")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Money request with ID {request_id} not found."
@@ -76,18 +81,29 @@ async def admin_update_money_request_status(
             # If it exists but update_money_request_status returned None, it means it was already processed
             # and its status was not 0.
             if db_request_check.status != 0:
+                 logger.warning(f"Money request ID {request_id} already processed (status: {db_request_check.status}). Cannot update to {status_update.status}.")
                  raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=f"Money request ID {request_id} has already been processed (current status: {db_request_check.status}) or is not in a pending state. Cannot update to {status_update.status}."
                 )
             # Fallback for other unexpected None returns from CRUD
+            logger.error(f"Unknown error updating money request ID {request_id} to status {status_update.status}.")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to update money request ID {request_id}. Please check logs."
             )
         
         # Commit the transaction to save all changes to the database
+        logger.info(f"Committing transaction to update money request ID {request_id} to status {status_update.status}")
         await db.commit()
+        
+        # Verify the updated state after commit
+        after_request = await crud_money_request.get_money_request_by_id(db, request_id)
+        logger.info(f"Money request ID {request_id} state after commit: status={after_request.status if after_request else 'not found'}, expected status={status_update.status}")
+        
+        if after_request and after_request.status != status_update.status:
+            logger.error(f"Database inconsistency: Money request ID {request_id} shows status {after_request.status} after commit, expected {status_update.status}")
+        
         logger.info(f"Admin {current_admin.email} (ID: {current_admin.id}) successfully updated money request ID {request_id} to status {updated_request.status}.")
         return updated_request
         
