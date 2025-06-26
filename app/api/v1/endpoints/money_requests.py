@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+from redis.asyncio import Redis
 
 from app.database.session import get_db
 from app.database.models import User # MoneyRequest model is used via CRUD
@@ -15,6 +16,7 @@ from app.schemas.money_request import (
 
 from app.crud import money_request as crud_money_request
 from app.core.security import get_current_user, get_current_admin_user # User auth
+from app.dependencies.redis_client import get_redis_client # Add Redis client dependency
 
 import logging
 
@@ -42,7 +44,8 @@ async def admin_update_money_request_status(
     request_id: int,
     status_update: MoneyRequestUpdateStatus, # Contains the new status
     current_admin: User = Depends(get_current_admin_user), # Get admin for logging
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client)
 ):
     """
     Admin endpoint to change the status of a money request.
@@ -57,7 +60,8 @@ async def admin_update_money_request_status(
             db=db,
             request_id=request_id,
             new_status=status_update.status,
-            admin_id=current_admin.id
+            admin_id=current_admin.id,
+            redis_client=redis_client
         )
 
         if updated_request is None:
@@ -81,19 +85,22 @@ async def admin_update_money_request_status(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to update money request ID {request_id}. Please check logs."
             )
-            
+        
+        # Commit the transaction to save all changes to the database
+        await db.commit()
         logger.info(f"Admin {current_admin.email} (ID: {current_admin.id}) successfully updated money request ID {request_id} to status {updated_request.status}.")
         return updated_request
         
     except ValueError as ve: # Catches insufficient funds or other validation errors from wallet processing
         logger.warning(f"Admin (ID: {current_admin.id}) failed to approve/process money request ID {request_id} due to: {ve}")
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail=str(ve) # Provide the specific error message (e.g., "Insufficient funds...")
         )
     except Exception as e:
         logger.error(f"Admin (ID: {current_admin.id}) encountered an error updating status for money request ID {request_id}: {e}", exc_info=True)
-        # The CRUD layer's transaction should handle rollback.
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while updating the money request status. The operation has been rolled back."

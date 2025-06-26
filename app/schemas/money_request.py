@@ -5,7 +5,7 @@ import datetime
 
 class MoneyRequestBase(BaseModel):
     amount: Decimal = Field(..., gt=0)
-    type: str = Field(..., pattern="^(deposit|withdraw)$")
+    type: str = Field(..., pattern="^(deposit|withdraw|withdrawal)$")
 
 class MoneyRequestCreate(MoneyRequestBase):
     """

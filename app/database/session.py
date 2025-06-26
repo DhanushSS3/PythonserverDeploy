@@ -5,6 +5,15 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from typing import AsyncGenerator
 import logging # Import logging
+import warnings
+
+# Create a database logger
+db_logger = logging.getLogger("database")
+handler = logging.FileHandler("logs/database.log")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+db_logger.addHandler(handler)
+db_logger.setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__) # Get logger for this module
 
@@ -50,18 +59,18 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Dependency function to get an asynchronous database session.
     Yields a session and ensures it's closed after the request.
     """
+    db_logger.debug("Creating new database session")
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            # You might need to explicitly commit in your CRUD operations
-            # or service layer depending on your transaction management strategy.
-            # await session.commit() # Example commit if managing transactions here
+            db_logger.debug("Database session used successfully")
         except Exception as e:
-            # await session.rollback() # Example rollback
-            logger.error(f"Database session error: {e}", exc_info=True) # Log the error
-            raise # Re-raise the exception
+            db_logger.error(f"Error in database session: {e}", exc_info=True)
+            await session.rollback()
+            db_logger.info("Session rolled back due to error")
+            raise
         finally:
-            await session.close()
+            db_logger.debug("Closing database session")
 
 # --- Function to create all tables ---
 # This is useful for initial setup or development.

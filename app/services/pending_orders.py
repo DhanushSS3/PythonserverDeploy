@@ -508,14 +508,41 @@ async def trigger_pending_order(
         # Fetch the latest dynamic portfolio to get up-to-date free_margin
         try:
             dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
-            user_free_margin = dynamic_portfolio.get('free_margin', 'N/A') if dynamic_portfolio else 'N/A'
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Latest free_margin for user {user_id}: {user_free_margin}")
+            if dynamic_portfolio:
+                user_free_margin = Decimal(str(dynamic_portfolio.get('free_margin', '0.0')))
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Latest free_margin for user {user_id}: {user_free_margin}")
+            else:
+                # Fallback: calculate free margin from user data
+                current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
+                current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
+                user_free_margin = current_wallet_balance_decimal - current_total_margin_decimal
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Calculated free_margin from user data for user {user_id}: {user_free_margin}")
         except Exception as portfolio_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error fetching dynamic portfolio for user {user_id}: {str(portfolio_error)}", exc_info=True)
+            # Fallback: calculate free margin from user data
+            current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
+            current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
+            user_free_margin = current_wallet_balance_decimal - current_total_margin_decimal
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using fallback free_margin calculation for user {user_id}: {user_free_margin}")
+        
+        # Check if user has sufficient free margin for the new order
+        if margin > user_free_margin:
+            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} for user {user_id} canceled due to insufficient free margin. Required: {margin}, Available free margin: {user_free_margin}")
+            db_order.order_status = 'CANCELLED'
+            db_order.cancel_message = "InsufficientFreeMargin"
+            try:
+                await db.commit()
+                await db.refresh(db_order)
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} status updated to CANCELLED in database")
+            except Exception as commit_error:
+                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error committing cancelled order {order_id}: {str(commit_error)}", exc_info=True)
+                await db.rollback()
+            
+            # Remove from pending orders
+            await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
             return
         
-        # We'll skip the free margin check since we're already handling the hedging logic
-        # and checking against wallet_balance later in the function
+        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Free margin check passed: required={margin}, available={user_free_margin}")
         
         orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Executing order {order_id} for user {user_id} at price {adjusted_buy_price_normalized} (order_price={order_price_normalized}, type={order_type_original})")
         
@@ -586,20 +613,8 @@ async def trigger_pending_order(
         # For perfect hedging, if margin is zero, we don't need to update the user's overall margin at all
         if margin > Decimal('0'):
             new_total_margin = current_total_margin_decimal + margin
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin check: current_margin={current_total_margin_decimal}, new_margin={new_total_margin}, wallet_balance={current_wallet_balance_decimal}")
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin check: current_margin={current_total_margin_decimal}, new_margin={new_total_margin}")
             orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using margin with hedging applied: {margin}. Adding to current total margin: {current_total_margin_decimal}")
-            
-            if new_total_margin > current_wallet_balance_decimal:
-                orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} for user {user_id} canceled due to insufficient margin. Required: {new_total_margin}, Available: {current_wallet_balance_decimal}")
-                db_order.order_status = 'CANCELLED'
-                db_order.cancel_message = "InsufficientFreeMargin"
-                try:
-                    await db.commit()
-                    await db.refresh(db_order)
-                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} status updated to CANCELLED in database")
-                except Exception as commit_error:
-                    orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error committing order cancellation to database: {str(commit_error)}", exc_info=True)
-                return
         else:
             # Perfect hedging case - no need to update the user's margin
             new_total_margin = current_total_margin_decimal

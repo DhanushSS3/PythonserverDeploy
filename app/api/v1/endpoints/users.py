@@ -724,30 +724,78 @@ async def request_withdraw_funds(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    logger.info(f"Received withdrawal request - User ID: {current_user.id}, Amount: {request.amount}")
+    
     if request.amount <= 0:
+        logger.warning(f"Invalid withdrawal amount: {request.amount}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Amount to withdraw must be positive."
         )
 
-    money_request_data = MoneyRequestCreate(
-        amount=request.amount,
-        type="withdraw"
-    )
+    try:
+        logger.debug(f"Creating MoneyRequestCreate schema with type='withdraw', amount={request.amount}")
+        money_request_data = MoneyRequestCreate(
+            amount=request.amount,
+            type="withdraw"
+        )
+        logger.debug(f"MoneyRequestCreate schema created successfully: {money_request_data}")
+    except Exception as schema_error:
+        logger.error(f"Failed to create MoneyRequestCreate schema: {schema_error}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid schema data: {str(schema_error)}"
+        )
 
     try:
+        logger.debug(f"Calling crud_money_request.create_money_request with user_id={current_user.id}")
         new_money_request = await crud_money_request.create_money_request(
             db=db,
             request_data=money_request_data,
             user_id=current_user.id
         )
+        
+        logger.info(f"Withdrawal request created successfully - Money Request ID: {new_money_request.id}, User ID: {current_user.id}, Amount: {request.amount}")
         return new_money_request
 
     except Exception as e:
-        logger.error(f"Error creating withdrawal request: {e}", exc_info=True)
+        logger.error(f"Error creating withdrawal request for user {current_user.id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the withdrawal request."
+            detail=f"An error occurred while creating the withdrawal request: {str(e)}"
+        )
+
+@router.get("/wallet/money-requests", response_model=List[MoneyRequestResponse])
+async def get_my_money_requests(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=200, description="Maximum number of records to return"),
+    status_filter: Optional[int] = Query(None, alias="status", ge=0, le=2, description="Filter by status: 0 (requested), 1 (approved), 2 (rejected)"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Endpoint for users to view their own money requests (deposits and withdrawals).
+    Supports pagination and filtering by status.
+    """
+    try:
+        money_requests = await crud_money_request.get_money_requests_by_user_id(
+            db=db, 
+            user_id=current_user.id, 
+            skip=skip, 
+            limit=limit
+        )
+        
+        # Filter by status if provided
+        if status_filter is not None:
+            money_requests = [req for req in money_requests if req.status == status_filter]
+            
+        return money_requests
+        
+    except Exception as e:
+        logger.error(f"Error retrieving money requests for user {current_user.id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving your money requests."
         )
 
 # --- Demo User Endpoints ---
@@ -1047,98 +1095,3 @@ async def demo_confirm_password_reset(
     await redis.delete(redis_key)
 
     return StatusResponse(message="Demo password reset successful.")
-
-
-@router.post("/demo/wallet/deposit", response_model=MoneyRequestResponse)
-async def request_deposit_funds_demo(
-    request: WalletTransactionRequest,
-    current_user: DemoUser = Depends(get_current_user), # Assuming get_current_user can return DemoUser based on token
-    db: AsyncSession = Depends(get_db)
-):
-    if request.amount <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Amount to deposit must be positive."
-        )
-
-    money_request_data = MoneyRequestCreate(
-        amount=request.amount,
-        type="deposit"
-    )
-
-    try:
-        # For demo users, money requests are handled directly as wallet updates
-        # Assuming we don't need a separate MoneyRequest table for demo users,
-        # and instead directly update their wallet balance.
-        # If you DO need a MoneyRequest for demo users, you'd need to add a
-        # demo_user_id foreign key to the MoneyRequest model.
-        updated_demo_user = await crud_user.update_demo_user_wallet_balance(
-            db=db,
-            demo_user_id=current_user.id,
-            amount=request.amount,
-            transaction_type="deposit",
-            description=request.description or "Demo funds added by user request"
-        )
-        return MoneyRequestResponse(
-            id=0, # Placeholder ID as no MoneyRequest object is created
-            user_id=current_user.id,
-            amount=request.amount,
-            type="deposit",
-            status=1, # Approved immediately
-            created_at=datetime.datetime.utcnow(),
-            updated_at=datetime.datetime.utcnow()
-        )
-    except ValueError as ve:
-        logger.warning(f"Demo wallet deposit failed for user {current_user.id}: {ve}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
-    except Exception as e:
-        logger.error(f"Error creating demo deposit request: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the demo deposit request."
-        )
-
-@router.post("/demo/wallet/withdraw", response_model=MoneyRequestResponse)
-async def request_withdraw_funds_demo(
-    request: WalletTransactionRequest,
-    current_user: DemoUser = Depends(get_current_user), # Assuming get_current_user can return DemoUser based on token
-    db: AsyncSession = Depends(get_db)
-):
-    if request.amount <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Amount to withdraw must be positive."
-        )
-
-    try:
-        updated_demo_user = await crud_user.update_demo_user_wallet_balance(
-            db=db,
-            demo_user_id=current_user.id,
-            amount=-request.amount, # Negative amount for withdrawal
-            transaction_type="withdrawal",
-            description=request.description or "Demo funds withdrawn by user request"
-        )
-        return MoneyRequestResponse(
-            id=0, # Placeholder ID
-            user_id=current_user.id,
-            amount=request.amount,
-            type="withdraw",
-            status=1, # Approved immediately
-            created_at=datetime.datetime.utcnow(),
-            updated_at=datetime.datetime.utcnow()
-        )
-    except ValueError as ve:
-        logger.warning(f"Demo wallet withdrawal failed for user {current_user.id}: {ve}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
-    except Exception as e:
-        logger.error(f"Error creating demo withdrawal request: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the demo withdrawal request."
-        )

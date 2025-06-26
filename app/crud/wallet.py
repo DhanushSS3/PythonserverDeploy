@@ -13,11 +13,21 @@ from app.schemas.wallet import WalletCreate
 import logging # Import logging
 
 from sqlalchemy import select
+from sqlalchemy.future import select
+import random
 
 from typing import List
 
 logger = logging.getLogger(__name__) # Get logger for this module
 
+
+async def generate_unique_10_digit_id(db, model, column):
+    while True:
+        candidate = str(random.randint(10**9, 10**10-1))
+        stmt = select(model).where(getattr(model, column) == candidate)
+        result = await db.execute(stmt)
+        if not result.scalar():
+            return candidate
 
 # Changed function signature to accept WalletCreate schema
 async def create_wallet_record(
@@ -35,8 +45,8 @@ async def create_wallet_record(
         The newly created Wallet object, or None on error.
     """
     try:
-        # Generate a unique transaction ID
-        transaction_id = str(uuid.uuid4())
+        # Generate a unique 10-digit transaction ID
+        transaction_id = await generate_unique_10_digit_id(db, Wallet, 'transaction_id')
         logger.debug(f"Generated transaction ID: {transaction_id}")
 
         # Create the wallet transaction object
@@ -55,7 +65,6 @@ async def create_wallet_record(
 
         # Add and flush to prepare for refresh
         db.add(wallet_record)
-        # Safe transaction handling with flush and refresh
         try:
             await db.flush()                 # Safe flush instead of commit
             await db.refresh(wallet_record)  # Still inside open transaction

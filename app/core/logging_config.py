@@ -62,6 +62,7 @@ firebase_comm_logger = setup_file_logger("firebase_comm", "firebase_comm.log", l
 orders_crud_logger = setup_file_logger("orders_crud", "orders_crud.log", logging.DEBUG)
 jwt_security_logger = setup_file_logger("jwt_security", "jwt_security.log", logging.DEBUG)
 error_logger = setup_file_logger("error", "error.log", logging.ERROR)
+money_requests_logger = setup_file_logger("money_requests", "money_requests.log", logging.DEBUG)
 
 # WebSocket logger with stream output
 websocket_logger  = setup_stream_logger("websocket_logger", logging.DEBUG)

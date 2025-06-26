@@ -213,42 +213,42 @@ async def update_user_wallet_balance(
     Applies row-level locking to ensure data consistency.
     Also creates a corresponding wallet transaction record.
     """
-    async with db.begin_nested():
-        user = await get_user_by_id_with_lock(db, user_id)
+    # Get user with row-level lock
+    user = await get_user_by_id_with_lock(db, user_id)
 
-        if not user:
-            raise ValueError(f"User with ID {user_id} not found.")
+    if not user:
+        raise ValueError(f"User with ID {user_id} not found.")
 
-        current_balance = user.wallet_balance
-        amount_decimal = Decimal(str(amount))
+    current_balance = user.wallet_balance
+    amount_decimal = Decimal(str(amount))
 
-        new_balance = current_balance + amount_decimal
+    new_balance = current_balance + amount_decimal
 
-        if new_balance < 0:
-            raise ValueError("Insufficient funds for this deduction.")
+    if new_balance < 0:
+        raise ValueError("Insufficient funds for this deduction.")
 
-        user.wallet_balance = new_balance
-        db.add(user)
+    user.wallet_balance = new_balance
+    db.add(user)
 
-        from app.crud.wallet import create_wallet_record # Import here to avoid circular dependency
+    from app.crud.wallet import create_wallet_record # Import here to avoid circular dependency
 
-        wallet_data = WalletCreate(
-            user_id=user_id,
-            transaction_type=transaction_type,
-            transaction_amount=abs(amount_decimal),
-            description=description,
-            is_approved=1,
-            symbol=symbol,
-            order_quantity=order_quantity,
-            order_type=order_type
-        )
-        wallet_record = await create_wallet_record(db, wallet_data)
+    wallet_data = WalletCreate(
+        user_id=user_id,
+        transaction_type=transaction_type,
+        transaction_amount=abs(amount_decimal),
+        description=description,
+        is_approved=1,
+        symbol=symbol,
+        order_quantity=order_quantity,
+        order_type=order_type
+    )
+    wallet_record = await create_wallet_record(db, wallet_data)
 
-        if not wallet_record:
-            raise Exception("Failed to create wallet transaction record.")
+    if not wallet_record:
+        raise Exception("Failed to create wallet transaction record.")
 
-        await db.refresh(user)
-        return user
+    await db.refresh(user)
+    return user
 
 async def generate_unique_account_number(db: AsyncSession) -> str:
     """

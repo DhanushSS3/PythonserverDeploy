@@ -1,0 +1,94 @@
+2025-06-25 23:39:28,500 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 15.0
+2025-06-25 23:39:28,500 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-25 23:39:28,562 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=15.0
+2025-06-25 23:39:28,563 - DEBUG - money_requests - Added money request to session
+2025-06-25 23:39:28,606 - DEBUG - money_requests - Committed transaction to database
+2025-06-25 23:39:28,616 - INFO - money_requests - Money request created successfully: ID 12, User ID 4, Type withdraw, Amount 15.0
+2025-06-25 23:39:28,627 - INFO - money_requests - Starting money request status update - ID: 12, New Status: 1, Admin ID: 10
+2025-06-25 23:39:28,627 - INFO - money_requests - Money request ID 12 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-25 23:39:28,683 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 12 approval.
+2025-06-25 23:39:28,699 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-25 23:39:28,707 - INFO - money_requests - Money request ID 12 status updated successfully to 1
+2025-06-25 23:40:54,663 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 999
+2025-06-25 23:40:54,664 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-25 23:40:54,664 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=999
+2025-06-25 23:40:54,664 - DEBUG - money_requests - Added money request to session
+2025-06-25 23:40:54,687 - DEBUG - money_requests - Committed transaction to database
+2025-06-25 23:40:54,701 - INFO - money_requests - Money request created successfully: ID 13, User ID 4, Type withdraw, Amount 999
+2025-06-25 23:41:23,442 - INFO - money_requests - Starting money request status update - ID: 13, New Status: 1, Admin ID: 10
+2025-06-25 23:41:23,459 - INFO - money_requests - Money request ID 13 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-25 23:41:23,563 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 13 approval.
+2025-06-25 23:41:23,571 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-25 23:41:23,590 - INFO - money_requests - Money request ID 13 status updated successfully to 1
+2025-06-26 00:19:36,993 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 100
+2025-06-26 00:19:36,994 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 00:19:36,994 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=100
+2025-06-26 00:19:36,996 - DEBUG - money_requests - Added money request to session
+2025-06-26 00:19:37,026 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 00:19:37,041 - INFO - money_requests - Money request created successfully: ID 14, User ID 4, Type withdraw, Amount 100
+2025-06-26 00:20:36,600 - INFO - money_requests - Starting money request status update - ID: 13, New Status: 1, Admin ID: 10
+2025-06-26 00:20:36,611 - WARNING - money_requests - Money request ID 13 has already been processed or is not in a pending state (current status: 1). Cannot update.
+2025-06-26 00:21:11,070 - INFO - money_requests - Starting money request status update - ID: 14, New Status: 1, Admin ID: 10
+2025-06-26 00:21:11,087 - INFO - money_requests - Money request ID 14 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-26 00:21:11,223 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 14 approval.
+2025-06-26 00:21:11,233 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-26 00:21:11,264 - INFO - money_requests - Money request ID 14 status updated successfully to 1
+2025-06-26 02:01:12,810 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 100
+2025-06-26 02:01:12,811 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 02:01:12,811 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=100
+2025-06-26 02:01:12,812 - DEBUG - money_requests - Added money request to session
+2025-06-26 02:01:12,833 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 02:01:12,847 - INFO - money_requests - Money request created successfully: ID 15, User ID 4, Type withdraw, Amount 100
+2025-06-26 02:02:25,093 - INFO - money_requests - Starting money request status update - ID: 15, New Status: 1, Admin ID: 10
+2025-06-26 02:02:25,098 - INFO - money_requests - Money request ID 15 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-26 02:02:25,149 - ERROR - money_requests - Unexpected error processing approved money request ID 15: Failed to create wallet transaction record.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\crud\money_request.py", line 141, in update_money_request_status
+    updated_user = await crud_user.update_user_wallet_balance(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\app\crud\user.py", line 248, in update_user_wallet_balance
+    raise Exception("Failed to create wallet transaction record.")
+Exception: Failed to create wallet transaction record.
+2025-06-26 02:06:05,129 - INFO - money_requests - Starting money request status update - ID: 15, New Status: 1, Admin ID: 10
+2025-06-26 02:06:05,134 - INFO - money_requests - Money request ID 15 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-26 02:06:05,182 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 15 approval.
+2025-06-26 02:06:05,186 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-26 02:06:05,195 - INFO - money_requests - Money request ID 15 status updated successfully to 1
+2025-06-26 02:11:12,051 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 333
+2025-06-26 02:11:12,053 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 02:11:12,053 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=333
+2025-06-26 02:11:12,054 - DEBUG - money_requests - Added money request to session
+2025-06-26 02:11:12,071 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 02:11:12,085 - INFO - money_requests - Money request created successfully: ID 16, User ID 4, Type withdraw, Amount 333
+2025-06-26 02:11:33,399 - INFO - money_requests - Starting money request status update - ID: 16, New Status: 1, Admin ID: 10
+2025-06-26 02:11:33,402 - INFO - money_requests - Money request ID 16 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-26 02:11:33,463 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 16 approval.
+2025-06-26 02:11:33,470 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-26 02:11:33,478 - INFO - money_requests - Money request ID 16 status updated successfully to 1
+2025-06-26 02:12:38,991 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 123
+2025-06-26 02:12:38,991 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 02:12:38,991 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=123
+2025-06-26 02:12:38,991 - DEBUG - money_requests - Added money request to session
+2025-06-26 02:12:39,007 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 02:12:39,021 - INFO - money_requests - Money request created successfully: ID 17, User ID 4, Type withdraw, Amount 123
+2025-06-26 02:13:09,946 - INFO - money_requests - Starting money request status update - ID: 1, New Status: 1, Admin ID: 10
+2025-06-26 02:13:09,953 - WARNING - money_requests - Money request ID 1 not found for status update.
+2025-06-26 02:13:21,498 - INFO - money_requests - Starting money request status update - ID: 17, New Status: 1, Admin ID: 10
+2025-06-26 02:13:21,503 - INFO - money_requests - Money request ID 17 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-26 02:13:21,552 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 17 approval.
+2025-06-26 02:13:21,557 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-26 02:13:21,567 - INFO - money_requests - Money request ID 17 status updated successfully to 1
+2025-06-26 02:19:26,080 - INFO - money_requests - Creating money request - User ID: 4, Type: withdraw, Amount: 155
+2025-06-26 02:19:26,080 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-26 02:19:26,080 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=4, type=withdraw, amount=155
+2025-06-26 02:19:26,081 - DEBUG - money_requests - Added money request to session
+2025-06-26 02:19:26,096 - DEBUG - money_requests - Committed transaction to database
+2025-06-26 02:19:26,102 - INFO - money_requests - Money request created successfully: ID 18, User ID 4, Type withdraw, Amount 155
+2025-06-26 02:19:38,716 - INFO - money_requests - Starting money request status update - ID: 18, New Status: 1, Admin ID: 10
+2025-06-26 02:19:38,719 - INFO - money_requests - Money request ID 18 approved by admin ID 10. Processing wallet update for user ID 4.
+2025-06-26 02:19:38,759 - INFO - money_requests - Wallet balance updated successfully for user ID 4 due to money request ID 18 approval.
+2025-06-26 02:19:38,760 - INFO - money_requests - Published user data update for user ID 4 after wallet balance update.
+2025-06-26 02:19:38,764 - INFO - money_requests - Money request ID 18 status updated successfully to 1

@@ -16,6 +16,11 @@ from app.crud import user as crud_user # For updating user balance and getting u
 # from app.crud import wallet as crud_wallet # For creating wallet records directly, now handled by crud_user
 
 import logging
+from app.core.logging_config import money_requests_logger
+
+# Import Redis client dependency and cache functions
+from app.dependencies.redis_client import get_redis_client
+from app.core.cache import publish_user_data_update
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +29,34 @@ async def create_money_request(db: AsyncSession, request_data: MoneyRequestCreat
     Creates a new money request for a user.
     Status defaults to 0 (requested).
     """
-    db_request = MoneyRequest(
-        user_id=user_id,
-        amount=request_data.amount,
-        type=request_data.type,
-        status=0  # Default status is 'requested'
-    )
-    db.add(db_request)
-    await db.commit()
-    await db.refresh(db_request)
-    logger.info(f"Money request created: ID {db_request.id}, User ID {user_id}, Type {request_data.type}, Amount {request_data.amount}")
-    return db_request
+    # Log the incoming request data for debugging
+    money_requests_logger.info(f"Creating money request - User ID: {user_id}, Type: {request_data.type}, Amount: {request_data.amount}")
+    money_requests_logger.debug(f"Money request schema validation passed? True (since we got here)")
+    
+    try:
+        db_request = MoneyRequest(
+            user_id=user_id,
+            amount=request_data.amount,
+            type=request_data.type,
+            status=0  # Default status is 'requested'
+        )
+        
+        money_requests_logger.debug(f"Constructed MoneyRequest object: user_id={db_request.user_id}, type={db_request.type}, amount={db_request.amount}")
+        
+        db.add(db_request)
+        money_requests_logger.debug("Added money request to session")
+        
+        await db.commit()
+        money_requests_logger.debug("Committed transaction to database")
+        
+        await db.refresh(db_request)
+        money_requests_logger.info(f"Money request created successfully: ID {db_request.id}, User ID {user_id}, Type {request_data.type}, Amount {request_data.amount}")
+        return db_request
+    except Exception as e:
+        money_requests_logger.error(f"Failed to create money request: {str(e)}", exc_info=True)
+        await db.rollback()
+        money_requests_logger.debug("Transaction rolled back due to error")
+        raise e
 
 async def get_money_request_by_id(db: AsyncSession, request_id: int) -> Optional[MoneyRequest]:
     """
@@ -75,104 +97,112 @@ async def update_money_request_status(
     db: AsyncSession,
     request_id: int,
     new_status: int,
-    admin_id: Optional[int] = None 
+    admin_id: Optional[int] = None,
+    redis_client = None  # Add Redis client parameter
 ) -> Optional[MoneyRequest]:
     """
     Updates the status of a money request.
     If approved (new_status == 1):
         - Atomically updates the user's wallet balance (with row-level lock on User).
         - Creates a corresponding wallet transaction record.
-    All these operations are performed within a nested transaction.
+        - Publishes user data update to WebSocket clients.
+    All these operations are performed within a single transaction.
     """
-    # Start a nested transaction to ensure atomicity of updating MoneyRequest status
-    # and performing wallet operations if approved.
-    async with db.begin_nested():
-        # It's generally a good idea to lock the specific money request if multiple admins
-        # could try to process it simultaneously, though the status check below offers some protection.
-        # For simplicity and focusing on the user wallet lock, we'll fetch it normally first.
-        # If contention on the same money request is a high concern, add .with_for_update() here.
-        money_request = await db.get(MoneyRequest, request_id) # Simpler way to get by PK
-
-        if not money_request:
-            logger.warning(f"Money request ID {request_id} not found for status update.")
-            return None # Or raise an error to be handled by the API layer
-
-        # Prevent reprocessing if the request is not in 'requested' state (status 0)
-        if money_request.status != 0:
-            logger.warning(f"Money request ID {request_id} has already been processed or is not in a pending state (current status: {money_request.status}). Cannot update.")
-            # This indicates an attempt to re-process. The API layer should handle this, possibly with a 409 Conflict.
-            return None 
-
-        original_status = money_request.status
-        money_request.status = new_status
-        money_request.updated_at = datetime.datetime.utcnow() 
-
-        if new_status == 1:  # Approved
-            logger.info(f"Money request ID {request_id} approved by admin ID {admin_id if admin_id else 'N/A'}. Processing wallet update for user ID {money_request.user_id}.")
-            
-            amount_to_change = money_request.amount
-            transaction_description = f"Money request ID {money_request.id} (type: {money_request.type}) approved by admin."
-            
-            if money_request.type == "withdraw":
-                amount_to_change = -money_request.amount # Negative for withdrawal
-            
-            try:
-                # This call to update_user_wallet_balance handles:
-                # 1. Getting the User with a row-level lock (.with_for_update()).
-                # 2. Performing balance calculations.
-                # 3. Updating User.wallet_balance.
-                # 4. Creating a Wallet record.
-                # 5. All within its own nested transaction (or the one we started if not nested there).
-                #    `crud_user.update_user_wallet_balance` should ideally use `db.begin_nested()`
-                #    or rely on the caller (this function) to manage the transaction.
-                #    Assuming `crud_user.update_user_wallet_balance` correctly handles its part of the transaction.
-                
-                updated_user = await crud_user.update_user_wallet_balance(
-                    db=db, # Pass the current session
-                    user_id=money_request.user_id,
-                    amount=amount_to_change,
-                    transaction_type=money_request.type, # 'deposit' or 'withdrawal'
-                    description=transaction_description 
-                    # Optional: pass symbol, order_quantity, order_type if relevant from MoneyRequest
-                )
-                
-                # If update_user_wallet_balance itself raises an error (e.g., ValueError for insufficient funds),
-                # the `db.begin_nested()` context manager in this function will catch it,
-                # rollback changes (including the money_request.status update), and re-raise the exception.
-                
-                if not updated_user: # Should not happen if update_user_wallet_balance raises on failure
-                    logger.error(f"Wallet balance update failed for user ID {money_request.user_id} for money request ID {request_id}, but no exception was raised by crud_user.")
-                    # This indicates an issue in crud_user.update_user_wallet_balance's error handling.
-                    # Explicitly rollback to be safe, though the context manager should handle it.
-                    await db.rollback() 
-                    return None 
-
-                logger.info(f"Wallet balance updated successfully for user ID {money_request.user_id} due to money request ID {request_id} approval.")
-
-            except ValueError as ve: # Specifically catch insufficient funds or other validation errors from wallet update
-                logger.error(f"Processing approved money request ID {request_id} failed: {ve}", exc_info=True)
-                # The `async with db.begin_nested():` will automatically rollback.
-                # Re-raise to be handled by the API endpoint.
-                raise ve 
-            except Exception as e: # Catch any other unexpected errors during wallet processing
-                logger.error(f"Unexpected error processing approved money request ID {request_id}: {e}", exc_info=True)
-                # The `async with db.begin_nested():` will automatically rollback.
-                # Re-raise.
-                raise e
-
-        elif new_status == 2: # Rejected
-            logger.info(f"Money request ID {request_id} rejected by admin ID {admin_id if admin_id else 'N/A'}.")
-            # No wallet action needed for rejection.
-        
-        # If new_status is 0 (back to requested), it's unusual for an admin action but handled.
-        elif new_status == 0 and original_status != 0:
-             logger.info(f"Money request ID {request_id} status changed to 'requested' by admin ID {admin_id if admin_id else 'N/A'}.")
-
-
-        db.add(money_request) # Add to session to mark as dirty for the status update.
-        # The commit for this nested transaction will happen when the `async with` block exits successfully.
-        # If an exception occurred (like ValueError from wallet update), a rollback already happened.
+    money_requests_logger.info(f"Starting money request status update - ID: {request_id}, New Status: {new_status}, Admin ID: {admin_id}")
     
-    # Refresh to get the latest state from the DB, especially if committed.
+    # Get the money request
+    money_request = await db.get(MoneyRequest, request_id)
+
+    if not money_request:
+        money_requests_logger.warning(f"Money request ID {request_id} not found for status update.")
+        return None
+
+    # Prevent reprocessing if the request is not in 'requested' state (status 0)
+    if money_request.status != 0:
+        money_requests_logger.warning(f"Money request ID {request_id} has already been processed or is not in a pending state (current status: {money_request.status}). Cannot update.")
+        return None 
+
+    original_status = money_request.status
+    money_request.status = new_status
+    money_request.updated_at = datetime.datetime.utcnow() 
+
+    if new_status == 1:  # Approved
+        money_requests_logger.info(f"Money request ID {request_id} approved by admin ID {admin_id if admin_id else 'N/A'}. Processing wallet update for user ID {money_request.user_id}.")
+        
+        amount_to_change = money_request.amount
+        transaction_description = f"Money request ID {money_request.id} (type: {money_request.type}) approved by admin."
+        
+        if money_request.type == "withdraw":
+            amount_to_change = -money_request.amount # Negative for withdrawal
+        
+        try:
+            # Call update_user_wallet_balance without nested transaction
+            # The outer transaction from the API endpoint will handle everything
+            updated_user = await crud_user.update_user_wallet_balance(
+                db=db,
+                user_id=money_request.user_id,
+                amount=amount_to_change,
+                transaction_type=money_request.type,
+                description=transaction_description
+            )
+
+
+            from app.core.cache import set_user_data_cache
+
+            # After updating the user's wallet balance:
+            db_user = await crud_user.get_user_by_id(db, money_request.user_id, user_type="live")  # or "demo" if needed
+            if db_user:
+                user_data_to_cache = {
+                    "id": db_user.id,
+                    "email": getattr(db_user, 'email', None),
+                    "group_name": db_user.group_name,
+                    "leverage": db_user.leverage,
+                    "user_type": db_user.user_type,
+                    "account_number": getattr(db_user, 'account_number', None),
+                    "wallet_balance": db_user.wallet_balance,
+                    "margin": db_user.margin,
+                    "first_name": getattr(db_user, 'first_name', None),
+                    "last_name": getattr(db_user, 'last_name', None),
+                    "country": getattr(db_user, 'country', None),
+                    "phone_number": getattr(db_user, 'phone_number', None),
+                }
+                await set_user_data_cache(redis_client, db_user.id, user_data_to_cache)
+                        
+            if not updated_user:
+                money_requests_logger.error(f"Wallet balance update failed for user ID {money_request.user_id} for money request ID {request_id}, but no exception was raised by crud_user.")
+                return None 
+
+            money_requests_logger.info(f"Wallet balance updated successfully for user ID {money_request.user_id} due to money request ID {request_id} approval.")
+
+            # Publish user data update to WebSocket clients if Redis client is available
+            if redis_client:
+                try:
+                    await publish_user_data_update(redis_client, money_request.user_id)
+                    money_requests_logger.info(f"Published user data update for user ID {money_request.user_id} after wallet balance update.")
+                except Exception as e:
+                    money_requests_logger.warning(f"Failed to publish user data update for user ID {money_request.user_id}: {e}")
+            else:
+                money_requests_logger.warning(f"No Redis client available to publish user data update for user ID {money_request.user_id}.")
+
+        except ValueError as ve:
+            money_requests_logger.error(f"Processing approved money request ID {request_id} failed: {ve}", exc_info=True)
+            raise ve 
+        except Exception as e:
+            money_requests_logger.error(f"Unexpected error processing approved money request ID {request_id}: {e}", exc_info=True)
+            raise e
+
+    elif new_status == 2: # Rejected
+        money_requests_logger.info(f"Money request ID {request_id} rejected by admin ID {admin_id if admin_id else 'N/A'}.")
+        # No wallet action needed for rejection.
+    
+    # If new_status is 0 (back to requested), it's unusual for an admin action but handled.
+    elif new_status == 0 and original_status != 0:
+         money_requests_logger.info(f"Money request ID {request_id} status changed to 'requested' by admin ID {admin_id if admin_id else 'N/A'}.")
+
+    # Add to session to mark as dirty for the status update
+    db.add(money_request)
+    
+    # Refresh to get the latest state from the DB
     await db.refresh(money_request)
+    money_requests_logger.info(f"Money request ID {request_id} status updated successfully to {new_status}")
     return money_request
