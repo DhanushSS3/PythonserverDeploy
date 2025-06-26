@@ -415,6 +415,11 @@ async def per_connection_redis_listener(
     # Initial setup - fetch and cache static order data
     await update_static_orders_cache(user_id, db, redis_client, user_type)
 
+    # Flag to track if this is the initial connection
+    is_initial_connection = True
+    # Cache to store all symbols data for initial connection
+    all_symbols_cache = {}
+
     # Log WebSocket state
     logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
 
@@ -461,6 +466,9 @@ async def per_connection_redis_listener(
                             redis_client=redis_client
                         )
                         
+                        # Update the all_symbols_cache with new data
+                        all_symbols_cache.update(adjusted_prices)
+                        
                         # Check and trigger pending orders based on the updated prices
                         for symbol, prices in adjusted_prices.items():
                             await check_and_trigger_pending_orders(
@@ -487,8 +495,15 @@ async def per_connection_redis_listener(
                             db=db,
                             user_type=user_type,
                             adjusted_prices=adjusted_prices,
-                            websocket=websocket
+                            websocket=websocket,
+                            is_initial_connection=is_initial_connection,
+                            all_symbols_cache=all_symbols_cache
                         )
+                        
+                        # After first market data update, set initial connection to False
+                        if is_initial_connection:
+                            is_initial_connection = False
+                            logger.info(f"User {user_id}: Initial connection completed, switching to incremental updates")
                 
                 elif channel == REDIS_ORDER_UPDATES_CHANNEL:
                     # Handle order updates
@@ -545,7 +560,7 @@ async def per_connection_redis_listener(
                             response_data = {
                                 "type": "market_update",
                                 "data": {
-                                    "market_prices": {},  # Empty market prices as this is just an order update
+                                    "market_prices": all_symbols_cache,  # Send all symbols data for order updates
                                     "account_summary": {
                                         "balance": balance_value,
                                         "margin": margin_value,
@@ -613,7 +628,7 @@ async def per_connection_redis_listener(
                             response_data = {
                                 "type": "market_update",
                                 "data": {
-                                    "market_prices": {},  # Empty market prices
+                                    "market_prices": all_symbols_cache,  # Send all symbols data for user data updates
                                     "account_summary": {
                                         "balance": balance_value,
                                         "margin": margin_value,
@@ -748,7 +763,9 @@ async def process_portfolio_update(
     db: AsyncSession,
     user_type: str,
     adjusted_prices: Dict[str, Dict[str, float]],
-    websocket: WebSocket
+    websocket: WebSocket,
+    is_initial_connection: bool,
+    all_symbols_cache: Dict[str, Dict[str, float]]
 ):
     """
     Process market data updates, update dynamic portfolio data, and send updates to the client.
@@ -809,10 +826,20 @@ async def process_portfolio_update(
                 
             logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
             
+            # Determine which market prices to send based on connection state
+            if is_initial_connection:
+                # Send all symbols data on initial connection
+                market_prices_to_send = all_symbols_cache
+                logger.info(f"User {user_id}: Initial connection - sending all {len(all_symbols_cache)} symbols data")
+            else:
+                # Send only the updated symbols on subsequent updates
+                market_prices_to_send = adjusted_prices
+                logger.info(f"User {user_id}: Incremental update - sending {len(adjusted_prices)} updated symbols")
+            
             response_data = {
                 "type": "market_update",
                 "data": {
-                    "market_prices": adjusted_prices,
+                    "market_prices": market_prices_to_send,
                     "account_summary": {
                         "balance": balance_value,
                         "margin": margin_value,
@@ -981,6 +1008,122 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "positions_with_pnl": []
     }
     await set_user_dynamic_portfolio_cache(redis_client, db_user_id, initial_dynamic_portfolio)
+
+    # Send initial connection data with all available symbols
+    try:
+        # Get all available symbols for the group
+        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+        initial_symbols_data = {}
+        
+        if group_settings:
+            # Import Firebase function to get latest market data
+            from app.firebase_stream import get_latest_market_data as get_latest_market_data_sync
+            
+            # Get all symbols for this group
+            group_symbols = list(group_settings.keys())
+            logger.info(f"User {account_number}: Fetching initial market data for {len(group_symbols)} symbols from Firebase")
+            
+            # Fetch fresh market data from Firebase for all symbols
+            for symbol in group_symbols:
+                try:
+                    # Get raw market data from Firebase
+                    raw_market_data = get_latest_market_data_sync(symbol)
+                    
+                    if raw_market_data and raw_market_data.get('b') and raw_market_data.get('o'):
+                        # Calculate adjusted prices using the same logic as _calculate_and_cache_adjusted_prices
+                        symbol_group_settings = group_settings.get(symbol)
+                        if symbol_group_settings:
+                            try:
+                                raw_ask_price = raw_market_data.get('b')  # Ask from Firebase
+                                raw_bid_price = raw_market_data.get('o')  # Bid from Firebase
+                                
+                                ask_decimal = Decimal(str(raw_ask_price))
+                                bid_decimal = Decimal(str(raw_bid_price))
+                                spread_setting = Decimal(str(symbol_group_settings.get('spread', 0)))
+                                spread_pip_setting = Decimal(str(symbol_group_settings.get('spread_pip', 0)))
+                                
+                                configured_spread_amount = spread_setting * spread_pip_setting
+                                half_spread = configured_spread_amount / Decimal(2)
+
+                                # Adjusted prices for user display and trading
+                                adjusted_buy_price = ask_decimal + half_spread  # User buys at adjusted ask
+                                adjusted_sell_price = bid_decimal - half_spread  # User sells at adjusted bid
+
+                                effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+                                effective_spread_in_pips = Decimal("0.0")
+                                if spread_pip_setting > Decimal("0.0"):
+                                    effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
+
+                                # Store in initial symbols data
+                                initial_symbols_data[symbol] = {
+                                    'buy': float(adjusted_buy_price),
+                                    'sell': float(adjusted_sell_price),
+                                    'spread': float(effective_spread_in_pips)
+                                }
+                                
+                                # Also update the cache with fresh data
+                                await set_adjusted_market_price_cache(
+                                    redis_client=redis_client,
+                                    group_name=group_name,
+                                    symbol=symbol,
+                                    buy_price=adjusted_buy_price,
+                                    sell_price=adjusted_sell_price,
+                                    spread_value=configured_spread_amount
+                                )
+                                
+                                logger.debug(f"User {account_number}: Fetched fresh data for {symbol}: Buy={adjusted_buy_price}, Sell={adjusted_sell_price}")
+                                
+                            except Exception as calc_error:
+                                logger.error(f"User {account_number}: Error calculating adjusted prices for {symbol}: {calc_error}")
+                                # Fallback to cached data if available
+                                cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                                if cached_prices:
+                                    initial_symbols_data[symbol] = {
+                                        'buy': float(cached_prices.get('buy', 0)),
+                                        'sell': float(cached_prices.get('sell', 0)),
+                                        'spread': float(cached_prices.get('spread', 0))
+                                    }
+                    else:
+                        logger.warning(f"User {account_number}: No market data from Firebase for {symbol}, trying cache")
+                        # Fallback to cached data if Firebase has no data
+                        cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                        if cached_prices:
+                            initial_symbols_data[symbol] = {
+                                'buy': float(cached_prices.get('buy', 0)),
+                                'sell': float(cached_prices.get('sell', 0)),
+                                'spread': float(cached_prices.get('spread', 0))
+                            }
+                        
+                except Exception as symbol_error:
+                    logger.error(f"User {account_number}: Error fetching data for {symbol}: {symbol_error}")
+                    # Fallback to cached data
+                    cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                    if cached_prices:
+                        initial_symbols_data[symbol] = {
+                            'buy': float(cached_prices.get('buy', 0)),
+                            'sell': float(cached_prices.get('sell', 0)),
+                            'spread': float(cached_prices.get('spread', 0))
+                        }
+        
+        # Send initial connection message with all symbols data
+        initial_response = {
+            "type": "market_update",
+            "data": {
+                "market_prices": initial_symbols_data,
+                "account_summary": {
+                    "balance": str(user_data_to_cache["wallet_balance"]),
+                    "margin": str(user_data_to_cache["margin"]),
+                    "open_orders": static_orders.get("open_orders", []) if static_orders else [],
+                    "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
+                }
+            }
+        }
+        
+        await websocket.send_text(json.dumps(initial_response, cls=DecimalEncoder))
+        logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from Firebase)")
+        
+    except Exception as e:
+        logger.error(f"User {account_number}: Error sending initial connection data: {e}", exc_info=True)
 
     # Create and manage the per-connection Redis listener task
     listener_task = asyncio.create_task(
