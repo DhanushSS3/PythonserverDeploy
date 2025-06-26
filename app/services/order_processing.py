@@ -342,10 +342,13 @@ async def process_new_order(
             )
             margin_before = margin_before_data["total_margin"]
 
+            # Create simulated order with all necessary attributes for calculation
             simulated_order = type('Obj', (object,), {
                 'order_quantity': quantity,
                 'order_type': order_type,
-                'margin': full_margin_usd
+                'margin': full_margin_usd,
+                'id': None,  # Add id attribute for consistent debugging
+                'order_id': 'NEW_ORDER_SIMULATED'  # Add order_id attribute for logging
             })()
 
             margin_after_data = await calculate_total_symbol_margin_contribution(
@@ -357,6 +360,14 @@ async def process_new_order(
 
             additional_margin = max(Decimal("0.0"), margin_after - margin_before)
             logger.info(f"[MARGIN_PROCESS] User {user_id} Symbol {symbol}: MarginBefore={margin_before:.2f}, MarginAfter={margin_after:.2f}, AdditionalMargin={additional_margin:.2f}")
+            
+            # Add more detailed logging to help track down margin calculation issues
+            logger.info(f"[MARGIN_PROCESS_DEBUG] User {user_id} Symbol {symbol}")
+            logger.info(f"[MARGIN_PROCESS_DEBUG] Full margin for this order: {full_margin_usd}")
+            logger.info(f"[MARGIN_PROCESS_DEBUG] Existing open orders count: {len(open_orders_for_symbol)}")
+            logger.info(f"[MARGIN_PROCESS_DEBUG] Total margin before: {margin_before}")
+            logger.info(f"[MARGIN_PROCESS_DEBUG] Total margin after: {margin_after}")
+            logger.info(f"[MARGIN_PROCESS_DEBUG] Additional margin needed: {additional_margin}")
 
             # Step 4: Lock user and update margin
             if not is_barclays_live_user:

@@ -12,6 +12,7 @@ from sqlalchemy import select  # Add this import
 import asyncio
 import time
 import uuid
+import inspect  # Added for debug function
 
 from app.core.cache import (
     set_user_data_cache, get_user_data_cache,
@@ -33,22 +34,92 @@ from app.core.cache import (
     get_user_static_orders_cache,
     DecimalEncoder  # Import for JSON serialization of decimals
 )
-from app.services.margin_calculator import calculate_single_order_margin, calculate_pending_order_margin, get_external_symbol_info
+from app.services.margin_calculator import calculate_single_order_margin, calculate_pending_order_margin
 from app.services.portfolio_calculator import calculate_user_portfolio, _convert_to_usd
 from app.core.firebase import send_order_to_firebase, get_latest_market_data
 from app.database.models import User, DemoUser, UserOrder, DemoUserOrder, ExternalSymbolInfo, Wallet
 from app.crud import crud_order
-from app.crud.crud_order import get_order_model
 from app.crud.user import update_user_margin, get_user_by_id_with_lock, get_demo_user_by_id_with_lock
-from app.crud.crud_order import get_open_orders_by_user_id_and_symbol
+from app.crud.crud_order import get_open_orders_by_user_id_and_symbol, get_order_model
 from app.schemas.order import PendingOrderPlacementRequest, OrderPlacementRequest
 from app.schemas.wallet import WalletCreate
-from app.services.margin_calculator import calculate_total_symbol_margin_contribution
+# Import ALL necessary functions from order_processing to ensure consistency
+from app.services.order_processing import (
+    calculate_total_symbol_margin_contribution,  # Use THIS implementation, not the one from margin_calculator
+    get_external_symbol_info,
+    get_order_model,
+    OrderProcessingError,
+    InsufficientFundsError,
+    generate_unique_10_digit_id
+)
+from app.core.logging_config import orders_logger
 
 logger = logging.getLogger("orders")
 
 # Redis key prefix for pending orders
 REDIS_PENDING_ORDERS_PREFIX = "pending_orders"
+
+async def debug_margin_calculations(
+    db: AsyncSession,
+    redis_client: Redis,
+    user_id: int,
+    symbol: str,
+    open_orders: list,
+    simulated_order,
+    user_type: str
+):
+    """
+    Debug helper function to compare margin calculation implementations
+    between order_processing.py and margin_calculator.py
+    """
+    try:
+        # Load the different implementations
+        from app.services.order_processing import calculate_total_symbol_margin_contribution as processing_calc
+        from app.services.margin_calculator import calculate_total_symbol_margin_contribution as calculator_calc
+        
+        # Get the order model
+        order_model = get_order_model(user_type)
+        
+        # Run calculations with both implementations
+        processing_margin_before = await processing_calc(db, redis_client, user_id, symbol, open_orders, order_model, user_type)
+        calculator_margin_before = await calculator_calc(db, redis_client, user_id, symbol, open_orders, user_type, order_model)
+        
+        # Add new order
+        orders_with_new = open_orders + [simulated_order]
+        processing_margin_after = await processing_calc(db, redis_client, user_id, symbol, orders_with_new, order_model, user_type)
+        calculator_margin_after = await calculator_calc(db, redis_client, user_id, symbol, orders_with_new, user_type, order_model)
+        
+        # Calculate additional margins
+        processing_additional = max(Decimal("0"), processing_margin_after["total_margin"] - processing_margin_before["total_margin"])
+        calculator_additional = max(Decimal("0"), calculator_margin_after["total_margin"] - calculator_margin_before["total_margin"])
+        
+        # Log the results for comparison
+        from app.core.logging_config import orders_logger
+        orders_logger.info(f"[MARGIN_DEBUG] === IMPLEMENTATION COMPARISON ===")
+        orders_logger.info(f"[MARGIN_DEBUG] User {user_id}, Symbol {symbol}, Orders: {len(open_orders)} + 1 new")
+        orders_logger.info(f"[MARGIN_DEBUG] order_processing.py implementation:")
+        orders_logger.info(f"[MARGIN_DEBUG]   - Margin before: {processing_margin_before['total_margin']}")
+        orders_logger.info(f"[MARGIN_DEBUG]   - Margin after: {processing_margin_after['total_margin']}")
+        orders_logger.info(f"[MARGIN_DEBUG]   - Additional margin: {processing_additional}")
+        orders_logger.info(f"[MARGIN_DEBUG] margin_calculator.py implementation:")
+        orders_logger.info(f"[MARGIN_DEBUG]   - Margin before: {calculator_margin_before['total_margin']}")
+        orders_logger.info(f"[MARGIN_DEBUG]   - Margin after: {calculator_margin_after['total_margin']}")
+        orders_logger.info(f"[MARGIN_DEBUG]   - Additional margin: {calculator_additional}")
+        orders_logger.info(f"[MARGIN_DEBUG] Difference in additional margin: {abs(processing_additional - calculator_additional)}")
+        
+        # Check parameter order differences
+        processing_signature = inspect.signature(processing_calc)
+        calculator_signature = inspect.signature(calculator_calc)
+        
+        orders_logger.info(f"[MARGIN_DEBUG] order_processing.py parameter order: {list(processing_signature.parameters.keys())}")
+        orders_logger.info(f"[MARGIN_DEBUG] margin_calculator.py parameter order: {list(calculator_signature.parameters.keys())}")
+        
+        # Using order_processing implementation for consistency
+        return processing_additional
+    except Exception as e:
+        from app.core.logging_config import orders_logger
+        orders_logger.error(f"[MARGIN_DEBUG] Error comparing implementations: {str(e)}", exc_info=True)
+        return None
 
 
 async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, order_type: str, user_id: str):
@@ -372,43 +443,64 @@ async def trigger_pending_order(
             )
             orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin calculated successfully for order {order_id}: margin={margin}, exec_price={exec_price}, contract_value={contract_value}")
             
-            # Implement hedging logic: check for hedging positions that would reduce required margin
+            # Implement proper margin calculation using the same approach as order_processing.py
             try:
-                # For hedging: Check if there are existing positions for the same symbol with opposite direction
-                open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                hedge_offset = Decimal('0')
+                # Step 1: Get all open orders for the symbol
+                open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
+                    db, user_id, symbol, order_model
+                )
                 
-                # Get the direction of the current order for comparison
-                is_buy = order_type_original.startswith('BUY')
-                is_sell = order_type_original.startswith('SELL')
+                # Store original calculated margin for the individual order record
+                original_order_margin = margin
                 
-                # Check for opposing positions
-                for existing_order in open_orders:
-                    if existing_order.order_company_name == symbol:
-                        existing_is_buy = existing_order.order_type.startswith('BUY')
-                        existing_is_sell = existing_order.order_type.startswith('SELL')
-                        
-                        # If directions are opposite, we have a hedging situation
-                        if (is_buy and existing_is_sell) or (is_sell and existing_is_buy):
-                            # For a hedge position, reduce the margin by the minimum of the two quantities
-                            hedge_quantity = min(order_quantity_decimal, existing_order.order_quantity)
-                            hedge_margin = (hedge_quantity / order_quantity_decimal) * margin
-                            hedge_offset += hedge_margin
-                            
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Found hedging position for order {order_id}: "
-                                             f"existing order {existing_order.order_id} with {existing_order.order_type}, "
-                                             f"reducing margin by {hedge_margin} (hedge ratio: {hedge_quantity}/{order_quantity_decimal})")
+                # Step 2: Calculate total margin before adding the new order
+                margin_before_data = await calculate_total_symbol_margin_contribution(
+                    db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
+                )
+                margin_before = margin_before_data["total_margin"]
                 
-                # Apply the hedge offset to reduce required margin
-                if hedge_offset > Decimal('0'):
-                    original_margin = margin
-                    # Don't let hedge_offset reduce margin below zero
-                    margin = max(margin - hedge_offset, Decimal('0'))
-                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Applied hedging offset: original margin={original_margin}, "
-                                     f"hedge offset={hedge_offset}, final margin={margin}")
-            except Exception as hedge_error:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating hedge offset for user {user_id}: {str(hedge_error)}", exc_info=True)
-                # Continue with original margin if hedging calculation fails
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Current symbol margin contribution (before): {margin_before}")
+                
+                # Step 3: Create a simulated order object for the new order
+                new_order_type = 'BUY' if order_type_original.startswith('BUY') else 'SELL'
+                simulated_order = type('Obj', (object,), {
+                    'order_quantity': order_quantity_decimal,
+                    'order_type': new_order_type,
+                    'margin': original_order_margin,
+                    'id': None,  # Add id attribute to match real orders
+                    'order_id': 'NEW_PENDING_TRIGGERED'  # Add order_id attribute for logging
+                })()
+                
+                # Step 4: Calculate total margin after adding the new order
+                margin_after_data = await calculate_total_symbol_margin_contribution(
+                    db, redis_client, user_id, symbol, 
+                    open_orders_for_symbol + [simulated_order],
+                    order_model, user_type
+                )
+                margin_after = margin_after_data["total_margin"]
+                
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Symbol margin contribution after adding order: {margin_after}")
+                
+                # Step 5: Calculate additional margin required (can be negative if hedging reduces margin)
+                # Let the calculate_total_symbol_margin_contribution function handle all the hedging logic
+                margin_difference = max(Decimal("0.0"), margin_after - margin_before)
+                
+                # For logging and debugging
+                if margin_after < margin_before:
+                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Hedging detected: order {order_id} reduces total margin by {margin_before - margin_after}")
+                
+                # Use margin_difference for updating user's total margin
+                # This can be positive (adding margin) or negative (reducing margin due to hedging)
+                margin = margin_difference
+                
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin change required: {margin} " +
+                                 f"(Before: {margin_before}, After: {margin_after})")
+                
+            except Exception as margin_calc_error:
+                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating margin effect for user {user_id}: {str(margin_calc_error)}", exc_info=True)
+                # If the advanced calculation fails, fall back to using the original calculated margin
+                margin = original_order_margin 
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Falling back to basic margin calculation: {margin}")
         except Exception as margin_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating margin for order {order_id}: {str(margin_error)}", exc_info=True)
             return
@@ -440,15 +532,17 @@ async def trigger_pending_order(
             # Store the original values for logging
             original_margin = db_order.margin if db_order.margin else "None"
             
-            # Update the order with calculated values from margin calculation
-            db_order.margin = margin
+            # Store the original calculated margin in the order (without any hedging adjustments)
+            # This ensures we always record the true margin requirement for this individual order
+            db_order.margin = original_order_margin
             db_order.contract_value = contract_value
             db_order.commission = commission
             db_order.order_price = exec_price  # Use the execution price from margin calculation
             
             orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with calculated values: " 
-                             f"margin={margin} (was {original_margin}), contract_value={contract_value}, "
+                             f"margin={original_order_margin} (was {original_margin}), contract_value={contract_value}, "
                              f"commission={commission}, execution_price={exec_price}")
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Note: Order margin stored is the individual margin requirement ({original_order_margin}), while margin change applied to user ({margin}) considers total symbol margin effect")
         except Exception as value_update_error:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating order with calculated values: {str(value_update_error)}", exc_info=True)
 
@@ -466,36 +560,66 @@ async def trigger_pending_order(
             return
 
         # Non-Barclays user
-        current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
-        current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
+        # FIX: Refresh user data right before margin calculation to get current state
+        try:
+            # Get fresh user data from database right before margin calculation
+            user_model = User if user_type == 'live' else DemoUser
+            fresh_user_result = await db.execute(select(user_model).filter(user_model.id == user_id))
+            fresh_user = fresh_user_result.scalars().first()
+            
+            if not fresh_user:
+                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Could not fetch fresh user data for user {user_id}")
+                return
+                
+            current_wallet_balance_decimal = Decimal(str(fresh_user.wallet_balance))
+            current_total_margin_decimal = Decimal(str(fresh_user.margin))
+            
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Fresh user data loaded: wallet_balance={current_wallet_balance_decimal}, current_margin={current_total_margin_decimal}")
+        except Exception as user_refresh_error:
+            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error refreshing user data: {str(user_refresh_error)}", exc_info=True)
+            # Fallback to original user data
+            current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
+            current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
+            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Using fallback user data: wallet_balance={current_wallet_balance_decimal}, current_margin={current_total_margin_decimal}")
 
-        new_total_margin = current_total_margin_decimal + margin
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin check: current_margin={current_total_margin_decimal}, new_margin={new_total_margin}, wallet_balance={current_wallet_balance_decimal}")
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using margin with hedging applied: {margin}. Adding to current total margin: {current_total_margin_decimal}")
-        
-        if new_total_margin > current_wallet_balance_decimal:
-            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} for user {user_id} canceled due to insufficient margin. Required: {new_total_margin}, Available: {current_wallet_balance_decimal}")
-            db_order.order_status = 'CANCELLED'
-            db_order.cancel_message = "InsufficientFreeMargin"
-            try:
-                await db.commit()
-                await db.refresh(db_order)
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} status updated to CANCELLED in database")
-            except Exception as commit_error:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error committing order cancellation to database: {str(commit_error)}", exc_info=True)
-            return
+        # FIX: Only update the margin if there's a real change needed
+        # For perfect hedging, if margin is zero, we don't need to update the user's overall margin at all
+        if margin > Decimal('0'):
+            new_total_margin = current_total_margin_decimal + margin
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin check: current_margin={current_total_margin_decimal}, new_margin={new_total_margin}, wallet_balance={current_wallet_balance_decimal}")
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using margin with hedging applied: {margin}. Adding to current total margin: {current_total_margin_decimal}")
+            
+            if new_total_margin > current_wallet_balance_decimal:
+                orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} for user {user_id} canceled due to insufficient margin. Required: {new_total_margin}, Available: {current_wallet_balance_decimal}")
+                db_order.order_status = 'CANCELLED'
+                db_order.cancel_message = "InsufficientFreeMargin"
+                try:
+                    await db.commit()
+                    await db.refresh(db_order)
+                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} status updated to CANCELLED in database")
+                except Exception as commit_error:
+                    orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error committing order cancellation to database: {str(commit_error)}", exc_info=True)
+                return
+        else:
+            # Perfect hedging case - no need to update the user's margin
+            new_total_margin = current_total_margin_decimal
+            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Perfect hedging detected: order {order_id} requires no additional margin. Keeping current margin of {current_total_margin_decimal}")
 
         try:
             # Update user's margin with the new total that includes hedging adjustments
-            await update_user_margin(
-                db,
-                user_id,
-                user_type,
-                new_total_margin
-            )
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] User margin updated successfully for user {user_id}: {new_total_margin} (includes hedging adjustments)")
+            # Only update margin in the database if there's a change to avoid unnecessary DB operations
+            if new_total_margin != current_total_margin_decimal:
+                await update_user_margin(
+                    db,
+                    user_id,
+                    user_type,
+                    new_total_margin
+                )
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] User margin updated successfully for user {user_id}: {new_total_margin} (includes hedging adjustments)")
+            else:
+                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] No margin update needed for user {user_id} - margin remains at {current_total_margin_decimal}")
             
-            # Refresh user data in the cache to reflect the updated margin
+            # Always refresh user data in the cache, even for a perfect hedge
             try:
                 # Get updated user data from the database
                 user_model = User if user_type == 'live' else DemoUser
@@ -1201,5 +1325,238 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
     except Exception as e:
         logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
         return {"open_orders": [], "pending_orders": [], "updated_at": datetime.now().isoformat()}
+
+# async def process_pending_order(
+#     db: AsyncSession,
+#     redis_client: Redis,
+#     user_id: int,
+#     order_data: Dict[str, Any],
+#     user_type: str
+# ) -> Dict[str, Any]:
+#     """
+#     Process a pending order by correctly calculating the margin before and after
+#     the order, updating the user's total margin with locking.
+    
+#     This function:
+#     1. Calculates the individual order margin using calculate_single_order_margin
+#     2. Gets all open orders for the symbol
+#     3. Calculates total margin contribution before adding new order
+#     4. Adds the new order (simulated) and recalculates total margin
+#     5. Determines additional margin needed by finding the difference
+#     6. Updates the user's total margin with proper locking
+    
+#     Args:
+#         db: Database session
+#         redis_client: Redis client
+#         user_id: User ID
+#         order_data: Order data dictionary
+#         user_type: User type ('live' or 'demo')
+        
+#     Returns:
+#         Dictionary with the processed order data
+#     """
+#     try:
+#         orders_logger.info(f"[PENDING_ORDER] Processing pending order for user {user_id}, symbol {order_data.get('order_company_name')}")
+        
+#         # Step 1: Load user data and settings
+#         user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+#         if not user_data:
+#             orders_logger.error(f"[PENDING_ORDER] User data not found for user {user_id}")
+#             raise OrderProcessingError("User data not found")
+
+#         symbol = order_data.get('order_company_name', '').upper()
+#         order_type = order_data.get('order_type', '').upper()
+#         quantity = Decimal(str(order_data.get('order_quantity', '0.0')))
+#         group_name = user_data.get('group_name')
+#         leverage = Decimal(str(user_data.get('leverage', '1.0')))
+
+#         orders_logger.info(f"[PENDING_ORDER] Order details - Symbol: {symbol}, Type: {order_type}, Quantity: {quantity}, Group: {group_name}, Leverage: {leverage}")
+        
+#         # Step 2: Get settings and market data
+#         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+#         if not group_settings:
+#             orders_logger.error(f"[PENDING_ORDER] Group settings not found for symbol {symbol}")
+#             raise OrderProcessingError(f"Group settings not found for symbol {symbol}")
+            
+#         external_symbol_info = await get_external_symbol_info(db, symbol)
+#         if not external_symbol_info:
+#             orders_logger.error(f"[PENDING_ORDER] External symbol info not found for {symbol}")
+#             raise OrderProcessingError(f"External symbol info not found for {symbol}")
+            
+#         raw_market_data = await get_latest_market_data()
+#         if not raw_market_data:
+#             orders_logger.error("[PENDING_ORDER] Failed to get market data")
+#             raise OrderProcessingError("Failed to get market data")
+        
+#         # Step 3: Calculate individual order margin using calculate_single_order_margin
+#         orders_logger.info(f"[PENDING_ORDER] Calculating individual order margin for {symbol}")
+#         full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+#             redis_client=redis_client,
+#             symbol=symbol,
+#             order_type=order_type,
+#             quantity=quantity,
+#             user_leverage=leverage,
+#             group_settings=group_settings,
+#             external_symbol_info=external_symbol_info,
+#             raw_market_data=raw_market_data,
+#             db=db,
+#             user_id=user_id
+#         )
+        
+#         if full_margin_usd is None:
+#             orders_logger.error(f"[PENDING_ORDER] Margin calculation failed for {symbol}")
+#             raise OrderProcessingError("Margin calculation failed")
+            
+#         orders_logger.info(f"[PENDING_ORDER] Individual margin: {full_margin_usd}, Price: {price}, Contract Value: {contract_value}, Commission: {commission}")
+        
+#         # Step 4: Get the order model based on user type
+#         order_model = get_order_model(user_type)
+        
+#         # Step 5: Calculate total symbol margin contribution before adding new order
+#         open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
+#             db, user_id, symbol, order_model
+#         )
+        
+#         orders_logger.info(f"[PENDING_ORDER] Found {len(open_orders_for_symbol)} existing open orders for symbol {symbol}")
+        
+#         # Ensure we're calling this with the correct parameters
+#         margin_before_data = await calculate_total_symbol_margin_contribution(
+#             db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
+#         )
+#         margin_before = margin_before_data["total_margin"]
+        
+#         orders_logger.info(f"[PENDING_ORDER] Total margin contribution before: {margin_before}")
+        
+#         # Step 6: Create a simulated order object to include in the calculation
+#         # Make sure object properties match exactly what calculate_total_symbol_margin_contribution expects
+#         simulated_order = type('Obj', (object,), {
+#             'order_quantity': quantity,
+#             'order_type': order_type,
+#             'margin': full_margin_usd,
+#             'id': None,  # Add id attribute to match real orders
+#             'order_id': 'NEW_PENDING'  # Add order_id attribute for logging
+#         })()
+        
+#         # Step 7: Calculate total symbol margin contribution after adding new order
+#         margin_after_data = await calculate_total_symbol_margin_contribution(
+#             db, redis_client, user_id, symbol, 
+#             open_orders_for_symbol + [simulated_order],
+#             order_model, user_type
+#         )
+#         margin_after = margin_after_data["total_margin"]
+        
+#         orders_logger.info(f"[PENDING_ORDER] Total margin contribution after: {margin_after}")
+        
+#         # Step 8: Calculate additional margin required
+#         additional_margin = max(Decimal("0.0"), margin_after - margin_before)
+#         orders_logger.info(f"[PENDING_ORDER] Additional margin required: {additional_margin}, calculated as margin_after ({margin_after}) - margin_before ({margin_before})")
+        
+#         # Log detailed information about the margin calculation
+#         orders_logger.info(f"[PENDING_ORDER_DEBUG] Full margin for this order: {full_margin_usd}")
+#         orders_logger.info(f"[PENDING_ORDER_DEBUG] Margin before adding order: {margin_before}")
+#         orders_logger.info(f"[PENDING_ORDER_DEBUG] Margin after adding order: {margin_after}")
+#         orders_logger.info(f"[PENDING_ORDER_DEBUG] Additional margin needed: {additional_margin}")
+        
+#         # Debug: Compare implementations and parameters between the two different margin calculation functions
+#         await debug_margin_calculations(
+#             db=db,
+#             redis_client=redis_client,
+#             user_id=user_id,
+#             symbol=symbol,
+#             open_orders=open_orders_for_symbol,
+#             simulated_order=simulated_order,
+#             user_type=user_type
+#         )
+        
+#         # Step 9: Lock user and update margin
+#         if user_type == 'demo':
+#             db_user_locked = await get_demo_user_by_id_with_lock(db, user_id)
+#         else:
+#             db_user_locked = await get_user_by_id_with_lock(db, user_id)
+            
+#         if db_user_locked is None:
+#             orders_logger.error(f"[PENDING_ORDER] Could not lock user record for user {user_id}")
+#             raise OrderProcessingError("Could not lock user record")
+            
+#         # Check if user has enough balance to cover the margin
+#         if db_user_locked.wallet_balance < db_user_locked.margin + additional_margin:
+#             orders_logger.error(f"[PENDING_ORDER] Insufficient funds for user {user_id}. Wallet: {db_user_locked.wallet_balance}, Current Margin: {db_user_locked.margin}, Additional Required: {additional_margin}")
+#             raise InsufficientFundsError("Not enough wallet balance to cover additional margin")
+            
+#         # Update user margin with additional margin
+#         original_user_margin = db_user_locked.margin
+#         db_user_locked.margin = (Decimal(str(db_user_locked.margin)) + additional_margin).quantize(
+#             Decimal("0.01"), rounding=ROUND_HALF_UP
+#         )
+        
+#         orders_logger.info(f"[PENDING_ORDER] Updating user margin: {original_user_margin} + {additional_margin} = {db_user_locked.margin}")
+        
+#         # Step 10: Save changes to database
+#         db.add(db_user_locked)
+#         await db.commit()
+#         await db.refresh(db_user_locked)
+        
+#         # Step 11: Update user data cache with full user information
+#         user_data_to_cache = {
+#             "id": db_user_locked.id,
+#             "email": getattr(db_user_locked, 'email', None),
+#             "wallet_balance": db_user_locked.wallet_balance,
+#             "leverage": db_user_locked.leverage,
+#             "group_name": db_user_locked.group_name,
+#             "margin": db_user_locked.margin,
+#             "user_type": user_type,
+#             "account_number": getattr(db_user_locked, 'account_number', None),
+#             "first_name": getattr(db_user_locked, 'first_name', None),
+#             "last_name": getattr(db_user_locked, 'last_name', None),
+#             "country": getattr(db_user_locked, 'country', None),
+#             "phone_number": getattr(db_user_locked, 'phone_number', None),
+#         }
+#         await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+        
+#         # Publish user data update notification
+#         try:
+#             from app.core.cache import publish_user_data_update
+#             await publish_user_data_update(redis_client, user_id)
+#             orders_logger.info(f"[PENDING_ORDER] Published user data update for user {user_id}")
+#         except Exception as e:
+#             orders_logger.error(f"[PENDING_ORDER] Failed to publish user data update: {str(e)}")
+        
+#         # Step 12: Generate unique IDs for SL/TP if needed
+#         stoploss_id = None
+#         if order_data.get('stop_loss') is not None:
+#             stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
+            
+#         takeprofit_id = None
+#         if order_data.get('take_profit') is not None:
+#             takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
+            
+#         # Step 13: Return the processed order data
+#         return {
+#             'order_id': await generate_unique_10_digit_id(db, order_model, 'order_id'),
+#             'order_status': order_data.get('order_status', 'PENDING'),
+#             'order_user_id': user_id,
+#             'order_company_name': symbol,
+#             'order_type': order_type,
+#             'order_price': price,
+#             'order_quantity': quantity,
+#             'contract_value': contract_value,
+#             'margin': full_margin_usd,
+#             'commission': commission,
+#             'stop_loss': order_data.get('stop_loss'),
+#             'take_profit': order_data.get('take_profit'),
+#             'stoploss_id': stoploss_id,
+#             'takeprofit_id': takeprofit_id,
+#             'status': order_data.get('status', 'PENDING'),
+#         }
+    
+#     except InsufficientFundsError as e:
+#         orders_logger.error(f"[PENDING_ORDER] Insufficient funds error: {str(e)}")
+#         raise
+#     except OrderProcessingError as e:
+#         orders_logger.error(f"[PENDING_ORDER] Order processing error: {str(e)}")
+#         raise
+#     except Exception as e:
+#         orders_logger.error(f"[PENDING_ORDER] Unexpected error: {str(e)}", exc_info=True)
+#         raise OrderProcessingError(f"Failed to process pending order: {str(e)}")
 
         
