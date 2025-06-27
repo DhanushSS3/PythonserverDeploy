@@ -14,6 +14,9 @@ import time
 import uuid
 import inspect  # Added for debug function
 
+# Import epsilon configuration
+from app.main import SLTP_EPSILON
+
 from app.core.cache import (
     set_user_data_cache, get_user_data_cache,
     set_user_portfolio_cache, get_user_portfolio_cache,
@@ -123,54 +126,81 @@ async def debug_margin_calculations(
 
 
 async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, order_type: str, user_id: str):
-    """Removes a single pending order from Redis."""
-    redis_key = f"{REDIS_PENDING_ORDERS_PREFIX}:{symbol}:{order_type}"
+    """
+    Remove a pending order from Redis.
+    """
     try:
-        # Fetch all orders for the key
-        all_user_orders_json = await redis_client.hgetall(redis_key)
+        # Remove from the specific pending orders list
+        pending_key = f"pending_orders:{symbol}:{order_type}:{user_id}"
+        await redis_client.lrem(pending_key, 0, order_id)
         
-        updated_user_orders = {}
-        order_removed = False
-
-        for user_key, orders_list_str in all_user_orders_json.items():
-            # Handle both bytes and string user keys
-            if isinstance(user_key, bytes):
-                current_user_id = user_key.decode('utf-8')
-            else:
-                current_user_id = user_key
-                
-            # Handle both bytes and string order lists
-            if isinstance(orders_list_str, bytes):
-                orders_list_str = orders_list_str.decode('utf-8')
-                
-            orders_list = json.loads(orders_list_str)
-            
-            # Filter out the specific order to be removed
-            filtered_orders = [order for order in orders_list if order.get('order_id') != order_id]
-            
-            if len(filtered_orders) < len(orders_list):
-                order_removed = True
-            
-            if filtered_orders:
-                updated_user_orders[user_key] = json.dumps(filtered_orders)
+        # Also remove from the general pending orders list
+        general_pending_key = f"pending_orders:{user_id}"
+        await redis_client.lrem(general_pending_key, 0, order_id)
         
-        if order_removed:
-            if updated_user_orders:
-                # Atomically update the hash for the users whose orders changed
-                pipe = redis_client.pipeline()
-                for user_key, orders_json in updated_user_orders.items():
-                    pipe.hset(redis_key, user_key, orders_json)
-                await pipe.execute()
-            else:
-                # If no orders remain for this key after filtering, delete the hash
-                await redis_client.delete(redis_key)
-            logger.info(f"Pending order {order_id} removed from Redis for symbol {symbol} type {order_type} and user {user_id}.")
-        else:
-            logger.warning(f"Attempted to remove pending order {order_id} from Redis, but it was not found for symbol {symbol} type {order_type} and user {user_id}.")
-
+        logger = logging.getLogger("pending_orders")
+        logger.info(f"[REDIS_CLEANUP] Removed pending order {order_id} from Redis for user {user_id}, symbol {symbol}, type {order_type}")
+        
     except Exception as e:
-        logger.error(f"Error removing pending order {order_id} from Redis: {e}", exc_info=True)
+        logger = logging.getLogger("pending_orders")
+        logger.error(f"[REDIS_CLEANUP] Error removing pending order {order_id} from Redis: {e}")
 
+async def get_all_pending_orders_from_redis(redis_client: Redis) -> List[Dict[str, Any]]:
+    """
+    Get all pending orders from Redis for cleanup purposes.
+    Returns a list of order data dictionaries.
+    """
+    try:
+        all_pending_orders = []
+        
+        # Get all keys that match the pattern "pending_orders:*"
+        pattern = "pending_orders:*"
+        keys = await redis_client.keys(pattern)
+        
+        for key in keys:
+            try:
+                # Get all order IDs from this list
+                order_ids = await redis_client.lrange(key, 0, -1)
+                
+                for order_id in order_ids:
+                    if order_id:
+                        # Try to get the order data from the order cache
+                        order_data_key = f"order:{order_id}"
+                        order_data = await redis_client.get(order_data_key)
+                        
+                        if order_data:
+                            try:
+                                order_dict = json.loads(order_data)
+                                all_pending_orders.append(order_dict)
+                            except json.JSONDecodeError:
+                                # If JSON parsing fails, create a basic order dict
+                                all_pending_orders.append({
+                                    'order_id': order_id.decode() if isinstance(order_id, bytes) else str(order_id),
+                                    'order_company_name': 'unknown',
+                                    'order_type': 'unknown',
+                                    'order_user_id': 'unknown',
+                                    'user_type': 'live'
+                                })
+                        else:
+                            # If no order data found, create a basic order dict
+                            all_pending_orders.append({
+                                'order_id': order_id.decode() if isinstance(order_id, bytes) else str(order_id),
+                                'order_company_name': 'unknown',
+                                'order_type': 'unknown',
+                                'order_user_id': 'unknown',
+                                'user_type': 'live'
+                            })
+            except Exception as e:
+                logger = logging.getLogger("redis_cleanup")
+                logger.error(f"[REDIS_CLEANUP] Error processing Redis key {key}: {e}")
+                continue
+        
+        return all_pending_orders
+        
+    except Exception as e:
+        logger = logging.getLogger("redis_cleanup")
+        logger.error(f"[REDIS_CLEANUP] Error getting all pending orders from Redis: {e}")
+        return []
 
 async def add_pending_order(
     redis_client: Redis, 
@@ -383,7 +413,7 @@ async def trigger_pending_order(
         orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Absolute price difference: {price_diff}")
 
         # Compare with small epsilon tolerance to catch very close values
-        epsilon = Decimal('0.00001')  # Small tolerance
+        epsilon = Decimal(SLTP_EPSILON)  # Small tolerance
         is_close = price_diff < epsilon
         orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Prices within epsilon tolerance: {is_close} (epsilon={epsilon})")
         
@@ -807,9 +837,9 @@ async def check_and_trigger_stoploss_takeprofit(
                 await process_order_stoploss_takeprofit(db, redis_client, order, 'demo')
             except Exception as e:
                 logger.error(f"[SLTP_CHECK] Error processing demo order {order.order_id}: {e}", exc_info=True)
-        
+            
         logger.info("[SLTP_CHECK] Completed SL/TP check cycle")
-                
+        
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error in check_and_trigger_stoploss_takeprofit: {e}", exc_info=True)
 
@@ -821,6 +851,7 @@ async def process_order_stoploss_takeprofit(
 ) -> None:
     """
     Process a single order for stop loss and take profit conditions.
+    Enhanced with epsilon accuracy to handle floating-point precision issues.
     """
     logger = logging.getLogger("sltp")
     
@@ -838,27 +869,31 @@ async def process_order_stoploss_takeprofit(
         else:
             from app.crud.user import get_demo_user_by_id
             user = await get_demo_user_by_id(db, user_id)
-            
+        
         if not user:
             logger.error(f"[SLTP_CHECK] User {user_id} not found for order {order.order_id}")
             return
-            
+        
         group_name = user.group_name
         if not group_name:
             logger.error(f"[SLTP_CHECK] No group name found for user {user_id}")
             return
-            
+        
         # Get adjusted market price
         adjusted_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
         if not adjusted_price:
             logger.warning(f"[SLTP_CHECK] No adjusted price available for {symbol} in group {group_name}")
             return
-            
+        
         # Convert prices to Decimal for accurate comparison
         buy_price = Decimal(str(adjusted_price.get('buy', '0')))
         sell_price = Decimal(str(adjusted_price.get('sell', '0')))
         
         logger.info(f"[SLTP_CHECK] Order {order.order_id} - Current prices: Buy={buy_price}, Sell={sell_price}")
+        
+        # Define epsilon for floating-point precision tolerance
+        # For forex (5 decimal places), use 0.00001 as tolerance
+        epsilon = Decimal(SLTP_EPSILON)
         
         # Check stop loss
         if order.stop_loss and order.stop_loss > 0:
@@ -866,35 +901,65 @@ async def process_order_stoploss_takeprofit(
             logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking stop loss: {stop_loss}")
             
             if order.order_type == 'BUY':
-                if sell_price <= stop_loss:
-                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order.order_id} at {sell_price} <= {stop_loss}")
+                # For BUY orders: trigger when sell_price <= stop_loss (with epsilon tolerance)
+                price_diff = abs(sell_price - stop_loss)
+                exact_match = sell_price <= stop_loss
+                epsilon_match = price_diff < epsilon
+                should_trigger = exact_match or epsilon_match
+                
+                if should_trigger:
+                    trigger_reason = "exact match" if exact_match else "epsilon tolerance"
+                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order.order_id} at {sell_price} <= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, sell_price, 'STOP_LOSS', user_type)
                 else:
-                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Stop loss not triggered: {sell_price} > {stop_loss}")
+                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Stop loss not triggered: {sell_price} > {stop_loss} (diff: {price_diff}, epsilon: {epsilon})")
+                    
             elif order.order_type == 'SELL':
-                if buy_price >= stop_loss:
-                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order.order_id} at {buy_price} >= {stop_loss}")
+                # For SELL orders: trigger when buy_price >= stop_loss (with epsilon tolerance)
+                price_diff = abs(buy_price - stop_loss)
+                exact_match = buy_price >= stop_loss
+                epsilon_match = price_diff < epsilon
+                should_trigger = exact_match or epsilon_match
+                
+                if should_trigger:
+                    trigger_reason = "exact match" if exact_match else "epsilon tolerance"
+                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order.order_id} at {buy_price} >= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, buy_price, 'STOP_LOSS', user_type)
                 else:
-                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Stop loss not triggered: {buy_price} < {stop_loss}")
-                
+                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Stop loss not triggered: {buy_price} < {stop_loss} (diff: {price_diff}, epsilon: {epsilon})")
+            
         # Check take profit
         if order.take_profit and order.take_profit > 0:
             take_profit = Decimal(str(order.take_profit))
             logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking take profit: {take_profit}")
             
             if order.order_type == 'BUY':
-                if sell_price >= take_profit:
-                    logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order.order_id} at {sell_price} >= {take_profit}")
+                # For BUY orders: trigger when sell_price >= take_profit (with epsilon tolerance)
+                price_diff = abs(sell_price - take_profit)
+                exact_match = sell_price >= take_profit
+                epsilon_match = price_diff < epsilon
+                should_trigger = exact_match or epsilon_match
+                
+                if should_trigger:
+                    trigger_reason = "exact match" if exact_match else "epsilon tolerance"
+                    logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order.order_id} at {sell_price} >= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, sell_price, 'TAKE_PROFIT', user_type)
                 else:
-                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Take profit not triggered: {sell_price} < {take_profit}")
+                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Take profit not triggered: {sell_price} < {take_profit} (diff: {price_diff}, epsilon: {epsilon})")
+                    
             elif order.order_type == 'SELL':
-                if buy_price <= take_profit:
-                    logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order.order_id} at {buy_price} <= {take_profit}")
+                # For SELL orders: trigger when buy_price <= take_profit (with epsilon tolerance)
+                price_diff = abs(buy_price - take_profit)
+                exact_match = buy_price <= take_profit
+                epsilon_match = price_diff < epsilon
+                should_trigger = exact_match or epsilon_match
+                
+                if should_trigger:
+                    trigger_reason = "exact match" if exact_match else "epsilon tolerance"
+                    logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order.order_id} at {buy_price} <= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, buy_price, 'TAKE_PROFIT', user_type)
                 else:
-                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Take profit not triggered: {buy_price} > {take_profit}")
+                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Take profit not triggered: {buy_price} > {take_profit} (diff: {price_diff}, epsilon: {epsilon})")
                 
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error processing order {order.order_id}: {e}", exc_info=True)
@@ -1339,6 +1404,28 @@ async def close_order(
             order_type=close_reason,
             execution_price=execution_price
         )
+
+        # Remove from Redis pending orders if this was a pending order that got triggered
+        # This ensures cleanup when SL/TP triggers on orders that were originally pending
+        try:
+            # Check if this order was in the pending orders Redis list
+            # We need to check all possible pending order types
+            pending_order_types = ['BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP']
+            for pending_type in pending_order_types:
+                try:
+                    await remove_pending_order(
+                        redis_client, 
+                        str(order.order_id), 
+                        order.order_company_name, 
+                        pending_type, 
+                        str(order.order_user_id)
+                    )
+                    logger.info(f"[ORDER_CLOSE] Removed order {order.order_id} from Redis pending orders (type: {pending_type})")
+                except Exception as remove_error:
+                    # This is expected if the order wasn't in Redis for this specific type
+                    pass
+        except Exception as redis_cleanup_error:
+            logger.warning(f"[ORDER_CLOSE] Error during Redis cleanup for order {order.order_id}: {redis_cleanup_error}")
 
         logger.info(f"[ORDER_CLOSE] Successfully closed order {order.order_id} due to {close_reason} with robust margin/wallet logic.")
         logger.info(f"[ORDER_CLOSE] Order details - Net Profit: {order.net_profit}, Commission: {total_commission_for_trade}, Swap: {swap_amount}")

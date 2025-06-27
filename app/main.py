@@ -19,6 +19,11 @@ from redis.asyncio import Redis
 
 import logging
 
+# --- Trading Configuration ---
+# Epsilon value for SL/TP accuracy (floating-point precision tolerance)
+# For forex (5 decimal places), use 0.00001 as tolerance
+SLTP_EPSILON = Decimal('0.00001')
+
 # --- APScheduler Imports ---
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -153,6 +158,7 @@ print(f"---------------------------")
 
 # Log application startup
 orders_logger.info("Application starting up - Orders logging initialized")
+orders_logger.info(f"SL/TP Epsilon accuracy configured: {SLTP_EPSILON}")
 
 # --- Scheduled Job Functions ---
 async def daily_swap_charge_job():
@@ -582,14 +588,20 @@ async def startup_event():
             pending_orders_task.add_done_callback(background_tasks.discard)
             logger.info("Pending order checker background task started")
             
-            # Start the SL/TP checker task (triggered by market data updates)
+            # Start the SL/TP checker background task
             sltp_task = asyncio.create_task(run_sltp_checker_on_market_update())
             background_tasks.add(sltp_task)
             sltp_task.add_done_callback(background_tasks.discard)
-            logger.info("SL/TP checker task started (triggered by market updates)")
+            logger.info("SL/TP checker background task started")
+            
+            # Start the Redis cleanup background task
+            redis_cleanup_task = asyncio.create_task(cleanup_orphaned_redis_orders())
+            background_tasks.add(redis_cleanup_task)
+            redis_cleanup_task.add_done_callback(background_tasks.discard)
+            logger.info("Redis cleanup background task started")
             
         except Exception as e:
-            logger.error(f"Error starting Redis-dependent tasks: {e}", exc_info=True)
+            logger.error(f"Error starting background tasks: {e}", exc_info=True)
     else:
         logger.warning("Redis is not available - skipping Redis-dependent tasks")
     
@@ -812,3 +824,103 @@ async def run_sltp_checker_on_market_update():
     finally:
         await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
         await pubsub.close()
+
+# --- Redis Cleanup Function ---
+async def cleanup_orphaned_redis_orders():
+    """
+    Periodically clean up orphaned orders in Redis that no longer exist in the database.
+    This ensures Redis stays in sync with the database.
+    """
+    logger = logging.getLogger("redis_cleanup")
+    logger.setLevel(logging.INFO)
+    
+    # Add file handler for Redis cleanup logging
+    redis_cleanup_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'redis_cleanup.log')
+    os.makedirs(os.path.dirname(redis_cleanup_log_path), exist_ok=True)
+    file_handler = logging.FileHandler(redis_cleanup_log_path)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(file_handler)
+    
+    while True:
+        try:
+            if not global_redis_client_instance:
+                logger.warning("Redis client not available, skipping cleanup")
+                await asyncio.sleep(60)  # Wait 1 minute before retry
+                continue
+                
+            async with AsyncSessionLocal() as db:
+                logger.info("[REDIS_CLEANUP] Starting orphaned orders cleanup")
+                
+                # Get all pending orders from Redis
+                from app.services.pending_orders import get_all_pending_orders_from_redis
+                pending_orders = await get_all_pending_orders_from_redis(global_redis_client_instance)
+                
+                if not pending_orders:
+                    logger.info("[REDIS_CLEANUP] No pending orders found in Redis")
+                    await asyncio.sleep(300)  # Wait 5 minutes before next check
+                    continue
+                
+                logger.info(f"[REDIS_CLEANUP] Found {len(pending_orders)} pending orders in Redis to verify")
+                
+                # Check each pending order against the database
+                from app.crud.crud_order import get_order_model
+                cleaned_count = 0
+                
+                for order_data in pending_orders:
+                    try:
+                        order_id = order_data.get('order_id')
+                        user_id = order_data.get('order_user_id')
+                        user_type = order_data.get('user_type', 'live')
+                        symbol = order_data.get('order_company_name')
+                        order_type = order_data.get('order_type')
+                        
+                        if not all([order_id, user_id, symbol, order_type]):
+                            logger.warning(f"[REDIS_CLEANUP] Incomplete order data: {order_data}")
+                            continue
+                        
+                        # Get the order model
+                        order_model = get_order_model(user_type)
+                        
+                        # Check if order exists in database
+                        from app.crud.crud_order import get_order_by_id
+                        db_order = await get_order_by_id(db, order_id, order_model)
+                        
+                        if not db_order:
+                            # Order doesn't exist in database, remove from Redis
+                            logger.warning(f"[REDIS_CLEANUP] Order {order_id} not found in database, removing from Redis")
+                            from app.services.pending_orders import remove_pending_order
+                            await remove_pending_order(
+                                global_redis_client_instance,
+                                str(order_id),
+                                symbol,
+                                order_type,
+                                str(user_id)
+                            )
+                            cleaned_count += 1
+                        elif db_order.order_status != 'PENDING':
+                            # Order exists but is no longer pending, remove from Redis
+                            logger.warning(f"[REDIS_CLEANUP] Order {order_id} status is {db_order.order_status}, removing from Redis")
+                            from app.services.pending_orders import remove_pending_order
+                            await remove_pending_order(
+                                global_redis_client_instance,
+                                str(order_id),
+                                symbol,
+                                order_type,
+                                str(user_id)
+                            )
+                            cleaned_count += 1
+                            
+                    except Exception as e:
+                        logger.error(f"[REDIS_CLEANUP] Error checking order {order_data.get('order_id', 'unknown')}: {e}")
+                        continue
+                
+                if cleaned_count > 0:
+                    logger.info(f"[REDIS_CLEANUP] Cleaned up {cleaned_count} orphaned orders from Redis")
+                else:
+                    logger.info("[REDIS_CLEANUP] No orphaned orders found")
+                    
+        except Exception as e:
+            logger.error(f"[REDIS_CLEANUP] Error in cleanup process: {e}", exc_info=True)
+        
+        # Wait 5 minutes before next cleanup
+        await asyncio.sleep(300)
