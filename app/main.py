@@ -574,11 +574,12 @@ async def startup_event():
             redis_task.add_done_callback(background_tasks.discard)
             logger.info("Redis publisher background task started")
             
-            # Start the stop loss/take profit checker background task
-            stoploss_task = asyncio.create_task(run_stoploss_takeprofit_checker())
-            background_tasks.add(stoploss_task)
-            stoploss_task.add_done_callback(background_tasks.discard)
-            logger.info("Stop loss/take profit checker background task started")
+            # Start the pending order checker background task
+            pending_orders_task = asyncio.create_task(run_pending_order_checker())
+            background_tasks.add(pending_orders_task)
+            pending_orders_task.add_done_callback(background_tasks.discard)
+            logger.info("Pending order checker background task started")
+            
         except Exception as e:
             logger.error(f"Error starting Redis-dependent tasks: {e}", exc_info=True)
     else:
@@ -684,7 +685,23 @@ async def run_stoploss_takeprofit_checker():
 async def run_pending_order_checker():
     """
     Continuously runs the pending order and SL/TP checker in the background.
+    Processes market data updates and checks for pending orders and SL/TP conditions.
     """
+    logger = logging.getLogger("pending_orders")
+    logger.setLevel(logging.INFO)
+    
+    # Add file handler for pending orders logging
+    pending_orders_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'pending_orders.log')
+    os.makedirs(os.path.dirname(pending_orders_log_path), exist_ok=True)
+    file_handler = logging.FileHandler(pending_orders_log_path)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(file_handler)
+    
+    # Add file handler for SL/TP logging
+    sltp_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'sltp.log')
+    sltp_handler = logging.FileHandler(sltp_log_path)
+    sltp_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(sltp_handler)
 
     # Give the application a moment to initialize everything else
     await asyncio.sleep(5) 
@@ -694,12 +711,57 @@ async def run_pending_order_checker():
         try:
             async with AsyncSessionLocal() as db:
                 if global_redis_client_instance:
-                    logger.debug("Executing check_and_trigger_stoploss_takeprofit...")
-                    await check_and_trigger_stoploss_takeprofit(db, global_redis_client_instance)
+                    # Get all group settings to process each symbol
+                    from app.crud import group as crud_group
+                    all_groups = await crud_group.get_all_groups(db)
+                    
+                    for group in all_groups:
+                        group_name = group.name
+                        group_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
+                        
+                        if not group_settings:
+                            continue
+                            
+                        for symbol in group_settings.keys():
+                            try:
+                                # Get adjusted market prices for the symbol
+                                adjusted_prices = await get_adjusted_market_price_cache(global_redis_client_instance, group_name, symbol)
+                                
+                                if adjusted_prices:
+                                    logger.info(f"[PENDING_ORDER_CHECK] Processing symbol {symbol} for group {group_name} with prices: {adjusted_prices}")
+                                    
+                                    # Check pending orders
+                                    from app.api.v1.endpoints.market_data_ws import check_and_trigger_pending_orders
+                                    await check_and_trigger_pending_orders(
+                                        redis_client=global_redis_client_instance,
+                                        db=db,
+                                        symbol=symbol,
+                                        adjusted_prices=adjusted_prices,
+                                        group_name=group_name
+                                    )
+                                    
+                                    # Check SL/TP orders
+                                    from app.api.v1.endpoints.market_data_ws import check_and_trigger_sl_tp_orders
+                                    await check_and_trigger_sl_tp_orders(
+                                        redis_client=global_redis_client_instance,
+                                        db=db,
+                                        symbol=symbol,
+                                        adjusted_prices=adjusted_prices,
+                                        group_name=group_name
+                                    )
+                                    
+                            except Exception as symbol_error:
+                                logger.error(f"Error processing symbol {symbol}: {symbol_error}", exc_info=True)
+                                continue
                 else:
                     logger.warning("Pending order checker: Global Redis client not available, skipping run.")
+                    await asyncio.sleep(5)  # Wait longer if Redis is not available
+                    continue
+                    
         except Exception as e:
             logger.error(f"Error in pending order checker loop: {e}", exc_info=True)
+            await asyncio.sleep(5)  # Wait longer if there was an error
+            continue
         
-        # Wait for 1 second before the next check to avoid overloading the system
+        # Wait for a short time before the next check
         await asyncio.sleep(1)

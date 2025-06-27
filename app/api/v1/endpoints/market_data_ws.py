@@ -224,13 +224,7 @@ async def _get_full_portfolio_details(
     return account_data_payload
 
 
-async def check_and_trigger_pending_orders(
-    redis_client: Redis,
-    db: AsyncSession,
-    symbol: str,
-    adjusted_prices: Dict[str, Any],
-    group_name: str
-):
+async def check_and_trigger_pending_orders(redis_client, db, symbol, adjusted_prices, group_name):
     """
     Check if any pending orders should be triggered based on current market prices.
     This is called when market data updates are received.
@@ -468,24 +462,6 @@ async def per_connection_redis_listener(
                         
                         # Update the all_symbols_cache with new data
                         all_symbols_cache.update(adjusted_prices)
-                        
-                        # Check and trigger pending orders based on the updated prices
-                        for symbol, prices in adjusted_prices.items():
-                            await check_and_trigger_pending_orders(
-                                redis_client=redis_client,
-                                db=db,
-                                symbol=symbol,
-                                adjusted_prices=prices,
-                                group_name=group_name
-                            )
-                            # --- Add SL/TP trigger check ---
-                            await check_and_trigger_sl_tp_orders(
-                                redis_client=redis_client,
-                                db=db,
-                                symbol=symbol,
-                                adjusted_prices=prices,
-                                group_name=group_name
-                            )
                         
                         # Update dynamic portfolio data
                         await process_portfolio_update(
