@@ -119,6 +119,32 @@ async def get_all_system_open_orders(db: AsyncSession):
     )
     return result.scalars().all()
 
+# Get all open orders for both live and demo users
+async def get_all_open_orders(db: AsyncSession):
+    """
+    Get all open orders for both live and demo users.
+    Returns a tuple of (live_orders, demo_orders).
+    """
+    orders_crud_logger.debug("[get_all_open_orders] Fetching all open orders for both live and demo users")
+    
+    try:
+        # Get live user orders
+        live_orders_stmt = select(UserOrder).filter(UserOrder.order_status == 'OPEN')
+        live_orders_result = await db.execute(live_orders_stmt)
+        live_orders = live_orders_result.scalars().all()
+        orders_crud_logger.debug(f"[get_all_open_orders] Found {len(live_orders)} live open orders")
+        
+        # Get demo user orders
+        demo_orders_stmt = select(DemoUserOrder).filter(DemoUserOrder.order_status == 'OPEN')
+        demo_orders_result = await db.execute(demo_orders_stmt)
+        demo_orders = demo_orders_result.scalars().all()
+        orders_crud_logger.debug(f"[get_all_open_orders] Found {len(demo_orders)} demo open orders")
+        
+        return live_orders, demo_orders
+    except Exception as e:
+        orders_crud_logger.error(f"[get_all_open_orders] Error getting all open orders: {str(e)}", exc_info=True)
+        return [], []
+
 # Get open and pending orders
 async def get_open_and_pending_orders_by_user_id_and_symbol(
     db: AsyncSession, user_id: int, symbol: str, order_model: Type[UserOrder | DemoUserOrder]

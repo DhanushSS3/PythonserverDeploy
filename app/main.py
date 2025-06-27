@@ -36,7 +36,9 @@ from app.core.cache import (
     get_adjusted_market_price_cache, 
     set_user_dynamic_portfolio_cache,
     get_last_known_price,
-    publish_order_update
+    publish_order_update,
+    REDIS_MARKET_DATA_CHANNEL,
+    decode_decimal
 )
 from app.crud import crud_order, user as crud_user
 
@@ -580,6 +582,12 @@ async def startup_event():
             pending_orders_task.add_done_callback(background_tasks.discard)
             logger.info("Pending order checker background task started")
             
+            # Start the SL/TP checker task (triggered by market data updates)
+            sltp_task = asyncio.create_task(run_sltp_checker_on_market_update())
+            background_tasks.add(sltp_task)
+            sltp_task.add_done_callback(background_tasks.discard)
+            logger.info("SL/TP checker task started (triggered by market updates)")
+            
         except Exception as e:
             logger.error(f"Error starting Redis-dependent tasks: {e}", exc_info=True)
     else:
@@ -684,8 +692,8 @@ async def run_stoploss_takeprofit_checker():
 # --- New Pending Order Checker Task ---
 async def run_pending_order_checker():
     """
-    Continuously runs the pending order and SL/TP checker in the background.
-    Processes market data updates and checks for pending orders and SL/TP conditions.
+    Continuously runs the pending order checker in the background.
+    SL/TP checks are now handled separately via market data updates.
     """
     logger = logging.getLogger("pending_orders")
     logger.setLevel(logging.INFO)
@@ -696,32 +704,31 @@ async def run_pending_order_checker():
     file_handler = logging.FileHandler(pending_orders_log_path)
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(file_handler)
-    
-    # Add file handler for SL/TP logging
-    sltp_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'sltp.log')
-    sltp_handler = logging.FileHandler(sltp_log_path)
-    sltp_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(sltp_handler)
 
     # Give the application a moment to initialize everything else
     await asyncio.sleep(5) 
-    logger.info("Starting the pending order and SL/TP checker background task.")
+    logger.info("Starting the pending order checker background task.")
     
     while True:
         try:
             async with AsyncSessionLocal() as db:
                 if global_redis_client_instance:
+                    # Process pending orders only (SL/TP is handled by market data updates)
                     # Get all group settings to process each symbol
                     from app.crud import group as crud_group
-                    all_groups = await crud_group.get_all_groups(db)
+                    all_groups = await crud_group.get_groups(db, skip=0, limit=1000)  # Get all groups with a high limit
+                    logger.info(f"Found {len(all_groups)} groups to process for pending orders")
                     
                     for group in all_groups:
                         group_name = group.name
                         group_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
                         
                         if not group_settings:
+                            logger.warning(f"No settings found for group {group_name}, skipping")
                             continue
                             
+                        logger.info(f"Processing group {group_name} with {len(group_settings)} symbols")
+                        
                         for symbol in group_settings.keys():
                             try:
                                 # Get adjusted market prices for the symbol
@@ -739,16 +746,8 @@ async def run_pending_order_checker():
                                         adjusted_prices=adjusted_prices,
                                         group_name=group_name
                                     )
-                                    
-                                    # Check SL/TP orders
-                                    from app.api.v1.endpoints.market_data_ws import check_and_trigger_sl_tp_orders
-                                    await check_and_trigger_sl_tp_orders(
-                                        redis_client=global_redis_client_instance,
-                                        db=db,
-                                        symbol=symbol,
-                                        adjusted_prices=adjusted_prices,
-                                        group_name=group_name
-                                    )
+                                else:
+                                    logger.warning(f"No adjusted prices found for symbol {symbol} in group {group_name}")
                                     
                             except Exception as symbol_error:
                                 logger.error(f"Error processing symbol {symbol}: {symbol_error}", exc_info=True)
@@ -765,3 +764,51 @@ async def run_pending_order_checker():
         
         # Wait for a short time before the next check
         await asyncio.sleep(1)
+
+# --- New SL/TP Checker Task (triggered by market data updates) ---
+async def run_sltp_checker_on_market_update():
+    """
+    SL/TP checker that runs only when market data updates are received.
+    This ensures SL/TP checks happen on every price tick.
+    """
+    logger = logging.getLogger("sltp")
+    logger.setLevel(logging.INFO)
+    
+    # Add file handler for SL/TP logging
+    sltp_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'sltp.log')
+    sltp_handler = logging.FileHandler(sltp_log_path)
+    sltp_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(sltp_handler)
+    logger.propagate = False
+
+    # Give the application a moment to initialize everything else
+    await asyncio.sleep(5) 
+    logger.info("Starting the SL/TP checker task (triggered by market updates).")
+    
+    # Subscribe to market data updates
+    pubsub = global_redis_client_instance.pubsub()
+    await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
+    
+    try:
+        while True:
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if message is None:
+                continue
+                
+            try:
+                message_data = json.loads(message['data'], object_hook=decode_decimal)
+                if message_data.get("type") == "market_data_update":
+                    logger.info("Market data update received, triggering SL/TP check")
+                    
+                    # Run SL/TP check with fresh database session
+                    async with AsyncSessionLocal() as db:
+                        await check_and_trigger_stoploss_takeprofit(db, global_redis_client_instance)
+                        
+            except Exception as e:
+                logger.error(f"Error processing market data for SL/TP check: {e}", exc_info=True)
+                
+    except Exception as e:
+        logger.error(f"Error in SL/TP checker task: {e}", exc_info=True)
+    finally:
+        await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
+        await pubsub.close()

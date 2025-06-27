@@ -39,7 +39,7 @@ from app.services.portfolio_calculator import calculate_user_portfolio, _convert
 from app.core.firebase import send_order_to_firebase, get_latest_market_data
 from app.database.models import User, DemoUser, UserOrder, DemoUserOrder, ExternalSymbolInfo, Wallet
 from app.crud import crud_order
-from app.crud.user import update_user_margin, get_user_by_id_with_lock, get_demo_user_by_id_with_lock
+from app.crud.user import update_user_margin, get_user_by_id, get_demo_user_by_id
 from app.crud.crud_order import get_open_orders_by_user_id_and_symbol, get_order_model
 from app.schemas.order import PendingOrderPlacementRequest, OrderPlacementRequest
 from app.schemas.wallet import WalletCreate
@@ -780,10 +780,10 @@ async def check_and_trigger_stoploss_takeprofit(
 ) -> None:
     """
     Check all open orders for stop loss and take profit conditions.
-    This function is called by the background task.
+    This function is called by the background task triggered by market data updates.
     """
     logger = logging.getLogger("sltp")
-    logger.info("[SLTP_CHECK] Starting SL/TP check for all open orders")
+    logger.info("[SLTP_CHECK] Starting SL/TP check triggered by market data update")
     
     try:
         # Get all open orders for both live and demo users
@@ -807,6 +807,8 @@ async def check_and_trigger_stoploss_takeprofit(
                 await process_order_stoploss_takeprofit(db, redis_client, order, 'demo')
             except Exception as e:
                 logger.error(f"[SLTP_CHECK] Error processing demo order {order.order_id}: {e}", exc_info=True)
+        
+        logger.info("[SLTP_CHECK] Completed SL/TP check cycle")
                 
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error in check_and_trigger_stoploss_takeprofit: {e}", exc_info=True)
@@ -832,7 +834,7 @@ async def process_order_stoploss_takeprofit(
         # Get user's group name
         if user_type == 'live':
             from app.crud.user import get_user_by_id
-            user = await get_user_by_id(db, user_id)
+            user = await get_user_by_id(db, user_id, user_type='live')  # Add user_type parameter
         else:
             from app.crud.user import get_demo_user_by_id
             user = await get_demo_user_by_id(db, user_id)
@@ -842,34 +844,57 @@ async def process_order_stoploss_takeprofit(
             return
             
         group_name = user.group_name
-        
+        if not group_name:
+            logger.error(f"[SLTP_CHECK] No group name found for user {user_id}")
+            return
+            
         # Get adjusted market price
         adjusted_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
         if not adjusted_price:
             logger.warning(f"[SLTP_CHECK] No adjusted price available for {symbol} in group {group_name}")
             return
             
-        logger.info(f"[SLTP_CHECK] Order {order.order_id} - Current adjusted price: {adjusted_price}")
+        # Convert prices to Decimal for accurate comparison
+        buy_price = Decimal(str(adjusted_price.get('buy', '0')))
+        sell_price = Decimal(str(adjusted_price.get('sell', '0')))
+        
+        logger.info(f"[SLTP_CHECK] Order {order.order_id} - Current prices: Buy={buy_price}, Sell={sell_price}")
         
         # Check stop loss
         if order.stop_loss and order.stop_loss > 0:
-            logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking stop loss: {order.stop_loss}")
-            if order.order_type == 'BUY' and adjusted_price['sell'] <= order.stop_loss:
-                logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order.order_id} at {adjusted_price['sell']} <= {order.stop_loss}")
-                await close_order(db, redis_client, order, adjusted_price['sell'], 'STOP_LOSS', user_type)
-            elif order.order_type == 'SELL' and adjusted_price['buy'] >= order.stop_loss:
-                logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order.order_id} at {adjusted_price['buy']} >= {order.stop_loss}")
-                await close_order(db, redis_client, order, adjusted_price['buy'], 'STOP_LOSS', user_type)
+            stop_loss = Decimal(str(order.stop_loss))
+            logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking stop loss: {stop_loss}")
+            
+            if order.order_type == 'BUY':
+                if sell_price <= stop_loss:
+                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order.order_id} at {sell_price} <= {stop_loss}")
+                    await close_order(db, redis_client, order, sell_price, 'STOP_LOSS', user_type)
+                else:
+                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Stop loss not triggered: {sell_price} > {stop_loss}")
+            elif order.order_type == 'SELL':
+                if buy_price >= stop_loss:
+                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order.order_id} at {buy_price} >= {stop_loss}")
+                    await close_order(db, redis_client, order, buy_price, 'STOP_LOSS', user_type)
+                else:
+                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Stop loss not triggered: {buy_price} < {stop_loss}")
                 
         # Check take profit
         if order.take_profit and order.take_profit > 0:
-            logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking take profit: {order.take_profit}")
-            if order.order_type == 'BUY' and adjusted_price['sell'] >= order.take_profit:
-                logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order.order_id} at {adjusted_price['sell']} >= {order.take_profit}")
-                await close_order(db, redis_client, order, adjusted_price['sell'], 'TAKE_PROFIT', user_type)
-            elif order.order_type == 'SELL' and adjusted_price['buy'] <= order.take_profit:
-                logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order.order_id} at {adjusted_price['buy']} <= {order.take_profit}")
-                await close_order(db, redis_client, order, adjusted_price['buy'], 'TAKE_PROFIT', user_type)
+            take_profit = Decimal(str(order.take_profit))
+            logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking take profit: {take_profit}")
+            
+            if order.order_type == 'BUY':
+                if sell_price >= take_profit:
+                    logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order.order_id} at {sell_price} >= {take_profit}")
+                    await close_order(db, redis_client, order, sell_price, 'TAKE_PROFIT', user_type)
+                else:
+                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Take profit not triggered: {sell_price} < {take_profit}")
+            elif order.order_type == 'SELL':
+                if buy_price <= take_profit:
+                    logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order.order_id} at {buy_price} <= {take_profit}")
+                    await close_order(db, redis_client, order, buy_price, 'TAKE_PROFIT', user_type)
+                else:
+                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Take profit not triggered: {buy_price} > {take_profit}")
                 
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error processing order {order.order_id}: {e}", exc_info=True)
@@ -1084,5 +1109,244 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
     except Exception as e:
         logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
         return {"open_orders": [], "pending_orders": [], "updated_at": datetime.now().isoformat()}
+
+async def close_order(
+    db: AsyncSession,
+    redis_client: Redis,
+    order,
+    execution_price: Decimal,
+    close_reason: str,
+    user_type: str
+) -> None:
+    """
+    Close an order with the given execution price and reason.
+    This function includes robust margin calculations, commission handling, and wallet transactions.
+    """
+    logger = logging.getLogger("orders")
+    logger.info(f"[ORDER_CLOSE] Closing {user_type} order {order.order_id} at price {execution_price} due to {close_reason}")
+    
+    try:
+        # Lock user for atomic operations
+        if user_type == 'live':
+            from app.crud.user import get_user_by_id_with_lock
+            db_user_locked = await get_user_by_id_with_lock(db, order.order_user_id)
+        else:
+            from app.crud.user import get_demo_user_by_id_with_lock
+            db_user_locked = await get_demo_user_by_id_with_lock(db, order.order_user_id)
+            
+        if db_user_locked is None:
+            logger.error(f"[ORDER_CLOSE] Could not retrieve and lock user record for user ID: {order.order_user_id}")
+            return
+
+        # Get all open orders for this symbol to recalculate margin
+        from app.crud.crud_order import get_order_model, get_open_orders_by_user_id_and_symbol, update_order_with_tracking
+        order_model_class = get_order_model(user_type)
+        all_open_orders_for_symbol = await get_open_orders_by_user_id_and_symbol(
+            db=db, user_id=db_user_locked.id, symbol=order.order_company_name, order_model=order_model_class
+        )
+
+        # Calculate margin before closing this order
+        margin_before_recalc_dict = await calculate_total_symbol_margin_contribution(
+            db=db,
+            redis_client=redis_client,
+            user_id=db_user_locked.id,
+            symbol=order.order_company_name,
+            open_positions_for_symbol=all_open_orders_for_symbol,
+            user_type=user_type,
+            order_model=order_model_class
+        )
+        margin_before_recalc = margin_before_recalc_dict["total_margin"]
+        current_overall_margin = Decimal(str(db_user_locked.margin))
+        non_symbol_margin = current_overall_margin - margin_before_recalc
+
+        # Calculate margin after closing this order
+        remaining_orders_for_symbol_after_close = [o for o in all_open_orders_for_symbol if o.order_id != order.order_id]
+        margin_after_symbol_recalc_dict = await calculate_total_symbol_margin_contribution(
+            db=db,
+            redis_client=redis_client,
+            user_id=db_user_locked.id,
+            symbol=order.order_company_name,
+            open_positions_for_symbol=remaining_orders_for_symbol_after_close,
+            user_type=user_type,
+            order_model=order_model_class
+        )
+        margin_after_symbol_recalc = margin_after_symbol_recalc_dict["total_margin"]
+
+        # Update user's margin
+        db_user_locked.margin = max(Decimal(0), (non_symbol_margin + margin_after_symbol_recalc).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+        # Get contract size and profit currency from ExternalSymbolInfo
+        from app.database.models import ExternalSymbolInfo
+        from sqlalchemy.future import select
+        symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(order.order_company_name))
+        symbol_info_result = await db.execute(symbol_info_stmt)
+        ext_symbol_info = symbol_info_result.scalars().first()
+        
+        if not ext_symbol_info or ext_symbol_info.contract_size is None or ext_symbol_info.profit is None:
+            logger.error(f"[ORDER_CLOSE] Missing critical ExternalSymbolInfo for symbol {order.order_company_name}.")
+            return
+
+        contract_size = Decimal(str(ext_symbol_info.contract_size))
+        profit_currency = ext_symbol_info.profit.upper()
+
+        # Get group settings for commission calculation
+        from app.core.cache import get_group_symbol_settings_cache
+        group_settings = await get_group_symbol_settings_cache(redis_client, db_user_locked.group_name, order.order_company_name)
+        if not group_settings:
+            logger.error("[ORDER_CLOSE] Group settings not found for commission calculation.")
+            return
+
+        # Calculate commission
+        commission_type = int(group_settings.get('commision_type', -1))
+        commission_value_type = int(group_settings.get('commision_value_type', -1))
+        commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
+        existing_entry_commission = Decimal(str(order.commission or "0.0"))
+        exit_commission = Decimal("0.0")
+        quantity = Decimal(str(order.order_quantity))
+        close_price = execution_price
+        entry_price = Decimal(str(order.order_price))
+
+        if commission_type in [0, 2]:
+            if commission_value_type == 0:
+                exit_commission = quantity * commission_rate
+            elif commission_value_type == 1:
+                calculated_exit_contract_value = quantity * contract_size * close_price
+                if calculated_exit_contract_value > Decimal("0.0"):
+                    exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
+
+        total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        # Calculate profit/loss
+        if order.order_type == "BUY":
+            profit = (close_price - entry_price) * quantity * contract_size
+        elif order.order_type == "SELL":
+            profit = (entry_price - close_price) * quantity * contract_size
+        else:
+            logger.error("[ORDER_CLOSE] Invalid order type.")
+            return
+
+        # Convert profit to USD if needed
+        profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, order.order_id, "PnL on Close", db=db, redis_client=redis_client)
+        if profit_currency != "USD" and profit_usd == profit:
+            logger.error(f"[ORDER_CLOSE] Order {order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
+            return
+
+        # Generate close_id
+        from app.services.order_processing import generate_unique_10_digit_id
+        close_id = await generate_unique_10_digit_id(db, order_model_class, 'close_id')
+
+        # Update order with close information
+        order.order_status = "CLOSED"
+        order.close_price = close_price
+        order.net_profit = (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        order.swap = order.swap or Decimal("0.0")
+        order.commission = total_commission_for_trade
+        order.close_id = close_id
+        order.close_message = f"Closed automatically due to {close_reason}"
+
+        # Update order with tracking
+        await update_order_with_tracking(
+            db=db,
+            db_order=order,
+            update_fields={
+                "order_status": order.order_status,
+                "close_price": order.close_price,
+                "close_id": order.close_id,
+                "net_profit": order.net_profit,
+                "swap": order.swap,
+                "commission": order.commission,
+                "close_message": order.close_message
+            },
+            user_id=db_user_locked.id,
+            user_type=user_type,
+            action_type=f"AUTO_{close_reason.upper()}_CLOSE"
+        )
+
+        # Update user's wallet balance
+        original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
+        swap_amount = order.swap
+        db_user_locked.wallet_balance = (original_wallet_balance + order.net_profit - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+        # Create wallet transactions
+        from app.database.models import Wallet
+        from app.schemas.wallet import WalletCreate
+        transaction_time = datetime.now(timezone.utc)
+        wallet_common_data = {
+            "symbol": order.order_company_name, 
+            "order_quantity": quantity, 
+            "is_approved": 1, 
+            "order_type": order.order_type, 
+            "transaction_time": transaction_time, 
+            "order_id": order.order_id
+        }
+        
+        if user_type == 'demo':
+            wallet_common_data["demo_user_id"] = db_user_locked.id
+        else:
+            wallet_common_data["user_id"] = db_user_locked.id
+
+        # Add profit/loss transaction
+        if order.net_profit != Decimal("0.0"):
+            transaction_id_profit = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=order.net_profit, description=f"P/L for closing order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_profit))
+
+        # Add commission transaction
+        if total_commission_for_trade > Decimal("0.0"):
+            transaction_id_commission = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for closing order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_commission))
+
+        # Add swap transaction
+        if swap_amount != Decimal("0.0"):
+            transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
+
+        # Commit all changes
+        await db.commit()
+        await db.refresh(order)
+        await db.refresh(db_user_locked)
+
+        # Update user data cache
+        user_type_str = 'demo' if user_type == 'demo' else 'live'
+        user_data_to_cache = {
+            "id": db_user_locked.id,
+            "email": getattr(db_user_locked, 'email', None),
+            "group_name": db_user_locked.group_name,
+            "leverage": db_user_locked.leverage,
+            "user_type": user_type_str,
+            "account_number": getattr(db_user_locked, 'account_number', None),
+            "wallet_balance": db_user_locked.wallet_balance,
+            "margin": db_user_locked.margin,
+            "first_name": getattr(db_user_locked, 'first_name', None),
+            "last_name": getattr(db_user_locked, 'last_name', None),
+            "country": getattr(db_user_locked, 'country', None),
+            "phone_number": getattr(db_user_locked, 'phone_number', None),
+        }
+        await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
+
+        # Update static orders and publish notifications
+        from app.api.v1.endpoints.orders import update_user_static_orders, publish_order_update, publish_user_data_update, publish_market_data_trigger
+        await update_user_static_orders(db_user_locked.id, db, redis_client, user_type_str)
+        await publish_order_update(redis_client, db_user_locked.id)
+        await publish_user_data_update(redis_client, db_user_locked.id)
+        await publish_market_data_trigger(redis_client)
+
+        # Publish order execution notification
+        await publish_order_execution_notification(
+            redis_client=redis_client,
+            user_id=str(order.order_user_id),
+            order_id=str(order.order_id),
+            symbol=order.order_company_name,
+            order_type=close_reason,
+            execution_price=execution_price
+        )
+
+        logger.info(f"[ORDER_CLOSE] Successfully closed order {order.order_id} due to {close_reason} with robust margin/wallet logic.")
+        logger.info(f"[ORDER_CLOSE] Order details - Net Profit: {order.net_profit}, Commission: {total_commission_for_trade}, Swap: {swap_amount}")
+        logger.info(f"[ORDER_CLOSE] User margin updated: {current_overall_margin} -> {db_user_locked.margin}")
+        logger.info(f"[ORDER_CLOSE] User wallet updated: {original_wallet_balance} -> {db_user_locked.wallet_balance}")
+
+    except Exception as e:
+        logger.error(f"[ORDER_CLOSE] Error closing order {order.order_id}: {e}", exc_info=True)
+        raise
 
         
