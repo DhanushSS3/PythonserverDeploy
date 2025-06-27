@@ -18,27 +18,39 @@ router = APIRouter(
     "/my-wallets",
     response_model=List[WalletResponse],
     summary="Get all wallet records of the authenticated user",
-    description="Fetches all wallet transaction records for the currently logged-in user."
+    description="Fetches all wallet transaction records for the currently logged-in user, filtered to show only withdraw and deposit transactions."
 )
 async def get_my_wallets(
     db: AsyncSession = Depends(get_db),
     current_user: User | DemoUser = Depends(get_current_user)
 ):
     """
-    Retrieves all wallet transaction records associated with the logged-in user.
+    Retrieves all wallet transaction records associated with the logged-in user,
+    filtered to show only withdraw and deposit transactions.
     """
     wallet_records = []
     
+    # Define the transaction types to filter for
+    transaction_types = ["withdraw", "deposit"]
+    
     # Check if the current user is a demo user or regular user
     if isinstance(current_user, DemoUser):
-        wallet_records = await get_wallet_records_by_demo_user_id(db=db, demo_user_id=current_user.id)
+        wallet_records = await get_wallet_records_by_demo_user_id(
+            db=db, 
+            demo_user_id=current_user.id,
+            transaction_types=transaction_types
+        )
     else:
-        wallet_records = await get_wallet_records_by_user_id(db=db, user_id=current_user.id)
+        wallet_records = await get_wallet_records_by_user_id(
+            db=db, 
+            user_id=current_user.id,
+            transaction_types=transaction_types
+        )
 
     if not wallet_records:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No wallet records found for this user."
+            detail="No withdraw or deposit wallet records found for this user."
         )
 
     return wallet_records

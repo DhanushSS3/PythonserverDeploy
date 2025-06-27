@@ -36,16 +36,20 @@ from app.database.session import AsyncSessionLocal
 # Import portfolio calculator
 from app.services.portfolio_calculator import calculate_user_portfolio
 from app.core.cache import (
+    set_user_data_cache,
     get_user_data_cache, 
     get_group_symbol_settings_cache, 
     get_adjusted_market_price_cache, 
     set_user_dynamic_portfolio_cache,
     get_last_known_price,
     publish_order_update,
+    publish_user_data_update,
+    publish_market_data_trigger,
     REDIS_MARKET_DATA_CHANNEL,
     decode_decimal
 )
 from app.crud import crud_order, user as crud_user
+from app.core.firebase import send_order_to_firebase
 
 # --- CORS Middleware Import ---
 from fastapi.middleware.cors import CORSMiddleware
@@ -106,9 +110,9 @@ from app.core.security import close_redis_connection, create_service_account_tok
 from app.shared_state import redis_publish_queue
 
 # Import orders logger
-from app.core.logging_config import orders_logger
+from app.core.logging_config import orders_logger, autocutoff_logger
 from app.services.order_processing import generate_unique_10_digit_id
-from app.database.models import UserOrder
+from app.database.models import UserOrder, DemoUser
 
 # Import stop loss and take profit checker
 from app.services.pending_orders import check_and_trigger_stoploss_takeprofit
@@ -293,10 +297,10 @@ async def update_all_users_dynamic_portfolio():
                     # Check for margin call conditions
                     margin_level = Decimal(portfolio_metrics.get("margin_level", "0.0"))
                     if margin_level > Decimal('0') and margin_level < margin_cutoff_threshold:
-                        logger.warning(f"CRITICAL: User {user_id} margin level {margin_level}% below cutoff threshold {margin_cutoff_threshold}%. Initiating auto-cutoff.")
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} margin level {margin_level}% below cutoff threshold {margin_cutoff_threshold}%. Initiating auto-cutoff.")
                         await handle_margin_cutoff(db, global_redis_client_instance, user_id, user_type, margin_level)
                     elif portfolio_metrics.get("margin_call", False):
-                        logger.warning(f"User {user_id} has margin call condition: margin level {margin_level}%")
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} has margin call condition: margin level {margin_level}%")
                     
                     # After portfolio update or order execution, log details if relevant
                     orders_logger.info(f"[PENDING_ORDER_EXECUTION][PORTFOLIO_UPDATE] user_id={user_id}, user_type={user_type}, group_name={group_name}, free_margin={dynamic_portfolio_data.get('free_margin', 'N/A')}, margin_level={dynamic_portfolio_data.get('margin_level', 'N/A')}, balance={dynamic_portfolio_data.get('balance', 'N/A')}, equity={dynamic_portfolio_data.get('equity', 'N/A')}")
@@ -317,7 +321,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
     - For Barclays users, it sends close requests to the service provider via Firebase.
     """
     try:
-        logger.warning(f"AUTO-CUTOFF: Initiating for user {user_id} ({user_type}) with margin level {margin_level}%")
+        autocutoff_logger.warning(f"[AUTO-CUTOFF] Initiating for user {user_id} ({user_type}) with margin level {margin_level}%")
 
         # Determine if the user is a Barclays live user
         is_barclays_live_user = False
@@ -332,22 +336,22 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
             user_for_cutoff = await crud_user.get_demo_user_by_id(db, user_id)
 
         if not user_for_cutoff:
-            logger.error(f"AUTO-CUTOFF: Could not find user {user_id} to perform cutoff.")
+            autocutoff_logger.error(f"[AUTO-CUTOFF] Could not find user {user_id} to perform cutoff.")
             return
 
         order_model = crud_order.get_order_model(user_type)
         open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
 
         if not open_orders:
-            logger.info(f"No open positions found for user {user_id} during auto-cutoff.")
+            autocutoff_logger.info(f"[AUTO-CUTOFF] No open positions found for user {user_id} during auto-cutoff.")
             return
 
-        logger.warning(f"AUTO-CUTOFF: Found {len(open_orders)} positions for user {user_id}. Barclays user: {is_barclays_live_user}")
+        autocutoff_logger.warning(f"[AUTO-CUTOFF] Found {len(open_orders)} positions for user {user_id}. Barclays user: {is_barclays_live_user}")
 
         # --- Conditional logic based on user type ---
         if is_barclays_live_user:
             # For Barclays users, send close requests to Firebase
-            logger.info(f"AUTO-CUTOFF: Processing Barclays user {user_id}. Sending close requests to Firebase.")
+            autocutoff_logger.info(f"[AUTO-CUTOFF] Processing Barclays user {user_id}. Sending close requests to Firebase.")
             for order in open_orders:
                 try:
                     close_id = await generate_unique_10_digit_id(db, UserOrder, 'close_id')
@@ -378,20 +382,56 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     )
                     await db.commit()
 
-                    logger.info(f"AUTO-CUTOFF: Close request sent for Barclays order {order.order_id} with close_id {close_id}.")
+                    autocutoff_logger.info(f"[AUTO-CUTOFF] Close request sent for Barclays order {order.order_id} with close_id {close_id}.")
 
                 except Exception as e:
-                    logger.error(f"AUTO-CUTOFF: Error sending close request for Barclays order {order.order_id}: {e}", exc_info=True)
+                    autocutoff_logger.error(f"[AUTO-CUTOFF] Error sending close request for Barclays order {order.order_id}: {e}", exc_info=True)
             
             # After sending all requests, publish an update to notify the user's frontend.
             await publish_order_update(redis_client, user_id)
-            logger.warning(f"AUTO-CUTOFF: Finished sending close requests for Barclays user {user_id}.")
+            
+            # Update user data cache for Barclays users as well
+            user_type_str = 'live'  # Barclays users are always live users
+            user_data_to_cache = {
+                "id": user_for_cutoff.id,
+                "email": getattr(user_for_cutoff, 'email', None),
+                "group_name": user_for_cutoff.group_name,
+                "leverage": user_for_cutoff.leverage,
+                "user_type": user_type_str,
+                "account_number": getattr(user_for_cutoff, 'account_number', None),
+                "wallet_balance": user_for_cutoff.wallet_balance,
+                "margin": user_for_cutoff.margin,
+                "first_name": getattr(user_for_cutoff, 'first_name', None),
+                "last_name": getattr(user_for_cutoff, 'last_name', None),
+                "country": getattr(user_for_cutoff, 'country', None),
+                "phone_number": getattr(user_for_cutoff, 'phone_number', None)
+            }
+            await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+            
+            # Update static orders and publish notifications
+            from app.api.v1.endpoints.orders import update_user_static_orders
+            await update_user_static_orders(user_id, db, redis_client, user_type_str)
+            await publish_user_data_update(redis_client, user_id)
+            await publish_market_data_trigger(redis_client)
+            
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] Finished sending close requests for Barclays user {user_id}.")
 
         else:
             # For non-Barclays users (live or demo), close orders directly
-            logger.info(f"AUTO-CUTOFF: Processing non-Barclays user {user_id}. Closing orders locally.")
-            from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
+            autocutoff_logger.info(f"[AUTO-CUTOFF] Processing non-Barclays user {user_id}. Closing orders locally.")
             
+            # Import necessary functions for proper order closing
+            from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
+            from app.services.portfolio_calculator import _convert_to_usd
+            from app.services.order_processing import calculate_total_symbol_margin_contribution
+            from app.database.models import ExternalSymbolInfo
+            from sqlalchemy import select
+            from app.schemas.wallet import WalletCreate
+            from app.crud.wallet import generate_unique_10_digit_id
+            from app.database.models import Wallet
+            from decimal import ROUND_HALF_UP
+            import datetime
+
             total_net_profit = Decimal('0.0')
 
             for order in open_orders:
@@ -400,7 +440,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     last_price = await get_last_known_price(redis_client, symbol)
                     
                     if not last_price:
-                        logger.error(f"Cannot close position {order.order_id} - no price available for {symbol}")
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Cannot close position {order.order_id} - no price available for {symbol}")
                         continue
 
                     # Determine close price based on order type
@@ -408,46 +448,180 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     close_price = Decimal(str(close_price_str))
 
                     if not close_price or close_price <= 0:
-                        logger.error(f"Cannot close position {order.order_id} - invalid price {close_price} for {symbol}")
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Cannot close position {order.order_id} - invalid price {close_price} for {symbol}")
                         continue
                     
-                    # Simplified P/L calculation for cutoff
-                    entry_price = order.order_price
-                    ext_symbol_info = await get_external_symbol_info_by_symbol(db, symbol)
-                    contract_size = Decimal(str(ext_symbol_info.contract_size)) if ext_symbol_info else Decimal('100000')
-                    quantity = order.order_quantity
+                    # Generate close_id
+                    close_id = await generate_unique_10_digit_id(db, order_model, 'close_id')
                     
-                    price_diff = (close_price - entry_price) if order.order_type == 'BUY' else (entry_price - close_price)
+                    # Get order details
+                    quantity = Decimal(str(order.order_quantity))
+                    entry_price = Decimal(str(order.order_price))
+                    order_type_db = order.order_type.upper()
                     
-                    # Note: This simplified P/L does not account for commission or currency conversion.
-                    # For a simple cutoff, this is acceptable. The main goal is liquidation.
-                    net_profit = price_diff * quantity * contract_size
+                    # Get external symbol info for contract size and profit currency
+                    symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(symbol))
+                    symbol_info_result = await db.execute(symbol_info_stmt)
+                    ext_symbol_info = symbol_info_result.scalars().first()
+                    
+                    if not ext_symbol_info or ext_symbol_info.contract_size is None or ext_symbol_info.profit is None:
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Missing critical ExternalSymbolInfo for symbol {symbol}. Skipping order {order.order_id}")
+                        continue
+                    
+                    contract_size = Decimal(str(ext_symbol_info.contract_size))
+                    profit_currency = ext_symbol_info.profit.upper()
+                    
+                    # Get group settings for commission calculation
+                    group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name, symbol)
+                    if not group_settings:
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Group settings not found for symbol {symbol}. Skipping order {order.order_id}")
+                        continue
+                    
+                    # Calculate commission
+                    commission_type = int(group_settings.get('commision_type', -1))
+                    commission_value_type = int(group_settings.get('commision_value_type', -1))
+                    commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
+                    
+                    # Get existing entry commission from the order
+                    existing_entry_commission = Decimal(str(order.commission or "0.0"))
+                    
+                    # Calculate exit commission if applicable
+                    exit_commission = Decimal("0.0")
+                    if commission_type in [0, 2]:  # "Every Trade" or "Out"
+                        if commission_value_type == 0:  # Per lot
+                            exit_commission = quantity * commission_rate
+                        elif commission_value_type == 1:  # Percent of price
+                            calculated_exit_contract_value = quantity * contract_size * close_price
+                            if calculated_exit_contract_value > Decimal("0.0"):
+                                exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
+                    
+                    # Total commission is existing entry commission plus exit commission
+                    total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    
+                    # Calculate profit/loss
+                    if order_type_db == "BUY":
+                        profit = (close_price - entry_price) * quantity * contract_size
+                    elif order_type_db == "SELL":
+                        profit = (entry_price - close_price) * quantity * contract_size
+                    else:
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Invalid order type {order_type_db} for order {order.order_id}")
+                        continue
+                    
+                    # Convert profit to USD
+                    profit_usd = await _convert_to_usd(profit, profit_currency, user_for_cutoff.id, order.order_id, "PnL on Auto-Cutoff", db=db, redis_client=redis_client)
+                    if profit_currency != "USD" and profit_usd == profit:
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Order {order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
+                        continue
+                    
+                    # Calculate net profit (profit_usd - commission)
+                    net_profit = (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    
+                    # Get swap amount
+                    swap_amount = order.swap or Decimal("0.0")
                     
                     # Update order fields for closure
                     order.close_price = close_price
                     order.order_status = 'CLOSED'
                     order.close_message = f"Auto-cutoff: margin level {margin_level}%"
                     order.net_profit = net_profit
-                    total_net_profit += net_profit
+                    order.commission = total_commission_for_trade
+                    order.close_id = close_id
+                    order.swap = swap_amount
                     
-                    logger.info(f"AUTO-CUTOFF: Closing local order {order.order_id} with P/L: {net_profit}")
+                    # Add to total net profit (including swap deduction)
+                    total_net_profit += (net_profit - swap_amount)
+                    
+                    # Create wallet transactions
+                    transaction_time = datetime.datetime.now(datetime.timezone.utc)
+                    wallet_common_data = {
+                        "symbol": symbol,
+                        "order_quantity": quantity,
+                        "is_approved": 1,
+                        "order_type": order.order_type,
+                        "transaction_time": transaction_time,
+                        "order_id": order.order_id
+                    }
+                    
+                    if isinstance(user_for_cutoff, DemoUser):
+                        wallet_common_data["demo_user_id"] = user_for_cutoff.id
+                    else:
+                        wallet_common_data["user_id"] = user_for_cutoff.id
+                    
+                    # Add profit/loss transaction
+                    if net_profit != Decimal("0.0"):
+                        transaction_id_profit = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=net_profit, description=f"P/L for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_profit))
+                    
+                    # Add commission transaction
+                    if total_commission_for_trade > Decimal("0.0"):
+                        transaction_id_commission = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_commission))
+                    
+                    # Add swap transaction
+                    if swap_amount != Decimal("0.0"):
+                        transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
+                    
+                    autocutoff_logger.info(f"[AUTO-CUTOFF] Closing local order {order.order_id} with P/L: {net_profit}, Commission: {total_commission_for_trade}, Swap: {swap_amount}")
 
                 except Exception as e:
-                    logger.error(f"Error processing local closure for order {order.order_id}: {e}", exc_info=True)
+                    autocutoff_logger.error(f"[AUTO-CUTOFF] Error processing local closure for order {order.order_id}: {e}", exc_info=True)
 
-            # After processing all orders, update user's financials
-            user_for_cutoff.wallet_balance += total_net_profit
-            user_for_cutoff.margin = Decimal('0') # Reset margin to zero
-            await db.commit()
-            
-            # Notify the user via WebSocket
-            await publish_order_update(redis_client, user_id)
-            await publish_user_data_update(redis_client, user_id)
-            
-            logger.warning(f"AUTO-CUTOFF: Completed for non-Barclays user {user_id}. All positions closed locally.")
+            # Recalculate user's margin after closing all orders
+            try:
+                # Get all remaining open orders for margin recalculation
+                remaining_open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                
+                # Calculate new total margin
+                new_total_margin = Decimal('0.0')
+                for remaining_order in remaining_open_orders:
+                    symbol = remaining_order.order_company_name
+                    symbol_orders = await crud_order.get_open_orders_by_user_id_and_symbol(db, user_id, symbol, order_model)
+                    margin_data = await calculate_total_symbol_margin_contribution(
+                        db, redis_client, user_id, symbol, symbol_orders, order_model, user_type
+                    )
+                    new_total_margin += margin_data["total_margin"]
+                
+                # Update user's financials
+                original_wallet_balance = Decimal(str(user_for_cutoff.wallet_balance))
+                user_for_cutoff.wallet_balance = (original_wallet_balance + total_net_profit).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+                user_for_cutoff.margin = new_total_margin.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                
+                await db.commit()
+                
+                # Update user data cache
+                user_type_str = 'demo' if isinstance(user_for_cutoff, DemoUser) else 'live'
+                user_data_to_cache = {
+                    "id": user_for_cutoff.id,
+                    "email": getattr(user_for_cutoff, 'email', None),
+                    "group_name": user_for_cutoff.group_name,
+                    "leverage": user_for_cutoff.leverage,
+                    "user_type": user_type_str,
+                    "account_number": getattr(user_for_cutoff, 'account_number', None),
+                    "wallet_balance": user_for_cutoff.wallet_balance,
+                    "margin": user_for_cutoff.margin,
+                    "first_name": getattr(user_for_cutoff, 'first_name', None),
+                    "last_name": getattr(user_for_cutoff, 'last_name', None),
+                    "country": getattr(user_for_cutoff, 'country', None),
+                    "phone_number": getattr(user_for_cutoff, 'phone_number', None)
+                }
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                
+                # Update static orders and publish notifications
+                from app.api.v1.endpoints.orders import update_user_static_orders
+                await update_user_static_orders(user_id, db, redis_client, user_type_str)
+                await publish_order_update(redis_client, user_id)
+                await publish_user_data_update(redis_client, user_id)
+                await publish_market_data_trigger(redis_client)
+                
+                autocutoff_logger.warning(f"[AUTO-CUTOFF] Completed for non-Barclays user {user_id}. All positions closed locally. Total net profit: {total_net_profit}, New margin: {new_total_margin}")
+                
+            except Exception as e:
+                autocutoff_logger.error(f"[AUTO-CUTOFF] Error updating user financials after auto-cutoff: {e}", exc_info=True)
+                await db.rollback()
             
     except Exception as e:
-        logger.error(f"Error in handle_margin_cutoff for user {user_id}: {e}", exc_info=True)
+        autocutoff_logger.error(f"[AUTO-CUTOFF] Error in handle_margin_cutoff for user {user_id}: {e}", exc_info=True)
 
 # --- Service Provider JWT Rotation Job ---
 async def rotate_service_account_jwt():

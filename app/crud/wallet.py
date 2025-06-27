@@ -95,14 +95,26 @@ async def create_wallet_record(
 
 # Example function to get wallet records by user ID (Async)
 async def get_wallet_records_by_user_id(
-    db: AsyncSession, user_id: int, skip: int = 0, limit: int = 100
+    db: AsyncSession, user_id: int, skip: int = 0, limit: int = 100, transaction_types: List[str] = None
 ) -> List[Wallet]:
     """
     Retrieves wallet transaction records for a specific user with pagination.
+    
+    Args:
+        db: The asynchronous database session
+        user_id: The user ID to filter by
+        skip: Number of records to skip for pagination
+        limit: Maximum number of records to return
+        transaction_types: Optional list of transaction types to filter by (e.g., ["withdraw", "deposit"])
     """
+    query = select(Wallet).filter(Wallet.user_id == user_id)
+    
+    # Filter by transaction types if provided
+    if transaction_types:
+        query = query.filter(Wallet.transaction_type.in_(transaction_types))
+    
     result = await db.execute(
-        select(Wallet)
-        .filter(Wallet.user_id == user_id)
+        query
         .offset(skip)
         .limit(limit)
         .order_by(Wallet.created_at.desc()) # Order by creation time
@@ -111,14 +123,26 @@ async def get_wallet_records_by_user_id(
 
 # Function to get wallet records by demo user ID (Async)
 async def get_wallet_records_by_demo_user_id(
-    db: AsyncSession, demo_user_id: int, skip: int = 0, limit: int = 100
+    db: AsyncSession, demo_user_id: int, skip: int = 0, limit: int = 100, transaction_types: List[str] = None
 ) -> List[Wallet]:
     """
     Retrieves wallet transaction records for a specific demo user with pagination.
+    
+    Args:
+        db: The asynchronous database session
+        demo_user_id: The demo user ID to filter by
+        skip: Number of records to skip for pagination
+        limit: Maximum number of records to return
+        transaction_types: Optional list of transaction types to filter by (e.g., ["withdraw", "deposit"])
     """
+    query = select(Wallet).filter(Wallet.demo_user_id == demo_user_id)
+    
+    # Filter by transaction types if provided
+    if transaction_types:
+        query = query.filter(Wallet.transaction_type.in_(transaction_types))
+    
     result = await db.execute(
-        select(Wallet)
-        .filter(Wallet.demo_user_id == demo_user_id)
+        query
         .offset(skip)
         .limit(limit)
         .order_by(Wallet.created_at.desc()) # Order by creation time

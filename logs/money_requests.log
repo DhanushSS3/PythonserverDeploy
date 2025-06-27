@@ -113,3 +113,27 @@ Exception: Failed to create wallet transaction record.
 2025-06-26 04:38:14,180 - INFO - money_requests - Wallet record created for rejected money request ID 19, transaction ID: 5636966403
 2025-06-26 04:38:14,190 - INFO - money_requests - Published user data update for user ID 4 after money request rejection.
 2025-06-26 04:38:14,199 - INFO - money_requests - Money request ID 19 status updated successfully to 2
+2025-06-27 05:11:53,846 - INFO - money_requests - Creating money request - User ID: 9, Type: withdraw, Amount: 1555
+2025-06-27 05:11:53,848 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-27 05:11:53,849 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=9, type=withdraw, amount=1555
+2025-06-27 05:11:53,849 - DEBUG - money_requests - Added money request to session
+2025-06-27 05:11:53,877 - DEBUG - money_requests - Committed transaction to database
+2025-06-27 05:11:53,899 - INFO - money_requests - Money request created successfully: ID 21, User ID 9, Type withdraw, Amount 1555
+2025-06-27 05:13:54,338 - INFO - money_requests - Starting money request status update - ID: 21, New Status: 1, Admin ID: 10
+2025-06-27 05:13:54,338 - DEBUG - money_requests - Updated money request ID 21 status from 0 to 1 and marked for commit
+2025-06-27 05:13:54,339 - INFO - money_requests - Money request ID 21 approved by admin ID 10. Processing wallet update for user ID 9.
+2025-06-27 05:13:54,415 - INFO - money_requests - Wallet balance updated successfully for user ID 9 due to money request ID 21 approval.
+2025-06-27 05:13:54,416 - INFO - money_requests - Published user data update for user ID 9 after wallet balance update.
+2025-06-27 05:13:54,426 - INFO - money_requests - Money request ID 21 status updated successfully to 1
+2025-06-27 05:15:33,384 - INFO - money_requests - Creating money request - User ID: 9, Type: withdraw, Amount: 335
+2025-06-27 05:15:33,384 - DEBUG - money_requests - Money request schema validation passed? True (since we got here)
+2025-06-27 05:15:33,384 - DEBUG - money_requests - Constructed MoneyRequest object: user_id=9, type=withdraw, amount=335
+2025-06-27 05:15:33,384 - DEBUG - money_requests - Added money request to session
+2025-06-27 05:15:33,397 - DEBUG - money_requests - Committed transaction to database
+2025-06-27 05:15:33,403 - INFO - money_requests - Money request created successfully: ID 22, User ID 9, Type withdraw, Amount 335
+2025-06-27 05:15:45,520 - INFO - money_requests - Starting money request status update - ID: 22, New Status: 2, Admin ID: 10
+2025-06-27 05:15:45,521 - DEBUG - money_requests - Updated money request ID 22 status from 0 to 2 and marked for commit
+2025-06-27 05:15:45,521 - INFO - money_requests - Money request ID 22 rejected by admin ID 10.
+2025-06-27 05:15:45,558 - INFO - money_requests - Wallet record created for rejected money request ID 22, transaction ID: 2942218911
+2025-06-27 05:15:45,560 - INFO - money_requests - Published user data update for user ID 9 after money request rejection.
+2025-06-27 05:15:45,567 - INFO - money_requests - Money request ID 22 status updated successfully to 2
