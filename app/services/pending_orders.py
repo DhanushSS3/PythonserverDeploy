@@ -125,49 +125,31 @@ async def get_all_pending_orders_from_redis(redis_client: Redis) -> List[Dict[st
     """
     Get all pending orders from Redis for cleanup purposes.
     Returns a list of order data dictionaries.
+    Handles the HASH data structure where pending orders are stored.
     """
     try:
         all_pending_orders = []
         
-        # Get all keys that match the pattern "pending_orders:*"
-        pattern = "pending_orders:*"
+        # Pattern for keys that store pending orders as Hashes.
+        pattern = f"{REDIS_PENDING_ORDERS_PREFIX}:*:*"
         keys = await redis_client.keys(pattern)
         
         for key in keys:
             try:
-                # Get all order IDs from this list
-                order_ids = await redis_client.lrange(key, 0, -1)
+                # This key is a HASH where each field is a user_id and the value is a JSON string of their orders.
+                user_orders_map = await redis_client.hgetall(key)
                 
-                for order_id in order_ids:
-                    if order_id:
-                        # Try to get the order data from the order cache
-                        order_data_key = f"order:{order_id}"
-                        order_data = await redis_client.get(order_data_key)
-                        
-                        if order_data:
-                            try:
-                                order_dict = json.loads(order_data)
-                                all_pending_orders.append(order_dict)
-                            except json.JSONDecodeError:
-                                # If JSON parsing fails, create a basic order dict
-                                all_pending_orders.append({
-                                    'order_id': order_id.decode() if isinstance(order_id, bytes) else str(order_id),
-                                    'order_company_name': 'unknown',
-                                    'order_type': 'unknown',
-                                    'order_user_id': 'unknown',
-                                    'user_type': 'live'
-                                })
-                        else:
-                            # If no order data found, create a basic order dict
-                            all_pending_orders.append({
-                                'order_id': order_id.decode() if isinstance(order_id, bytes) else str(order_id),
-                                'order_company_name': 'unknown',
-                                'order_type': 'unknown',
-                                'order_user_id': 'unknown',
-                                'user_type': 'live'
-                            })
+                for user_id, orders_json in user_orders_map.items():
+                    if orders_json:
+                        try:
+                            # Decode and parse the list of orders for the user.
+                            orders = json.loads(orders_json, object_hook=decode_decimal)
+                            all_pending_orders.extend(orders)
+                        except json.JSONDecodeError:
+                            logger.error(f"[REDIS_CLEANUP] Failed to decode JSON for key {key}, user {user_id}: {orders_json}")
+                            continue
             except Exception as e:
-                logger = logging.getLogger("redis_cleanup")
+                # This handles cases where a key matching the pattern is not a HASH.
                 logger.error(f"[REDIS_CLEANUP] Error processing Redis key {key}: {e}")
                 continue
         

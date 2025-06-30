@@ -189,7 +189,8 @@ class DemoUser(Base):
     # Add back simple relationship without complex conditions 
     demo_user_favorites = relationship("UserFavoriteSymbol", 
                                      foreign_keys="[UserFavoriteSymbol.user_id]",
-                                     primaryjoin="DemoUser.id == UserFavoriteSymbol.user_id")
+                                     primaryjoin="DemoUser.id == UserFavoriteSymbol.user_id",
+                                     overlaps="user_favorites")
 
 
 class Group(Base):

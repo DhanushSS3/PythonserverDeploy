@@ -1047,3 +1047,372 @@ fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
 2025-06-29 23:37:40,382 - database - DEBUG - Closing database session
 2025-06-29 23:37:50,489 - database - DEBUG - Database session used successfully
 2025-06-29 23:37:50,491 - database - DEBUG - Closing database session
+2025-06-30 03:09:21,612 - database - DEBUG - Creating new database session
+2025-06-30 03:09:23,486 - database - DEBUG - Database session used successfully
+2025-06-30 03:09:23,487 - database - DEBUG - Closing database session
+2025-06-30 03:12:09,629 - database - DEBUG - Creating new database session
+2025-06-30 03:12:11,196 - database - DEBUG - Database session used successfully
+2025-06-30 03:12:11,197 - database - DEBUG - Closing database session
+2025-06-30 03:15:05,127 - database - DEBUG - Creating new database session
+2025-06-30 03:15:06,825 - database - DEBUG - Creating new database session
+2025-06-30 03:15:06,887 - database - DEBUG - Database session used successfully
+2025-06-30 03:15:06,888 - database - DEBUG - Closing database session
+2025-06-30 03:15:18,368 - database - DEBUG - Database session used successfully
+2025-06-30 03:15:18,369 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,715 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,731 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:33,732 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,743 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,749 - database - ERROR - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 65, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:21:33,755 - database - INFO - Session rolled back due to error
+2025-06-30 03:21:33,756 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,760 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,798 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:33,799 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,821 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,832 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,903 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:33,904 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,912 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,931 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:33,932 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,944 - database - DEBUG - Creating new database session
+2025-06-30 03:21:33,975 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:33,975 - database - DEBUG - Closing database session
+2025-06-30 03:21:33,990 - database - DEBUG - Creating new database session
+2025-06-30 03:21:34,016 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:34,017 - database - DEBUG - Closing database session
+2025-06-30 03:21:34,032 - database - DEBUG - Creating new database session
+2025-06-30 03:21:34,048 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:34,050 - database - DEBUG - Closing database session
+2025-06-30 03:21:36,852 - database - DEBUG - Creating new database session
+2025-06-30 03:21:36,866 - database - DEBUG - Database session used successfully
+2025-06-30 03:21:36,867 - database - DEBUG - Closing database session
+2025-06-30 03:22:18,305 - database - DEBUG - Creating new database session
+2025-06-30 03:22:18,318 - database - ERROR - Error in database session: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 289, in refresh_access_token
+    payload = decode_token(refresh_token)
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 98, in decode_token
+    raise JWTError("Could not validate credentials")
+jose.exceptions.JWTError: Could not validate credentials
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 65, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 352, in refresh_access_token
+    raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2025-06-30 03:22:18,327 - database - INFO - Session rolled back due to error
+2025-06-30 03:22:18,328 - database - DEBUG - Closing database session
+2025-06-30 03:22:18,490 - database - DEBUG - Creating new database session
+2025-06-30 03:22:18,501 - database - ERROR - Error in database session: 401: Could not validate credentials
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 281, in get_current_user
+    payload = decode_token(token)
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 98, in decode_token
+    raise JWTError("Could not validate credentials")
+jose.exceptions.JWTError: Could not validate credentials
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 65, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 291, in app
+    solved_result = await solve_dependencies(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
+    solved = await call(**solved_result.values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 326, in get_current_user
+    raise credentials_exception
+fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2025-06-30 03:22:18,507 - database - INFO - Session rolled back due to error
+2025-06-30 03:22:18,508 - database - DEBUG - Closing database session
+2025-06-30 03:22:27,980 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:27,981 - database - DEBUG - Closing database session
+2025-06-30 03:22:30,646 - database - DEBUG - Creating new database session
+2025-06-30 03:22:31,205 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:31,206 - database - DEBUG - Closing database session
+2025-06-30 03:22:32,432 - database - DEBUG - Creating new database session
+2025-06-30 03:22:32,446 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:32,447 - database - DEBUG - Closing database session
+2025-06-30 03:22:32,463 - database - DEBUG - Creating new database session
+2025-06-30 03:22:32,478 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:32,478 - database - DEBUG - Closing database session
+2025-06-30 03:22:32,481 - database - DEBUG - Creating new database session
+2025-06-30 03:22:32,662 - database - DEBUG - Creating new database session
+2025-06-30 03:22:32,716 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:32,718 - database - DEBUG - Closing database session
+2025-06-30 03:22:33,069 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:33,070 - database - DEBUG - Closing database session
+2025-06-30 03:22:33,083 - database - DEBUG - Creating new database session
+2025-06-30 03:22:33,719 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:33,720 - database - DEBUG - Closing database session
+2025-06-30 03:22:33,758 - database - DEBUG - Creating new database session
+2025-06-30 03:22:33,776 - database - DEBUG - Database session used successfully
+2025-06-30 03:22:33,777 - database - DEBUG - Closing database session
+2025-06-30 03:22:33,789 - database - DEBUG - Creating new database session
+2025-06-30 03:23:48,862 - database - DEBUG - Creating new database session
+2025-06-30 03:23:48,877 - database - DEBUG - Database session used successfully
+2025-06-30 03:23:48,878 - database - DEBUG - Closing database session
+2025-06-30 03:25:07,001 - database - DEBUG - Creating new database session
+2025-06-30 03:25:07,013 - database - DEBUG - Database session used successfully
+2025-06-30 03:25:07,014 - database - DEBUG - Closing database session
+2025-06-30 03:25:12,888 - database - DEBUG - Database session used successfully
+2025-06-30 03:25:12,889 - database - DEBUG - Closing database session
+2025-06-30 03:27:55,837 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 60, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:27:55,840 - INFO - database - Session rolled back due to error
+2025-06-30 03:28:05,334 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 60, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:28:05,336 - INFO - database - Session rolled back due to error
+2025-06-30 03:41:52,519 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:41:52,521 - INFO - database - Session rolled back due to error
+2025-06-30 03:43:23,762 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:43:23,763 - INFO - database - Session rolled back due to error
+2025-06-30 03:43:27,581 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:43:27,582 - INFO - database - Session rolled back due to error
+2025-06-30 03:43:31,073 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-30 03:43:31,075 - INFO - database - Session rolled back due to error

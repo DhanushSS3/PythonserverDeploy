@@ -11,14 +11,7 @@ from sqlalchemy import and_, or_
 from typing import Dict
 import logging
 
-orders_crud_logger = logging.getLogger('orders-crud-log')
-# Ensure handler is only added once to avoid duplicate logs
-if not orders_crud_logger.handlers:
-    file_handler = logging.FileHandler('logs/orders_crud.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    file_handler.setFormatter(formatter)
-    orders_crud_logger.addHandler(file_handler)
-    orders_crud_logger.setLevel(logging.DEBUG)
+orders_crud_logger = logging.getLogger('orders_crud')
 
 # Utility to get the appropriate model class
 def get_order_model(user_type: str):
@@ -32,14 +25,7 @@ def get_order_model(user_type: str):
 
 # Create a new order
 async def create_order(db: AsyncSession, order_data: dict, order_model: Type[UserOrder | DemoUserOrder]):
-    import logging
-    orders_logger = logging.getLogger('orders-log-debug')
-    file_handler = logging.FileHandler('logs/orders.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    file_handler.setFormatter(formatter)
-    if not orders_logger.hasHandlers():
-        orders_logger.addHandler(file_handler)
-    orders_logger.setLevel(logging.DEBUG)
+    orders_logger = logging.getLogger('orders')
     orders_logger.info(f"[ENTER-CRUD] create_order called with: {order_data}")
     orders_logger.debug(f"[DEBUG][create_order] Received order_data: {order_data}")
     # Ensure 'status' is present and valid
@@ -332,14 +318,7 @@ async def create_user_order(
     """
     Create a new order in the database.
     """
-    import logging
-    orders_logger = logging.getLogger('orders-log-debug')
-    file_handler = logging.FileHandler('logs/orders.log')
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    file_handler.setFormatter(formatter)
-    if not orders_logger.hasHandlers():
-        orders_logger.addHandler(file_handler)
-    orders_logger.setLevel(logging.DEBUG)
+    orders_logger = logging.getLogger('orders')
     orders_logger.debug(f"[DEBUG][create_user_order] Received order_data: {order_data}")
     try:
         # Ensure 'status' is present and valid

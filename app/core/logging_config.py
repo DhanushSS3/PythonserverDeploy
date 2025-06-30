@@ -29,7 +29,7 @@ def setup_file_logger(name: str, filename: str, level=logging.INFO) -> logging.L
     logger.propagate = False
     return logger
 
-def setup_stream_logger(name: str, level=logging.INFO) -> logging.Logger:
+def setup_stream_logger(name: str, level=logging.ERROR) -> logging.Logger:
     """
     Creates a logger that outputs to the console (stdout).
     """
@@ -47,6 +47,7 @@ def setup_stream_logger(name: str, level=logging.INFO) -> logging.Logger:
 # --- Loggers by Component ---
 
 # File loggers
+database_logger   = setup_file_logger("database", "database.log", logging.INFO)
 firebase_logger   = setup_file_logger("firebase", "firebase.log", logging.INFO)
 redis_logger      = setup_file_logger("redis", "redis.log", logging.DEBUG)
 security_logger   = setup_file_logger("app.core.security", "security.log", logging.DEBUG)
@@ -59,14 +60,14 @@ cache_logger      = setup_file_logger("cache", "cache.log", logging.DEBUG)
 frontend_orders_logger = setup_file_logger("frontend_orders", "frontend_orders.log", logging.DEBUG)
 service_provider_logger = setup_file_logger("service_provider", "service_provider.log", logging.DEBUG)
 firebase_comm_logger = setup_file_logger("firebase_comm", "firebase_comm.log", logging.DEBUG)
-orders_crud_logger = setup_file_logger("orders_crud", "orders_crud.log", logging.DEBUG)
+orders_crud_logger = setup_file_logger("orders_crud", "orders_crud.log", logging.INFO)
 jwt_security_logger = setup_file_logger("jwt_security", "jwt_security.log", logging.DEBUG)
 error_logger = setup_file_logger("error", "error.log", logging.ERROR)
 money_requests_logger = setup_file_logger("money_requests", "money_requests.log", logging.DEBUG)
 autocutoff_logger = setup_file_logger("autocutoff", "autocutoff.log", logging.DEBUG)
 
 # WebSocket logger with stream output
-websocket_logger  = setup_stream_logger("websocket_logger", logging.DEBUG)
+websocket_logger  = setup_stream_logger("websocket_logger", logging.ERROR)
 
 # Optionally force DEBUG level for specific modules globally
 logging.getLogger("app.core.security").setLevel(logging.DEBUG)

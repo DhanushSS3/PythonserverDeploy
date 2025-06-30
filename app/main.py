@@ -18,6 +18,7 @@ from decimal import Decimal
 from redis.asyncio import Redis
 
 import logging
+import sys
 
 # --- Trading Configuration ---
 # Epsilon value for SL/TP accuracy (floating-point precision tolerance)
@@ -55,7 +56,22 @@ from app.core.firebase import send_order_to_firebase
 from fastapi.middleware.cors import CORSMiddleware
 
 # Configure basic logging early
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
+
+# --- Force all stream handlers to ERROR level ---
+# This is an aggressive way to ensure only errors are shown in the console
+for logger_name in logging.Logger.manager.loggerDict:
+    logger = logging.getLogger(logger_name)
+    if not logger.handlers:
+        continue
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            # Check if the stream is stdout or stderr (console)
+            if handler.stream in (sys.stdout, sys.stderr):
+                logger.setLevel(logging.ERROR)
+                handler.setLevel(logging.ERROR)
+
 logging.getLogger('app.services.portfolio_calculator').setLevel(logging.DEBUG)
 logging.getLogger('app.services.swap_service').setLevel(logging.DEBUG)
 

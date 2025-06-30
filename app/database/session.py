@@ -9,11 +9,6 @@ import warnings
 
 # Create a database logger
 db_logger = logging.getLogger("database")
-handler = logging.FileHandler("logs/database.log")
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-db_logger.addHandler(handler)
-db_logger.setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__) # Get logger for this module
 
@@ -40,7 +35,14 @@ logger.info(f"Attempting to connect to database using URL: {DATABASE_URL[:20]}..
 # --- Database Engine ---
 # Create the asynchronous engine.
 # echo=True will print SQL statements to the console (useful for debugging)
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(
+    DATABASE_URL, 
+    echo=settings.ECHO_SQL,
+    pool_size=20,
+    max_overflow=10,
+    pool_recycle=1800,  # Recycle connections every 30 minutes
+    pool_pre_ping=True
+)
 
 # --- Database Session Local ---
 # Create a configured "SessionLocal" class.
