@@ -88,8 +88,8 @@ async def get_all_group_records_with_contract_size(
             "spread_pip": str(group.spread_pip),
             "show_points": str(group.show_points),
             "pip_currency": group.pip_currency,
-            "created_at": group.created_at.isoformat(),
-            "updated_at": group.updated_at.isoformat(),
+            "created_at": group.created_at.isoformat() if hasattr(group.created_at, 'isoformat') else str(group.created_at),
+            "updated_at": group.updated_at.isoformat() if hasattr(group.updated_at, 'isoformat') else str(group.updated_at),
             "contract_size": contract_size,
             "half_spread": str(half_spread) if half_spread is not None else None
         })
