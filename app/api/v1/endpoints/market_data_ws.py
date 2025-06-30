@@ -241,8 +241,6 @@ async def check_and_trigger_pending_orders(redis_client, db, symbol, adjusted_pr
         adjusted_buy_price = adjusted_prices.get('buy')
         if not adjusted_buy_price:
             orders_logger.error(f"[PENDING_ORDER_EXECUTION] Adjusted buy price missing for symbol {symbol} in check_and_trigger_pending_orders. Skipping all pending orders for this symbol.")
-            return
-        
         # Check each order type key
         for redis_key in redis_keys:
             try:
@@ -276,7 +274,7 @@ async def check_and_trigger_pending_orders(redis_client, db, symbol, adjusted_pr
                             adjusted_buy_price_normalized = Decimal(str(round(Decimal(adjusted_buy_price_str), 5)))
                             
                             # Log the raw values
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Raw values - order_price: {order_price}, adjusted_buy_price: {adjusted_buy_price}")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Raw values - order_price: {order_price}, adjusted_buy_price: {adjusted_buy_price}")
                         except Exception as e:
                             orders_logger.error(f"[PENDING_ORDER_EXECUTION] Error normalizing decimal values: {str(e)}", exc_info=True)
                             continue
@@ -284,48 +282,48 @@ async def check_and_trigger_pending_orders(redis_client, db, symbol, adjusted_pr
                         should_trigger = False
                         if order_type in ['BUY_LIMIT', 'SELL_STOP']:
                             should_trigger = adjusted_buy_price_normalized <= order_price_normalized
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP check: {adjusted_buy_price_normalized} <= {order_price_normalized} = {should_trigger}")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP check: {adjusted_buy_price_normalized} <= {order_price_normalized} = {should_trigger}")
                         elif order_type in ['SELL_LIMIT', 'BUY_STOP']:
                             should_trigger = adjusted_buy_price_normalized >= order_price_normalized
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP check: {adjusted_buy_price_normalized} >= {order_price_normalized} = {should_trigger}")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP check: {adjusted_buy_price_normalized} >= {order_price_normalized} = {should_trigger}")
                         else:
-                            orders_logger.error(f"[PENDING_ORDER_EXECUTION] Unknown order type {order_type} for order {order.get('order_id')}. Skipping.")
+                            # orders_logger.error(f"[PENDING_ORDER_EXECUTION] Unknown order type {order_type} for order {order.get('order_id')}. Skipping.")
                             continue
                         
                         # Additional debug logging for price comparison
-                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Price comparison values - adjusted_buy_price_normalized: {adjusted_buy_price_normalized} ({type(adjusted_buy_price_normalized)}), order_price_normalized: {order_price_normalized} ({type(order_price_normalized)})")
+                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Price comparison values - adjusted_buy_price_normalized: {adjusted_buy_price_normalized} ({type(adjusted_buy_price_normalized)}), order_price_normalized: {order_price_normalized} ({type(order_price_normalized)})")
                         
                         # Compare as strings for consistent comparison
                         adjusted_price_str = str(adjusted_buy_price_normalized)
                         order_price_str = str(order_price_normalized)
-                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] String comparison for prices: '{adjusted_price_str}' vs '{order_price_str}'")
+                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] String comparison for prices: '{adjusted_price_str}' vs '{order_price_str}'")
                         
                         # Compare numeric difference
                         price_diff = abs(adjusted_buy_price_normalized - order_price_normalized)
-                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Absolute price difference: {price_diff}")
+                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Absolute price difference: {price_diff}")
                         
                         # Compare with small epsilon tolerance to catch very close values
                         epsilon = Decimal('0.00001')  # Small tolerance
                         is_close = price_diff < epsilon
-                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Prices within epsilon tolerance: {is_close} (epsilon={epsilon})")
+                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Prices within epsilon tolerance: {is_close} (epsilon={epsilon})")
                         
                         # Consider using epsilon for near-exact matches
                         should_trigger_with_epsilon = False
                         if order_type in ['BUY_LIMIT', 'SELL_STOP']:
                             should_trigger_with_epsilon = (adjusted_buy_price_normalized <= order_price_normalized) or is_close
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP with epsilon: {should_trigger_with_epsilon}")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP with epsilon: {should_trigger_with_epsilon}")
                         elif order_type in ['SELL_LIMIT', 'BUY_STOP']:
                             should_trigger_with_epsilon = (adjusted_buy_price_normalized >= order_price_normalized) or is_close
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP with epsilon: {should_trigger_with_epsilon}")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP with epsilon: {should_trigger_with_epsilon}")
                         
                         # Use the epsilon-based trigger when prices are very close
                         if should_trigger_with_epsilon and not should_trigger:
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Using epsilon-based trigger since prices are very close")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Using epsilon-based trigger since prices are very close")
                             should_trigger = True
                         
-                        orders_logger.info(f"[PENDING_ORDER_EXECUTION] Checking order {order.get('order_id')}: type={order_type}, adjusted_buy_price={adjusted_buy_price_normalized}, order_price={order_price_normalized}, should_trigger={should_trigger}")
+                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Checking order {order.get('order_id')}: type={order_type}, adjusted_buy_price={adjusted_buy_price_normalized}, order_price={order_price_normalized}, should_trigger={should_trigger}")
                         if should_trigger:
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Trigger condition met for order {order.get('order_id')}. Executing trigger_pending_order.")
+                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Trigger condition met for order {order.get('order_id')}. Executing trigger_pending_order.")
                             from app.services.pending_orders import trigger_pending_order
                             # Use a new database session for trigger_pending_order to ensure fresh data
                             from app.database.session import AsyncSessionLocal
@@ -337,8 +335,8 @@ async def check_and_trigger_pending_orders(redis_client, db, symbol, adjusted_pr
                                     order=order,
                                     current_price=adjusted_buy_price_normalized
                                 )
-                        else:
-                            orders_logger.info(f"[PENDING_ORDER_EXECUTION] Order {order.get('order_id')} conditions not met for execution. Skipping.")
+                        # else:
+                        #     orders_logger.info(f"[PENDING_ORDER_EXECUTION] Order {order.get('order_id')} conditions not met for execution. Skipping.")
             
             except Exception as e:
                 logger.error(f"Error processing pending orders for key {redis_key}: {e}", exc_info=True)

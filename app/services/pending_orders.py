@@ -96,27 +96,6 @@ async def debug_margin_calculations(
         processing_additional = max(Decimal("0"), processing_margin_after["total_margin"] - processing_margin_before["total_margin"])
         calculator_additional = max(Decimal("0"), calculator_margin_after["total_margin"] - calculator_margin_before["total_margin"])
         
-        # Log the results for comparison
-        from app.core.logging_config import orders_logger
-        orders_logger.info(f"[MARGIN_DEBUG] === IMPLEMENTATION COMPARISON ===")
-        orders_logger.info(f"[MARGIN_DEBUG] User {user_id}, Symbol {symbol}, Orders: {len(open_orders)} + 1 new")
-        orders_logger.info(f"[MARGIN_DEBUG] order_processing.py implementation:")
-        orders_logger.info(f"[MARGIN_DEBUG]   - Margin before: {processing_margin_before['total_margin']}")
-        orders_logger.info(f"[MARGIN_DEBUG]   - Margin after: {processing_margin_after['total_margin']}")
-        orders_logger.info(f"[MARGIN_DEBUG]   - Additional margin: {processing_additional}")
-        orders_logger.info(f"[MARGIN_DEBUG] margin_calculator.py implementation:")
-        orders_logger.info(f"[MARGIN_DEBUG]   - Margin before: {calculator_margin_before['total_margin']}")
-        orders_logger.info(f"[MARGIN_DEBUG]   - Margin after: {calculator_margin_after['total_margin']}")
-        orders_logger.info(f"[MARGIN_DEBUG]   - Additional margin: {calculator_additional}")
-        orders_logger.info(f"[MARGIN_DEBUG] Difference in additional margin: {abs(processing_additional - calculator_additional)}")
-        
-        # Check parameter order differences
-        processing_signature = inspect.signature(processing_calc)
-        calculator_signature = inspect.signature(calculator_calc)
-        
-        orders_logger.info(f"[MARGIN_DEBUG] order_processing.py parameter order: {list(processing_signature.parameters.keys())}")
-        orders_logger.info(f"[MARGIN_DEBUG] margin_calculator.py parameter order: {list(calculator_signature.parameters.keys())}")
-        
         # Using order_processing implementation for consistency
         return processing_additional
     except Exception as e:
@@ -137,9 +116,6 @@ async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, 
         # Also remove from the general pending orders list
         general_pending_key = f"pending_orders:{user_id}"
         await redis_client.lrem(general_pending_key, 0, order_id)
-        
-        logger = logging.getLogger("pending_orders")
-        logger.info(f"[REDIS_CLEANUP] Removed pending order {order_id} from Redis for user {user_id}, symbol {symbol}, type {order_type}")
         
     except Exception as e:
         logger = logging.getLogger("pending_orders")
@@ -230,7 +206,6 @@ async def add_pending_order(
 
         current_orders.append(pending_order_data)
         await redis_client.hset(redis_key, user_id, json.dumps(current_orders))
-        logger.info(f"Pending order {pending_order_data['order_id']} added to Redis for user {user_id} under key {redis_key}.")
     except Exception as e:
         logger.error(f"Error adding pending order {pending_order_data['order_id']} to Redis: {e}", exc_info=True)
         raise
@@ -253,26 +228,20 @@ async def trigger_pending_order(
     order_type_original = order['order_type'] # Store original order_type
     from app.core.logging_config import orders_logger
     
-    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Starting trigger_pending_order for order {order_id}, user {user_id}, symbol {symbol}, type {order_type_original}")
-    
     try:
         user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
         if not user_data:
             user_model = User if user_type == 'live' else DemoUser
             user_data = await user_model.by_id(db, user_id)
             if not user_data:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] User data not found for user {user_id} when triggering order {order_id}. Skipping.")
+                orders_logger.error(f"[PENDING_ORDER] User data not found for user {user_id} when triggering order {order_id}. Skipping.")
                 return
-        
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] User data loaded for user {user_id}: group={user_data.get('group_name')}, wallet_balance={user_data.get('wallet_balance')}")
 
         group_name = user_data.get('group_name')
         group_settings = await get_group_settings_cache(redis_client, group_name)
         if not group_settings:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Group settings not found for group {group_name} when triggering order {order_id}. Skipping.")
+            orders_logger.error(f"[PENDING_ORDER] Group settings not found for group {group_name} when triggering order {order_id}. Skipping.")
             return
-
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Group settings loaded for group {group_name}")
 
         order_model = get_order_model(user_type)
         
@@ -287,12 +256,10 @@ async def trigger_pending_order(
             db_order = await crud_order.get_order_by_id(db, order_id, order_model)
             
             if db_order:
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Database order {order_id} found on attempt {retry_count + 1}")
                 break
                 
             # On the last attempt, try a direct SQL query as a backup method
             if retry_count == max_retries - 1:
-                orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Last attempt: trying direct SQL query for order {order_id}")
                 try:
                     from sqlalchemy import text
                     table_name = "demo_user_orders" if user_type == "demo" else "user_orders"
@@ -303,28 +270,22 @@ async def trigger_pending_order(
                         db_order = order_model()
                         for key, value in row._mapping.items():
                             setattr(db_order, key, value)
-                        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Found order {order_id} with direct SQL query")
                         break
                 except Exception as sql_error:
-                    orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error in direct SQL query: {str(sql_error)}", exc_info=True)
+                    orders_logger.error(f"[PENDING_ORDER] Error in direct SQL query: {str(sql_error)}", exc_info=True)
             
             if retry_count < max_retries - 1:
-                orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Database order {order_id} not found on attempt {retry_count + 1}/{max_retries}. Retrying in {retry_delay}s...")
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 1.5  # Less aggressive exponential backoff
 
         if not db_order:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Database order {order_id} not found after {max_retries} attempts when triggering pending order. Skipping.")
+            orders_logger.error(f"[PENDING_ORDER] Database order {order_id} not found after {max_retries} attempts when triggering pending order. Skipping.")
             # Remove the order from Redis since it cannot be found in the database
-            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Removing order {order_id} from Redis since it cannot be found in the database.")
             await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
             return
 
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Database order loaded: status={db_order.order_status}, price={db_order.order_price}")
-
         # Ensure atomicity: only update if still PENDING
         if db_order.order_status != 'PENDING':
-            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} already processed (status: {db_order.order_status}). Skipping trigger.")
             await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id) 
             return
 
@@ -333,20 +294,18 @@ async def trigger_pending_order(
         adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
         
         if not adjusted_prices:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Adjusted market prices not found for symbol {symbol} when triggering order {order_id}. Skipping.")
+            orders_logger.error(f"[PENDING_ORDER] Adjusted market prices not found for symbol {symbol} when triggering order {order_id}. Skipping.")
             return
-        
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Adjusted prices loaded: {adjusted_prices}")
         
         # Use the adjusted buy price for all trigger conditions
         adjusted_buy_price = adjusted_prices.get('buy')
         if not adjusted_buy_price:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Adjusted buy price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
+            orders_logger.error(f"[PENDING_ORDER] Adjusted buy price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
             return
         
         adjusted_sell_price = adjusted_prices.get('sell')
         if not adjusted_sell_price:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Adjusted sell price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
+            orders_logger.error(f"[PENDING_ORDER] Adjusted sell price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
             return
 
         # Normalize decimal values for comparison - round to 5 decimal places
@@ -375,64 +334,42 @@ async def trigger_pending_order(
             
             adjusted_sell_price_normalized = Decimal(str(round(Decimal(adjusted_sell_price_str), 5)))
             
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Normalized prices for comparison - order_price: {order_price_normalized}, adjusted_buy_price: {adjusted_buy_price_normalized}, adjusted_sell_price: {adjusted_sell_price_normalized}")
         except Exception as e:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error normalizing prices for comparison: {str(e)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error normalizing prices for comparison: {str(e)}", exc_info=True)
             return
         
         # Only use adjusted_buy_price for all pending order types
         if not adjusted_buy_price:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Adjusted buy price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
+            orders_logger.error(f"[PENDING_ORDER] Adjusted buy price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
             return
         
         # Determine if the order should be triggered
         should_trigger = False
         if order_type_original in ['BUY_LIMIT', 'SELL_STOP']:
             should_trigger = adjusted_buy_price_normalized <= order_price_normalized
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] BUY_LIMIT/SELL_STOP check: {adjusted_buy_price_normalized} <= {order_price_normalized} = {should_trigger}")
         elif order_type_original in ['SELL_LIMIT', 'BUY_STOP']:
             should_trigger = adjusted_buy_price_normalized >= order_price_normalized
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] SELL_LIMIT/BUY_STOP check: {adjusted_buy_price_normalized} >= {order_price_normalized} = {should_trigger}")
         else:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Unknown order type {order_type_original} for order {order_id}. Skipping execution.")
+            orders_logger.error(f"[PENDING_ORDER] Unknown order type {order_type_original} for order {order_id}. Skipping execution.")
             return
         
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Checking order {order_id}: type={order_type_original}, adjusted_buy_price={adjusted_buy_price_normalized}, order_price={order_price_normalized}, should_trigger={should_trigger}")
-        
-        # Additional debug logging for price comparison
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Price comparison values - adjusted_buy_price_normalized: {adjusted_buy_price_normalized} ({type(adjusted_buy_price_normalized)}), order_price_normalized: {order_price_normalized} ({type(order_price_normalized)})")
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Raw price values - adjusted_buy_price: {adjusted_buy_price} ({type(adjusted_buy_price)}), order_price: {order_price} ({type(order_price)})")
-        
-        # Convert to strings for consistent comparison (handles potential float vs Decimal issues)
-        adjusted_price_str = str(adjusted_buy_price_normalized)
-        order_price_str = str(order_price_normalized)
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] String comparison for prices: '{adjusted_price_str}' vs '{order_price_str}'")
-        
-        # Compare numeric difference
-        price_diff = abs(adjusted_buy_price_normalized - order_price_normalized)
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Absolute price difference: {price_diff}")
-
         # Compare with small epsilon tolerance to catch very close values
         epsilon = Decimal(SLTP_EPSILON)  # Small tolerance
+        price_diff = abs(adjusted_buy_price_normalized - order_price_normalized)
         is_close = price_diff < epsilon
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Prices within epsilon tolerance: {is_close} (epsilon={epsilon})")
         
         # Consider using epsilon for near-exact matches
         should_trigger_with_epsilon = False
         if order_type_original in ['BUY_LIMIT', 'SELL_STOP']:
             should_trigger_with_epsilon = (adjusted_buy_price_normalized <= order_price_normalized) or is_close
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] BUY_LIMIT/SELL_STOP with epsilon: {should_trigger_with_epsilon}")
         elif order_type_original in ['SELL_LIMIT', 'BUY_STOP']:
             should_trigger_with_epsilon = (adjusted_buy_price_normalized >= order_price_normalized) or is_close
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] SELL_LIMIT/BUY_STOP with epsilon: {should_trigger_with_epsilon}")
         
         # Use epsilon-based trigger when prices are very close
         if should_trigger_with_epsilon and not should_trigger:
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using epsilon-based trigger since prices are very close: {adjusted_buy_price_normalized} vs {order_price_normalized}")
             should_trigger = True
         
         if not should_trigger:
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} conditions not met for execution. Skipping.")
             return
         
         # Calculate the required margin for the order using calculate_single_order_margin
@@ -440,7 +377,6 @@ async def trigger_pending_order(
         user_leverage = Decimal(str(user_data.get('leverage', '1.0')))
         # Get external symbol info from DB
         external_symbol_info = await get_external_symbol_info(db, symbol)
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] External symbol info loaded: {external_symbol_info}")
         
         # Get raw market data (for margin calculation) using the synchronous version
         from app.firebase_stream import get_latest_market_data as get_latest_market_data_sync
@@ -450,12 +386,9 @@ async def trigger_pending_order(
             last_known = await get_last_known_price(redis_client, symbol)
             if last_known:
                 raw_market_data = last_known
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Fallback to last known price for {symbol}: {raw_market_data}")
             else:
-                orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] No market data or last known price for {symbol}. Cannot calculate margin for order {order_id}.")
+                orders_logger.warning(f"[PENDING_ORDER] No market data or last known price for {symbol}. Cannot calculate margin for order {order_id}.")
                 return
-        
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Raw market data loaded: {raw_market_data}")
         
         try:
             # Wrap the calculate_single_order_margin call in a try block to catch any exceptions
@@ -471,7 +404,6 @@ async def trigger_pending_order(
                 db=db,
                 user_id=user_id
             )
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin calculated successfully for order {order_id}: margin={margin}, exec_price={exec_price}, contract_value={contract_value}")
             
             # Implement proper margin calculation using the same approach as order_processing.py
             try:
@@ -488,8 +420,6 @@ async def trigger_pending_order(
                     db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
                 )
                 margin_before = margin_before_data["total_margin"]
-                
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Current symbol margin contribution (before): {margin_before}")
                 
                 # Step 3: Create a simulated order object for the new order
                 new_order_type = 'BUY' if order_type_original.startswith('BUY') else 'SELL'
@@ -509,30 +439,20 @@ async def trigger_pending_order(
                 )
                 margin_after = margin_after_data["total_margin"]
                 
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Symbol margin contribution after adding order: {margin_after}")
-                
                 # Step 5: Calculate additional margin required (can be negative if hedging reduces margin)
                 # Let the calculate_total_symbol_margin_contribution function handle all the hedging logic
                 margin_difference = max(Decimal("0.0"), margin_after - margin_before)
-                
-                # For logging and debugging
-                if margin_after < margin_before:
-                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Hedging detected: order {order_id} reduces total margin by {margin_before - margin_after}")
                 
                 # Use margin_difference for updating user's total margin
                 # This can be positive (adding margin) or negative (reducing margin due to hedging)
                 margin = margin_difference
                 
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin change required: {margin} " +
-                                 f"(Before: {margin_before}, After: {margin_after})")
-                
             except Exception as margin_calc_error:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating margin effect for user {user_id}: {str(margin_calc_error)}", exc_info=True)
+                orders_logger.error(f"[PENDING_ORDER] Error calculating margin effect for user {user_id}: {str(margin_calc_error)}", exc_info=True)
                 # If the advanced calculation fails, fall back to using the original calculated margin
                 margin = original_order_margin 
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Falling back to basic margin calculation: {margin}")
         except Exception as margin_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error calculating margin for order {order_id}: {str(margin_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error calculating margin for order {order_id}: {str(margin_error)}", exc_info=True)
             return
         
         # Fetch the latest dynamic portfolio to get up-to-date free_margin
@@ -540,41 +460,33 @@ async def trigger_pending_order(
             dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
             if dynamic_portfolio:
                 user_free_margin = Decimal(str(dynamic_portfolio.get('free_margin', '0.0')))
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Latest free_margin for user {user_id}: {user_free_margin}")
             else:
                 # Fallback: calculate free margin from user data
                 current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
                 current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
                 user_free_margin = current_wallet_balance_decimal - current_total_margin_decimal
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Calculated free_margin from user data for user {user_id}: {user_free_margin}")
         except Exception as portfolio_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error fetching dynamic portfolio for user {user_id}: {str(portfolio_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error fetching dynamic portfolio for user {user_id}: {str(portfolio_error)}", exc_info=True)
             # Fallback: calculate free margin from user data
             current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
             current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
             user_free_margin = current_wallet_balance_decimal - current_total_margin_decimal
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using fallback free_margin calculation for user {user_id}: {user_free_margin}")
         
         # Check if user has sufficient free margin for the new order
         if margin > user_free_margin:
-            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} for user {user_id} canceled due to insufficient free margin. Required: {margin}, Available free margin: {user_free_margin}")
+            orders_logger.warning(f"[PENDING_ORDER] Order {order_id} for user {user_id} canceled due to insufficient free margin. Required: {margin}, Available free margin: {user_free_margin}")
             db_order.order_status = 'CANCELLED'
             db_order.cancel_message = "InsufficientFreeMargin"
             try:
                 await db.commit()
                 await db.refresh(db_order)
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} status updated to CANCELLED in database")
             except Exception as commit_error:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error committing cancelled order {order_id}: {str(commit_error)}", exc_info=True)
+                orders_logger.error(f"[PENDING_ORDER] Error committing cancelled order {order_id}: {str(commit_error)}", exc_info=True)
                 await db.rollback()
             
             # Remove from pending orders
             await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
             return
-        
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Free margin check passed: required={margin}, available={user_free_margin}")
-        
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Executing order {order_id} for user {user_id} at price {adjusted_buy_price_normalized} (order_price={order_price_normalized}, type={order_type_original})")
         
         # Get contract size and profit currency from symbol settings
         contract_size = Decimal(str(group_symbol_settings.get('contract_size', 100000)))
@@ -582,26 +494,17 @@ async def trigger_pending_order(
         
         # Calculate contract value using the CORRECT formula - this should match what we calculated above
         contract_value = order_quantity_decimal * contract_size
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Contract value calculated: {contract_value}")
 
         # Update the order properties with the calculated values
         try:
-            # Store the original values for logging
-            original_margin = db_order.margin if db_order.margin else "None"
-            
             # Store the original calculated margin in the order (without any hedging adjustments)
             # This ensures we always record the true margin requirement for this individual order
             db_order.margin = original_order_margin
             db_order.contract_value = contract_value
             db_order.commission = commission
             db_order.order_price = exec_price  # Use the execution price from margin calculation
-            
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with calculated values: " 
-                             f"margin={original_order_margin} (was {original_margin}), contract_value={contract_value}, "
-                             f"commission={commission}, execution_price={exec_price}")
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Note: Order margin stored is the individual margin requirement ({original_order_margin}), while margin change applied to user ({margin}) considers total symbol margin effect")
         except Exception as value_update_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating order with calculated values: {str(value_update_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error updating order with calculated values: {str(value_update_error)}", exc_info=True)
 
         # Determine the new order type (removing LIMIT/STOP)
         try:
@@ -611,9 +514,8 @@ async def trigger_pending_order(
             # Set stop_loss and take_profit to None
             db_order.stop_loss = None
             db_order.take_profit = None
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated order object with new values and cleared SL/TP")
         except Exception as update_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating order object with new values: {str(update_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error updating order object with new values: {str(update_error)}", exc_info=True)
             return
 
         # Non-Barclays user
@@ -625,30 +527,25 @@ async def trigger_pending_order(
             fresh_user = fresh_user_result.scalars().first()
             
             if not fresh_user:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Could not fetch fresh user data for user {user_id}")
+                orders_logger.error(f"[PENDING_ORDER] Could not fetch fresh user data for user {user_id}")
                 return
                 
             current_wallet_balance_decimal = Decimal(str(fresh_user.wallet_balance))
             current_total_margin_decimal = Decimal(str(fresh_user.margin))
             
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Fresh user data loaded: wallet_balance={current_wallet_balance_decimal}, current_margin={current_total_margin_decimal}")
         except Exception as user_refresh_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error refreshing user data: {str(user_refresh_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error refreshing user data: {str(user_refresh_error)}", exc_info=True)
             # Fallback to original user data
             current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
             current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
-            orders_logger.warning(f"[PENDING_ORDER_EXECUTION_DEBUG] Using fallback user data: wallet_balance={current_wallet_balance_decimal}, current_margin={current_total_margin_decimal}")
 
         # FIX: Only update the margin if there's a real change needed
         # For perfect hedging, if margin is zero, we don't need to update the user's overall margin at all
         if margin > Decimal('0'):
             new_total_margin = current_total_margin_decimal + margin
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Margin check: current_margin={current_total_margin_decimal}, new_margin={new_total_margin}")
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Using margin with hedging applied: {margin}. Adding to current total margin: {current_total_margin_decimal}")
         else:
             # Perfect hedging case - no need to update the user's margin
             new_total_margin = current_total_margin_decimal
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Perfect hedging detected: order {order_id} requires no additional margin. Keeping current margin of {current_total_margin_decimal}")
 
         try:
             # Update user's margin with the new total that includes hedging adjustments
@@ -660,9 +557,6 @@ async def trigger_pending_order(
                     user_type,
                     new_total_margin
                 )
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] User margin updated successfully for user {user_id}: {new_total_margin} (includes hedging adjustments)")
-            else:
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] No margin update needed for user {user_id} - margin remains at {current_total_margin_decimal}")
             
             # Always refresh user data in the cache, even for a perfect hedge
             try:
@@ -688,32 +582,27 @@ async def trigger_pending_order(
                         "phone_number": getattr(updated_user, 'phone_number', None),
                     }
                     await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                    orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Updated user data cache with new margin value: {updated_user.margin}")
             except Exception as cache_error:
-                orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating user data cache: {str(cache_error)}", exc_info=True)
+                orders_logger.error(f"[PENDING_ORDER] Error updating user data cache: {str(cache_error)}", exc_info=True)
             
             # Publish user data update notification to WebSocket clients using the existing cache function
             await publish_user_data_update(redis_client, user_id)
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Published user data update notification for user {user_id}")
         except Exception as margin_update_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating user margin: {str(margin_update_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error updating user margin: {str(margin_update_error)}", exc_info=True)
             return
         
         db_order.order_status = 'OPEN'
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Pending order {order_id} for user {user_id} opened successfully. New total margin: {new_total_margin}")
 
         # Commit DB changes for the order status and updated fields
         try:
             await db.commit()
             await db.refresh(db_order)
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Order {order_id} status updated to OPEN in database")
         except Exception as commit_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error committing order status change to database: {str(commit_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error committing order status change to database: {str(commit_error)}", exc_info=True)
             return
 
         try:
             # --- Portfolio Update & Websocket Event ---
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Starting portfolio update for user {user_id}")
             user_data_for_portfolio = await get_user_data_cache(redis_client, user_id, db, user_type) # Re-fetch updated user data
             if user_data_for_portfolio:
                 open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
@@ -748,31 +637,26 @@ async def trigger_pending_order(
                         prices = await get_last_known_price(redis_client, symbol_key)
                         if prices:
                             adjusted_market_prices[symbol_key] = prices
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Fetched market prices for {len(adjusted_market_prices)} symbols")
                 
                 portfolio = await calculate_user_portfolio(user_data_for_portfolio, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                 await publish_account_structure_changed_event(redis_client, user_id)
-                orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Portfolio cache updated and websocket event published for user {user_id}")
         except Exception as e:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error updating portfolio cache or publishing websocket event: {str(e)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error updating portfolio cache or publishing websocket event: {str(e)}", exc_info=True)
             # Continue execution - don't return here as the order is already opened
-
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Successfully processed triggered pending order {order_id} for user {user_id}. Status set to {db_order.order_status}. Order Type changed from {order_type_original} to {new_order_type}.")
         
         # Remove the order from Redis pending list AFTER successful processing
         # Use the original_order_type for removal as that's how it's stored in Redis
         try:
             await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
-            orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Successfully removed order {order_id} from Redis pending orders")
             
             # Notify clients about order execution through websockets
             await publish_order_execution_notification(redis_client, user_id, order_id, symbol, new_order_type, exec_price)
         except Exception as remove_error:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error removing order from Redis: {str(remove_error)}", exc_info=True)
+            orders_logger.error(f"[PENDING_ORDER] Error removing order from Redis: {str(remove_error)}", exc_info=True)
 
     except Exception as e:
-        orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Critical error in trigger_pending_order for order {order.get('order_id', 'N/A')}: {str(e)}", exc_info=True)
+        orders_logger.error(f"[PENDING_ORDER] Critical error in trigger_pending_order for order {order.get('order_id', 'N/A')}: {str(e)}", exc_info=True)
         raise
 
 # New function to publish order execution notification
@@ -798,11 +682,10 @@ async def publish_order_execution_notification(redis_client: Redis, user_id: str
         # Publish to the user's channel
         channel = f"user:{user_id}:notifications"
         await redis_client.publish(channel, json.dumps(notification))
-        orders_logger.info(f"[PENDING_ORDER_EXECUTION_DEBUG] Published order execution notification for order {order_id} to channel {channel}")
     
     except Exception as e:
         from app.core.logging_config import orders_logger
-        orders_logger.error(f"[PENDING_ORDER_EXECUTION_DEBUG] Error publishing order execution notification: {str(e)}", exc_info=True)
+        orders_logger.error(f"[PENDING_ORDER] Error publishing order execution notification: {str(e)}", exc_info=True)
 
 async def check_and_trigger_stoploss_takeprofit(
     db: AsyncSession,
@@ -813,19 +696,15 @@ async def check_and_trigger_stoploss_takeprofit(
     This function is called by the background task triggered by market data updates.
     """
     logger = logging.getLogger("sltp")
-    logger.info("[SLTP_CHECK] Starting SL/TP check triggered by market data update")
     
     try:
         # Get all open orders for both live and demo users
         from app.crud.crud_order import get_all_open_orders
         live_orders, demo_orders = await get_all_open_orders(db)
         
-        logger.info(f"[SLTP_CHECK] Found {len(live_orders)} live orders and {len(demo_orders)} demo orders to check")
-        
         # Process live orders
         for order in live_orders:
             try:
-                logger.info(f"[SLTP_CHECK] Processing live order {order.order_id} for symbol {order.order_company_name}")
                 await process_order_stoploss_takeprofit(db, redis_client, order, 'live')
             except Exception as e:
                 logger.error(f"[SLTP_CHECK] Error processing live order {order.order_id}: {e}", exc_info=True)
@@ -833,13 +712,10 @@ async def check_and_trigger_stoploss_takeprofit(
         # Process demo orders
         for order in demo_orders:
             try:
-                logger.info(f"[SLTP_CHECK] Processing demo order {order.order_id} for symbol {order.order_company_name}")
                 await process_order_stoploss_takeprofit(db, redis_client, order, 'demo')
             except Exception as e:
                 logger.error(f"[SLTP_CHECK] Error processing demo order {order.order_id}: {e}", exc_info=True)
             
-        logger.info("[SLTP_CHECK] Completed SL/TP check cycle")
-        
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error in check_and_trigger_stoploss_takeprofit: {e}", exc_info=True)
 
@@ -859,8 +735,6 @@ async def process_order_stoploss_takeprofit(
         # Get the symbol and current price
         symbol = order.order_company_name
         user_id = order.order_user_id
-        
-        logger.info(f"[SLTP_CHECK] Processing {user_type} order {order.order_id} for user {user_id}, symbol {symbol}")
         
         # Get user's group name
         if user_type == 'live':
@@ -889,8 +763,6 @@ async def process_order_stoploss_takeprofit(
         buy_price = Decimal(str(adjusted_price.get('buy', '0')))
         sell_price = Decimal(str(adjusted_price.get('sell', '0')))
         
-        logger.info(f"[SLTP_CHECK] Order {order.order_id} - Current prices: Buy={buy_price}, Sell={sell_price}")
-        
         # Define epsilon for floating-point precision tolerance
         # For forex (5 decimal places), use 0.00001 as tolerance
         epsilon = Decimal(SLTP_EPSILON)
@@ -898,7 +770,6 @@ async def process_order_stoploss_takeprofit(
         # Check stop loss
         if order.stop_loss and order.stop_loss > 0:
             stop_loss = Decimal(str(order.stop_loss))
-            logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking stop loss: {stop_loss}")
             
             if order.order_type == 'BUY':
                 # For BUY orders: trigger when sell_price <= stop_loss (with epsilon tolerance)
@@ -911,8 +782,6 @@ async def process_order_stoploss_takeprofit(
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
                     logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order.order_id} at {sell_price} <= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, sell_price, 'STOP_LOSS', user_type)
-                else:
-                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Stop loss not triggered: {sell_price} > {stop_loss} (diff: {price_diff}, epsilon: {epsilon})")
                     
             elif order.order_type == 'SELL':
                 # For SELL orders: trigger when buy_price >= stop_loss (with epsilon tolerance)
@@ -925,13 +794,10 @@ async def process_order_stoploss_takeprofit(
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
                     logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order.order_id} at {buy_price} >= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, buy_price, 'STOP_LOSS', user_type)
-                else:
-                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Stop loss not triggered: {buy_price} < {stop_loss} (diff: {price_diff}, epsilon: {epsilon})")
             
         # Check take profit
         if order.take_profit and order.take_profit > 0:
             take_profit = Decimal(str(order.take_profit))
-            logger.info(f"[SLTP_CHECK] Order {order.order_id} - Checking take profit: {take_profit}")
             
             if order.order_type == 'BUY':
                 # For BUY orders: trigger when sell_price >= take_profit (with epsilon tolerance)
@@ -944,8 +810,6 @@ async def process_order_stoploss_takeprofit(
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
                     logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order.order_id} at {sell_price} >= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, sell_price, 'TAKE_PROFIT', user_type)
-                else:
-                    logger.info(f"[SLTP_CHECK] BUY order {order.order_id} - Take profit not triggered: {sell_price} < {take_profit} (diff: {price_diff}, epsilon: {epsilon})")
                     
             elif order.order_type == 'SELL':
                 # For SELL orders: trigger when buy_price <= take_profit (with epsilon tolerance)
@@ -958,8 +822,6 @@ async def process_order_stoploss_takeprofit(
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
                     logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order.order_id} at {buy_price} <= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, buy_price, 'TAKE_PROFIT', user_type)
-                else:
-                    logger.info(f"[SLTP_CHECK] SELL order {order.order_id} - Take profit not triggered: {buy_price} > {take_profit} (diff: {price_diff}, epsilon: {epsilon})")
                 
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error processing order {order.order_id}: {e}", exc_info=True)
@@ -979,7 +841,6 @@ async def get_last_known_price(redis_client: Redis, symbol: str) -> dict:
         price_data = await redis_client.get(price_key)
         
         if not price_data:
-            logger.warning(f"No price data found for {symbol}")
             return None
             
         try:
@@ -1134,13 +995,10 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
     Always fetches fresh data from the database to ensure the cache is up-to-date.
     """
     try:
-        logger.info(f"Starting update_user_static_orders for user {user_id}, user_type {user_type}")
         order_model = get_order_model(user_type)
-        logger.info(f"Using order model: {order_model.__name__}")
         
         # Get open orders - always fetch from database to ensure fresh data
         open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-        logger.info(f"Fetched {len(open_orders_orm)} open orders for user {user_id}")
         open_orders_data = []
         for pos in open_orders_orm:
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
@@ -1152,7 +1010,6 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
         # Get pending orders - always fetch from database to ensure fresh data
         pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
         pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
-        logger.info(f"Fetched {len(pending_orders_orm)} pending orders for user {user_id}")
         pending_orders_data = []
         for po in pending_orders_orm:
             po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
@@ -1168,7 +1025,6 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
             "updated_at": datetime.now().isoformat()
         }
         await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
-        logger.info(f"Updated static orders cache for user {user_id} with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
         
         return static_orders_data
     except Exception as e:
@@ -1188,7 +1044,6 @@ async def close_order(
     This function includes robust margin calculations, commission handling, and wallet transactions.
     """
     logger = logging.getLogger("orders")
-    logger.info(f"[ORDER_CLOSE] Closing {user_type} order {order.order_id} at price {execution_price} due to {close_reason}")
     
     try:
         # Lock user for atomic operations
@@ -1420,17 +1275,11 @@ async def close_order(
                         pending_type, 
                         str(order.order_user_id)
                     )
-                    logger.info(f"[ORDER_CLOSE] Removed order {order.order_id} from Redis pending orders (type: {pending_type})")
                 except Exception as remove_error:
                     # This is expected if the order wasn't in Redis for this specific type
                     pass
         except Exception as redis_cleanup_error:
             logger.warning(f"[ORDER_CLOSE] Error during Redis cleanup for order {order.order_id}: {redis_cleanup_error}")
-
-        logger.info(f"[ORDER_CLOSE] Successfully closed order {order.order_id} due to {close_reason} with robust margin/wallet logic.")
-        logger.info(f"[ORDER_CLOSE] Order details - Net Profit: {order.net_profit}, Commission: {total_commission_for_trade}, Swap: {swap_amount}")
-        logger.info(f"[ORDER_CLOSE] User margin updated: {current_overall_margin} -> {db_user_locked.margin}")
-        logger.info(f"[ORDER_CLOSE] User wallet updated: {original_wallet_balance} -> {db_user_locked.wallet_balance}")
 
     except Exception as e:
         logger.error(f"[ORDER_CLOSE] Error closing order {order.order_id}: {e}", exc_info=True)

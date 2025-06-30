@@ -71,7 +71,7 @@ async def calculate_total_symbol_margin_contribution(
     order_model=None,
     user_type: str = 'live'
 ) -> Dict[str, Any]: 
-    logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
+    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
     # logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] Positions data: {open_positions_for_symbol}") # Can be very verbose
 
     total_buy_quantity = Decimal(0)
@@ -80,7 +80,7 @@ async def calculate_total_symbol_margin_contribution(
     contributing_orders_count = 0
 
     if not open_positions_for_symbol:
-        logger.debug(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
+        # logger.debug(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
         return {"total_margin": Decimal("0.0"), "contributing_orders_count": 0}
 
     for i, position in enumerate(open_positions_for_symbol):
@@ -99,14 +99,14 @@ async def calculate_total_symbol_margin_contribution(
             position_quantity = Decimal(position_quantity_str)
             position_full_margin = Decimal(position_full_margin_str)
 
-            logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
+            # logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
 
             if position_quantity > 0:
                 margin_per_lot_of_position = Decimal("0.0")
                 if position_quantity != Decimal("0"): # Avoid division by zero if quantity is somehow zero
                     margin_per_lot_of_position = position_full_margin / position_quantity
                 all_margins_per_lot.append(margin_per_lot_of_position)
-                logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
+                # logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
                 if position_full_margin > Decimal("0.0"):
                     contributing_orders_count +=1 # Count if this position itself contributes margin
 
@@ -123,9 +123,9 @@ async def calculate_total_symbol_margin_contribution(
     
     calculated_total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) # Changed precision to 0.01
     
-    logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}")
-    logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
-    logger.debug(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}, ContributingOrders={contributing_orders_count} (based on individual stored margins)")
+    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}")
+    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
+    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}, ContributingOrders={contributing_orders_count} (based on individual stored margins)")
     
     # The contributing_orders_count here might be misleading if highest_margin_per_lot is zero.
     # The logic of this function implies that if highest_margin_per_lot is 0, total margin is 0.

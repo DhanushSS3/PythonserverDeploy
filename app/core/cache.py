@@ -420,7 +420,7 @@ async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: 
     Returns None if the cache is empty or expired.
     """
     cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol}"
-    cache_logger.debug(f"Looking up cache key: {cache_key}")
+    # cache_logger.debug(f"Looking up cache key: {cache_key}")
     try:
         cached_data = await redis_client.get(cache_key)
         if cached_data:
@@ -431,9 +431,9 @@ async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: 
                 "sell": decimal.Decimal(price_data["sell"]),
                 "spread_value": decimal.Decimal(price_data["spread_value"])
             }
-        else:
-            cache_logger.debug(f"No cached data found for key {cache_key}")
-            return None
+        # else:
+        #     cache_logger.debug(f"No cached data found for key {cache_key}")
+        #     return None
     except Exception as e:
         cache_logger.error(f"Error fetching adjusted market price from cache for key {cache_key}: {e}", exc_info=True)
         return None
