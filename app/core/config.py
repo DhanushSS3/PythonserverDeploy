@@ -93,6 +93,12 @@ class Settings(BaseSettings):
     DEFAULT_FROM_EMAIL: str = os.getenv("DEFAULT_FROM_EMAIL", "noreply@.com")
     MAIL_FROM: str = os.getenv("MAIL_FROM", "noreply@.")
 
+    SLTP_EPSILON: float = 0.00001
+    
+    # Tylt.money Payment Gateway API Credentials
+    TYLT_API_KEY: str = os.getenv("TLP_API_KEY", "")
+    TYLT_API_SECRET: str = os.getenv("TLP_API_SECRET", "")
+
 
 @lru_cache()
 def get_settings() -> Settings:
@@ -102,3 +108,6 @@ def get_settings() -> Settings:
     settings_instance = Settings()
     logger.info(f"Settings instance loaded. Project: {settings_instance.PROJECT_NAME}, API Prefix: {settings_instance.API_V1_STR}")
     return settings_instance
+
+
+settings = Settings()

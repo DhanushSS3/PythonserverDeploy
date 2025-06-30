@@ -617,3 +617,18 @@ class UserFavoriteSymbol(Base):
 
     # Simple relationship to Symbol
     symbol = relationship("Symbol", back_populates="favorited_by")
+
+
+class CryptoPayment(Base):
+    __tablename__ = 'crypto_payments'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    merchant_order_id = Column(String(255), unique=True, index=True, nullable=False)
+    base_amount = Column(SQLDecimal(20, 8), nullable=False)
+    base_currency = Column(String(50), nullable=False)
+    settled_currency = Column(String(50), nullable=False)
+    network_symbol = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, default='PENDING')  # e.g., PENDING, COMPLETED, FAILED
+    transaction_details = Column(Text, nullable=True)  # Store callback data as JSON
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())

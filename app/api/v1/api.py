@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 # Import individual routers from endpoints
-from app.api.v1.endpoints import users, groups, orders, wallets, news, money_requests
+from app.api.v1.endpoints import users, groups, orders, wallets, news, money_requests, crypto_payments
 # Uncomment favorites import 
 from app.api.v1.endpoints import favorites
 # Import the market data WebSocket router module
@@ -19,6 +19,7 @@ api_router.include_router(orders.router, tags=["orders"])
 api_router.include_router(money_requests.router, prefix="", tags=["Money Requests"])
 api_router.include_router(wallets.router, tags=["Wallets"])
 api_router.include_router(news.router, tags=["News"])
+api_router.include_router(crypto_payments.router, prefix="/payments", tags=["Crypto Payments"])
 # Include the favorites router
 api_router.include_router(favorites.router, tags=["favorites"])
 # Include the WebSocket router
