@@ -209,15 +209,6 @@ async def calculate_single_order_margin(
                 orders_logger.error(f"[MARGIN_CALC] Could not get any price for {symbol} {order_type} order")
                 return None, None, None, None
         
-        # Calculate contract value using the CORRECT formula
-        # Contract value = contract_size * quantity (without price)
-        contract_value = contract_size * quantity
-        
-        orders_logger.info(f"[MARGIN_CALC] Contract value calculation for {symbol}:")
-        orders_logger.info(f"[MARGIN_CALC] Contract value = contract_size * quantity = {contract_size} * {quantity} = {contract_value}")
-        
-        # Calculate margin using the CORRECT formula
-        # Margin = (contract_value * price) / user_leverage
         # Ensure user_leverage is at least 1 to avoid division by zero
         effective_leverage = max(user_leverage, Decimal('1'))
         # For live users, leverage is typically 100 or 200
@@ -236,11 +227,37 @@ async def calculate_single_order_margin(
             except Exception as e:
                 orders_logger.error(f"[MARGIN_CALC] Error getting user leverage: {e}")
                 effective_leverage = Decimal('100')  # Default to 100
-                
-        margin_raw = (contract_value * price) / effective_leverage
+
+        # Get symbol type from group settings to determine margin formula
+        symbol_type = int(group_settings.get('type', 1)) # Default to 1 (forex) if not found
+        orders_logger.info(f"[MARGIN_CALC] Symbol type from group settings: {symbol_type}")
+
+        if symbol_type == 4: # Crypto
+            # Margin for crypto: (price * contract_size * quantity * margin_from_group) / leverage
+            group_margin_rate_raw = group_settings.get('margin', '0.0')
+            group_margin_rate = Decimal(str(group_margin_rate_raw))
+            orders_logger.info(f"[MARGIN_CALC] Crypto margin calculation. Group margin rate: {group_margin_rate}")
+            
+            margin_raw = (price * contract_size * quantity * group_margin_rate) / effective_leverage
+            
+            # For crypto, contract value is often considered differently for logging/display.
+            # Let's keep the standard calculation for consistency unless specified otherwise.
+            contract_value = contract_size * quantity
+
+            orders_logger.info(f"[MARGIN_CALC] Crypto Margin calc: (price * contract_size * quantity * group_margin_rate) / effective_leverage = ({price} * {contract_size} * {quantity} * {group_margin_rate}) / {effective_leverage} = {margin_raw}")
+
+        else: # Forex, Commodities, Indices
+            # Existing margin calculation
+            # Contract value = contract_size * quantity
+            contract_value = contract_size * quantity
+            orders_logger.info(f"[MARGIN_CALC] Standard contract value calculation: contract_size * quantity = {contract_size} * {quantity} = {contract_value}")
+            
+            # Margin = (contract_value * price) / user_leverage
+            margin_raw = (contract_value * price) / effective_leverage
+            orders_logger.info(f"[MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = ({contract_value} * {price}) / {effective_leverage} = {margin_raw}")
+
+
         margin = margin_raw.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        
-        orders_logger.info(f"[MARGIN_CALC] Margin calculation: (contract_value * price) / effective_leverage = ({contract_value} * {price}) / {effective_leverage} = {margin_raw} (rounded to {margin})")
         
         # Calculate commission
         commission = Decimal('0.0')

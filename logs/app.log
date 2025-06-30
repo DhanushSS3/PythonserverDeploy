@@ -1805,3 +1805,814 @@ fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
 2025-06-30 03:43:40,757 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
 2025-06-30 03:43:40,760 - INFO - app.main - Redis connection closed
 2025-06-30 03:43:40,760 - INFO - app.main - Application shutdown completed
+2025-06-30 03:44:20,653 - INFO - app.core.config - .env file loaded successfully.
+2025-06-30 03:44:20,658 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-30 03:44:20,658 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-30 03:44:21,081 - INFO - app.main - Application startup initiated
+2025-06-30 03:44:21,112 - INFO - app.main - Firebase already initialized
+2025-06-30 03:44:21,112 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-30 03:44:21,117 - INFO - app.main - Redis initialized
+2025-06-30 03:44:21,119 - INFO - app.main - Scheduler initialized
+2025-06-30 03:44:21,120 - INFO - app.main - Background tasks initialized
+2025-06-30 03:44:22,021 - INFO - app.main - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-06-30 03:44:22,021 - INFO - app.main - Application startup completed
+2025-06-30 03:44:22,021 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 03:44:22,022 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-30 03:44:22,746 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 03:44:24,642 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-30 03:44:24,647 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-30 03:44:24,651 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-30 03:44:24,655 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-30 03:44:24,657 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-30 03:44:24,660 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-30 03:44:24,663 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-30 03:44:24,665 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-30 03:44:24,667 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-30 03:44:24,669 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-30 03:44:24,672 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-30 03:44:24,674 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-30 03:44:24,676 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-30 03:44:24,678 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-30 03:44:24,680 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-30 03:44:24,682 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-30 03:44:24,684 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-30 03:44:24,687 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-30 03:44:24,689 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-30 03:44:24,691 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-30 03:44:24,694 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-30 03:44:24,696 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-30 03:44:24,698 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-30 03:44:24,700 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-30 03:44:24,702 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-30 03:44:24,704 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-30 03:44:24,706 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-30 03:44:24,708 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-30 03:44:24,710 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-30 03:44:24,712 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-30 03:44:24,714 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-30 03:44:24,716 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-30 03:44:24,718 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-30 03:44:24,720 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-30 03:44:24,722 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-30 03:44:24,724 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-30 03:44:24,726 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-30 03:44:24,727 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-30 03:44:24,729 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-30 03:44:24,731 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-30 03:44:24,733 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-30 03:44:24,734 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-30 03:44:24,736 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-30 03:44:24,739 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-30 03:44:24,740 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-30 03:44:24,742 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-30 03:44:24,744 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-30 03:44:24,746 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-30 03:44:24,748 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-30 03:44:24,750 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-30 03:44:24,752 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-30 03:44:24,754 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-30 03:44:24,756 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-30 03:44:24,758 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-30 03:44:24,760 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-30 03:44:24,762 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-30 03:44:24,764 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-30 03:44:24,766 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-30 03:44:24,768 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-30 03:44:24,770 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-30 03:44:24,772 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-30 03:44:24,774 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-30 03:44:24,776 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-30 03:44:24,778 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-30 03:44:24,780 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-30 03:44:24,782 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-30 03:44:24,784 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-30 03:44:24,786 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-30 03:44:24,788 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-30 03:44:24,790 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-30 03:44:24,792 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-30 03:44:24,794 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-30 03:44:24,795 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-30 03:44:24,797 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-30 03:44:24,799 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-30 03:44:24,800 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-30 03:44:24,802 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-30 03:44:24,804 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-30 03:44:24,806 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-30 03:44:25,858 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 1
+2025-06-30 03:44:25,859 - WARNING - app.api.v1.endpoints.users - Refresh token validation failed for user ID 1. Data found: False, User ID match: False
+2025-06-30 03:44:25,859 - ERROR - app.api.v1.endpoints.users - Unexpected error during refresh token process for token: eyJhbGciOiJIUzI1NiIs... : 401: Invalid or expired refresh token
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+2025-06-30 03:44:37,178 - INFO - app.main - Application shutdown initiated
+2025-06-30 03:44:37,178 - INFO - app.main - Scheduler shutdown completed
+2025-06-30 03:44:37,178 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-30 03:44:38,129 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-30 03:44:38,129 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-30 03:44:38,132 - INFO - app.main - Redis connection closed
+2025-06-30 03:44:38,132 - INFO - app.main - Application shutdown completed
+2025-06-30 03:58:04,333 - INFO - app.core.config - .env file loaded successfully.
+2025-06-30 03:58:04,339 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-30 03:58:04,339 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-30 03:58:04,828 - INFO - app.main - Application startup initiated
+2025-06-30 03:58:04,859 - INFO - app.main - Firebase already initialized
+2025-06-30 03:58:04,860 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-30 03:58:04,865 - INFO - app.main - Redis initialized
+2025-06-30 03:58:04,871 - INFO - app.main - Scheduler initialized
+2025-06-30 03:58:04,871 - INFO - app.main - Background tasks initialized
+2025-06-30 03:58:06,121 - INFO - app.main - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-06-30 03:58:06,121 - INFO - app.main - Application startup completed
+2025-06-30 03:58:06,121 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 03:58:06,122 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-30 03:58:06,848 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 03:58:07,160 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-30 03:58:07,163 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-30 03:58:07,166 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-30 03:58:07,169 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-30 03:58:07,172 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-30 03:58:07,175 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-30 03:58:07,178 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-30 03:58:07,181 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-30 03:58:07,184 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-30 03:58:07,187 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-30 03:58:07,190 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-30 03:58:07,193 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-30 03:58:07,195 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-30 03:58:07,198 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-30 03:58:07,201 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-30 03:58:07,204 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-30 03:58:07,206 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-30 03:58:07,209 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-30 03:58:07,212 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-30 03:58:07,215 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-30 03:58:07,217 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-30 03:58:07,220 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-30 03:58:07,223 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-30 03:58:07,226 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-30 03:58:07,228 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-30 03:58:07,231 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-30 03:58:07,234 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-30 03:58:07,237 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-30 03:58:07,240 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-30 03:58:07,243 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-30 03:58:07,246 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-30 03:58:07,248 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-30 03:58:07,250 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-30 03:58:07,253 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-30 03:58:07,256 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-30 03:58:07,259 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-30 03:58:07,262 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-30 03:58:07,264 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-30 03:58:07,267 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-30 03:58:07,270 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-30 03:58:07,273 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-30 03:58:07,276 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-30 03:58:07,278 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-30 03:58:07,281 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-30 03:58:07,283 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-30 03:58:07,285 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-30 03:58:07,287 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-30 03:58:07,290 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-30 03:58:07,293 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-30 03:58:07,296 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-30 03:58:07,299 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-30 03:58:07,302 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-30 03:58:07,304 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-30 03:58:07,306 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-30 03:58:07,308 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-30 03:58:07,310 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-30 03:58:07,312 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-30 03:58:07,314 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-30 03:58:07,316 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-30 03:58:07,318 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-30 03:58:07,320 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-30 03:58:07,322 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-30 03:58:07,324 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-30 03:58:07,326 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-30 03:58:07,328 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-30 03:58:07,330 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-30 03:58:07,332 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-30 03:58:07,334 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-30 03:58:07,337 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-30 03:58:07,339 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-30 03:58:07,341 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-30 03:58:07,343 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-30 03:58:07,346 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-30 03:58:07,348 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-30 03:58:07,350 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-30 03:58:07,353 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-30 03:58:07,355 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-30 03:58:07,356 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-30 03:58:07,359 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-30 03:58:09,544 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 1
+2025-06-30 03:58:09,544 - WARNING - app.api.v1.endpoints.users - Refresh token validation failed for user ID 1. Data found: False, User ID match: False
+2025-06-30 03:58:09,544 - ERROR - app.api.v1.endpoints.users - Unexpected error during refresh token process for token: eyJhbGciOiJIUzI1NiIs... : 401: Invalid or expired refresh token
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+2025-06-30 03:58:15,548 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-30 03:58:15,554 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-30 03:58:15,562 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-30 03:58:15,570 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-30 03:58:15,580 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-30 03:58:15,587 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-30 03:58:15,594 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-30 03:58:15,603 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-30 03:58:15,611 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-30 03:58:15,620 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-30 03:58:15,626 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-30 03:58:15,633 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-30 03:58:15,641 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-30 03:58:15,647 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-30 03:58:15,654 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-30 03:58:15,659 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-30 03:58:15,667 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-30 03:58:15,673 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-30 03:58:15,679 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-30 03:58:15,685 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-30 03:58:15,690 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-30 03:58:15,695 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-30 03:58:15,701 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-30 03:58:15,705 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-30 03:58:15,711 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-30 03:58:15,735 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-30 03:58:15,742 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-30 03:58:15,767 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-30 03:58:15,777 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-30 03:58:15,790 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-30 03:58:15,798 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-30 03:58:15,806 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-30 03:58:15,814 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-30 03:58:15,821 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-30 03:58:15,829 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-30 03:58:15,835 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-30 03:58:15,843 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-30 03:58:15,848 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-30 03:58:15,852 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-30 03:58:15,857 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-30 03:58:15,862 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-30 03:58:15,868 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-30 03:58:15,875 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-30 03:58:15,880 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-30 03:58:15,886 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-30 03:58:15,891 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-30 03:58:15,897 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-30 03:58:15,904 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-30 03:58:15,912 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-30 03:58:15,917 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-30 03:58:15,922 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-30 03:58:15,929 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-30 03:58:15,936 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-30 03:58:15,941 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-30 03:58:15,946 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-30 03:58:15,952 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-30 03:58:15,957 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-30 03:58:15,964 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-30 03:58:15,970 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-30 03:58:15,975 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-30 03:58:15,980 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-30 03:58:15,987 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-30 03:58:15,994 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-30 03:58:16,000 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-30 03:58:16,007 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-30 03:58:16,012 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-30 03:58:16,018 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-30 03:58:16,024 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-30 03:58:16,032 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-30 03:58:16,037 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-30 03:58:16,043 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-30 03:58:16,049 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-30 03:58:16,054 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-30 03:58:16,060 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-30 03:58:16,064 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-30 03:58:16,070 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-30 03:58:16,076 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-30 03:58:16,082 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-30 03:58:16,087 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-30 03:58:27,832 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:28,250 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 03:58:28,664 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:29,869 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:32,347 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:34,598 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:36,840 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:38,941 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:41,359 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:43,548 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:58:45,478 - INFO - app.main - Application shutdown initiated
+2025-06-30 03:58:45,478 - INFO - app.main - Scheduler shutdown completed
+2025-06-30 03:58:45,478 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-30 03:58:45,554 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-30 03:58:45,554 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-30 03:58:45,558 - INFO - app.main - Redis connection closed
+2025-06-30 03:58:45,558 - INFO - app.main - Application shutdown completed
+2025-06-30 03:59:45,059 - INFO - app.core.config - .env file loaded successfully.
+2025-06-30 03:59:45,064 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-30 03:59:45,065 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-30 03:59:45,564 - INFO - app.main - Application startup initiated
+2025-06-30 03:59:45,600 - INFO - app.main - Firebase already initialized
+2025-06-30 03:59:45,600 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-30 03:59:45,606 - INFO - app.main - Redis initialized
+2025-06-30 03:59:45,612 - INFO - app.main - Scheduler initialized
+2025-06-30 03:59:45,612 - INFO - app.main - Background tasks initialized
+2025-06-30 03:59:46,475 - INFO - app.main - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-06-30 03:59:46,475 - INFO - app.main - Application startup completed
+2025-06-30 03:59:46,476 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 03:59:46,477 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-30 03:59:47,085 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 03:59:47,201 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 1
+2025-06-30 03:59:47,204 - WARNING - app.api.v1.endpoints.users - Refresh token validation failed for user ID 1. Data found: False, User ID match: False
+2025-06-30 03:59:47,205 - ERROR - app.api.v1.endpoints.users - Unexpected error during refresh token process for token: eyJhbGciOiJIUzI1NiIs... : 401: Invalid or expired refresh token
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+2025-06-30 03:59:47,244 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-30 03:59:47,251 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-30 03:59:47,257 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-30 03:59:47,262 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-30 03:59:47,267 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-30 03:59:47,275 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-30 03:59:47,281 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-30 03:59:47,287 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-30 03:59:47,293 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-30 03:59:47,298 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-30 03:59:47,303 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-30 03:59:47,307 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-30 03:59:47,313 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-30 03:59:47,317 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-30 03:59:47,321 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-30 03:59:47,326 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-30 03:59:47,329 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-30 03:59:47,332 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-30 03:59:47,334 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-30 03:59:47,337 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-30 03:59:47,339 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-30 03:59:47,341 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-30 03:59:47,343 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-30 03:59:47,346 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-30 03:59:47,348 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-30 03:59:47,350 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-30 03:59:47,353 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-30 03:59:47,355 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-30 03:59:47,357 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-30 03:59:47,360 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-30 03:59:47,362 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-30 03:59:47,365 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-30 03:59:47,368 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-30 03:59:47,371 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-30 03:59:47,374 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-30 03:59:47,376 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-30 03:59:47,378 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-30 03:59:47,381 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-30 03:59:47,383 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-30 03:59:47,384 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-30 03:59:47,387 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-30 03:59:47,389 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-30 03:59:47,391 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-30 03:59:47,394 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-30 03:59:47,397 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-30 03:59:47,400 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-30 03:59:47,404 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-30 03:59:47,407 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-30 03:59:47,410 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-30 03:59:47,412 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-30 03:59:47,416 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-30 03:59:47,418 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-30 03:59:47,422 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-30 03:59:47,426 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-30 03:59:47,430 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-30 03:59:47,433 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-30 03:59:47,436 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-30 03:59:47,438 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-30 03:59:47,443 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-30 03:59:47,446 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-30 03:59:47,450 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-30 03:59:47,453 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-30 03:59:47,456 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-30 03:59:47,459 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-30 03:59:47,462 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-30 03:59:47,465 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-30 03:59:47,467 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-30 03:59:47,471 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-30 03:59:47,473 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-30 03:59:47,475 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-30 03:59:47,478 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-30 03:59:47,480 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-30 03:59:47,490 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-30 03:59:47,493 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-30 03:59:47,497 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-30 03:59:47,499 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-30 03:59:47,501 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-30 03:59:47,504 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-30 03:59:47,507 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-30 03:59:50,265 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:52,729 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:54,364 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 03:59:54,365 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 03:59:54,767 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:54,768 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 03:59:55,372 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:55,372 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 03:59:57,026 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:57,029 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.070000000000000000000000, PnL USD=-0.05119953188999414862492685781, Commission=0.10000000, Final PnL=-0.1511995318899941486249268578
+2025-06-30 03:59:57,707 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 03:59:57,707 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 03:59:57,707 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 03:59:58,119 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:58,119 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 03:59:58,120 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 03:59:59,373 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 03:59:59,376 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89284, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.090000000000000000000000, PnL USD=-0.06582796957284961966062024576, Commission=0.10000000, Final PnL=-0.1658279695728496196606202458
+2025-06-30 03:59:59,377 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89291, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.050000000000000000000000, PnL USD=-0.03657109420713867758923346987, Commission=0.10000000, Final PnL=-0.1365710942071386775892334699
+2025-06-30 04:00:00,093 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:00:00,093 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:00:00,094 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:00:00,094 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:00:00,505 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:00,505 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:00,505 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:00,505 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:01,625 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:01,626 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89285, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.080000000000000000000000, PnL USD=-0.05851289477918696332704319714, Commission=0.10000000, Final PnL=-0.1585128947791869633270431971
+2025-06-30 04:00:01,627 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89292, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.060000000000000000000000, PnL USD=-0.04388467108439022249528239786, Commission=0.10000000, Final PnL=-0.1438846710843902224952823979
+2025-06-30 04:00:01,629 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89292, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.080000000000000000000000, PnL USD=-0.05851289477918696332704319714, Commission=0.10000000, Final PnL=-0.1585128947791869633270431971
+2025-06-30 04:00:04,201 - DEBUG - app.services.portfolio_calculator - Position calculation for BTCUSD: Type=BUY, Entry=107628.30000000, Current=107536.8, Quantity=0.01000000, Contract Size=1.00000000, PnL=-0.915000000000000000000000, PnL USD=-0.915000000000000000000000, Commission=0.10000000, Final PnL=-1.015000000000000000000000
+2025-06-30 04:00:04,201 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:04,201 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:04,201 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:06,310 - DEBUG - app.services.portfolio_calculator - Position calculation for BTCUSD: Type=BUY, Entry=107628.30000000, Current=107545.9, Quantity=0.01000000, Contract Size=1.00000000, PnL=-0.824000000000000000000000, PnL USD=-0.824000000000000000000000, Commission=0.10000000, Final PnL=-0.924000000000000000000000
+2025-06-30 04:00:06,311 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.070000000000000000000000, PnL USD=-0.05119840846090270108174923020, Commission=0.10000000, Final PnL=-0.1511984084609027010817492302
+2025-06-30 04:00:06,312 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89292, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.060000000000000000000000, PnL USD=-0.04388435010934517235578505445, Commission=0.10000000, Final PnL=-0.1438843501093451723557850544
+2025-06-30 04:00:06,313 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89292, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.080000000000000000000000, PnL USD=-0.05851246681246022980771340594, Commission=0.10000000, Final PnL=-0.1585124668124602298077134059
+2025-06-30 04:00:08,390 - DEBUG - app.services.portfolio_calculator - Position calculation for BTCUSD: Type=BUY, Entry=107628.30000000, Current=107530.0, Quantity=0.01000000, Contract Size=1.00000000, PnL=-0.983000000000000000000000, PnL USD=-0.983000000000000000000000, Commission=0.10000000, Final PnL=-1.083000000000000000000000
+2025-06-30 04:00:08,391 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.070000000000000000000000, PnL USD=-0.05119728508111112736421748607, Commission=0.10000000, Final PnL=-0.1511972850811111273642174861
+2025-06-30 04:00:08,392 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89293, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.070000000000000000000000, PnL USD=-0.05119728508111112736421748607, Commission=0.10000000, Final PnL=-0.1511972850811111273642174861
+2025-06-30 04:00:08,392 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89293, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.090000000000000000000000, PnL USD=-0.06582508081857144946827962494, Commission=0.10000000, Final PnL=-0.1658250808185714494682796249
+2025-06-30 04:00:10,850 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:10,850 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:10,850 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:10,850 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:13,106 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:13,107 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89285, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.080000000000000000000000, PnL USD=-0.05851118294984128841624855551, Commission=0.10000000, Final PnL=-0.1585111829498412884162485555
+2025-06-30 04:00:13,108 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89291, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.050000000000000000000000, PnL USD=-0.03656948934365080526015534719, Commission=0.10000000, Final PnL=-0.1365694893436508052601553472
+2025-06-30 04:00:13,109 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89291, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.070000000000000000000000, PnL USD=-0.05119728508111112736421748607, Commission=0.10000000, Final PnL=-0.1511972850811111273642174861
+2025-06-30 04:00:15,449 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:15,450 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:15,450 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:15,450 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:17,721 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:17,722 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89285, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.080000000000000000000000, PnL USD=-0.05851289477918696332704319714, Commission=0.10000000, Final PnL=-0.1585128947791869633270431971
+2025-06-30 04:00:17,723 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.8929, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.040000000000000000000000, PnL USD=-0.02925644738959348166352159857, Commission=0.10000000, Final PnL=-0.1292564473895934816635215986
+2025-06-30 04:00:17,724 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.8929, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.060000000000000000000000, PnL USD=-0.04388467108439022249528239786, Commission=0.10000000, Final PnL=-0.1438846710843902224952823979
+2025-06-30 04:00:19,879 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:19,879 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:19,879 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:19,879 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:22,170 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:22,172 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.8928, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.130000000000000000000000, PnL USD=-0.09508762690540975452763392727, Commission=0.10000000, Final PnL=-0.1950876269054097545276339273
+2025-06-30 04:00:22,173 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0E-24, PnL USD=0E-14, Commission=0.10000000, Final PnL=-0.10000000000000
+2025-06-30 04:00:22,174 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.020000000000000000000000, PnL USD=-0.01462886567775534685040521958, Commission=0.10000000, Final PnL=-0.1146288656777553468504052196
+2025-06-30 04:00:24,493 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:24,494 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89279, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.140000000000000000000000, PnL USD=-0.1024132961719372938018010110, Commission=0.10000000, Final PnL=-0.2024132961719372938018010110
+2025-06-30 04:00:24,495 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0E-24, PnL USD=0E-14, Commission=0.10000000, Final PnL=-0.10000000000000
+2025-06-30 04:00:24,495 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.020000000000000000000000, PnL USD=-0.01463047088170532768597157300, Commission=0.10000000, Final PnL=-0.1146304708817053276859715730
+2025-06-30 04:00:26,923 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:26,924 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89278, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.150000000000000000000000, PnL USD=-0.1097293343087051938551572787, Commission=0.10000000, Final PnL=-0.2097293343087051938551572787
+2025-06-30 04:00:26,924 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89284, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.020000000000000000000000, PnL USD=0.01463057790782735918068763716, Commission=0.10000000, Final PnL=-0.08536942209217264081931236284
+2025-06-30 04:00:26,924 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89284, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0E-24, PnL USD=0E-14, Commission=0.10000000, Final PnL=-0.10000000000000
+2025-06-30 04:00:29,190 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:29,190 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:29,190 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:29,190 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:00:31,425 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:00:31,427 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89293000, Current=0.89275, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.180000000000000000000000, PnL USD=-0.1316752011704462326261887345, Commission=0.10000000, Final PnL=-0.2316752011704462326261887345
+2025-06-30 04:00:31,428 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89282, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.040000000000000000000000, PnL USD=0.02926115581565471836137527432, Commission=0.10000000, Final PnL=-0.07073884418434528163862472568
+2025-06-30 04:00:31,429 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89284000, Current=0.89282, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.020000000000000000000000, PnL USD=0.01463057790782735918068763716, Commission=0.10000000, Final PnL=-0.08536942209217264081931236284
+2025-06-30 04:00:32,629 - INFO - app.main - Application shutdown initiated
+2025-06-30 04:00:32,629 - INFO - app.main - Scheduler shutdown completed
+2025-06-30 04:00:32,629 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-30 04:00:33,337 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-30 04:00:33,337 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-30 04:00:33,344 - INFO - app.main - Redis connection closed
+2025-06-30 04:00:33,344 - INFO - app.main - Application shutdown completed
+2025-06-30 04:02:15,056 - INFO - app.core.config - .env file loaded successfully.
+2025-06-30 04:02:15,066 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-30 04:02:15,066 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-30 04:02:15,660 - INFO - app.main - Application startup initiated
+2025-06-30 04:02:15,690 - INFO - app.main - Firebase already initialized
+2025-06-30 04:02:15,690 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-30 04:02:15,693 - INFO - app.main - Redis initialized
+2025-06-30 04:02:15,696 - INFO - app.main - Scheduler initialized
+2025-06-30 04:02:15,696 - INFO - app.main - Background tasks initialized
+2025-06-30 04:02:16,782 - INFO - app.main - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-06-30 04:02:16,783 - INFO - app.main - Application startup completed
+2025-06-30 04:02:16,783 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 04:02:16,783 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-30 04:02:17,350 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 04:02:21,989 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-30 04:02:21,996 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-30 04:02:22,001 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-30 04:02:22,008 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-30 04:02:22,014 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-30 04:02:22,020 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-30 04:02:22,030 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-30 04:02:22,037 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-30 04:02:22,043 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-30 04:02:22,049 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-30 04:02:22,055 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-30 04:02:22,061 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-30 04:02:22,068 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-30 04:02:22,075 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-30 04:02:22,082 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-30 04:02:22,089 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-30 04:02:22,095 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-30 04:02:22,102 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-30 04:02:22,109 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-30 04:02:22,115 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-30 04:02:22,122 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-30 04:02:22,130 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-30 04:02:22,136 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-30 04:02:22,143 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-30 04:02:22,150 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-30 04:02:22,157 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-30 04:02:22,164 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-30 04:02:22,171 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-30 04:02:22,178 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-30 04:02:22,185 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-30 04:02:22,192 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-30 04:02:22,199 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-30 04:02:22,212 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-30 04:02:22,220 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-30 04:02:22,236 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-30 04:02:22,264 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-30 04:02:22,276 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-30 04:02:22,288 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-30 04:02:22,299 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-30 04:02:22,306 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-30 04:02:22,312 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-30 04:02:22,321 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-30 04:02:22,334 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-30 04:02:22,344 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-30 04:02:22,352 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-30 04:02:22,357 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-30 04:02:22,368 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-30 04:02:22,421 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-30 04:02:22,439 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-30 04:02:22,453 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-30 04:02:22,466 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-30 04:02:22,480 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-30 04:02:22,494 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-30 04:02:22,504 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-30 04:02:22,511 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-30 04:02:22,515 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-30 04:02:22,521 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-30 04:02:22,528 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-30 04:02:22,535 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-30 04:02:22,543 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-30 04:02:22,551 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-30 04:02:22,559 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-30 04:02:22,565 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-30 04:02:22,572 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-30 04:02:22,579 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-30 04:02:22,589 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-30 04:02:22,598 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-30 04:02:22,606 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-30 04:02:22,613 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-30 04:02:22,622 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-30 04:02:22,638 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-30 04:02:22,645 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-30 04:02:22,652 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-30 04:02:22,659 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-30 04:02:22,666 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-30 04:02:22,673 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-30 04:02:22,680 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-30 04:02:22,688 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-30 04:02:22,695 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-30 04:02:59,696 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 1
+2025-06-30 04:02:59,698 - WARNING - app.api.v1.endpoints.users - Refresh token validation failed for user ID 1. Data found: False, User ID match: False
+2025-06-30 04:02:59,698 - ERROR - app.api.v1.endpoints.users - Unexpected error during refresh token process for token: eyJhbGciOiJIUzI1NiIs... : 401: Invalid or expired refresh token
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+2025-06-30 04:03:12,842 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 1
+2025-06-30 04:03:12,846 - WARNING - app.api.v1.endpoints.users - Refresh token validation failed for user ID 1. Data found: False, User ID match: False
+2025-06-30 04:03:12,847 - ERROR - app.api.v1.endpoints.users - Unexpected error during refresh token process for token: eyJhbGciOiJIUzI1NiIs... : 401: Invalid or expired refresh token
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+2025-06-30 04:03:15,696 - DEBUG - app.main - Starting update_all_users_dynamic_portfolio job
+2025-06-30 04:03:15,711 - DEBUG - app.main - Found 10 active users to update portfolios
+2025-06-30 04:03:15,733 - WARNING - app.main - No group settings found for group string. Skipping portfolio update for user 8.
+2025-06-30 04:03:16,081 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCHF: Type=BUY, Entry=0.88210000, Current=0.5203100000, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-361.7900000000000000000000000, PnL USD=-453.9910403935199708875531741, Commission=0.10000000, Final PnL=-454.0910403935199708875531741
+2025-06-30 04:03:16,086 - WARNING - app.main - No group settings found for group default. Skipping portfolio update for user 10.
+2025-06-30 04:03:16,100 - WARNING - app.main - User 2 has no group_name set. Skipping portfolio update.
+2025-06-30 04:03:16,103 - WARNING - app.main - No group settings found for group string. Skipping portfolio update for user 3.
+2025-06-30 04:03:16,115 - WARNING - app.main - User 5 has no group_name set. Skipping portfolio update.
+2025-06-30 04:03:16,422 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89287000, Current=0.8929000000, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.03000000000000000000000000, PnL USD=0.02194570632255799152895735949, Commission=0.10000000, Final PnL=-0.07805429367744200847104264051
+2025-06-30 04:03:16,423 - DEBUG - app.main - Finished update_all_users_dynamic_portfolio job
+2025-06-30 04:03:22,771 - WARNING - app.core.cache - No cached adjusted buy price found for key: adjusted_market_price:default:BTCUSD
+2025-06-30 04:03:22,772 - WARNING - app.core.cache - Fallback: Using raw Firebase 'o' price for BTCUSD
+2025-06-30 04:03:23,228 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:03:23,561 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:24,087 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:26,323 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:26,740 - WARNING - app.core.cache - No cached adjusted sell price found for key: adjusted_market_price:default:BTCUSD
+2025-06-30 04:03:26,740 - WARNING - app.core.cache - Fallback: Using raw Firebase 'b' price for BTCUSD
+2025-06-30 04:03:27,250 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:03:27,251 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:03:27,628 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:27,629 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:28,574 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:28,574 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:29,714 - WARNING - app.core.cache - No cached adjusted sell price found for key: adjusted_market_price:default:BTCUSD
+2025-06-30 04:03:29,714 - WARNING - app.core.cache - Fallback: Using raw Firebase 'b' price for BTCUSD
+2025-06-30 04:03:30,213 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:03:30,213 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:03:30,214 - WARNING - app.services.portfolio_calculator - Invalid current prices for BTCUSD: buy=0, sell=0
+2025-06-30 04:03:30,621 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:30,621 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:30,621 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:31,162 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:31,162 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:31,162 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:33,162 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:33,162 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:33,162 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:35,384 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:35,384 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:35,384 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:35,799 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:35,800 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:37,690 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:37,691 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:40,147 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:40,148 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:40,864 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:42,298 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol BTCUSD
+2025-06-30 04:03:54,215 - WARNING - app.core.cache - No cached adjusted buy price found for key: adjusted_market_price:default:AUDCAD
+2025-06-30 04:03:54,215 - WARNING - app.core.cache - Fallback: Using raw Firebase 'o' price for AUDCAD
+2025-06-30 04:03:54,685 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:03:55,097 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:03:56,043 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:03:57,076 - WARNING - app.core.cache - No cached adjusted sell price found for key: adjusted_market_price:default:AUDCAD
+2025-06-30 04:03:57,076 - WARNING - app.core.cache - Fallback: Using raw Firebase 'b' price for AUDCAD
+2025-06-30 04:03:57,520 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:03:57,520 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:03:57,983 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:03:57,989 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:03:58,540 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89282000, Current=0.89279, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.030000000000000000000000, PnL USD=-0.02194618794715357942325418075, Commission=0.10000000, Final PnL=-0.1219461879471535794232541808
+2025-06-30 04:03:58,544 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89288000, Current=0.89286, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.020000000000000000000000, PnL USD=0.01463079196476905294883612050, Commission=0.10000000, Final PnL=-0.08536920803523094705116387950
+2025-06-30 04:04:00,034 - WARNING - app.core.cache - No cached adjusted sell price found for key: adjusted_market_price:default:AUDCAD
+2025-06-30 04:04:00,034 - WARNING - app.core.cache - Fallback: Using raw Firebase 'b' price for AUDCAD
+2025-06-30 04:04:00,626 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:04:00,627 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:04:00,627 - WARNING - app.services.portfolio_calculator - Invalid current prices for AUDCAD: buy=0, sell=0
+2025-06-30 04:04:01,138 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:01,139 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:01,139 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:01,547 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:01,547 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:01,547 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:03,038 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89282000, Current=0.89282, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0E-24, PnL USD=0E-14, Commission=0.10000000, Final PnL=-0.10000000000000
+2025-06-30 04:04:03,039 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89288000, Current=0.89288, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0E-24, PnL USD=0E-14, Commission=0.10000000, Final PnL=-0.10000000000000
+2025-06-30 04:04:03,039 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89288, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.020000000000000000000000, PnL USD=-0.01463089899558878395282998164, Commission=0.10000000, Final PnL=-0.1146308989955887839528299816
+2025-06-30 04:04:05,541 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89282000, Current=0.89284, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.020000000000000000000000, PnL USD=0.01463068493551525614671650853, Commission=0.10000000, Final PnL=-0.08536931506448474385328349147
+2025-06-30 04:04:05,550 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89288000, Current=0.89289, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.010000000000000000000000, PnL USD=-0.007315342467757628073358254267, Commission=0.10000000, Final PnL=-0.1073153424677576280733582543
+2025-06-30 04:04:05,559 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89289, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.030000000000000000000000, PnL USD=-0.02194602740327288422007476280, Commission=0.10000000, Final PnL=-0.1219460274032728842200747628
+2025-06-30 04:04:07,459 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:07,460 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:07,460 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:09,738 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89282000, Current=0.89283, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.010000000000000000000000, PnL USD=0.007315503013987241762743606250, Commission=0.10000000, Final PnL=-0.09268449698601275823725639375
+2025-06-30 04:04:09,739 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89288000, Current=0.89289, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.010000000000000000000000, PnL USD=-0.007315503013987241762743606250, Commission=0.10000000, Final PnL=-0.1073155030139872417627436062
+2025-06-30 04:04:09,740 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89289, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.030000000000000000000000, PnL USD=-0.02194650904196172528823081875, Commission=0.10000000, Final PnL=-0.1219465090419617252882308188
+2025-06-30 04:04:11,960 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89282000, Current=0.89284, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.020000000000000000000000, PnL USD=0.01463100602797448352548721250, Commission=0.10000000, Final PnL=-0.08536899397202551647451278750
+2025-06-30 04:04:11,960 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89288000, Current=0.89289, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.010000000000000000000000, PnL USD=-0.007315503013987241762743606250, Commission=0.10000000, Final PnL=-0.1073155030139872417627436062
+2025-06-30 04:04:11,961 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.89289, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.030000000000000000000000, PnL USD=-0.02194650904196172528823081875, Commission=0.10000000, Final PnL=-0.1219465090419617252882308188
+2025-06-30 04:04:13,645 - INFO - app.main - Application shutdown initiated
+2025-06-30 04:04:13,645 - INFO - app.main - Scheduler shutdown completed
+2025-06-30 04:04:13,645 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-30 04:04:13,945 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-30 04:04:13,945 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-30 04:04:13,948 - INFO - app.main - Redis connection closed
+2025-06-30 04:04:13,948 - INFO - app.main - Application shutdown completed
+2025-06-30 04:04:15,472 - INFO - app.core.config - .env file loaded successfully.
+2025-06-30 04:04:15,478 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-06-30 04:04:15,478 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-06-30 04:04:15,914 - INFO - app.main - Application startup initiated
+2025-06-30 04:04:15,942 - INFO - app.main - Firebase already initialized
+2025-06-30 04:04:15,942 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-06-30 04:04:15,946 - INFO - app.main - Redis initialized
+2025-06-30 04:04:15,948 - INFO - app.main - Scheduler initialized
+2025-06-30 04:04:15,948 - INFO - app.main - Background tasks initialized
+2025-06-30 04:04:16,907 - INFO - app.main - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-06-30 04:04:16,907 - INFO - app.main - Application startup completed
+2025-06-30 04:04:16,907 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 04:04:16,908 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-06-30 04:04:17,629 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-06-30 04:04:19,634 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCAD'.
+2025-06-30 04:04:19,637 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDCHF'.
+2025-06-30 04:04:19,639 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDJPY'.
+2025-06-30 04:04:19,641 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDNZD'.
+2025-06-30 04:04:19,643 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDSGD'.
+2025-06-30 04:04:19,645 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUDUSD'.
+2025-06-30 04:04:19,647 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADCHF'.
+2025-06-30 04:04:19,650 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CADJPY'.
+2025-06-30 04:04:19,652 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFJPY'.
+2025-06-30 04:04:19,654 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CHFSGD'.
+2025-06-30 04:04:19,656 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURAUD'.
+2025-06-30 04:04:19,658 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCAD'.
+2025-06-30 04:04:19,660 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCHF'.
+2025-06-30 04:04:19,662 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURCZK'.
+2025-06-30 04:04:19,664 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURGBP'.
+2025-06-30 04:04:19,666 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURJPY'.
+2025-06-30 04:04:19,668 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNOK'.
+2025-06-30 04:04:19,670 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURNZD'.
+2025-06-30 04:04:19,673 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURPLN'.
+2025-06-30 04:04:19,675 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSEK'.
+2025-06-30 04:04:19,677 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURSGD'.
+2025-06-30 04:04:19,679 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURTRY'.
+2025-06-30 04:04:19,681 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURUSD'.
+2025-06-30 04:04:19,682 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'EURZAR'.
+2025-06-30 04:04:19,684 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPAUD'.
+2025-06-30 04:04:19,686 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCAD'.
+2025-06-30 04:04:19,688 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPCHF'.
+2025-06-30 04:04:19,690 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPJPY'.
+2025-06-30 04:04:19,692 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNOK'.
+2025-06-30 04:04:19,694 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPNZD'.
+2025-06-30 04:04:19,696 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSEK'.
+2025-06-30 04:04:19,697 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPSGD'.
+2025-06-30 04:04:19,699 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPTRY'.
+2025-06-30 04:04:19,701 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GBPUSD'.
+2025-06-30 04:04:19,703 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKJPY'.
+2025-06-30 04:04:19,704 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NOKSEK'.
+2025-06-30 04:04:19,706 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCAD'.
+2025-06-30 04:04:19,708 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDCHF'.
+2025-06-30 04:04:19,710 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDJPY'.
+2025-06-30 04:04:19,712 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NZDUSD'.
+2025-06-30 04:04:19,714 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SEKJPY'.
+2025-06-30 04:04:19,716 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'SGDJPY'.
+2025-06-30 04:04:19,718 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCAD'.
+2025-06-30 04:04:19,719 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCHF'.
+2025-06-30 04:04:19,721 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCNH'.
+2025-06-30 04:04:19,723 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDCZK'.
+2025-06-30 04:04:19,724 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDJPY'.
+2025-06-30 04:04:19,726 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDMXN'.
+2025-06-30 04:04:19,728 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDNOK'.
+2025-06-30 04:04:19,730 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDPLN'.
+2025-06-30 04:04:19,732 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSEK'.
+2025-06-30 04:04:19,733 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDSGD'.
+2025-06-30 04:04:19,735 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTHB'.
+2025-06-30 04:04:19,737 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTRY'.
+2025-06-30 04:04:19,739 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDZAR'.
+2025-06-30 04:04:19,741 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'ZARJPY'.
+2025-06-30 04:04:19,743 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAUUSD'.
+2025-06-30 04:04:19,745 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'XAGUSD'.
+2025-06-30 04:04:19,747 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'BTCUSD'.
+2025-06-30 04:04:19,749 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UK100'.
+2025-06-30 04:04:19,750 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'DE30'.
+2025-06-30 04:04:19,752 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'AUS200'.
+2025-06-30 04:04:19,754 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'FR40'.
+2025-06-30 04:04:19,755 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US100'.
+2025-06-30 04:04:19,757 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US500'.
+2025-06-30 04:04:19,759 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000'.
+2025-06-30 04:04:19,761 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US30'.
+2025-06-30 04:04:19,762 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'JP225'.
+2025-06-30 04:04:19,764 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'IND50'.
+2025-06-30 04:04:19,766 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'CN50U'.
+2025-06-30 04:04:19,768 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'HKG50'.
+2025-06-30 04:04:19,769 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USOIL'.
+2025-06-30 04:04:19,771 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'UKOIL'.
+2025-06-30 04:04:19,773 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'NGAS'.
+2025-06-30 04:04:19,774 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'USDTUSD'.
+2025-06-30 04:04:19,776 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'US2000-1'.
+2025-06-30 04:04:19,778 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'GER30-1'.
+2025-06-30 04:04:19,780 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'W20'.
+2025-06-30 04:04:19,782 - DEBUG - app.core.cache - Group-symbol settings cached for group 'Group B', symbol 'D30'.
+2025-06-30 04:04:21,161 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=BUY, Entry=0.89282000, Current=0.89283, Quantity=0.01000000, Contract Size=100000.00000000, PnL=0.010000000000000000000000, PnL USD=0.007315449497794391976414990819, Commission=0.10000000, Final PnL=-0.09268455050220560802358500918
+2025-06-30 04:04:21,162 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89288000, Current=0.8929, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.020000000000000000000000, PnL USD=-0.01463089899558878395282998164, Commission=0.10000000, Final PnL=-0.1146308989955887839528299816
+2025-06-30 04:04:21,163 - DEBUG - app.services.portfolio_calculator - Position calculation for AUDCAD: Type=SELL, Entry=0.89286000, Current=0.8929, Quantity=0.01000000, Contract Size=100000.00000000, PnL=-0.040000000000000000000000, PnL USD=-0.02926179799117756790565996328, Commission=0.10000000, Final PnL=-0.1292617979911775679056599633
+2025-06-30 04:04:23,461 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:23,461 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:23,461 - WARNING - app.services.portfolio_calculator - No adjusted prices found for symbol AUDCAD
+2025-06-30 04:04:25,466 - INFO - app.main - Application shutdown initiated
+2025-06-30 04:04:25,466 - INFO - app.main - Scheduler shutdown completed
+2025-06-30 04:04:25,466 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-06-30 04:04:27,669 - INFO - app.firebase_stream - Firebase listener closed.
+2025-06-30 04:04:27,670 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-06-30 04:04:27,675 - INFO - app.main - Redis connection closed
+2025-06-30 04:04:27,675 - INFO - app.main - Application shutdown completed

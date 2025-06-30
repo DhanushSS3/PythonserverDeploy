@@ -164,130 +164,6 @@ async def process_new_order(
     from app.services.portfolio_calculator import calculate_user_portfolio, _convert_to_usd
     from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
     
-    # Local helper function to calculate margin
-    async def calculate_margin(
-        symbol: str, 
-        order_type: str, 
-        quantity: Decimal, 
-        leverage: Decimal, 
-        group_settings: Dict[str, Any], 
-        ext_symbol_info: Dict[str, Any], 
-        market_data: Dict[str, Any],
-        group_name: str,
-        order_price: Decimal = None  # Add order_price as a fallback
-    ) -> Tuple[Decimal, Decimal, Decimal, Decimal]:
-        """Local helper to calculate margin without redis_client parameter"""
-        try:
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Calculating margin for {symbol} {order_type} order, quantity: {quantity}")
-            
-            # Get contract size from external symbol info
-            contract_size_raw = ext_symbol_info.get('contract_size', 100000)
-            contract_size = Decimal(str(contract_size_raw))
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Contract size for {symbol}: {contract_size} (raw: {contract_size_raw}, type: {type(contract_size_raw)})")
-            
-            # Get appropriate price based on order type
-            price = None
-            if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-                # For buy orders, use the ask price
-                price_data = await get_live_adjusted_buy_price_for_pair(redis_client, symbol, group_name)
-                if price_data:
-                    price = Decimal(str(price_data))
-                    orders_logger.info(f"[ORDER_MARGIN_CALC] Got BUY price for {symbol} from cache: {price}")
-            elif order_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
-                # For sell orders, use the bid price
-                price_data = await get_live_adjusted_sell_price_for_pair(redis_client, symbol, group_name)
-                if price_data:
-                    price = Decimal(str(price_data))
-                    orders_logger.info(f"[ORDER_MARGIN_CALC] Got SELL price for {symbol} from cache: {price}")
-            
-            # If we couldn't get a price from the cache, try to get it from raw market data
-            if price is None:
-                orders_logger.info(f"[ORDER_MARGIN_CALC] No price in cache for {symbol}, checking raw market data")
-                if symbol in market_data:
-                    symbol_data = market_data[symbol]
-                    orders_logger.info(f"[ORDER_MARGIN_CALC] Raw market data for {symbol}: {symbol_data}")
-                    if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-                        price_raw = symbol_data.get('ask', '0')
-                        price = Decimal(str(price_raw))
-                        orders_logger.info(f"[ORDER_MARGIN_CALC] Using raw ask price for {symbol}: {price} (raw: {price_raw})")
-                    else:
-                        price_raw = symbol_data.get('bid', '0')
-                        price = Decimal(str(price_raw))
-                        orders_logger.info(f"[ORDER_MARGIN_CALC] Using raw bid price for {symbol}: {price} (raw: {price_raw})")
-                
-                # If we still don't have a price, use the order_price if provided
-                if (price is None or price == Decimal('0')) and order_price is not None:
-                    orders_logger.info(f"[ORDER_MARGIN_CALC] Using order_price {order_price} as fallback for {symbol} {order_type} order")
-                    price = order_price
-                # If we still don't have a price, log an error and return zeros
-                elif price is None or price == Decimal('0'):
-                    orders_logger.error(f"[ORDER_MARGIN_CALC] Could not get price for {symbol} {order_type} order")
-                    return None, None, None, None
-            
-            # Calculate contract value - CORRECT FORMULA
-            # Contract value = quantity * contract_size (without price)
-            contract_value = quantity * contract_size
-            
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Contract value calculation for {symbol}:")
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Contract value = quantity * contract_size = {quantity} * {contract_size} = {contract_value}")
-            
-            # Calculate margin based on contract value and leverage - CORRECT FORMULA
-            # Margin = (contract_value * price) / leverage
-            margin_raw = (contract_value * price) / leverage
-            margin = margin_raw.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Margin calculation: (contract_value * price) / leverage = ({contract_value} * {price}) / {leverage} = {margin_raw} (rounded to {margin})")
-            
-            # Calculate commission
-            commission = Decimal('0.0')
-            commission_type = int(group_settings.get('commision_type', 0))
-            commission_value_type = int(group_settings.get('commision_value_type', 0))
-            commission_rate = Decimal(str(group_settings.get('commision', '0.0')))
-            
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Commission settings for {symbol}: type={commission_type}, value_type={commission_value_type}, rate={commission_rate}")
-            
-            if commission_type in [0, 1]:  # "Every Trade" or "In"
-                if commission_value_type == 0:  # Per lot
-                    commission = quantity * commission_rate
-                    orders_logger.info(f"[ORDER_MARGIN_CALC] Per lot commission: {quantity} * {commission_rate} = {commission}")
-                elif commission_value_type == 1:  # Percent of price
-                    commission = (commission_rate / Decimal('100')) * contract_value * price
-                    orders_logger.info(f"[ORDER_MARGIN_CALC] Percent commission: ({commission_rate}/100) * {contract_value} * {price} = {commission}")
-            
-            commission = commission.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
-            # Check if profit_currency is USD or needs conversion
-            profit_currency = ext_symbol_info.get('profit_currency', ext_symbol_info.get('profit', 'USD'))
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Profit currency for {symbol}: {profit_currency}")
-            
-            # For non-USD currencies, we need to convert the margin to USD
-            if profit_currency != 'USD' and user_id is not None:
-                position_id = ""  # No position ID yet
-                value_description = f"margin for {symbol} {order_type} order"
-                
-                orders_logger.info(f"[ORDER_MARGIN_CALC] Converting margin from {profit_currency} to USD: {margin} {profit_currency}")
-                
-                # Convert margin to USD
-                margin_usd = await _convert_to_usd(
-                    margin, 
-                    profit_currency, 
-                    user_id, 
-                    position_id, 
-                    value_description, 
-                    db, 
-                    redis_client
-                )
-                
-                orders_logger.info(f"[ORDER_MARGIN_CALC] Margin after USD conversion: {margin} {profit_currency} -> {margin_usd} USD")
-                margin = margin_usd
-            
-            orders_logger.info(f"[ORDER_MARGIN_CALC] Final results for {symbol} {order_type}: margin={margin}, price={price}, contract_value={contract_value}, commission={commission}")
-            return margin, price, contract_value, commission
-        
-        except Exception as e:
-            orders_logger.error(f"[ORDER_MARGIN_CALC] Error calculating margin: {e}", exc_info=True)
-            return None, None, None, None
-
     try:
         # Step 1: Load user data and settings
             user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
@@ -312,17 +188,18 @@ async def process_new_order(
             if not raw_market_data:
                 raise OrderProcessingError("Failed to get market data")
 
-            # Step 2: Calculate standalone margin using local helper
-            full_margin_usd, price, contract_value, commission = await calculate_margin(
+            # Step 2: Calculate standalone margin using the centralized function
+            full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                redis_client=redis_client,
                 symbol=symbol,
                 order_type=order_type,
                 quantity=quantity,
-                leverage=leverage,
+                user_leverage=leverage,
                 group_settings=group_settings,
-                ext_symbol_info=external_symbol_info,
-                market_data=raw_market_data,
-                group_name=group_name,
-                order_price=order_data.get('order_price')
+                external_symbol_info=external_symbol_info,
+                raw_market_data=raw_market_data,
+                db=db,
+                user_id=user_id
             )
             if full_margin_usd is None:
                 raise OrderProcessingError("Margin calculation failed")
