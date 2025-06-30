@@ -933,8 +933,8 @@ async def run_pending_order_checker():
                                         group_name=group_name
                                     )
                                 else:
-                                    logger.warning(f"No adjusted prices found for symbol {symbol} in group {group_name}")
-                                    
+                                    # logger.warning(f"No adjusted prices found for symbol {symbol} in group {group_name}")
+                                    pass
                             except Exception as symbol_error:
                                 logger.error(f"Error processing symbol {symbol}: {symbol_error}", exc_info=True)
                                 continue
