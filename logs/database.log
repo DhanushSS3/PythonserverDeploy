@@ -551,3 +551,135 @@ fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
 2025-06-29 22:07:48,406 - database - DEBUG - Closing database session
 2025-06-29 22:07:58,701 - database - DEBUG - Database session used successfully
 2025-06-29 22:07:58,705 - database - DEBUG - Closing database session
+2025-06-29 22:14:06,617 - database - DEBUG - Creating new database session
+2025-06-29 22:14:06,621 - database - ERROR - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 65, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-29 22:14:06,624 - database - INFO - Session rolled back due to error
+2025-06-29 22:14:06,625 - database - DEBUG - Closing database session
+2025-06-29 22:14:10,785 - database - DEBUG - Creating new database session
+2025-06-29 22:14:11,183 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:11,185 - database - DEBUG - Closing database session
+2025-06-29 22:14:11,766 - database - DEBUG - Creating new database session
+2025-06-29 22:14:12,619 - database - DEBUG - Creating new database session
+2025-06-29 22:14:13,327 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:13,331 - database - DEBUG - Closing database session
+2025-06-29 22:14:24,196 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:24,197 - database - DEBUG - Closing database session
+2025-06-29 22:14:26,868 - database - DEBUG - Creating new database session
+2025-06-29 22:14:27,840 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:27,841 - database - DEBUG - Closing database session
+2025-06-29 22:14:29,517 - database - DEBUG - Creating new database session
+2025-06-29 22:14:29,531 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:29,532 - database - DEBUG - Closing database session
+2025-06-29 22:14:29,549 - database - DEBUG - Creating new database session
+2025-06-29 22:14:29,675 - database - DEBUG - Creating new database session
+2025-06-29 22:14:29,873 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:29,882 - database - DEBUG - Closing database session
+2025-06-29 22:14:30,928 - database - DEBUG - Creating new database session
+2025-06-29 22:14:31,075 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:31,081 - database - DEBUG - Closing database session
+2025-06-29 22:14:31,976 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:31,977 - database - DEBUG - Closing database session
+2025-06-29 22:14:32,000 - database - DEBUG - Creating new database session
+2025-06-29 22:14:33,112 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:33,114 - database - DEBUG - Closing database session
+2025-06-29 22:14:34,893 - database - DEBUG - Creating new database session
+2025-06-29 22:14:34,904 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:34,904 - database - DEBUG - Closing database session
+2025-06-29 22:14:35,197 - database - DEBUG - Creating new database session
+2025-06-29 22:14:42,358 - database - DEBUG - Creating new database session
+2025-06-29 22:14:43,235 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:43,240 - database - DEBUG - Closing database session
+2025-06-29 22:14:43,892 - database - DEBUG - Creating new database session
+2025-06-29 22:14:45,220 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:45,221 - database - DEBUG - Closing database session
+2025-06-29 22:14:45,873 - database - DEBUG - Creating new database session
+2025-06-29 22:14:47,150 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:47,152 - database - DEBUG - Closing database session
+2025-06-29 22:14:47,896 - database - DEBUG - Creating new database session
+2025-06-29 22:14:49,102 - database - DEBUG - Database session used successfully
+2025-06-29 22:14:49,103 - database - DEBUG - Closing database session
+2025-06-29 22:15:09,079 - database - DEBUG - Creating new database session
+2025-06-29 22:15:11,281 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:11,282 - database - DEBUG - Closing database session
+2025-06-29 22:15:22,123 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:22,127 - database - DEBUG - Closing database session
+2025-06-29 22:15:22,210 - database - DEBUG - Creating new database session
+2025-06-29 22:15:22,228 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:22,230 - database - DEBUG - Closing database session
+2025-06-29 22:15:22,272 - database - DEBUG - Creating new database session
+2025-06-29 22:15:22,300 - database - DEBUG - Creating new database session
+2025-06-29 22:15:22,346 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:22,348 - database - DEBUG - Closing database session
+2025-06-29 22:15:22,406 - database - DEBUG - Creating new database session
+2025-06-29 22:15:22,564 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:22,568 - database - DEBUG - Closing database session
+2025-06-29 22:15:25,308 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:25,313 - database - DEBUG - Closing database session
+2025-06-29 22:15:25,360 - database - DEBUG - Creating new database session
+2025-06-29 22:15:25,805 - database - DEBUG - Creating new database session
+2025-06-29 22:15:28,693 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:28,735 - database - DEBUG - Closing database session
+2025-06-29 22:15:28,928 - database - DEBUG - Creating new database session
+2025-06-29 22:15:29,025 - database - DEBUG - Database session used successfully
+2025-06-29 22:15:29,028 - database - DEBUG - Closing database session
+2025-06-29 22:16:22,533 - database - DEBUG - Creating new database session
+2025-06-29 22:16:22,540 - database - ERROR - Error in database session: 500: An error occurred while refreshing token.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 310, in refresh_access_token
+     raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 65, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 360, in refresh_access_token
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
+2025-06-29 22:16:22,548 - database - INFO - Session rolled back due to error
+2025-06-29 22:16:22,551 - database - DEBUG - Closing database session
+2025-06-29 22:16:36,749 - database - DEBUG - Creating new database session
+2025-06-29 22:16:36,865 - database - DEBUG - Database session used successfully
+2025-06-29 22:16:36,867 - database - DEBUG - Closing database session
+2025-06-29 22:17:08,928 - database - DEBUG - Database session used successfully
+2025-06-29 22:17:08,936 - database - DEBUG - Closing database session

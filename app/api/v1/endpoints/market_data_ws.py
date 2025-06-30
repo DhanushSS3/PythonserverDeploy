@@ -651,6 +651,10 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                     'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            # Add updated_at field
+            updated_at = getattr(pos, 'updated_at', None)
+            if updated_at:
+                pos_dict['updated_at'] = updated_at.isoformat() if isinstance(updated_at, datetime.datetime) else str(updated_at)
             open_orders_data.append(pos_dict)
         
         # Get pending orders - always fetch from database to ensure fresh data
@@ -663,6 +667,10 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
             po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
+            # Add updated_at field
+            updated_at = getattr(po, 'updated_at', None)
+            if updated_at:
+                po_dict['updated_at'] = updated_at.isoformat() if isinstance(updated_at, datetime.datetime) else str(updated_at)
             pending_orders_data.append(po_dict)
         
         # Cache the static orders data
