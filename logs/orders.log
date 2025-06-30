@@ -1,2 +1,257 @@
 2025-06-30 04:04:15,871 - INFO - orders - Application starting up - Orders logging initialized
 2025-06-30 04:04:15,871 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-06-30 04:17:30,285 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-30 04:17:30,285 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-06-30 04:17:39,304 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: demo
+2025-06-30 04:17:46,696 - INFO - orders - Order placement request received - User ID: 1, Symbol: BTCUSD, Type: BUY, Quantity: 0.01
+2025-06-30 04:17:46,699 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-30 04:17:46,699 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-30 04:17:46,700 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-30 04:17:47,086 - INFO - orders - [MARGIN_CALC] Starting margin calculation for BTCUSD BUY order, quantity: 0.01
+2025-06-30 04:17:47,086 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 1
+2025-06-30 04:17:47,093 - INFO - orders - [MARGIN_CALC] Contract size for BTCUSD: 1.00000000 (raw: 1.00000000, type: <class 'decimal.Decimal'>)
+2025-06-30 04:17:47,094 - INFO - orders - [MARGIN_CALC] Got BUY price for BTCUSD from cache: 107727.1000000000
+2025-06-30 04:17:47,095 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 4
+2025-06-30 04:17:47,095 - INFO - orders - [MARGIN_CALC] Crypto margin calculation. Group margin rate: 50.0000
+2025-06-30 04:17:47,095 - INFO - orders - [MARGIN_CALC] Crypto Margin calc: (price * contract_size * quantity * group_margin_rate) / effective_leverage = (107727.1000000000 * 1.00000000 * 0.01 * 50.0000) / 100.00 = 538.635500000000000000000
+2025-06-30 04:17:47,095 - INFO - orders - [MARGIN_CALC] Commission settings for BTCUSD: type=1, value_type=0, rate=10.0000
+2025-06-30 04:17:47,095 - INFO - orders - [MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-30 04:17:47,096 - INFO - orders - [MARGIN_CALC] Profit currency for BTCUSD: USD
+2025-06-30 04:17:47,096 - INFO - orders - [MARGIN_CALC] Final results for BTCUSD BUY: margin=538.64, price=107727.1000000000, contract_value=0.0100000000, commission=0.10
+2025-06-30 04:17:47,096 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol BTCUSD: Calculated commission=0.10
+2025-06-30 04:17:47,102 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol BTCUSD: MarginBefore=0.00, MarginAfter=538.64, AdditionalMargin=538.64
+2025-06-30 04:17:47,103 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 1 Symbol BTCUSD
+2025-06-30 04:17:47,103 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 538.64
+2025-06-30 04:17:47,103 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 0
+2025-06-30 04:17:47,103 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 0.0
+2025-06-30 04:17:47,103 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 538.64
+2025-06-30 04:17:47,104 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 538.64
+2025-06-30 04:17:47,108 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=538.64
+2025-06-30 04:17:47,138 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '1999625504', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_price': Decimal('107727.1000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.64'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:17:47,139 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '1999625504', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_price': Decimal('107727.1000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.64'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:17:47,139 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '1999625504', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_price': Decimal('107727.1000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.64'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:17:47,140 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 1999625504
+2025-06-30 04:17:47,162 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 538.64000000
+2025-06-30 04:17:47,175 - INFO - orders - User data cache updated for user 1 after placing order
+2025-06-30 04:17:47,596 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-30 04:17:47,598 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:17:47,598 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:17:47,605 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-30 04:17:47,609 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:17:47,621 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-30 04:17:53,476 - INFO - orders - Order placement request received - User ID: 1, Symbol: BTCUSD, Type: SELL, Quantity: 0.01
+2025-06-30 04:17:53,479 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-30 04:17:53,479 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-30 04:17:53,479 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-30 04:17:53,940 - INFO - orders - [MARGIN_CALC] Starting margin calculation for BTCUSD SELL order, quantity: 0.01
+2025-06-30 04:17:53,940 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 1
+2025-06-30 04:17:53,945 - INFO - orders - [MARGIN_CALC] Contract size for BTCUSD: 1.00000000 (raw: 1.00000000, type: <class 'decimal.Decimal'>)
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Got SELL price for BTCUSD from cache: 107727.2000000000
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 4
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Crypto margin calculation. Group margin rate: 50.0000
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Crypto Margin calc: (price * contract_size * quantity * group_margin_rate) / effective_leverage = (107727.2000000000 * 1.00000000 * 0.01 * 50.0000) / 100.00 = 538.636000000000000000000
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Commission settings for BTCUSD: type=1, value_type=0, rate=10.0000
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-30 04:17:53,947 - INFO - orders - [MARGIN_CALC] Profit currency for BTCUSD: USD
+2025-06-30 04:17:53,948 - INFO - orders - [MARGIN_CALC] Final results for BTCUSD SELL: margin=538.64, price=107727.2000000000, contract_value=0.0100000000, commission=0.10
+2025-06-30 04:17:53,948 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol BTCUSD: Calculated commission=0.10
+2025-06-30 04:17:53,952 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol BTCUSD: MarginBefore=538.64, MarginAfter=538.64, AdditionalMargin=0.00
+2025-06-30 04:17:53,952 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 1 Symbol BTCUSD
+2025-06-30 04:17:53,952 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 538.64
+2025-06-30 04:17:53,953 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 1
+2025-06-30 04:17:53,953 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 538.64
+2025-06-30 04:17:53,953 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 538.64
+2025-06-30 04:17:53,953 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 0.0
+2025-06-30 04:17:53,959 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=538.64000000, CalculatedNewMargin=538.64
+2025-06-30 04:17:53,970 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '5416416615', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'SELL', 'order_price': Decimal('107727.2000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.64'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:17:53,970 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '5416416615', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'SELL', 'order_price': Decimal('107727.2000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.64'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:17:53,970 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '5416416615', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'SELL', 'order_price': Decimal('107727.2000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.64'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:17:53,971 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 5416416615
+2025-06-30 04:17:53,983 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 538.64000000
+2025-06-30 04:17:53,998 - INFO - orders - User data cache updated for user 1 after placing order
+2025-06-30 04:17:54,368 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-30 04:17:54,374 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:17:54,375 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:17:54,384 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-30 04:17:54,397 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:17:54,403 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 0 pending orders
+2025-06-30 04:18:15,665 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: BTCUSD, Type: BUY_LIMIT, Quantity: 0.01
+2025-06-30 04:18:15,673 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=0.03, Current buy price=107772.9000000000, Current sell price=107672.8000000000
+2025-06-30 04:18:15,678 - INFO - orders - Calculated contract_value for pending order: 0.0100000000 (contract_size: 1.00000000 * quantity: 0.01)
+2025-06-30 04:18:15,680 - INFO - orders - [DEBUG] User data from cache: {'id': 1, 'email': 'dhanush777ss@gmail.com', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'user_type': 'demo', 'account_number': '5O42G', 'wallet_balance': Decimal('24997.58000000'), 'margin': Decimal('538.64000000'), 'first_name': None, 'last_name': None, 'country': None, 'phone_number': Decimal('8618025298')}
+2025-06-30 04:18:15,681 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-30 04:18:15,682 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-06-30 04:18:15,682 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-30 04:18:15,682 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-30 04:18:15,682 - INFO - orders - User 1 is_barclays_live_user: False (user_type: demo, sending_orders_normalized: barclays)
+2025-06-30 04:18:15,695 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '9457539855', 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.01'), 'order_price': Decimal('0.03'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '1500378477', 'takeprofit_id': '6808633198', 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': Decimal('0.0100000000'), 'margin': None, 'open_time': None}
+2025-06-30 04:18:15,695 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.03
+2025-06-30 04:18:15,695 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '9457539855', 'order_status': 'PENDING', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.03'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': None, 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-06-30 04:18:15,696 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '9457539855', 'order_status': 'PENDING', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.03'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': None, 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-06-30 04:18:15,696 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 9457539855
+2025-06-30 04:18:15,719 - INFO - orders - Order 9457539855 verified in database on attempt 1 before adding to Redis.
+2025-06-30 04:18:15,725 - INFO - orders - Pending order 9457539855 added to Redis for non-Barclays user or demo user.
+2025-06-30 04:18:15,730 - INFO - orders - User data cache updated for user 1 after placing pending order
+2025-06-30 04:18:15,730 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:18:15,730 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:18:15,735 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-30 04:18:15,739 - INFO - orders - Fetched 1 pending orders for user 1
+2025-06-30 04:18:15,741 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 1 pending orders
+2025-06-30 04:20:57,816 - INFO - orders - Application starting up - Orders logging initialized
+2025-06-30 04:20:57,817 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-06-30 04:21:06,247 - INFO - orders - Cancel pending order request received - Order ID: 9457539855, User ID: 1
+2025-06-30 04:21:06,260 - INFO - orders - Generated cancel_id: 5185078051 for order 9457539855
+2025-06-30 04:21:06,265 - INFO - orders - User 1 is_barclays_live_user: False
+2025-06-30 04:21:06,266 - INFO - orders - Non-Barclays user. Cancelling order 9457539855 immediately
+2025-06-30 04:21:06,288 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:21:06,288 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:21:06,291 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-30 04:21:06,294 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:21:06,298 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 0 pending orders
+2025-06-30 04:21:11,024 - INFO - orders - Order close request received - Order ID: 5416416615, User ID: 1, Close Price: 107814.1
+2025-06-30 04:21:11,024 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000027E2DADB490>, type: <class 'app.database.models.DemoUser'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-30 04:21:11,024 - INFO - orders - Using order model: demo_user_orders for user 1 (DemoUser)
+2025-06-30 04:21:11,024 - INFO - orders - Request to close order 5416416615 for user 1 (DemoUser) with price 107814.1. Frontend provided type: SELL, company: BTCUSD, status: CLOSED, frontend_status: CLOSED.
+2025-06-30 04:21:11,042 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-06-30 04:21:11,071 - INFO - orders - Existing entry commission for order 5416416615: 0.10000000
+2025-06-30 04:21:11,071 - INFO - orders - Commission calculation for order 5416416615: entry=0.10000000, exit=0.0, total=0.10
+2025-06-30 04:21:11,071 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.869000000000000000000000 USD to USD for PnL on Close (user_id: 1, position: 5416416615)
+2025-06-30 04:21:11,071 - INFO - orders - [CURRENCY_CONVERT] Currency is already USD, no conversion needed
+2025-06-30 04:21:11,108 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24996.61000000, margin=538.64
+2025-06-30 04:21:11,109 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24996.61000000, margin=538.64
+2025-06-30 04:21:11,111 - INFO - orders - User data cache updated for user 1
+2025-06-30 04:21:11,111 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:21:11,111 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:21:11,114 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-30 04:21:11,117 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:21:11,119 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-30 04:21:11,119 - INFO - orders - Publishing order update for user 1
+2025-06-30 04:21:11,121 - INFO - orders - Publishing user data update for user 1
+2025-06-30 04:21:11,122 - INFO - orders - Publishing market data trigger
+2025-06-30 04:21:13,645 - INFO - orders - Order close request received - Order ID: 1999625504, User ID: 1, Close Price: 107714
+2025-06-30 04:21:13,645 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000027E2DADA780>, type: <class 'app.database.models.DemoUser'>, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-06-30 04:21:13,645 - INFO - orders - Using order model: demo_user_orders for user 1 (DemoUser)
+2025-06-30 04:21:13,646 - INFO - orders - Request to close order 1999625504 for user 1 (DemoUser) with price 107714. Frontend provided type: BUY, company: BTCUSD, status: CLOSED, frontend_status: CLOSED.
+2025-06-30 04:21:13,662 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-06-30 04:21:13,683 - INFO - orders - Existing entry commission for order 1999625504: 0.10000000
+2025-06-30 04:21:13,683 - INFO - orders - Commission calculation for order 1999625504: entry=0.10000000, exit=0.0, total=0.10
+2025-06-30 04:21:13,683 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.131000000000000000000000 USD to USD for PnL on Close (user_id: 1, position: 1999625504)
+2025-06-30 04:21:13,684 - INFO - orders - [CURRENCY_CONVERT] Currency is already USD, no conversion needed
+2025-06-30 04:21:13,710 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24996.38000000, margin=0
+2025-06-30 04:21:13,710 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24996.38000000, margin=0
+2025-06-30 04:21:13,715 - INFO - orders - User data cache updated for user 1
+2025-06-30 04:21:13,715 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:21:13,715 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:21:13,719 - INFO - orders - Fetched 0 open orders for user 1
+2025-06-30 04:21:13,722 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:21:13,723 - INFO - orders - Updated static orders cache for user 1 with 0 open orders and 0 pending orders
+2025-06-30 04:21:13,724 - INFO - orders - Publishing order update for user 1
+2025-06-30 04:21:13,725 - INFO - orders - Publishing user data update for user 1
+2025-06-30 04:21:13,728 - INFO - orders - Publishing market data trigger
+2025-06-30 04:21:19,939 - INFO - orders - Order placement request received - User ID: 1, Symbol: BTCUSD, Type: BUY, Quantity: 0.01
+2025-06-30 04:21:19,942 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-30 04:21:19,942 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-30 04:21:19,943 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-30 04:21:20,315 - INFO - orders - [MARGIN_CALC] Starting margin calculation for BTCUSD BUY order, quantity: 0.01
+2025-06-30 04:21:20,315 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 1
+2025-06-30 04:21:20,333 - INFO - orders - [MARGIN_CALC] Contract size for BTCUSD: 1.00000000 (raw: 1.00000000, type: <class 'decimal.Decimal'>)
+2025-06-30 04:21:20,338 - INFO - orders - [MARGIN_CALC] Got BUY price for BTCUSD from cache: 107764.0000000000
+2025-06-30 04:21:20,338 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 4
+2025-06-30 04:21:20,339 - INFO - orders - [MARGIN_CALC] Crypto margin calculation. Group margin rate: 50.0000
+2025-06-30 04:21:20,339 - INFO - orders - [MARGIN_CALC] Crypto Margin calc: (price * contract_size * quantity * group_margin_rate) / effective_leverage = (107764.0000000000 * 1.00000000 * 0.01 * 50.0000) / 100.00 = 538.820000000000000000000
+2025-06-30 04:21:20,339 - INFO - orders - [MARGIN_CALC] Commission settings for BTCUSD: type=1, value_type=0, rate=10.0000
+2025-06-30 04:21:20,339 - INFO - orders - [MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-30 04:21:20,340 - INFO - orders - [MARGIN_CALC] Profit currency for BTCUSD: USD
+2025-06-30 04:21:20,340 - INFO - orders - [MARGIN_CALC] Final results for BTCUSD BUY: margin=538.82, price=107764.0000000000, contract_value=0.0100000000, commission=0.10
+2025-06-30 04:21:20,340 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol BTCUSD: Calculated commission=0.10
+2025-06-30 04:21:20,352 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol BTCUSD: MarginBefore=0.00, MarginAfter=538.82, AdditionalMargin=538.82
+2025-06-30 04:21:20,352 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 1 Symbol BTCUSD
+2025-06-30 04:21:20,352 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 538.82
+2025-06-30 04:21:20,353 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 0
+2025-06-30 04:21:20,353 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 0.0
+2025-06-30 04:21:20,353 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 538.82
+2025-06-30 04:21:20,353 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 538.82
+2025-06-30 04:21:20,369 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=0E-8, CalculatedNewMargin=538.82
+2025-06-30 04:21:20,419 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '9006313108', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_price': Decimal('107764.0000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:21:20,419 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '9006313108', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_price': Decimal('107764.0000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:21:20,419 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '9006313108', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_price': Decimal('107764.0000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:21:20,419 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 9006313108
+2025-06-30 04:21:20,447 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 538.82000000
+2025-06-30 04:21:20,470 - INFO - orders - User data cache updated for user 1 after placing order
+2025-06-30 04:21:21,329 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-30 04:21:21,333 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:21:21,333 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:21:21,340 - INFO - orders - Fetched 1 open orders for user 1
+2025-06-30 04:21:21,348 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:21:21,357 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 0 pending orders
+2025-06-30 04:21:24,463 - INFO - orders - Order placement request received - User ID: 1, Symbol: BTCUSD, Type: SELL, Quantity: 0.01
+2025-06-30 04:21:24,466 - INFO - orders - [DEBUG] group_settings_cache: {'sending_orders': 'barclays'}
+2025-06-30 04:21:24,466 - INFO - orders - [DEBUG] sending_orders_cache value: barclays (type: <class 'str'>)
+2025-06-30 04:21:24,466 - INFO - orders - Order placement: user_id=1, is_barclays_live_user=False, user_type=demo, group_name=Group B, sending_orders_setting=barclays
+2025-06-30 04:21:24,755 - INFO - orders - [MARGIN_CALC] Starting margin calculation for BTCUSD SELL order, quantity: 0.01
+2025-06-30 04:21:24,755 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 1
+2025-06-30 04:21:24,762 - INFO - orders - [MARGIN_CALC] Contract size for BTCUSD: 1.00000000 (raw: 1.00000000, type: <class 'decimal.Decimal'>)
+2025-06-30 04:21:24,765 - INFO - orders - [MARGIN_CALC] Got SELL price for BTCUSD from cache: 107764.1000000000
+2025-06-30 04:21:24,765 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 4
+2025-06-30 04:21:24,765 - INFO - orders - [MARGIN_CALC] Crypto margin calculation. Group margin rate: 50.0000
+2025-06-30 04:21:24,765 - INFO - orders - [MARGIN_CALC] Crypto Margin calc: (price * contract_size * quantity * group_margin_rate) / effective_leverage = (107764.1000000000 * 1.00000000 * 0.01 * 50.0000) / 100.00 = 538.820500000000000000000
+2025-06-30 04:21:24,765 - INFO - orders - [MARGIN_CALC] Commission settings for BTCUSD: type=1, value_type=0, rate=10.0000
+2025-06-30 04:21:24,765 - INFO - orders - [MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-30 04:21:24,766 - INFO - orders - [MARGIN_CALC] Profit currency for BTCUSD: USD
+2025-06-30 04:21:24,766 - INFO - orders - [MARGIN_CALC] Final results for BTCUSD SELL: margin=538.82, price=107764.1000000000, contract_value=0.0100000000, commission=0.10
+2025-06-30 04:21:24,766 - app.services.order_processing - INFO - [COMMISSION_CALC] User 1 Symbol BTCUSD: Calculated commission=0.10
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1 Symbol BTCUSD: MarginBefore=538.82, MarginAfter=538.82, AdditionalMargin=0.00
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 1 Symbol BTCUSD
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 538.82
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 1
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 538.82
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 538.82
+2025-06-30 04:21:24,776 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 0.0
+2025-06-30 04:21:24,792 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 1: OriginalMarginDB=538.82000000, CalculatedNewMargin=538.82
+2025-06-30 04:21:24,812 - INFO - orders - [PRE-CRUD] About to call create_order with: {'order_id': '9629462119', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'SELL', 'order_price': Decimal('107764.1000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:21:24,813 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '9629462119', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'SELL', 'order_price': Decimal('107764.1000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:21:24,813 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '9629462119', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'SELL', 'order_price': Decimal('107764.1000000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-06-30 04:21:24,813 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 9629462119
+2025-06-30 04:21:24,831 - INFO - orders - [MARGIN_COMMIT_CHECK] User 1 margin in session BEFORE commit: 538.82000000
+2025-06-30 04:21:24,840 - INFO - orders - User data cache updated for user 1 after placing order
+2025-06-30 04:21:25,524 - INFO - orders - Portfolio cache updated and websocket event published for user 1 after placing order.
+2025-06-30 04:21:25,527 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:21:25,528 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:21:25,534 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-30 04:21:25,544 - INFO - orders - Fetched 0 pending orders for user 1
+2025-06-30 04:21:25,549 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 0 pending orders
+2025-06-30 04:21:34,330 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: BTCUSD, Type: BUY_LIMIT, Quantity: 0.01
+2025-06-30 04:21:34,339 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=100000, Current buy price=107764.0000000000, Current sell price=107764.1000000000
+2025-06-30 04:21:34,344 - INFO - orders - Calculated contract_value for pending order: 0.0100000000 (contract_size: 1.00000000 * quantity: 0.01)
+2025-06-30 04:21:34,345 - INFO - orders - [DEBUG] User data from cache: {'id': 1, 'email': 'dhanush777ss@gmail.com', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'user_type': 'demo', 'account_number': '5O42G', 'wallet_balance': Decimal('24996.38000000'), 'margin': Decimal('538.82000000'), 'first_name': None, 'last_name': None, 'country': None, 'phone_number': Decimal('8618025298')}
+2025-06-30 04:21:34,346 - INFO - orders - [DEBUG] Group name: Group B
+2025-06-30 04:21:34,346 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-06-30 04:21:34,347 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-06-30 04:21:34,347 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-06-30 04:21:34,347 - INFO - orders - User 1 is_barclays_live_user: False (user_type: demo, sending_orders_normalized: barclays)
+2025-06-30 04:21:34,350 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for BTCUSD: contract_size=1.00000000, profit_currency=USD, digit=2.00000
+2025-06-30 04:21:34,351 - INFO - orders - [MARGIN_CALC] Starting margin calculation for BTCUSD BUY_LIMIT order, quantity: 0.01
+2025-06-30 04:21:34,351 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 1
+2025-06-30 04:21:34,356 - INFO - orders - [MARGIN_CALC] Contract size for BTCUSD: 1.00000000 (raw: 1.00000000, type: <class 'decimal.Decimal'>)
+2025-06-30 04:21:34,358 - INFO - orders - [MARGIN_CALC] Got BUY price for BTCUSD from cache: 107764.0000000000
+2025-06-30 04:21:34,358 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 4
+2025-06-30 04:21:34,359 - INFO - orders - [MARGIN_CALC] Crypto margin calculation. Group margin rate: 50.0000
+2025-06-30 04:21:34,359 - INFO - orders - [MARGIN_CALC] Crypto Margin calc: (price * contract_size * quantity * group_margin_rate) / effective_leverage = (107764.0000000000 * 1.00000000 * 0.01 * 50.0000) / 100.00 = 538.820000000000000000000
+2025-06-30 04:21:34,359 - INFO - orders - [MARGIN_CALC] Commission settings for BTCUSD: type=1, value_type=0, rate=10.0000
+2025-06-30 04:21:34,359 - INFO - orders - [MARGIN_CALC] Per lot commission: 0.01 * 10.0000 = 0.100000
+2025-06-30 04:21:34,359 - INFO - orders - [MARGIN_CALC] Profit currency for BTCUSD: USD
+2025-06-30 04:21:34,359 - INFO - orders - [MARGIN_CALC] Final results for BTCUSD BUY_LIMIT: margin=538.82, price=107764.0000000000, contract_value=0.0100000000, commission=0.10
+2025-06-30 04:21:34,359 - INFO - orders - Calculated initial margin: 538.82, commission: 0.10 for pending order 1319028245
+2025-06-30 04:21:34,369 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '1319028245', 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.01'), 'order_price': Decimal('100000'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '8107910835', 'takeprofit_id': '4683351335', 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'commission': Decimal('0.10'), 'open_time': None}
+2025-06-30 04:21:34,369 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 100000
+2025-06-30 04:21:34,370 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '1319028245', 'order_status': 'PENDING', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('100000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-06-30 04:21:34,370 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '1319028245', 'order_status': 'PENDING', 'order_user_id': 1, 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('100000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('0.0100000000'), 'margin': Decimal('538.82'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-06-30 04:21:34,370 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 1319028245
+2025-06-30 04:21:34,401 - INFO - orders - Order 1319028245 verified in database on attempt 1 before adding to Redis.
+2025-06-30 04:21:34,406 - INFO - orders - Pending order 1319028245 added to Redis for non-Barclays user or demo user.
+2025-06-30 04:21:34,413 - INFO - orders - User data cache updated for user 1 after placing pending order
+2025-06-30 04:21:34,413 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-06-30 04:21:34,414 - INFO - orders - Using order model: DemoUserOrder
+2025-06-30 04:21:34,416 - INFO - orders - Fetched 2 open orders for user 1
+2025-06-30 04:21:34,420 - INFO - orders - Fetched 1 pending orders for user 1
+2025-06-30 04:21:34,421 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 1 pending orders

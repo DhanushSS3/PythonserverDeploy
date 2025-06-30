@@ -731,6 +731,36 @@ async def place_pending_order(
         is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
         orders_logger.info(f"User {user_id_for_order} is_barclays_live_user: {is_barclays_live_user} (user_type: {user_type}, sending_orders_normalized: {sending_orders_normalized})")
 
+        # --- Calculate Margin at Placement Time ---
+        margin = None
+        commission = None
+        try:
+            leverage = Decimal(str(user_data.get('leverage', '1.0')))
+            external_symbol_info_dict = await get_external_symbol_info(db, order_request.symbol)
+            raw_market_data = get_latest_market_data()
+            group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, order_request.symbol) if group_name else {}
+
+
+            margin, _, _, commission = await calculate_single_order_margin(
+                redis_client=redis_client,
+                symbol=order_request.symbol,
+                order_type=order_request.order_type,
+                quantity=order_request.order_quantity,
+                user_leverage=leverage,
+                group_settings=group_symbol_settings,
+                external_symbol_info=external_symbol_info_dict,
+                raw_market_data=raw_market_data,
+                db=db,
+                user_id=user_id_for_order
+            )
+            orders_logger.info(f"Calculated initial margin: {margin}, commission: {commission} for pending order {new_order_id}")
+        except Exception as e:
+            orders_logger.error(f"Could not calculate initial margin for pending order: {e}", exc_info=True)
+            # Decide if you want to fail the order or proceed with margin=None
+            # For now, we proceed with margin=None and commission=None
+            margin = None
+            commission = None
+
         # Generate SL/TP IDs if values are provided
         stoploss_id = None
         if order_request.stop_loss is not None:
@@ -756,7 +786,8 @@ async def place_pending_order(
             'order_user_id': user_id_for_order,  # Always current_user.id
             'order_status': "PENDING_PROCESSING" if is_barclays_live_user else order_request.order_status, # Use PENDING_PROCESSING for Barclays users
             'contract_value': contract_value, # Store calculated contract_value
-            'margin': None,         # Still None for pending orders
+            'margin': margin, # Store pre-calculated margin
+            'commission': commission, # Store pre-calculated commission
             'open_time': None # Not open yet
         }
 
