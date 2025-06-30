@@ -6,13 +6,13 @@ from decimal import Decimal
 # Changed from sqlalchemy.orm import Session to sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from app.database.models import Wallet  # Import the Wallet model from models.py
+from app.database.models import Wallet, User  # Import the Wallet and WalletTransaction models from models.py
 # Import the new WalletCreate schema
 from app.schemas.wallet import WalletCreate
 
 import logging # Import logging
 
-from sqlalchemy import select
+from sqlalchemy import select, update, func
 from sqlalchemy.future import select
 import random
 
@@ -20,14 +20,7 @@ from typing import List
 
 logger = logging.getLogger(__name__) # Get logger for this module
 
-
-async def generate_unique_10_digit_id(db, model, column):
-    while True:
-        candidate = str(random.randint(10**9, 10**10-1))
-        stmt = select(model).where(getattr(model, column) == candidate)
-        result = await db.execute(stmt)
-        if not result.scalar():
-            return candidate
+from app.services.order_processing import generate_unique_10_digit_id
 
 # Changed function signature to accept WalletCreate schema
 async def create_wallet_record(
@@ -272,3 +265,88 @@ async def get_wallet_records_by_order_id(
 #     # # Run the async test function
 #     # asyncio.run(test_create_wallet())
 
+async def add_funds_to_wallet(db: AsyncSession, user_id: int, amount: Decimal, currency: str, reason: str = None, by_admin: bool = False):
+    # Find the live user
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise Exception("User not found")
+    user.wallet_balance = (user.wallet_balance or Decimal('0')) + amount
+    await db.flush()
+    # Generate unique transaction_id
+    transaction_id = await generate_unique_10_digit_id(db, Wallet, 'transaction_id')
+    # Create wallet transaction record
+    wallet_record = Wallet(
+        user_id=user_id,
+        transaction_type="deposit",
+        transaction_amount=amount,
+        description=reason,
+        symbol=currency,
+        is_approved=1,
+        transaction_time=datetime.datetime.now(),
+        transaction_id=transaction_id
+    )
+    db.add(wallet_record)
+    await db.commit()
+    return user.wallet_balance
+
+async def withdraw_funds_from_wallet(db: AsyncSession, user_id: int, amount: Decimal, currency: str, reason: str = None, by_admin: bool = False):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or (user.wallet_balance or Decimal('0')) < amount:
+        raise Exception("Insufficient funds")
+    user.wallet_balance -= amount
+    await db.flush()
+    transaction_id = await generate_unique_10_digit_id(db, Wallet, 'transaction_id')
+    wallet_record = Wallet(
+        user_id=user_id,
+        transaction_type="withdraw",
+        transaction_amount=-amount,
+        description=reason,
+        symbol=currency,
+        is_approved=1,
+        transaction_time=datetime.datetime.now(),
+        transaction_id=transaction_id
+    )
+    db.add(wallet_record)
+    await db.commit()
+    return user.wallet_balance
+
+# Function to get total deposit amount for live users
+async def get_total_deposit_amount_for_live_user(
+    db: AsyncSession, user_id: int
+) -> Decimal:
+    """
+    Calculates the total deposit amount for a specific live user.
+    
+    Args:
+        db: The asynchronous database session
+        user_id: The user ID to calculate total deposits for
+        
+    Returns:
+        The total deposit amount as a Decimal, or 0 if no deposits found
+    """
+    try:
+        # Sum all transaction_amount where transaction_type is "deposit" and user_id matches
+        result = await db.execute(
+            select(func.coalesce(func.sum(Wallet.transaction_amount), 0))
+            .filter(Wallet.user_id == user_id)
+            .filter(Wallet.transaction_type == "deposit")
+        )
+        
+        total_amount = result.scalar()
+        logger.info(f"Total deposit amount for user {user_id}: {total_amount}")
+        return total_amount or Decimal('0')
+        
+    except SQLAlchemyError as e:
+        logger.error(
+            f"Database error calculating total deposit amount for user {user_id}: {e}",
+            exc_info=True
+        )
+        return Decimal('0')
+    except Exception as e:
+        logger.error(
+            f"Unexpected error calculating total deposit amount for user {user_id}: {e}",
+            exc_info=True
+        )
+        return Decimal('0')

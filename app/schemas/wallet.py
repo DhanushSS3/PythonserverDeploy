@@ -268,3 +268,27 @@ class WalletBalanceResponse(BaseModel):
     new_balance: Decimal = Field(..., decimal_places=8)
     message: str
     transaction_id: Optional[str] = None
+
+from pydantic import BaseModel, Field
+from decimal import Decimal
+from typing import Optional
+
+class AdminWalletActionRequest(BaseModel):
+    user_id: int
+    amount: Decimal
+    currency: str
+    reason: Optional[str] = None
+
+class AdminWalletActionResponse(BaseModel):
+    status: bool
+    message: str
+    balance: Optional[Decimal] = None
+
+# Schema for total deposit amount response
+class TotalDepositResponse(BaseModel):
+    user_id: int
+    total_deposit_amount: Decimal = Field(..., decimal_places=8)
+    message: str = "Total deposit amount retrieved successfully"
+    
+    class Config:
+        from_attributes = True

@@ -6,8 +6,8 @@ from sqlalchemy import select
 from app.database.session import get_db
 from app.core.security import get_current_user
 from app.database.models import User, DemoUser, Wallet
-from app.schemas.wallet import WalletResponse  # Adjust if needed
-from app.crud.wallet import get_wallet_records_by_user_id, get_wallet_records_by_order_id, get_wallet_records_by_demo_user_id
+from app.schemas.wallet import WalletResponse, TotalDepositResponse  # Adjust if needed
+from app.crud.wallet import get_wallet_records_by_user_id, get_wallet_records_by_order_id, get_wallet_records_by_demo_user_id, get_total_deposit_amount_for_live_user
 
 router = APIRouter(
     prefix="/wallets",
@@ -93,3 +93,36 @@ async def get_wallet_records_by_order(
         )
 
     return wallet_records
+
+@router.get(
+    "/total-deposits",
+    response_model=TotalDepositResponse,
+    summary="Get total deposit amount for live user",
+    description="Calculates and returns the total amount deposited by the authenticated live user."
+)
+async def get_total_deposits(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieves the total deposit amount for the authenticated live user.
+    Only accessible for live users (not demo users).
+    """
+    # Ensure this endpoint is only accessible for live users
+    if isinstance(current_user, DemoUser):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is only accessible for live users."
+        )
+    
+    # Get total deposit amount for the live user
+    total_deposit_amount = await get_total_deposit_amount_for_live_user(
+        db=db, 
+        user_id=current_user.id
+    )
+    
+    return TotalDepositResponse(
+        user_id=current_user.id,
+        total_deposit_amount=total_deposit_amount,
+        message="Total deposit amount retrieved successfully"
+    )
