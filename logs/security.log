@@ -16688,3 +16688,201 @@ jose.exceptions.JWTError: Could not validate credentials
 2025-07-02 04:52:41,177 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
 2025-07-02 04:54:06,644 - INFO - app.core.security - Closing Redis connection...
 2025-07-02 04:54:06,647 - INFO - app.core.security - Redis connection closed.
+2025-07-02 04:55:47,711 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-02 04:55:47,711 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-02 04:55:47,713 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-02 04:55:47,713 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-02 04:55:47,716 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-02 04:55:47,716 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-02 04:55:47,716 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-02 04:55:47,716 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 2, 12, 30, 47, 716405), 'iat': datetime.datetime(2025, 7, 2, 11, 55, 47, 716407)}
+2025-07-02 04:55:47,716 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-02 04:55:52,520 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,520 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,521 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,521 - INFO - app.core.security - Token payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,521 - INFO - app.core.security - Regular user token detected. Deferring to get_current_user.
+2025-07-02 04:55:52,521 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,521 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,521 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,521 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,521 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:52,531 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:52,531 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:52,531 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:52,547 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,548 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,548 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,548 - INFO - app.core.security - Token payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,548 - INFO - app.core.security - Regular user token detected. Deferring to get_current_user.
+2025-07-02 04:55:52,549 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,549 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,549 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,549 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,550 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:52,554 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,554 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,556 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,556 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,556 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:52,560 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:52,561 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:52,561 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:52,570 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:52,570 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:52,769 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,769 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,769 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,770 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,770 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:52,774 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:52,774 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:52,885 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:52,889 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:52,891 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,891 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:52,891 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:52,901 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:52,901 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:53,303 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:53,303 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:53,304 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:56,569 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:56,569 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:56,569 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:56,571 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:56,571 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:56,579 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:56,579 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:55:59,299 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:55:59,299 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:55:59,300 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:59,300 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:55:59,301 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:55:59,310 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:55:59,310 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:15,780 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:15,780 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:15,781 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,781 - INFO - app.core.security - Token payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,781 - INFO - app.core.security - Regular user token detected. Deferring to get_current_user.
+2025-07-02 04:56:15,781 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:15,781 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:15,781 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,781 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,781 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:56:15,787 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:56:15,787 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:15,787 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:15,793 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:15,793 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:15,793 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,793 - INFO - app.core.security - Token payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,793 - INFO - app.core.security - Regular user token detected. Deferring to get_current_user.
+2025-07-02 04:56:15,794 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:15,794 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:15,794 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,794 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,794 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:56:15,798 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:56:15,799 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:15,799 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:15,804 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:15,804 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:15,804 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,804 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:15,805 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:56:15,809 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:56:15,810 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:16,073 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:16,074 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:16,074 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:16,074 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:16,075 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:56:16,079 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:56:16,079 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:16,666 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:16,666 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:16,667 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:16,667 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:16,667 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:56:16,672 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:56:16,672 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:56:16,743 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:16,743 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:16,744 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:56:35,436 - INFO - app.core.security - Closing Redis connection...
+2025-07-02 04:56:35,437 - INFO - app.core.security - Redis connection closed.
+2025-07-02 04:56:55,734 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-02 04:56:55,734 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-02 04:56:55,737 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-02 04:56:55,738 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-02 04:56:55,745 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-02 04:56:55,745 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-02 04:56:55,745 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-02 04:56:55,745 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 2, 12, 31, 55, 745602), 'iat': datetime.datetime(2025, 7, 2, 11, 56, 55, 745605)}
+2025-07-02 04:56:55,746 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-02 04:56:57,212 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:56:57,212 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:56:57,212 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:57:33,998 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 04:57:33,998 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 04:57:33,998 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:57:33,998 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 04:57:33,998 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 04:57:34,000 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 04:57:34,000 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 04:57:57,969 - INFO - app.core.security - Closing Redis connection...
+2025-07-02 04:57:57,970 - INFO - app.core.security - Redis connection closed.
+2025-07-02 05:00:09,233 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-02 05:00:09,233 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-02 05:00:09,238 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-02 05:00:09,238 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-02 05:00:09,243 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-02 05:00:09,243 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-02 05:00:09,243 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-02 05:00:09,243 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 2, 12, 35, 9, 243091), 'iat': datetime.datetime(2025, 7, 2, 12, 0, 9, 243097)}
+2025-07-02 05:00:09,243 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-02 05:00:13,147 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 05:00:13,147 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 05:00:13,147 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 05:00:16,832 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 05:00:16,833 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 05:00:16,833 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 05:00:16,833 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 05:00:16,834 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 05:00:16,841 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 05:00:16,841 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 05:00:23,069 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-02 05:00:23,069 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-02 05:00:23,069 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 05:00:23,069 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751457937, 'iat': 1751456137}
+2025-07-02 05:00:23,069 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-02 05:00:23,070 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-02 05:00:23,071 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-02 05:00:34,731 - INFO - app.core.security - Closing Redis connection...
+2025-07-02 05:00:34,733 - INFO - app.core.security - Redis connection closed.

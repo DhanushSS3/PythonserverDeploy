@@ -213,20 +213,28 @@ async def calculate_user_portfolio(
                 continue
 
             # Patch: handle if current_prices is a string (e.g., just a price)
-            if isinstance(current_prices, str):
-                # Assume this is the 'buy' price for BUY, 'sell' for SELL, fallback to 0
-                if order_type == 'BUY':
-                    current_buy = Decimal(current_prices)
-                    current_sell = Decimal('0')
+            try:
+                if isinstance(current_prices, str):
+                    # Assume this is the 'buy' price for BUY, 'sell' for SELL, fallback to 0
+                    if order_type == 'BUY':
+                        current_buy = Decimal(current_prices)
+                        current_sell = Decimal('0')
+                    else:
+                        current_buy = Decimal('0')
+                        current_sell = Decimal(current_prices)
+                elif isinstance(current_prices, dict):
+                    current_buy = Decimal(str(current_prices.get('buy', '0')))
+                    current_sell = Decimal(str(current_prices.get('sell', '0')))
                 else:
                     current_buy = Decimal('0')
-                    current_sell = Decimal(current_prices)
-            elif isinstance(current_prices, dict):
-                current_buy = Decimal(str(current_prices.get('buy', '0')))
-                current_sell = Decimal(str(current_prices.get('sell', '0')))
-            else:
-                current_buy = Decimal('0')
-                current_sell = Decimal('0')
+                    current_sell = Decimal('0')
+            except Exception as e:
+                logger.error(f"Error converting current_prices to Decimal for {symbol}: {current_prices} ({e})")
+                position_with_pnl = position.copy()
+                position_with_pnl['profit_loss'] = "0.0"
+                position_with_pnl['current_price'] = "0.0"
+                positions_with_pnl.append(position_with_pnl)
+                continue
 
             if current_buy <= 0 or current_sell <= 0:
                 logger.warning(f"Invalid current prices for {symbol}: buy={current_buy}, sell={current_sell}")
