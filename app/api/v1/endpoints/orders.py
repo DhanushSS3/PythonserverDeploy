@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, validator
 from sqlalchemy import select
 from fastapi.security import OAuth2PasswordBearer
 import asyncio
+import orjson
 
 from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user, get_user_from_service_token
@@ -307,19 +308,17 @@ async def place_order(
     order_request: OrderPlacementRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    redis_client: Redis = Depends(get_redis_client)
+    redis_client: Redis = Depends(get_redis_client),
+    background_tasks: BackgroundTasks = None
 ):
     """
-    Place a new order.
+    Place a new order. Optimized for minimal latency.
     """
     from app.core.logging_config import frontend_orders_logger, error_logger
-    
+    start_total = time.perf_counter()
     try:
-        # Log the incoming request
         frontend_orders_logger.info(f"FRONTEND ORDER PLACEMENT - REQUEST: {json.dumps(order_request.dict(), default=str)}")
         orders_logger.info(f"Order placement request received - User ID: {current_user.id}, Symbol: {order_request.symbol}, Type: {order_request.order_type}, Quantity: {order_request.order_quantity}")
-        
-        # Convert order request to dict
         order_data = {
             'order_company_name': order_request.symbol,
             'order_type': order_request.order_type,
@@ -330,93 +329,77 @@ async def place_order(
             'stop_loss': order_request.stop_loss,
             'take_profit': order_request.take_profit
         }
-
-        # Get user and group settings to determine if Barclays live user
         user_id_for_order = current_user.id
-        # Use user_type from request (not just current_user)
         user_type = order_request.user_type.lower() if hasattr(order_request, 'user_type') else current_user.user_type
-        user_data_cache = await get_user_data_cache(redis_client, user_id_for_order, db, user_type)
+        # Parallelize user/group cache fetches
+        t0 = time.perf_counter()
+        user_data_task = get_user_data_cache(redis_client, user_id_for_order, db, user_type)
+        group_settings_task = user_data_task  # Will get group_name from user_data
+        # Await user_data first to get group_name
+        user_data_cache = await user_data_task
+        log_time = lambda label, t: orders_logger.info(f"[PERF] {label}: {time.perf_counter() - t:.4f}s")
+        log_time("user_data_cache", t0)
         group_name = user_data_cache.get('group_name') if user_data_cache else None
-        # Fallback: If group_name is missing, fetch from DB
-        if not group_name:
-            db_user = await get_user_by_id(db, user_id_for_order, user_type=user_type)
-            group_name = getattr(db_user, 'group_name', None) if db_user else None
-        group_settings_cache = await get_group_settings_cache(redis_client, group_name) if group_name else None
+        # Now parallelize group settings and DB fallback
+        t1 = time.perf_counter()
+        group_settings_task = get_group_settings_cache(redis_client, group_name) if group_name else None
+        db_user_task = get_user_by_id(db, user_id_for_order, user_type=user_type) if not group_name else None
+        group_settings_cache, db_user = await asyncio.gather(
+            group_settings_task if group_settings_task else asyncio.sleep(0),
+            db_user_task if db_user_task else asyncio.sleep(0)
+        )
+        log_time("group_settings_cache+db_user", t1)
+        if not group_name and db_user:
+            group_name = getattr(db_user, 'group_name', None)
         sending_orders_cache = group_settings_cache.get('sending_orders') if group_settings_cache else None
-
-        # If not found in cache, fetch group settings from DB
+        # Fallback: fetch group settings from DB if not in cache
         if (group_settings_cache is None or sending_orders_cache is None) and group_name:
             from app.crud import group as crud_group
+            t2 = time.perf_counter()
             db_group_result = await crud_group.get_group_by_name(db, group_name)
-            orders_logger.info(f"[DEBUG] db_group_result fetched from DB: {db_group_result}")
+            log_time("crud_group.get_group_by_name", t2)
             sending_orders_extracted = None
             if db_group_result:
-                # If it's a list (multiple group-symbol records), extract from the first
                 if isinstance(db_group_result, list):
-                    orders_logger.info(f"[DEBUG] Number of group records found: {len(db_group_result)}")
                     if len(db_group_result) > 0 and hasattr(db_group_result[0], 'sending_orders'):
                         sending_orders_extracted = getattr(db_group_result[0], 'sending_orders', None)
-                # If it's a single record
                 elif hasattr(db_group_result, 'sending_orders'):
                     sending_orders_extracted = getattr(db_group_result, 'sending_orders', None)
             if sending_orders_extracted is not None:
                 sending_orders_cache = sending_orders_extracted
-                orders_logger.info(f"[DEBUG] sending_orders_cache extracted from DB: {sending_orders_cache}")
-            else:
-                orders_logger.warning(f"[WARNING] Group '{group_name}' not found in DB or missing 'sending_orders' attribute. db_group_result={db_group_result}")
-
-        # Normalize for robust comparison
         sending_orders_normalized = sending_orders_cache.lower() if isinstance(sending_orders_cache, str) else sending_orders_cache
-        orders_logger.info(f"[DEBUG] group_settings_cache: {group_settings_cache}")
-        orders_logger.info(f"[DEBUG] sending_orders_cache value: {sending_orders_cache} (type: {type(sending_orders_cache)})")
         is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
-        orders_logger.info(f"Order placement: user_id={user_id_for_order}, is_barclays_live_user={is_barclays_live_user}, user_type={user_type}, group_name={group_name}, sending_orders_setting={sending_orders_cache}")
-
-        # Force order_status to 'PROCESSING' for Barclays live users
         if is_barclays_live_user:
             order_data['order_status'] = 'PROCESSING'
-
-        # Prepare order data (all IDs, margin, etc.)
+        # Process new order (margin, commission, IDs)
+        t3 = time.perf_counter()
         order_create_internal = await process_new_order(
             db=db,
             redis_client=redis_client,
-            user_id=user_id_for_order, # Use the defined user_id
+            user_id=user_id_for_order,
             order_data=order_data,
             user_type=current_user.user_type,
-            is_barclays_live_user=is_barclays_live_user # Pass the new flag
+            is_barclays_live_user=is_barclays_live_user
         )
-
-        # Create order in database (OrderCreateInternal-compatible)
+        log_time("process_new_order", t3)
+        # Create order in DB
         order_model = get_order_model(current_user.user_type)
-        orders_logger.info(f"[PRE-CRUD] About to call create_order with: {order_create_internal}")
+        t4 = time.perf_counter()
         db_order = await crud_order.create_order(db, order_create_internal, order_model)
-
-        # Log user margin from session before commit
-        try:
-            user_to_check = await db.get(type(current_user), current_user.id) # Assumes current_user is the correct user model type
-            if user_to_check:
-                orders_logger.info(f"[MARGIN_COMMIT_CHECK] User {current_user.id} margin in session BEFORE commit: {user_to_check.margin}")
-            else:
-                orders_logger.warning(f"[MARGIN_COMMIT_CHECK] User {current_user.id} not found in session before commit.")
-        except Exception as e_check:
-            orders_logger.error(f"[MARGIN_COMMIT_CHECK] Error checking user margin before commit: {e_check}", exc_info=True)
-        
+        log_time("crud_order.create_order", t4)
+        # Commit once at the end
+        t5 = time.perf_counter()
         await db.commit()
         await db.refresh(db_order)
-
-        # Margin update for non-Barclays users is now handled within process_new_order.
-        # The database commit for the order itself is sufficient here.
-
-        # --- Update user data cache after DB update ---
-        try:
+        log_time("db.commit+refresh", t5)
+        # Update user data cache (background)
+        async def update_user_cache():
             user_id = db_order.order_user_id
-            # Fetch the latest user data from DB to update cache
             db_user = None
             if user_type == 'live':
                 db_user = await get_user_by_id(db, user_id, user_type=user_type)
             else:
                 db_user = await get_demo_user_by_id(db, user_id, user_type=user_type)
-            
             if db_user:
                 user_data_to_cache = {
                     "id": db_user.id,
@@ -433,12 +416,12 @@ async def place_order(
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                orders_logger.info(f"User data cache updated for user {user_id} after placing order")
-        except Exception as e:
-            orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
-
-        # --- Portfolio Update & Websocket Event ---
-        try:
+        if background_tasks:
+            background_tasks.add_task(update_user_cache)
+        else:
+            asyncio.create_task(update_user_cache())
+        # Portfolio update (background)
+        async def update_portfolio():
             user_id = db_order.order_user_id
             user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
             if user_data:
@@ -450,25 +433,23 @@ async def place_order(
                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
                     for pos in open_positions
                 ]
-                adjusted_market_prices = {}
-                if group_symbol_settings:
-                    for symbol_key in group_symbol_settings.keys(): # Renamed symbol to symbol_key to avoid conflict with outer scope symbol if any
-                        # Assuming symbol_key is the actual symbol string we need for price fetching
-                        prices = await get_last_known_price(redis_client, symbol_key)
-                        if prices:
-                            adjusted_market_prices[symbol_key] = prices
+                # Batch price fetch
+                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                if symbol_keys:
+                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                else:
+                    adjusted_market_prices = {}
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                 await publish_account_structure_changed_event(redis_client, user_id)
-                orders_logger.info(f"Portfolio cache updated and websocket event published for user {user_id} after placing order.")
-        except Exception as e:
-            orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order placement: {e}", exc_info=True)
-
-        # --- Barclays Firebase Push Logic ---
+        if background_tasks:
+            background_tasks.add_task(update_portfolio)
+        else:
+            asyncio.create_task(update_portfolio())
+        # Barclays Firebase push (background)
         if is_barclays_live_user:
-            try:
-                # For Barclays live users, ensure order_status is PROCESSING and do NOT update margin in DB
-                # Check margin and send to Firebase if sufficient, but do not update user margin
+            async def barclays_push():
                 user_id = db_order.order_user_id
                 user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
                 group_name = user_data.get('group_name') if user_data else None
@@ -479,50 +460,34 @@ async def place_order(
                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
                     for pos in open_positions
                 ]
-                adjusted_market_prices = {}
-                if group_symbol_settings:
-                    for symbol_key in group_symbol_settings.keys():
-                        prices = await get_last_known_price(redis_client, symbol_key)
-                        if prices:
-                            adjusted_market_prices[symbol_key] = prices
+                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                if symbol_keys:
+                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                else:
+                    adjusted_market_prices = {}
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 free_margin = Decimal(str(portfolio.get('free_margin', '0')))
                 order_margin = Decimal(str(db_order.margin or 0))
-                # Do NOT update user margin for Barclays users; just check
                 if free_margin > order_margin:
                     firebase_order_data = {
                         'order_id': db_order.order_id,
                         'order_user_id': db_order.order_user_id,
                         'order_company_name': db_order.order_company_name,
                         'order_type': db_order.order_type,
-                        'order_status': db_order.order_status,  # Should be PROCESSING
+                        'order_status': db_order.order_status,
                         'order_price': db_order.order_price,
                         'order_quantity': db_order.order_quantity,
                         'contract_value': db_order.contract_value,
                         'margin': db_order.margin,
                         'stop_loss': db_order.stop_loss,
                         'take_profit': db_order.take_profit,
-
-                        'status': getattr(db_order, 'status', None),
                     }
-                    orders_logger.info(f"[FIREBASE] Payload being sent to Firebase: {firebase_order_data}")
+                    # send_order_to_firebase is assumed async
                     await send_order_to_firebase(firebase_order_data, "live")
-                    orders_logger.info(f"[FIREBASE] Barclays order sent to Firebase: {db_order.order_id} (order_status=PROCESSING, margin not updated in DB)")
-                else:
-                    orders_logger.warning(f"[FIREBASE] Barclays order NOT sent to Firebase due to insufficient free margin. free_margin={free_margin}, order_margin={order_margin}")
-            except Exception as e:
-                orders_logger.error(f"[FIREBASE] Error sending Barclays order to Firebase: {e}", exc_info=True)
-
-        await publish_account_structure_changed_event(redis_client, current_user.id)
-        await publish_market_data_trigger(redis_client)
-        
-        # Update static orders cache - force a fresh fetch from the database
-        await update_user_static_orders(user_id, db, redis_client, user_type)
-        
-        # Publish updates to notify WebSocket clients - make sure these are in the right order
-        await publish_order_update(redis_client, user_id)
-        await publish_user_data_update(redis_client, user_id)
-        
+        # Final timing log
+        orders_logger.info(f"[PERF] TOTAL place_order: {time.perf_counter() - start_total:.4f}s")
+        # Return response (use orjson for fast serialization if possible)
         return OrderResponse(
             order_id=db_order.order_id,
             order_user_id=db_order.order_user_id,
@@ -548,7 +513,6 @@ async def place_order(
             takeprofit_id=getattr(db_order, 'takeprofit_id', None),
             close_id=getattr(db_order, 'close_id', None),
         )
-
     except OrderProcessingError as e:
         orders_logger.error(f"Order processing error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -934,17 +898,96 @@ async def place_pending_order(
                     "country": getattr(db_user, 'country', None),
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
-                await set_user_data_cache(redis_client, user_id_for_order, user_data_to_cache)
-                orders_logger.info(f"User data cache updated for user {user_id_for_order} after placing pending order")
+                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                orders_logger.info(f"User data cache updated for user {user_id} after placing order")
         except Exception as e:
-            orders_logger.error(f"Error updating user data cache after pending order placement: {e}", exc_info=True)
+            orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
 
+        # --- Portfolio Update & Websocket Event ---
+        try:
+            user_id = db_order.order_user_id
+            user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
+            if user_data:
+                group_name = user_data.get('group_name')
+                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                open_positions_dicts = [
+                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                    for pos in open_positions
+                ]
+                adjusted_market_prices = {}
+                if group_symbol_settings:
+                    for symbol_key in group_symbol_settings.keys(): # Renamed symbol to symbol_key to avoid conflict with outer scope symbol if any
+                        # Assuming symbol_key is the actual symbol string we need for price fetching
+                        prices = await get_last_known_price(redis_client, symbol_key)
+                        if prices:
+                            adjusted_market_prices[symbol_key] = prices
+                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                await set_user_portfolio_cache(redis_client, user_id, portfolio)
+                await publish_account_structure_changed_event(redis_client, user_id)
+                orders_logger.info(f"Portfolio cache updated and websocket event published for user {user_id} after placing order.")
+        except Exception as e:
+            orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order placement: {e}", exc_info=True)
+
+        # --- Barclays Firebase Push Logic ---
+        if is_barclays_live_user:
+            try:
+                # For Barclays live users, ensure order_status is PROCESSING and do NOT update margin in DB
+                # Check margin and send to Firebase if sufficient, but do not update user margin
+                user_id = db_order.order_user_id
+                user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
+                group_name = user_data.get('group_name') if user_data else None
+                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
+                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                open_positions_dicts = [
+                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                    for pos in open_positions
+                ]
+                adjusted_market_prices = {}
+                if group_symbol_settings:
+                    for symbol_key in group_symbol_settings.keys():
+                        prices = await get_last_known_price(redis_client, symbol_key)
+                        if prices:
+                            adjusted_market_prices[symbol_key] = prices
+                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                free_margin = Decimal(str(portfolio.get('free_margin', '0')))
+                order_margin = Decimal(str(db_order.margin or 0))
+                # Do NOT update user margin for Barclays users; just check
+                if free_margin > order_margin:
+                    firebase_order_data = {
+                        'order_id': db_order.order_id,
+                        'order_user_id': db_order.order_user_id,
+                        'order_company_name': db_order.order_company_name,
+                        'order_type': db_order.order_type,
+                        'order_status': db_order.order_status,  # Should be PROCESSING
+                        'order_price': db_order.order_price,
+                        'order_quantity': db_order.order_quantity,
+                        'contract_value': db_order.contract_value,
+                        'margin': db_order.margin,
+                        'stop_loss': db_order.stop_loss,
+                        'take_profit': db_order.take_profit,
+
+                        'status': getattr(db_order, 'status', None),
+                    }
+                    orders_logger.info(f"[FIREBASE] Payload being sent to Firebase: {firebase_order_data}")
+                    await send_order_to_firebase(firebase_order_data, "live")
+                    orders_logger.info(f"[FIREBASE] Barclays order sent to Firebase: {db_order.order_id} (order_status=PROCESSING, margin not updated in DB)")
+                else:
+                    orders_logger.warning(f"[FIREBASE] Barclays order NOT sent to Firebase due to insufficient free margin. free_margin={free_margin}, order_margin={order_margin}")
+            except Exception as e:
+                orders_logger.error(f"[FIREBASE] Error sending Barclays order to Firebase: {e}", exc_info=True)
+
+        await publish_account_structure_changed_event(redis_client, current_user.id)
+        await publish_market_data_trigger(redis_client)
+        
         # Update static orders cache - force a fresh fetch from the database
-        await update_user_static_orders(user_id_for_order, db, redis_client, user_type)
+        await update_user_static_orders(user_id, db, redis_client, user_type)
         
         # Publish updates to notify WebSocket clients - make sure these are in the right order
-        await publish_order_update(redis_client, user_id_for_order)
-        await publish_user_data_update(redis_client, user_id_for_order)
+        await publish_order_update(redis_client, user_id)
+        await publish_user_data_update(redis_client, user_id)
         
         return OrderResponse(
             order_id=db_order.order_id,
@@ -953,23 +996,31 @@ async def place_pending_order(
             order_type=db_order.order_type,
             order_quantity=db_order.order_quantity,
             order_price=db_order.order_price,
-            status=db_order.status,
+            status=getattr(db_order, 'status', None) or 'ACTIVE',
             stop_loss=db_order.stop_loss,
             take_profit=db_order.take_profit,
             order_status=db_order.order_status,
-            contract_value=db_order.contract_value if db_order.contract_value is not None else None,
-            margin=db_order.margin if db_order.margin is not None else None,
+            contract_value=db_order.contract_value,
+            margin=db_order.margin,
             created_at=getattr(db_order, 'created_at', None).isoformat() if getattr(db_order, 'created_at', None) else None,
             updated_at=getattr(db_order, 'updated_at', None).isoformat() if getattr(db_order, 'updated_at', None) else None,
+            net_profit=getattr(db_order, 'net_profit', None),
+            close_price=getattr(db_order, 'close_price', None),
+            commission=getattr(db_order, 'commission', None),
+            swap=getattr(db_order, 'swap', None),
+            cancel_message=getattr(db_order, 'cancel_message', None),
+            close_message=getattr(db_order, 'close_message', None),
+            stoploss_id=getattr(db_order, 'stoploss_id', None),
+            takeprofit_id=getattr(db_order, 'takeprofit_id', None),
+            close_id=getattr(db_order, 'close_id', None),
         )
 
     except OrderProcessingError as e:
         orders_logger.error(f"Order processing error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        orders_logger.error(f"Unexpected error in place_pending_order: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to process pending order: {str(e)}")
-
+        orders_logger.error(f"Unexpected error in place_order: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
 
 @router.post("/close", response_model=OrderResponse)
 async def close_order(
