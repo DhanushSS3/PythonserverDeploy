@@ -137,16 +137,6 @@ async def _calculate_and_cache_adjusted_prices(
                 if spread_pip_setting > Decimal("0.0"):
                     effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
 
-                # Cache the adjusted prices
-                await set_adjusted_market_price_cache(
-                    redis_client=redis_client,
-                    group_name=group_name,
-                    symbol=symbol_upper,
-                    buy_price=adjusted_buy_price,
-                    sell_price=adjusted_sell_price,
-                    spread_value=configured_spread_amount
-                )
-
                 # Add to payload for immediate response
                 adjusted_prices_payload[symbol_upper] = {
                     'buy': float(adjusted_buy_price),
@@ -851,6 +841,12 @@ from app.dependencies.redis_client import get_redis_client
 
 @router.websocket("/ws/market-data")
 async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+    """
+    WebSocket endpoint for market data.
+    - Authenticates user as before.
+    - Only reads adjusted prices from Redis (no per-user calculation or writes).
+    - All adjusted price calculations are now centralized in a background worker.
+    """
     logger.info("--- MINIMAL TEST: ENTERED websocket_endpoint ---")
     for handler in logger.handlers:
         handler.flush()
@@ -1051,16 +1047,6 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                                     'sell': float(adjusted_sell_price),
                                     'spread': float(effective_spread_in_pips)
                                 }
-                                
-                                # Also update the cache with fresh data
-                                await set_adjusted_market_price_cache(
-                                    redis_client=redis_client,
-                                    group_name=group_name,
-                                    symbol=symbol,
-                                    buy_price=adjusted_buy_price,
-                                    sell_price=adjusted_sell_price,
-                                    spread_value=configured_spread_amount
-                                )
                                 
                                 logger.debug(f"User {account_number}: Fetched fresh data for {symbol}: Buy={adjusted_buy_price}, Sell={adjusted_sell_price}")
                                 

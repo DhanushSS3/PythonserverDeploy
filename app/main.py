@@ -133,6 +133,9 @@ from app.database.models import UserOrder, DemoUser
 # Import stop loss and take profit checker
 from app.services.pending_orders import check_and_trigger_stoploss_takeprofit
 
+# Import adjusted price worker
+from app.services.adjusted_price_worker import adjusted_price_worker
+
 settings = get_settings()
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -685,6 +688,11 @@ async def startup_event():
             redis_task = asyncio.create_task(redis_publisher_task(global_redis_client_instance))
             background_tasks.add(redis_task)
             redis_task.add_done_callback(background_tasks.discard)
+            
+            # Start the centralized adjusted price worker
+            adjusted_price_task = asyncio.create_task(adjusted_price_worker(global_redis_client_instance))
+            background_tasks.add(adjusted_price_task)
+            adjusted_price_task.add_done_callback(background_tasks.discard)
             
             pending_orders_task = asyncio.create_task(run_pending_order_checker())
             background_tasks.add(pending_orders_task)

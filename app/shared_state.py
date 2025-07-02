@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 # synchronous Firebase streaming thread to an asynchronous task
 # that publishes messages to Redis Pub/Sub.
 # The maxsize can be adjusted based on expected data volume and publishing speed.
+# Note: All adjusted price calculations are now centralized in a background worker.
 redis_publish_queue: asyncio.Queue = asyncio.Queue(maxsize=500) # Increased size as example
 
 # This queue is no longer used for market data streaming with Redis Pub/Sub.

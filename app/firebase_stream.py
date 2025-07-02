@@ -60,6 +60,7 @@ async def process_firebase_events(firebase_db_instance, path: str = 'datafeeds')
     """
     Listens to the specified Firebase Realtime Database path and puts incoming data onto a shared queue.
     Runs in a background asyncio task (in the main event loop's thread).
+    Note: Market data is now debounced/coalesced at the adjusted price worker, not here.
     """
     logger.info(f"Starting Firebase Admin event processing task for path: '{path}'. Queuing data for Redis publishing.")
 
