@@ -212,8 +212,21 @@ async def calculate_user_portfolio(
                 positions_with_pnl.append(position_with_pnl)
                 continue
 
-            current_buy = Decimal(str(current_prices.get('buy', '0')))
-            current_sell = Decimal(str(current_prices.get('sell', '0')))
+            # Patch: handle if current_prices is a string (e.g., just a price)
+            if isinstance(current_prices, str):
+                # Assume this is the 'buy' price for BUY, 'sell' for SELL, fallback to 0
+                if order_type == 'BUY':
+                    current_buy = Decimal(current_prices)
+                    current_sell = Decimal('0')
+                else:
+                    current_buy = Decimal('0')
+                    current_sell = Decimal(current_prices)
+            elif isinstance(current_prices, dict):
+                current_buy = Decimal(str(current_prices.get('buy', '0')))
+                current_sell = Decimal(str(current_prices.get('sell', '0')))
+            else:
+                current_buy = Decimal('0')
+                current_sell = Decimal('0')
 
             if current_buy <= 0 or current_sell <= 0:
                 logger.warning(f"Invalid current prices for {symbol}: buy={current_buy}, sell={current_sell}")

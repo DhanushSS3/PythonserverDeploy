@@ -369,7 +369,10 @@ async def place_order(
                 sending_orders_cache = sending_orders_extracted
         sending_orders_normalized = sending_orders_cache.lower() if isinstance(sending_orders_cache, str) else sending_orders_cache
         is_barclays_live_user = (user_type == 'live' and sending_orders_normalized == 'barclays')
+        # Barclays user detection debug log
+        orders_logger.debug(f"[BARCLAYS DETECTION] user_type={user_type}, sending_orders_normalized={sending_orders_normalized}, is_barclays_live_user={is_barclays_live_user}")
         if is_barclays_live_user:
+            orders_logger.debug(f"[BARCLAYS] Setting order_status=PROCESSING for Barclays user {user_id_for_order}")
             order_data['order_status'] = 'PROCESSING'
         # Process new order (margin, commission, IDs)
         t3 = time.perf_counter()
@@ -450,6 +453,10 @@ async def place_order(
         # Barclays Firebase push (background)
         if is_barclays_live_user:
             async def barclays_push():
+                """
+                Background task to send Barclays order details to Firebase after order placement, if user is a Barclays live user.
+                """
+                orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
                 user_id = db_order.order_user_id
                 user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
                 group_name = user_data.get('group_name') if user_data else None
@@ -469,6 +476,7 @@ async def place_order(
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 free_margin = Decimal(str(portfolio.get('free_margin', '0')))
                 order_margin = Decimal(str(db_order.margin or 0))
+                orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
                 if free_margin > order_margin:
                     firebase_order_data = {
                         'order_id': db_order.order_id,
@@ -483,8 +491,13 @@ async def place_order(
                         'stop_loss': db_order.stop_loss,
                         'take_profit': db_order.take_profit,
                     }
-                    # send_order_to_firebase is assumed async
+                    orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
                     await send_order_to_firebase(firebase_order_data, "live")
+            # SCHEDULE THE TASK!
+            if background_tasks:
+                background_tasks.add_task(barclays_push)
+            else:
+                asyncio.create_task(barclays_push())
         # Final timing log
         orders_logger.info(f"[PERF] TOTAL place_order: {time.perf_counter() - start_total:.4f}s")
         # Return response (use orjson for fast serialization if possible)
@@ -945,12 +958,12 @@ async def place_pending_order(
                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
                     for pos in open_positions
                 ]
-                adjusted_market_prices = {}
-                if group_symbol_settings:
-                    for symbol_key in group_symbol_settings.keys():
-                        prices = await get_last_known_price(redis_client, symbol_key)
-                        if prices:
-                            adjusted_market_prices[symbol_key] = prices
+                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                if symbol_keys:
+                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                else:
+                    adjusted_market_prices = {}
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 free_margin = Decimal(str(portfolio.get('free_margin', '0')))
                 order_margin = Decimal(str(db_order.margin or 0))
