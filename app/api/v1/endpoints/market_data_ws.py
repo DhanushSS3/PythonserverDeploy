@@ -972,8 +972,12 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         return
 
     # Accept the WebSocket connection
-    await websocket.accept()
-    logger.info(f"WebSocket connection accepted for user {account_number} (Group: {group_name}).")
+    try:
+        await websocket.accept()
+        logger.info(f"WebSocket connection accepted for user {account_number} (Group: {group_name}).")
+    except Exception as accept_error:
+        logger.error(f"Failed to accept WebSocket connection for user {account_number}: {accept_error}")
+        return
 
     # Initialize static orders cache
     static_orders = await update_static_orders_cache(db_user_id, db, redis_client, user_type)
@@ -993,6 +997,11 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     # Send initial connection data with all available symbols
     try:
+        # Check if the connection is still alive before proceeding
+        if websocket.client_state == WebSocketState.DISCONNECTED:
+            logger.warning(f"User {account_number}: Client disconnected before sending initial data")
+            return
+
         # Get all available symbols for the group
         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
         initial_symbols_data = {}
@@ -1087,23 +1096,35 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                             'spread': float(cached_prices.get('spread', 0))
                         }
         
-        # Send initial connection message with all symbols data
-        initial_response = {
-            "type": "market_update",
-            "data": {
-                "market_prices": initial_symbols_data,
-                "account_summary": {
-                    "balance": str(user_data_to_cache["wallet_balance"]),
-                    "margin": str(user_data_to_cache["margin"]),
-                    "open_orders": static_orders.get("open_orders", []) if static_orders else [],
-                    "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
+        # Check connection state again before sending
+        if websocket.client_state == WebSocketState.CONNECTED:
+            # Send initial connection message with all symbols data
+            initial_response = {
+                "type": "market_update",
+                "data": {
+                    "market_prices": initial_symbols_data,
+                    "account_summary": {
+                        "balance": str(user_data_to_cache["wallet_balance"]),
+                        "margin": str(user_data_to_cache["margin"]),
+                        "open_orders": static_orders.get("open_orders", []) if static_orders else [],
+                        "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
+                    }
                 }
             }
-        }
-        
-        await websocket.send_text(json.dumps(initial_response, cls=DecimalEncoder))
-        logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from Firebase)")
-        
+            
+            try:
+                await websocket.send_text(json.dumps(initial_response, cls=DecimalEncoder))
+                logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from Firebase)")
+            except WebSocketDisconnect:
+                logger.warning(f"User {account_number}: Client disconnected during initial data send")
+                return
+            except Exception as send_error:
+                logger.error(f"User {account_number}: Error sending initial data: {send_error}")
+                return
+        else:
+            logger.warning(f"User {account_number}: Client disconnected before sending initial data")
+            return
+
     except Exception as e:
         logger.error(f"User {account_number}: Error sending initial connection data: {e}", exc_info=True)
 

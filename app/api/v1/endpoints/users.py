@@ -675,7 +675,9 @@ async def confirm_password_reset(
 
     redis_key = f"reset_token:{user.email}:{user_type}"
     stored_token = await redis.get(redis_key)
-    if not stored_token or stored_token.decode() != payload.reset_token:
+    
+    # Since we're using decode_responses=True in Redis config, stored_token is already a string
+    if not stored_token or stored_token != payload.reset_token:
         raise HTTPException(status_code=403, detail="Invalid or expired reset token.")
 
     user.hashed_password = get_password_hash(payload.new_password)
@@ -1086,7 +1088,9 @@ async def demo_confirm_password_reset(
 
     redis_key = f"reset_token:{demo_user.email}:{fixed_user_type}"
     stored_token = await redis.get(redis_key)
-    if not stored_token or stored_token.decode() != payload.reset_token:
+    
+    # Since we're using decode_responses=True in Redis config, stored_token is already a string
+    if not stored_token or stored_token != payload.reset_token:
         raise HTTPException(status_code=403, detail="Invalid or expired reset token.")
 
     demo_user.hashed_password = get_password_hash(payload.new_password)
