@@ -388,29 +388,24 @@ async def per_connection_redis_listener(
     user_type: str
 ):
     pubsub = redis_client.pubsub()
-    # Subscribe to all relevant channels
     await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
     await pubsub.subscribe(REDIS_ORDER_UPDATES_CHANNEL)
     await pubsub.subscribe(REDIS_USER_DATA_UPDATES_CHANNEL)
     logger.info(f"User {user_id}: Subscribed to Redis channels for market data and updates")
 
-    # Initial setup - fetch and cache static order data
     await update_static_orders_cache(user_id, db, redis_client, user_type)
 
-    # Flag to track if this is the initial connection
     is_initial_connection = True
-    # Cache to store all symbols data for initial connection
     all_symbols_cache = {}
+    last_sent_prices = {}  # Track last sent prices per symbol
 
-    # Log WebSocket state
     logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message is None:
-                # Periodically check WebSocket state
-                if random.random() < 0.01:  # Log state approximately once every 100 iterations
+                if random.random() < 0.01:
                     logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
                 await asyncio.sleep(0.01)
                 continue
@@ -418,28 +413,19 @@ async def per_connection_redis_listener(
             try:
                 message_data = json.loads(message['data'], object_hook=decode_decimal)
                 channel = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
-                
-                # Log all received messages for debugging - use DecimalEncoder for JSON serialization
                 logger.info(f"User {user_id}: Received message on channel {channel}: {json.dumps(message_data, cls=DecimalEncoder)[:200]}...")
-                
-                # Handle different message types based on channel
+
                 if channel == REDIS_MARKET_DATA_CHANNEL:
                     if message_data.get("type") == "market_data_update":
-                        # DIAGNOSTICS: Log delay from Firebase
                         firebase_ts = message_data.get("_timestamp")
                         if firebase_ts:
                             import time
                             delay = time.time() - firebase_ts
                             logger.info(f"User {user_id}: Market data delay from Firebase to WS listener entry: {delay:.4f} seconds.")
 
-                        # Process market data update (existing code)
                         price_data_content = {k: v for k, v in message_data.items() if k not in ["type", "_timestamp"]}
-                        
-                        # Get group settings
                         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
                         relevant_symbols = set(group_settings.keys())
-                        
-                        # Update and cache adjusted prices
                         adjusted_prices = await _calculate_and_cache_adjusted_prices(
                             raw_market_data=price_data_content,
                             group_name=group_name,
@@ -447,24 +433,31 @@ async def per_connection_redis_listener(
                             group_settings=group_settings,
                             redis_client=redis_client
                         )
-                        
-                        # Update the all_symbols_cache with new data
                         all_symbols_cache.update(adjusted_prices)
-                        
-                        # Update dynamic portfolio data
+
+                        # --- Only send changed symbols ---
+                        changed_prices = {}
+                        for symbol, price in adjusted_prices.items():
+                            last = last_sent_prices.get(symbol)
+                            if not last or (
+                                price['buy'] != last['buy'] or
+                                price['sell'] != last['sell'] or
+                                price['spread'] != last['spread']
+                            ):
+                                changed_prices[symbol] = price
+                                last_sent_prices[symbol] = price
+                        # If initial connection, send all; else, only changed
                         await process_portfolio_update(
                             user_id=user_id,
                             group_name=group_name,
                             redis_client=redis_client,
                             db=db,
                             user_type=user_type,
-                            adjusted_prices=adjusted_prices,
+                            adjusted_prices=all_symbols_cache if is_initial_connection else changed_prices,
                             websocket=websocket,
                             is_initial_connection=is_initial_connection,
                             all_symbols_cache=all_symbols_cache
                         )
-                        
-                        # After first market data update, set initial connection to False
                         if is_initial_connection:
                             is_initial_connection = False
                             logger.info(f"User {user_id}: Initial connection completed, switching to incremental updates")
@@ -743,19 +736,13 @@ async def process_portfolio_update(
     Process market data updates, update dynamic portfolio data, and send updates to the client.
     """
     try:
-        # PERFORMANCE FIX: Get static orders from cache. Do NOT fetch from DB on every market tick.
-        # The cache is updated on connection and when an order update event is received.
         static_orders = await get_user_static_orders_cache(redis_client, user_id)
         if not static_orders:
             logger.warning(f"User {user_id}: Static orders cache empty. Forcing a refresh from DB (this should be rare).")
         async with AsyncSessionLocal() as refresh_db:
             static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
-        
-        # Get open positions from static orders
         open_positions = static_orders.get("open_orders", []) if static_orders else []
         pending_orders = static_orders.get("pending_orders", []) if static_orders else []
-
-        # Update dynamic portfolio data (PnL, free margin, etc.)
         await update_dynamic_portfolio_cache(
             user_id=user_id,
             group_name=group_name,
@@ -765,17 +752,11 @@ async def process_portfolio_update(
             db=db,
             user_type=user_type
         )
-        
-        # Get the latest dynamic portfolio data
         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
-        
-        # Get fresh user data to ensure we have the latest balance and margin
         async with AsyncSessionLocal() as refresh_db:
             user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
             logger.debug(f"User {user_id}: Fresh user data fetched for market update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
-        
         if not dynamic_portfolio:
-            # Get user data for basic account info
             dynamic_portfolio = {
                 "balance": user_data.get("wallet_balance", "0.0") if user_data else "0.0",
                 "margin": user_data.get("margin", "0.0") if user_data else "0.0",
@@ -783,31 +764,17 @@ async def process_portfolio_update(
                 "profit_loss": "0.0",
                 "margin_level": "0.0"
             }
-
         if websocket.client_state == WebSocketState.CONNECTED:
-            # IMPORTANT: Use the values directly from user_data for balance and margin
-            # This ensures we're sending the most up-to-date values from the database
             balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
             margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
-            
-            # Ensure balance and margin are properly formatted as strings
             if isinstance(balance_value, Decimal):
                 balance_value = str(balance_value)
             if isinstance(margin_value, Decimal):
                 margin_value = str(margin_value)
-                
             logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
-            
-            # Determine which market prices to send based on connection state
-            if is_initial_connection:
-                # Send all symbols data on initial connection
-                market_prices_to_send = all_symbols_cache
-                logger.info(f"User {user_id}: Initial connection - sending all {len(all_symbols_cache)} symbols data")
-            else:
-                # Send only the updated symbols on subsequent updates
-                market_prices_to_send = adjusted_prices
-                logger.info(f"User {user_id}: Incremental update - sending {len(adjusted_prices)} updated symbols")
-            
+            # Only send changed/updated symbols after initial connection
+            market_prices_to_send = adjusted_prices
+            logger.info(f"User {user_id}: Sending {len(market_prices_to_send)} changed/updated symbols")
             response_data = {
                 "type": "market_update",
                 "data": {
@@ -815,12 +782,11 @@ async def process_portfolio_update(
                     "account_summary": {
                         "balance": balance_value,
                         "margin": margin_value,
-                        "open_orders": open_positions,  # Static open orders without PnL
-                        "pending_orders": pending_orders  # Static pending orders
+                        "open_orders": open_positions,
+                        "pending_orders": pending_orders
                     }
                 }
             }
-            logger.info(f"User {user_id}: Sending market data update with balance={balance_value}, margin={margin_value}, {len(open_positions)} open orders and {len(pending_orders)} pending orders")
             await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
             logger.debug(f"User {user_id}: Sent positions + market prices update")
     except Exception as e:
