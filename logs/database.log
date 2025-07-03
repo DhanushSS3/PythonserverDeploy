@@ -9023,3 +9023,129 @@ Traceback (most recent call last):
     raise credentials_exception
 fastapi.exceptions.HTTPException: 401: Could not validate credentials
 2025-07-03 01:02:57,375 - INFO - database - Session rolled back due to error
+2025-07-03 02:56:42,850 - ERROR - database - Error in database session: 500: Error in close_order endpoint: 500: Error processing close order: cannot access local variable 'user_id' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1401, in close_order
+    orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
+                                                           ^^^^^^^
+UnboundLocalError: cannot access local variable 'user_id' where it is not associated with a value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1605, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: cannot access local variable 'user_id' where it is not associated with a value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1608, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: cannot access local variable 'user_id' where it is not associated with a value
+2025-07-03 02:56:42,860 - INFO - database - Session rolled back due to error
+2025-07-03 03:01:09,206 - ERROR - database - Error in database session: 500: Error in close_order endpoint: 500: Error processing close order: cannot access local variable 'user_id' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1401, in close_order
+    orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
+                                                           ^^^^^^^
+UnboundLocalError: cannot access local variable 'user_id' where it is not associated with a value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1605, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: cannot access local variable 'user_id' where it is not associated with a value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1608, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: cannot access local variable 'user_id' where it is not associated with a value
+2025-07-03 03:01:09,216 - INFO - database - Session rolled back due to error
+2025-07-03 03:09:47,556 - ERROR - database - Error in database session: 500: Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1531, in close_order
+    raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
+fastapi.exceptions.HTTPException: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1602, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1605, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+2025-07-03 03:09:47,575 - INFO - database - Session rolled back due to error
+2025-07-03 03:41:25,876 - ERROR - database - Error in database session: 500: Error in close_order endpoint: 500: Error processing close order: 500: Group settings not found for commission calculation.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1315, in close_order
+    raise HTTPException(status_code=500, detail="Group settings not found for commission calculation.")
+fastapi.exceptions.HTTPException: 500: Group settings not found for commission calculation.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1602, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: 500: Group settings not found for commission calculation.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1605, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: 500: Group settings not found for commission calculation.
+2025-07-03 03:41:25,896 - INFO - database - Session rolled back due to error

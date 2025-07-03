@@ -112,7 +112,7 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
         for pos in open_orders_orm:
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
-                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
             open_orders_data.append(pos_dict)
         
@@ -124,7 +124,7 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
         for po in pending_orders_orm:
             po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
-                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
             pending_orders_data.append(po_dict)
         
@@ -912,12 +912,18 @@ async def place_pending_order(
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                orders_logger.info(f"User data cache updated for user {user_id} after placing order")
+                
+                # Update static orders cache after order placement
+                await update_user_static_orders_cache_after_order_change(user_id, db, redis_client, user_type)
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
 
-        # --- Portfolio Update & Websocket Event ---
-        try:
+        if background_tasks:
+            background_tasks.add_task(update_user_cache)
+        else:
+            asyncio.create_task(update_user_cache())
+        # Portfolio update (background)
+        async def update_portfolio():
             user_id = db_order.order_user_id
             user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
             if user_data:
@@ -939,15 +945,17 @@ async def place_pending_order(
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                 await publish_account_structure_changed_event(redis_client, user_id)
-                orders_logger.info(f"Portfolio cache updated and websocket event published for user {user_id} after placing order.")
-        except Exception as e:
-            orders_logger.error(f"Error updating portfolio cache or publishing websocket event after order placement: {e}", exc_info=True)
-
-        # --- Barclays Firebase Push Logic ---
+        if background_tasks:
+            background_tasks.add_task(update_portfolio)
+        else:
+            asyncio.create_task(update_portfolio())
+        # Barclays Firebase push (background)
         if is_barclays_live_user:
-            try:
-                # For Barclays live users, ensure order_status is PROCESSING and do NOT update margin in DB
-                # Check margin and send to Firebase if sufficient, but do not update user margin
+            async def barclays_push():
+                """
+                Background task to send Barclays order details to Firebase after order placement, if user is a Barclays live user.
+                """
+                orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
                 user_id = db_order.order_user_id
                 user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
                 group_name = user_data.get('group_name') if user_data else None
@@ -967,41 +975,31 @@ async def place_pending_order(
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 free_margin = Decimal(str(portfolio.get('free_margin', '0')))
                 order_margin = Decimal(str(db_order.margin or 0))
-                # Do NOT update user margin for Barclays users; just check
+                orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
                 if free_margin > order_margin:
                     firebase_order_data = {
                         'order_id': db_order.order_id,
                         'order_user_id': db_order.order_user_id,
                         'order_company_name': db_order.order_company_name,
                         'order_type': db_order.order_type,
-                        'order_status': db_order.order_status,  # Should be PROCESSING
+                        'order_status': db_order.order_status,
                         'order_price': db_order.order_price,
                         'order_quantity': db_order.order_quantity,
                         'contract_value': db_order.contract_value,
                         'margin': db_order.margin,
                         'stop_loss': db_order.stop_loss,
                         'take_profit': db_order.take_profit,
-
-                        'status': getattr(db_order, 'status', None),
                     }
-                    orders_logger.info(f"[FIREBASE] Payload being sent to Firebase: {firebase_order_data}")
+                    orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
                     await send_order_to_firebase(firebase_order_data, "live")
-                    orders_logger.info(f"[FIREBASE] Barclays order sent to Firebase: {db_order.order_id} (order_status=PROCESSING, margin not updated in DB)")
-                else:
-                    orders_logger.warning(f"[FIREBASE] Barclays order NOT sent to Firebase due to insufficient free margin. free_margin={free_margin}, order_margin={order_margin}")
-            except Exception as e:
-                orders_logger.error(f"[FIREBASE] Error sending Barclays order to Firebase: {e}", exc_info=True)
-
-        await publish_account_structure_changed_event(redis_client, current_user.id)
-        await publish_market_data_trigger(redis_client)
-        
-        # Update static orders cache - force a fresh fetch from the database
-        await update_user_static_orders(user_id, db, redis_client, user_type)
-        
-        # Publish updates to notify WebSocket clients - make sure these are in the right order
-        await publish_order_update(redis_client, user_id)
-        await publish_user_data_update(redis_client, user_id)
-        
+            # SCHEDULE THE TASK!
+            if background_tasks:
+                background_tasks.add_task(barclays_push)
+            else:
+                asyncio.create_task(barclays_push())
+        # Final timing log
+        orders_logger.info(f"[PERF] TOTAL place_order: {time.perf_counter() - start_total:.4f}s")
+        # Return response (use orjson for fast serialization if possible)
         return OrderResponse(
             order_id=db_order.order_id,
             order_user_id=db_order.order_user_id,
@@ -1027,7 +1025,6 @@ async def place_pending_order(
             takeprofit_id=getattr(db_order, 'takeprofit_id', None),
             close_id=getattr(db_order, 'close_id', None),
         )
-
     except OrderProcessingError as e:
         orders_logger.error(f"Order processing error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -1259,10 +1256,52 @@ async def close_order(
                         if db_order.order_status != 'OPEN':
                             raise HTTPException(status_code=400, detail=f"Order status is '{db_order.order_status}'. Only 'OPEN' orders can be closed.")
                         
+                        # Lock user for atomic operations
+                        db_user_locked = await get_user_by_id_with_lock(db, user_to_operate_on.id)
+                        if db_user_locked is None:
+                            raise HTTPException(status_code=500, detail="Could not retrieve user data securely.")
+
+                        # Get all open orders for this symbol to recalculate margin
+                        all_open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
+                            db=db, user_id=db_user_locked.id, symbol=db_order.order_company_name, order_model=order_model_class
+                        )
+
+                        # Calculate margin before closing this order
+                        margin_before_recalc_dict = await calculate_total_symbol_margin_contribution(
+                            db=db,
+                            redis_client=redis_client,
+                            user_id=db_user_locked.id,
+                            symbol=db_order.order_company_name,
+                            open_positions_for_symbol=all_open_orders_for_symbol,
+                            user_type=user_type,
+                            order_model=order_model_class
+                        )
+                        margin_before_recalc = margin_before_recalc_dict["total_margin"]
+                        current_overall_margin = Decimal(str(db_user_locked.margin))
+                        non_symbol_margin = current_overall_margin - margin_before_recalc
+
+                        # Calculate margin after closing this order
+                        remaining_orders_for_symbol_after_close = [o for o in all_open_orders_for_symbol if o.order_id != order_id]
+                        margin_after_symbol_recalc_dict = await calculate_total_symbol_margin_contribution(
+                            db=db,
+                            redis_client=redis_client,
+                            user_id=db_user_locked.id,
+                            symbol=db_order.order_company_name,
+                            open_positions_for_symbol=remaining_orders_for_symbol_after_close,
+                            user_type=user_type,
+                            order_model=order_model_class
+                        )
+                        margin_after_symbol_recalc = margin_after_symbol_recalc_dict["total_margin"]
+
+                        # Update user's margin
+                        db_user_locked.margin = max(Decimal(0), (non_symbol_margin + margin_after_symbol_recalc).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+                        # Rest of the existing code for commission, profit calculation, etc.
                         quantity = Decimal(str(db_order.order_quantity))
                         entry_price = Decimal(str(db_order.order_price))
                         order_type_db = db_order.order_type.upper()
                         order_symbol = db_order.order_company_name.upper()
+
                         symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(order_symbol))
                         symbol_info_result = await db.execute(symbol_info_stmt)
                         ext_symbol_info = symbol_info_result.scalars().first()
@@ -1270,43 +1309,53 @@ async def close_order(
                             raise HTTPException(status_code=500, detail=f"Missing critical ExternalSymbolInfo for symbol {order_symbol}.")
                         contract_size = Decimal(str(ext_symbol_info.contract_size))
                         profit_currency = ext_symbol_info.profit.upper()
+
                         group_settings = await get_group_symbol_settings_cache(redis_client, user_group_name, order_symbol)
                         if not group_settings:
                             raise HTTPException(status_code=500, detail="Group settings not found for commission calculation.")
+                        
                         commission_type = int(group_settings.get('commision_type', -1))
                         commission_value_type = int(group_settings.get('commision_value_type', -1))
                         commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
+                        
+                        # Get existing entry commission from the order
                         existing_entry_commission = Decimal(str(db_order.commission or "0.0"))
                         orders_logger.info(f"Existing entry commission for order {order_id}: {existing_entry_commission}")
+                        
+                        # Only calculate exit commission if applicable
                         exit_commission = Decimal("0.0")
-                        if commission_type in [0, 2]:
-                            if commission_value_type == 0:
+                        if commission_type in [0, 2]:  # "Every Trade" or "Out"
+                            if commission_value_type == 0:  # Per lot
                                 exit_commission = quantity * commission_rate
-                            elif commission_value_type == 1:
+                            elif commission_value_type == 1:  # Percent of price
                                 calculated_exit_contract_value = quantity * contract_size * close_price
                                 if calculated_exit_contract_value > Decimal("0.0"):
                                     exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
+                        
+                        # Total commission is existing entry commission plus exit commission
                         total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                         orders_logger.info(f"Commission calculation for order {order_id}: entry={existing_entry_commission}, exit={exit_commission}, total={total_commission_for_trade}")
+
                         if order_type_db == "BUY": profit = (close_price - entry_price) * quantity * contract_size
                         elif order_type_db == "SELL": profit = (entry_price - close_price) * quantity * contract_size
                         else: raise HTTPException(status_code=500, detail="Invalid order type.")
-                        db_user_locked = await get_user_by_id_with_lock(db, user_to_operate_on.id)
-                        if db_user_locked is None:
-                            raise HTTPException(status_code=500, detail=f"Could not retrieve and lock user record for user ID: {user_to_operate_on.id}")
+                        
                         profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db, redis_client=redis_client)
                         if profit_currency != "USD" and profit_usd == profit: 
                             orders_logger.error(f"Order {db_order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
                             raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
+
                         db_order.order_status = "CLOSED"
                         db_order.close_price = close_price
                         db_order.net_profit = (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                         db_order.swap = db_order.swap or Decimal("0.0")
                         db_order.commission = total_commission_for_trade
                         db_order.close_id = close_id # Save close_id in DB
+
                         original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
                         swap_amount = db_order.swap
                         db_user_locked.wallet_balance = (original_wallet_balance + db_order.net_profit - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
                         transaction_time = datetime.datetime.now(datetime.timezone.utc)
                         wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time, "order_id": db_order.order_id}
                         if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
@@ -1320,6 +1369,7 @@ async def close_order(
                         if swap_amount != Decimal("0.0"):
                             transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
                             db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
+
                     # End of async with db.begin_nested()
                     # Now, outside the context manager, refresh objects
                     await db.refresh(db_order)
@@ -1329,6 +1379,38 @@ async def close_order(
                     orders_logger.info(f"[DEBUG] After commit & refresh: order_id={db_order.order_id}, order_status={db_order.order_status}, close_price={db_order.close_price}, net_profit={db_order.net_profit}, commission={db_order.commission}, close_id={db_order.close_id}, updated_at={db_order.updated_at}")
                     # Log the user's wallet balance and margin after commit
                     orders_logger.info(f"AFTER COMMIT: User {db_user_locked.id} wallet_balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
+                    
+                    # Update user data cache with the latest values from db_user_locked
+                    user_data_to_cache = {
+                        "id": db_user_locked.id,
+                        "email": getattr(db_user_locked, 'email', None),
+                        "group_name": db_user_locked.group_name,
+                        "leverage": db_user_locked.leverage,
+                        "user_type": user_type,
+                        "account_number": getattr(db_user_locked, 'account_number', None),
+                        "wallet_balance": db_user_locked.wallet_balance,
+                        "margin": db_user_locked.margin,
+                        "first_name": getattr(db_user_locked, 'first_name', None),
+                        "last_name": getattr(db_user_locked, 'last_name', None),
+                        "country": getattr(db_user_locked, 'country', None),
+                        "phone_number": getattr(db_user_locked, 'phone_number', None)
+                    }
+                    orders_logger.info(f"Setting user data cache for user {db_user_locked.id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
+                    await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
+                    orders_logger.info(f"User data cache updated for user {db_user_locked.id}")
+                    
+                    await update_user_static_orders(db_user_locked.id, db, redis_client, user_type)
+                    
+                    # Publish updates in the correct order
+                    orders_logger.info(f"Publishing order update for user {db_user_locked.id}")
+                    await publish_order_update(redis_client, db_user_locked.id)
+                    
+                    orders_logger.info(f"Publishing user data update for user {db_user_locked.id}")
+                    await publish_user_data_update(redis_client, db_user_locked.id)
+                    
+                    orders_logger.info(f"Publishing market data trigger")
+                    await publish_market_data_trigger(redis_client)
+                    
                     return OrderResponse.model_validate(db_order, from_attributes=True)
             else:
                 # Always fetch user_group before logging
@@ -1369,24 +1451,42 @@ async def close_order(
                     orders_logger.error(f"Could not retrieve and lock user record for user ID: {user_to_operate_on.id}")
                     raise HTTPException(status_code=500, detail="Could not retrieve user data securely.")
 
+                # Get all open orders for this symbol to recalculate margin
                 all_open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
                     db=db, user_id=db_user_locked.id, symbol=order_symbol, order_model=order_model_class
                 )
+
+                # Calculate margin before closing this order
                 margin_before_recalc_dict = await calculate_total_symbol_margin_contribution(
-                    db=db, redis_client=redis_client, user_id=db_user_locked.id, symbol=order_symbol,
-                    open_positions_for_symbol=all_open_orders_for_symbol, order_model=order_model_class
+                    db=db,
+                    redis_client=redis_client,
+                    user_id=db_user_locked.id,
+                    symbol=order_symbol,
+                    open_positions_for_symbol=all_open_orders_for_symbol,
+                    user_type=user_type,
+                    order_model=order_model_class
                 )
                 margin_before_recalc = margin_before_recalc_dict["total_margin"]
                 current_overall_margin = Decimal(str(db_user_locked.margin))
                 non_symbol_margin = current_overall_margin - margin_before_recalc
+
+                # Calculate margin after closing this order
                 remaining_orders_for_symbol_after_close = [o for o in all_open_orders_for_symbol if o.order_id != order_id]
                 margin_after_symbol_recalc_dict = await calculate_total_symbol_margin_contribution(
-                    db=db, redis_client=redis_client, user_id=db_user_locked.id, symbol=order_symbol,
-                    open_positions_for_symbol=remaining_orders_for_symbol_after_close, order_model=order_model_class
+                    db=db,
+                    redis_client=redis_client,
+                    user_id=db_user_locked.id,
+                    symbol=order_symbol,
+                    open_positions_for_symbol=remaining_orders_for_symbol_after_close,
+                    user_type=user_type,
+                    order_model=order_model_class
                 )
                 margin_after_symbol_recalc = margin_after_symbol_recalc_dict["total_margin"]
+
+                # Update user's margin
                 db_user_locked.margin = max(Decimal(0), (non_symbol_margin + margin_after_symbol_recalc).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
+                # Rest of the existing code for commission, profit calculation, etc.
                 symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(order_symbol))
                 symbol_info_result = await db.execute(symbol_info_stmt)
                 ext_symbol_info = symbol_info_result.scalars().first()
@@ -1462,8 +1562,8 @@ async def close_order(
                 orders_logger.info(f"AFTER COMMIT: User {db_user_locked.id} wallet_balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
                 
                 # Define variables needed for WebSocket updates
-                user_id = db_order.order_user_id
-                user_type_str = 'demo' if isinstance(db_user_locked, DemoUser) else 'live'
+                user_id = db_user_locked.id  # Changed from db_order.order_user_id to db_user_locked.id
+                user_type_str = 'demo'
                 
                 # Update user data cache with the latest values from db_user_locked
                 user_data_to_cache = {
@@ -3783,7 +3883,7 @@ async def update_user_static_orders_cache_after_order_change(
         for pos in open_orders_orm:
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
-                                    'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+                                    'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
             created_at = getattr(pos, 'created_at', None)
             if created_at:
@@ -3797,7 +3897,7 @@ async def update_user_static_orders_cache_after_order_change(
         for po in pending_orders_orm:
             po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
-                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
             created_at = getattr(po, 'created_at', None)
             if created_at:
