@@ -62,46 +62,6 @@ logger = logging.getLogger("orders")
 # Redis key prefix for pending orders
 REDIS_PENDING_ORDERS_PREFIX = "pending_orders"
 
-async def debug_margin_calculations(
-    db: AsyncSession,
-    redis_client: Redis,
-    user_id: int,
-    symbol: str,
-    open_orders: list,
-    simulated_order,
-    user_type: str
-):
-    """
-    Debug helper function to compare margin calculation implementations
-    between order_processing.py and margin_calculator.py
-    """
-    try:
-        # Load the different implementations
-        from app.services.order_processing import calculate_total_symbol_margin_contribution as processing_calc
-        from app.services.margin_calculator import calculate_total_symbol_margin_contribution as calculator_calc
-        
-        # Get the order model
-        order_model = get_order_model(user_type)
-        
-        # Run calculations with both implementations
-        processing_margin_before = await processing_calc(db, redis_client, user_id, symbol, open_orders, order_model, user_type)
-        calculator_margin_before = await calculator_calc(db, redis_client, user_id, symbol, open_orders, user_type, order_model)
-        
-        # Add new order
-        orders_with_new = open_orders + [simulated_order]
-        processing_margin_after = await processing_calc(db, redis_client, user_id, symbol, orders_with_new, order_model, user_type)
-        calculator_margin_after = await calculator_calc(db, redis_client, user_id, symbol, orders_with_new, user_type, order_model)
-        
-        # Calculate additional margins
-        processing_additional = max(Decimal("0"), processing_margin_after["total_margin"] - processing_margin_before["total_margin"])
-        calculator_additional = max(Decimal("0"), calculator_margin_after["total_margin"] - calculator_margin_before["total_margin"])
-        
-        # Using order_processing implementation for consistency
-        return processing_additional
-    except Exception as e:
-        from app.core.logging_config import orders_logger
-        orders_logger.error(f"[MARGIN_DEBUG] Error comparing implementations: {str(e)}", exc_info=True)
-        return None
 
 
 async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, order_type: str, user_id: str):
@@ -676,28 +636,55 @@ async def check_and_trigger_stoploss_takeprofit(
     """
     Check all open orders for stop loss and take profit conditions.
     This function is called by the background task triggered by market data updates.
+    Optimized to fetch open orders from cache if available.
+    Only checks orders that have SL or TP set (>0).
     """
     logger = logging.getLogger("sltp")
-    
     try:
-        # Get all open orders for both live and demo users
-        from app.crud.crud_order import get_all_open_orders
-        live_orders, demo_orders = await get_all_open_orders(db)
-        
-        # Process live orders
-        for order in live_orders:
+        from app.crud.user import get_all_active_users_both
+        live_users, demo_users = await get_all_active_users_both(db)
+        all_users = [(u.id, "live") for u in live_users] + [(u.id, "demo") for u in demo_users]
+        for user_id, user_type in all_users:
             try:
-                await process_order_stoploss_takeprofit(db, redis_client, order, 'live')
+                static_orders = await get_user_static_orders_cache(redis_client, user_id)
+                open_orders = []
+                if static_orders and static_orders.get("open_orders"):
+                    open_orders = static_orders["open_orders"]
+                else:
+                    order_model = get_order_model(user_type)
+                    open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                    for o in open_orders_orm:
+                        open_orders.append({
+                            'order_id': getattr(o, 'order_id', None),
+                            'order_company_name': getattr(o, 'order_company_name', None),
+                            'order_type': getattr(o, 'order_type', None),
+                            'order_quantity': getattr(o, 'order_quantity', None),
+                            'order_price': getattr(o, 'order_price', None),
+                            'margin': getattr(o, 'margin', None),
+                            'contract_value': getattr(o, 'contract_value', None),
+                            'stop_loss': getattr(o, 'stop_loss', None),
+                            'take_profit': getattr(o, 'take_profit', None),
+                            'commission': getattr(o, 'commission', None),
+                            'order_status': getattr(o, 'order_status', None),
+                            'order_user_id': getattr(o, 'order_user_id', None)
+                        })
+                # Only check orders with SL or TP set (>0)
+                def get_attr(o, key):
+                    if isinstance(o, dict):
+                        return o.get(key)
+                    return getattr(o, key, None)
+                sl_tp_orders = [
+                    o for o in open_orders
+                    if (get_attr(o, 'stop_loss') and Decimal(str(get_attr(o, 'stop_loss'))) > 0)
+                    or (get_attr(o, 'take_profit') and Decimal(str(get_attr(o, 'take_profit'))) > 0)
+                ]
+                for order in sl_tp_orders:
+                    try:
+                        await process_order_stoploss_takeprofit(db, redis_client, order, user_type)
+                    except Exception as e:
+                        logger.error(f"[SLTP_CHECK] Error processing {user_type} order {order.get('order_id')}: {e}", exc_info=True)
             except Exception as e:
-                logger.error(f"[SLTP_CHECK] Error processing live order {order.order_id}: {e}", exc_info=True)
-        
-        # Process demo orders
-        for order in demo_orders:
-            try:
-                await process_order_stoploss_takeprofit(db, redis_client, order, 'demo')
-            except Exception as e:
-                logger.error(f"[SLTP_CHECK] Error processing demo order {order.order_id}: {e}", exc_info=True)
-            
+                logger.error(f"[SLTP_CHECK] Error processing user {user_id}: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"[SLTP_CHECK] Error in check_and_trigger_stoploss_takeprofit: {e}", exc_info=True)
 
@@ -710,103 +697,88 @@ async def process_order_stoploss_takeprofit(
     """
     Process a single order for stop loss and take profit conditions.
     Enhanced with epsilon accuracy to handle floating-point precision issues.
+    Accepts both ORM and dict order objects.
     """
     logger = logging.getLogger("sltp")
-    
     try:
+        # Support both ORM and dict order objects
+        def get_attr(o, key):
+            if isinstance(o, dict):
+                return o.get(key)
+            return getattr(o, key, None)
         # Get the symbol and current price
-        symbol = order.order_company_name
-        user_id = order.order_user_id
-        
+        symbol = get_attr(order, 'order_company_name')
+        user_id = get_attr(order, 'order_user_id')
         # Get user's group name
         if user_type == 'live':
             from app.crud.user import get_user_by_id
-            user = await get_user_by_id(db, user_id, user_type='live')  # Add user_type parameter
+            user = await get_user_by_id(db, user_id, user_type='live')
         else:
             from app.crud.user import get_demo_user_by_id
             user = await get_demo_user_by_id(db, user_id)
-        
         if not user:
-            logger.error(f"[SLTP_CHECK] User {user_id} not found for order {order.order_id}")
+            logger.error(f"[SLTP_CHECK] User {user_id} not found for order {get_attr(order, 'order_id')}")
             return
-        
         group_name = user.group_name
         if not group_name:
             logger.error(f"[SLTP_CHECK] No group name found for user {user_id}")
             return
-        
         # Get adjusted market price
         adjusted_price = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
         if not adjusted_price:
             logger.warning(f"[SLTP_CHECK] No adjusted price available for {symbol} in group {group_name}")
             return
-        
-        # Convert prices to Decimal for accurate comparison
         buy_price = Decimal(str(adjusted_price.get('buy', '0')))
         sell_price = Decimal(str(adjusted_price.get('sell', '0')))
-        
-        # Define epsilon for floating-point precision tolerance
-        # For forex (5 decimal places), use 0.00001 as tolerance
         epsilon = Decimal(SLTP_EPSILON)
-        
         # Check stop loss
-        if order.stop_loss and order.stop_loss > 0:
-            stop_loss = Decimal(str(order.stop_loss))
-            
-            if order.order_type == 'BUY':
-                # For BUY orders: trigger when sell_price <= stop_loss (with epsilon tolerance)
+        stop_loss = get_attr(order, 'stop_loss')
+        order_type = get_attr(order, 'order_type')
+        order_id = get_attr(order, 'order_id')
+        take_profit = get_attr(order, 'take_profit')
+        if stop_loss and Decimal(str(stop_loss)) > 0:
+            stop_loss = Decimal(str(stop_loss))
+            if order_type == 'BUY':
                 price_diff = abs(sell_price - stop_loss)
                 exact_match = sell_price <= stop_loss
                 epsilon_match = price_diff < epsilon
                 should_trigger = exact_match or epsilon_match
-                
                 if should_trigger:
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
-                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order.order_id} at {sell_price} <= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
+                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for BUY order {order_id} at {sell_price} <= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, sell_price, 'STOP_LOSS', user_type)
-                    
-            elif order.order_type == 'SELL':
-                # For SELL orders: trigger when buy_price >= stop_loss (with epsilon tolerance)
+            elif order_type == 'SELL':
                 price_diff = abs(buy_price - stop_loss)
                 exact_match = buy_price >= stop_loss
                 epsilon_match = price_diff < epsilon
                 should_trigger = exact_match or epsilon_match
-                
                 if should_trigger:
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
-                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order.order_id} at {buy_price} >= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
+                    logger.warning(f"[SLTP_CHECK] Stop loss triggered for SELL order {order_id} at {buy_price} >= {stop_loss} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, buy_price, 'STOP_LOSS', user_type)
-            
         # Check take profit
-        if order.take_profit and order.take_profit > 0:
-            take_profit = Decimal(str(order.take_profit))
-            
-            if order.order_type == 'BUY':
-                # For BUY orders: trigger when sell_price >= take_profit (with epsilon tolerance)
+        if take_profit and Decimal(str(take_profit)) > 0:
+            take_profit = Decimal(str(take_profit))
+            if order_type == 'BUY':
                 price_diff = abs(sell_price - take_profit)
                 exact_match = sell_price >= take_profit
                 epsilon_match = price_diff < epsilon
                 should_trigger = exact_match or epsilon_match
-                
                 if should_trigger:
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
-                    logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order.order_id} at {sell_price} >= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
+                    logger.warning(f"[SLTP_CHECK] Take profit triggered for BUY order {order_id} at {sell_price} >= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, sell_price, 'TAKE_PROFIT', user_type)
-                    
-            elif order.order_type == 'SELL':
-                # For SELL orders: trigger when buy_price <= take_profit (with epsilon tolerance)
+            elif order_type == 'SELL':
                 price_diff = abs(buy_price - take_profit)
                 exact_match = buy_price <= take_profit
                 epsilon_match = price_diff < epsilon
                 should_trigger = exact_match or epsilon_match
-                
                 if should_trigger:
                     trigger_reason = "exact match" if exact_match else "epsilon tolerance"
-                    logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order.order_id} at {buy_price} <= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
+                    logger.warning(f"[SLTP_CHECK] Take profit triggered for SELL order {order_id} at {buy_price} <= {take_profit} (diff: {price_diff}, epsilon: {epsilon}, reason: {trigger_reason})")
                     await close_order(db, redis_client, order, buy_price, 'TAKE_PROFIT', user_type)
-                
     except Exception as e:
-        logger.error(f"[SLTP_CHECK] Error processing order {order.order_id}: {e}", exc_info=True)
+        logger.error(f"[SLTP_CHECK] Error processing order {get_attr(order, 'order_id')}: {e}", exc_info=True)
 
 async def get_last_known_price(redis_client: Redis, symbol: str) -> dict:
     """

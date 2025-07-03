@@ -734,15 +734,27 @@ async def process_portfolio_update(
 ):
     """
     Process market data updates, update dynamic portfolio data, and send updates to the client.
+    Optimized to use cache instead of database queries on every tick.
     """
     try:
+        # Try to get static orders from cache first
         static_orders = await get_user_static_orders_cache(redis_client, user_id)
-        if not static_orders:
-            logger.warning(f"User {user_id}: Static orders cache empty. Forcing a refresh from DB (this should be rare).")
-        async with AsyncSessionLocal() as refresh_db:
-            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+        
+        # Only query database if cache is empty or this is initial connection
+        if not static_orders or is_initial_connection:
+            if not static_orders:
+                logger.info(f"User {user_id}: Static orders cache empty. Fetching from database.")
+            else:
+                logger.info(f"User {user_id}: Initial connection - fetching fresh orders from database.")
+            
+            # Create a new database session for fresh data
+            async with AsyncSessionLocal() as refresh_db:
+                static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+        
         open_positions = static_orders.get("open_orders", []) if static_orders else []
         pending_orders = static_orders.get("pending_orders", []) if static_orders else []
+        
+        # Update dynamic portfolio cache with current market prices
         await update_dynamic_portfolio_cache(
             user_id=user_id,
             group_name=group_name,
@@ -752,10 +764,17 @@ async def process_portfolio_update(
             db=db,
             user_type=user_type
         )
+        
+        # Get dynamic portfolio from cache
         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
-        async with AsyncSessionLocal() as refresh_db:
-            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
-            logger.debug(f"User {user_id}: Fresh user data fetched for market update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+        
+        # Get user data from cache (only query DB if cache is empty)
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+        if not user_data:
+            logger.warning(f"User {user_id}: User data cache empty. Fetching from database.")
+            async with AsyncSessionLocal() as refresh_db:
+                user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+        
         if not dynamic_portfolio:
             dynamic_portfolio = {
                 "balance": user_data.get("wallet_balance", "0.0") if user_data else "0.0",
@@ -764,17 +783,22 @@ async def process_portfolio_update(
                 "profit_loss": "0.0",
                 "margin_level": "0.0"
             }
+        
         if websocket.client_state == WebSocketState.CONNECTED:
             balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
             margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+            
             if isinstance(balance_value, Decimal):
                 balance_value = str(balance_value)
             if isinstance(margin_value, Decimal):
                 margin_value = str(margin_value)
-            logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
+            
+            logger.debug(f"User {user_id}: Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
+            
             # Only send changed/updated symbols after initial connection
             market_prices_to_send = adjusted_prices
-            logger.info(f"User {user_id}: Sending {len(market_prices_to_send)} changed/updated symbols")
+            logger.debug(f"User {user_id}: Sending {len(market_prices_to_send)} changed/updated symbols")
+            
             response_data = {
                 "type": "market_update",
                 "data": {

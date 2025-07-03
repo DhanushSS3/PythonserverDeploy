@@ -168,22 +168,28 @@ def get_order_model(user_or_type):
         return UserOrder
     return None
 
+def get_user_type(user):
+    """
+    Returns the user type ('live' or 'demo') for a user object.
+    Prefers the user_type attribute, falls back to class name.
+    """
+    if hasattr(user, 'user_type'):
+        return str(user.user_type).lower()
+    if user.__class__.__name__ == 'DemoUser':
+        return 'demo'
+    return 'live'
+
 # --- New Endpoints for Order Status Filtering ---
 @router.get("/pending", response_model=List[OrderResponse], summary="Get all pending orders for the current user")
 async def get_pending_orders(
     db: AsyncSession = Depends(get_db),
     current_user: User | DemoUser = Depends(get_current_user),
 ):
-    """
-    Returns all orders with status 'PENDING' for the current user.
-    """
-    if not current_user or not hasattr(current_user, "user_type"):
-        logger.error(f"[get_pending_orders] Invalid user or missing user_type: {current_user}")
-        raise HTTPException(status_code=400, detail="Invalid user or user_type.")
-    logger.info(f"[get_pending_orders] user_type: {current_user.user_type}")
-    order_model = get_order_model(current_user.user_type)
+    user_type = get_user_type(current_user)
+    logger.info(f"[get_pending_orders] user_type: {user_type}")
+    order_model = get_order_model(user_type)
     if order_model is None:
-        logger.error(f"[get_pending_orders] Could not determine order model for user_type: {current_user.user_type}")
+        logger.error(f"[get_pending_orders] Could not determine order model for user_type: {user_type}")
         raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
     orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["PENDING"], order_model)
     return orders
@@ -193,16 +199,11 @@ async def get_closed_orders(
     db: AsyncSession = Depends(get_db),
     current_user: User | DemoUser = Depends(get_current_user),
 ):
-    """
-    Returns all orders with status 'CLOSED' for the current user.
-    """
-    if not current_user or not hasattr(current_user, "user_type"):
-        logger.error(f"[get_closed_orders] Invalid user or missing user_type: {current_user}")
-        raise HTTPException(status_code=400, detail="Invalid user or user_type.")
-    logger.info(f"[get_closed_orders] user_type: {current_user.user_type}")
-    order_model = get_order_model(current_user.user_type)
+    user_type = get_user_type(current_user)
+    logger.info(f"[get_closed_orders] user_type: {user_type}")
+    order_model = get_order_model(user_type)
     if order_model is None:
-        logger.error(f"[get_closed_orders] Could not determine order model for user_type: {current_user.user_type}")
+        logger.error(f"[get_closed_orders] Could not determine order model for user_type: {user_type}")
         raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
     orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["CLOSED"], order_model)
     return orders
@@ -212,16 +213,11 @@ async def get_rejected_orders(
     db: AsyncSession = Depends(get_db),
     current_user: User | DemoUser = Depends(get_current_user),
 ):
-    """
-    Returns all orders with status 'REJECTED' for the current user.
-    """
-    if not current_user or not hasattr(current_user, "user_type"):
-        logger.error(f"[get_rejected_orders] Invalid user or missing user_type: {current_user}")
-        raise HTTPException(status_code=400, detail="Invalid user or user_type.")
-    logger.info(f"[get_rejected_orders] user_type: {current_user.user_type}")
-    order_model = get_order_model(current_user.user_type)
+    user_type = get_user_type(current_user)
+    logger.info(f"[get_rejected_orders] user_type: {user_type}")
+    order_model = get_order_model(user_type)
     if order_model is None:
-        logger.error(f"[get_rejected_orders] Could not determine order model for user_type: {current_user.user_type}")
+        logger.error(f"[get_rejected_orders] Could not determine order model for user_type: {user_type}")
         raise HTTPException(status_code=400, detail="Invalid user_type for order model.")
     orders = await crud_order.get_orders_by_user_id_and_statuses(db, current_user.id, ["REJECTED"], order_model)
     return orders
@@ -306,7 +302,7 @@ class OrderPlacementRequest(BaseModel):
 @router.post("/", response_model=OrderResponse)
 async def place_order(
     order_request: OrderPlacementRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User | DemoUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
     background_tasks: BackgroundTasks = None
@@ -419,6 +415,10 @@ async def place_order(
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                
+                # Update static orders cache after order placement
+                await update_user_static_orders_cache_after_order_change(user_id, db, redis_client, user_type)
+                
         if background_tasks:
             background_tasks.add_task(update_user_cache)
         else:
@@ -535,8 +535,8 @@ async def place_order(
 
 @router.post("/pending-place", response_model=OrderResponse)
 async def place_pending_order(
-    order_request: PendingOrderPlacementRequest, # Use the new schema here
-    current_user: User = Depends(get_current_user),
+    order_request: PendingOrderPlacementRequest,
+    current_user: User | DemoUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
 ):
@@ -929,13 +929,13 @@ async def place_pending_order(
                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
                     for pos in open_positions
                 ]
-                adjusted_market_prices = {}
-                if group_symbol_settings:
-                    for symbol_key in group_symbol_settings.keys(): # Renamed symbol to symbol_key to avoid conflict with outer scope symbol if any
-                        # Assuming symbol_key is the actual symbol string we need for price fetching
-                        prices = await get_last_known_price(redis_client, symbol_key)
-                        if prices:
-                            adjusted_market_prices[symbol_key] = prices
+                # Batch price fetch
+                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                if symbol_keys:
+                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                else:
+                    adjusted_market_prices = {}
                 portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
                 await set_user_portfolio_cache(redis_client, user_id, portfolio)
                 await publish_account_structure_changed_event(redis_client, user_id)
@@ -1048,21 +1048,15 @@ async def close_order(
     Close an existing order.
     """
     from app.core.logging_config import frontend_orders_logger, error_logger
-    
     try:
-        # Log the incoming request
         frontend_orders_logger.info(f"FRONTEND ORDER CLOSE - REQUEST: {json.dumps(close_request.dict(), default=str)}")
         orders_logger.info(f"Order close request received - Order ID: {close_request.order_id}, User ID: {close_request.user_id}, Close Price: {close_request.close_price}")
-        
-        # Validate the request
         if not close_request.order_id:
             error_msg = "Order ID is required"
             frontend_orders_logger.error(f"FRONTEND ORDER CLOSE ERROR: {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
-        
         target_user_id_to_operate_on = current_user.id
         user_to_operate_on = current_user
-
         if close_request.user_id is not None:
             is_service_account = getattr(current_user, 'is_service_account', False)
             if is_service_account:
@@ -1083,21 +1077,18 @@ async def close_order(
                 if close_request.user_id != current_user.id:
                     orders_logger.error(f"Unauthorized user_id specification - Current user: {current_user.id}, Requested user: {close_request.user_id}")
                     raise HTTPException(status_code=403, detail="Not authorized to specify user_id.")
-        
-        orders_logger.info(f"user_to_operate_on: {user_to_operate_on}, type: {type(user_to_operate_on)}, attrs: {dir(user_to_operate_on)}")
-        order_model_class = get_order_model(user_to_operate_on)
-        orders_logger.info(f"Using order model: {getattr(order_model_class, '__tablename__', str(order_model_class))} for user {user_to_operate_on.id} ({type(user_to_operate_on).__name__})")
+        user_type = get_user_type(user_to_operate_on)
+        orders_logger.info(f"user_to_operate_on: {user_to_operate_on}, type: {type(user_to_operate_on)}, user_type: {user_type}, attrs: {dir(user_to_operate_on)}")
+        order_model_class = get_order_model(user_type)
+        orders_logger.info(f"Using order model: {getattr(order_model_class, '__tablename__', str(order_model_class))} for user {user_to_operate_on.id} (user_type: {user_type})")
         order_id = close_request.order_id
-
         try:
             close_price = Decimal(str(close_request.close_price))
             if close_price <= Decimal("0"):
                 raise HTTPException(status_code=400, detail="Close price must be positive.")
         except InvalidOperation:
             raise HTTPException(status_code=400, detail="Invalid close price format.")
-
-        orders_logger.info(f"Request to close order {order_id} for user {user_to_operate_on.id} ({type(user_to_operate_on).__name__}) with price {close_price}. Frontend provided type: {close_request.order_type}, company: {close_request.order_company_name}, status: {close_request.order_status}, frontend_status: {close_request.status}.")
-
+        orders_logger.info(f"Request to close order {order_id} for user {user_to_operate_on.id} (user_type: {user_type}) with price {close_price}. Frontend provided type: {close_request.order_type}, company: {close_request.order_company_name}, status: {close_request.order_status}, frontend_status: {close_request.status}.")
         from app.services.order_processing import generate_unique_10_digit_id
         close_id = await generate_unique_10_digit_id(db, order_model_class, 'close_id')
 
@@ -1257,6 +1248,8 @@ async def close_order(
                     user_group = await crud_group.get_group_by_name(db, getattr(user_to_operate_on, 'group_name', None))
                     group_name_str = user_group.group_name if user_group and hasattr(user_group, 'group_name') else 'default'
                     orders_logger.info(f"Live user {user_to_operate_on.id} from group '{group_name_str}' ('sending_orders' is NOT 'barclays'). Processing close locally.")
+                    # Fix: assign user_group_name before using it
+                    user_group_name = getattr(user_to_operate_on, 'group_name', None) or 'default'
                     async with db.begin_nested():
                         db_order = await crud_order.get_order_by_id(db, order_id=order_id, order_model=order_model_class)
                         if db_order is None:
@@ -1265,7 +1258,10 @@ async def close_order(
                             raise HTTPException(status_code=403, detail="Not authorized to close this order.")
                         if db_order.order_status != 'OPEN':
                             raise HTTPException(status_code=400, detail=f"Order status is '{db_order.order_status}'. Only 'OPEN' orders can be closed.")
-
+                        
+                        quantity = Decimal(str(db_order.order_quantity))
+                        entry_price = Decimal(str(db_order.order_price))
+                        order_type_db = db_order.order_type.upper()
                         order_symbol = db_order.order_company_name.upper()
                         symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(order_symbol))
                         symbol_info_result = await db.execute(symbol_info_stmt)
@@ -1274,53 +1270,43 @@ async def close_order(
                             raise HTTPException(status_code=500, detail=f"Missing critical ExternalSymbolInfo for symbol {order_symbol}.")
                         contract_size = Decimal(str(ext_symbol_info.contract_size))
                         profit_currency = ext_symbol_info.profit.upper()
-
                         group_settings = await get_group_symbol_settings_cache(redis_client, user_group_name, order_symbol)
                         if not group_settings:
                             raise HTTPException(status_code=500, detail="Group settings not found for commission calculation.")
-                        
                         commission_type = int(group_settings.get('commision_type', -1))
                         commission_value_type = int(group_settings.get('commision_value_type', -1))
                         commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
-                        
-                        # Get existing entry commission from the order
                         existing_entry_commission = Decimal(str(db_order.commission or "0.0"))
                         orders_logger.info(f"Existing entry commission for order {order_id}: {existing_entry_commission}")
-                        
-                        # Only calculate exit commission if applicable
                         exit_commission = Decimal("0.0")
-                        if commission_type in [0, 2]:  # "Every Trade" or "Out"
-                            if commission_value_type == 0:  # Per lot
+                        if commission_type in [0, 2]:
+                            if commission_value_type == 0:
                                 exit_commission = quantity * commission_rate
-                            elif commission_value_type == 1:  # Percent of price
+                            elif commission_value_type == 1:
                                 calculated_exit_contract_value = quantity * contract_size * close_price
                                 if calculated_exit_contract_value > Decimal("0.0"):
                                     exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
-                        
-                        # Total commission is existing entry commission plus exit commission
                         total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                         orders_logger.info(f"Commission calculation for order {order_id}: entry={existing_entry_commission}, exit={exit_commission}, total={total_commission_for_trade}")
-
                         if order_type_db == "BUY": profit = (close_price - entry_price) * quantity * contract_size
                         elif order_type_db == "SELL": profit = (entry_price - close_price) * quantity * contract_size
                         else: raise HTTPException(status_code=500, detail="Invalid order type.")
-                        
+                        db_user_locked = await get_user_by_id_with_lock(db, user_to_operate_on.id)
+                        if db_user_locked is None:
+                            raise HTTPException(status_code=500, detail=f"Could not retrieve and lock user record for user ID: {user_to_operate_on.id}")
                         profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, db_order.order_id, "PnL on Close", db=db, redis_client=redis_client)
                         if profit_currency != "USD" and profit_usd == profit: 
                             orders_logger.error(f"Order {db_order.order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
                             raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
-
                         db_order.order_status = "CLOSED"
                         db_order.close_price = close_price
                         db_order.net_profit = (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                         db_order.swap = db_order.swap or Decimal("0.0")
                         db_order.commission = total_commission_for_trade
                         db_order.close_id = close_id # Save close_id in DB
-
                         original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
                         swap_amount = db_order.swap
                         db_user_locked.wallet_balance = (original_wallet_balance + db_order.net_profit - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
-
                         transaction_time = datetime.datetime.now(datetime.timezone.utc)
                         wallet_common_data = {"symbol": order_symbol, "order_quantity": quantity, "is_approved": 1, "order_type": db_order.order_type, "transaction_time": transaction_time, "order_id": db_order.order_id}
                         if isinstance(db_user_locked, DemoUser): wallet_common_data["demo_user_id"] = db_user_locked.id
@@ -1334,49 +1320,16 @@ async def close_order(
                         if swap_amount != Decimal("0.0"):
                             transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
                             db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {db_order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
-
-                        await db.commit()
-                        await db.refresh(db_order)
-                        
-                        # Log the user's wallet balance and margin after commit
-                        orders_logger.info(f"AFTER COMMIT: User {db_user_locked.id} wallet_balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
-                        
-                        # Define variables needed for WebSocket updates
-                        user_id = db_order.order_user_id
-                        user_type_str = 'demo' if isinstance(db_user_locked, DemoUser) else 'live'
-                        
-                        # Update user data cache with the latest values from db_user_locked
-                        user_data_to_cache = {
-                            "id": db_user_locked.id,
-                            "email": getattr(db_user_locked, 'email', None),
-                            "group_name": db_user_locked.group_name,
-                            "leverage": db_user_locked.leverage,
-                            "user_type": user_type_str,
-                            "account_number": getattr(db_user_locked, 'account_number', None),
-                            "wallet_balance": db_user_locked.wallet_balance,
-                            "margin": db_user_locked.margin,
-                            "first_name": getattr(db_user_locked, 'first_name', None),
-                            "last_name": getattr(db_user_locked, 'last_name', None),
-                            "country": getattr(db_user_locked, 'country', None),
-                            "phone_number": getattr(db_user_locked, 'phone_number', None)
-                        }
-                        orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
-                        await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                        orders_logger.info(f"User data cache updated for user {user_id}")
-                        
-                        await update_user_static_orders(user_id, db, redis_client, user_type_str)
-                        
-                        # Publish updates in the correct order
-                        orders_logger.info(f"Publishing order update for user {user_id}")
-                        await publish_order_update(redis_client, user_id)
-                        
-                        orders_logger.info(f"Publishing user data update for user {user_id}")
-                        await publish_user_data_update(redis_client, user_id)
-                        
-                        orders_logger.info(f"Publishing market data trigger")
-                        await publish_market_data_trigger(redis_client)
-                        
-                        return OrderResponse.model_validate(db_order, from_attributes=True)
+                    # End of async with db.begin_nested()
+                    # Now, outside the context manager, refresh objects
+                    await db.refresh(db_order)
+                    await db.refresh(db_user_locked)
+                    orders_logger.info(f"[DEBUG] DB commit completed for order {db_order.order_id}. Checking DB state...")
+                    await db.commit()
+                    orders_logger.info(f"[DEBUG] After commit & refresh: order_id={db_order.order_id}, order_status={db_order.order_status}, close_price={db_order.close_price}, net_profit={db_order.net_profit}, commission={db_order.commission}, close_id={db_order.close_id}, updated_at={db_order.updated_at}")
+                    # Log the user's wallet balance and margin after commit
+                    orders_logger.info(f"AFTER COMMIT: User {db_user_locked.id} wallet_balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
+                    return OrderResponse.model_validate(db_order, from_attributes=True)
             else:
                 # Always fetch user_group before logging
                 user_group = await crud_group.get_group_by_name(db, getattr(user_to_operate_on, 'group_name', None))
@@ -1525,7 +1478,7 @@ async def close_order(
                     "first_name": getattr(db_user_locked, 'first_name', None),
                     "last_name": getattr(db_user_locked, 'last_name', None),
                     "country": getattr(db_user_locked, 'country', None),
-                    "phone_number": getattr(db_user_locked, 'phone_number', None),
+                    "phone_number": getattr(db_user_locked, 'phone_number', None)
                 }
                 orders_logger.info(f"Setting user data cache for user {user_id} with wallet_balance={user_data_to_cache['wallet_balance']}, margin={user_data_to_cache['margin']}")
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache)
@@ -1589,7 +1542,8 @@ async def modify_pending_order(
     current_user: User | DemoUser = Depends(get_current_user),
 ):
     try:
-        order_model = get_order_model(modify_request.user_type)
+        user_type = get_user_type(current_user)
+        order_model = get_order_model(user_type)
         db_order = await crud_order.get_order_by_id_and_user_id(
             db,
             modify_request.order_id,
@@ -1727,7 +1681,7 @@ async def modify_pending_order(
             orders_logger.error(f"Error updating user data cache after pending order modification: {e}", exc_info=True)
 
         # Update static orders cache - force a fresh fetch from the database
-        await update_user_static_orders(modify_request.user_id, db, redis_client, modify_request.user_type)
+        await update_user_static_orders_cache_after_order_change(modify_request.user_id, db, redis_client, modify_request.user_type)
 
         # Publish updates to notify WebSocket clients - make sure these are in the right order
         await publish_order_update(redis_client, modify_request.user_id)
@@ -1887,7 +1841,7 @@ async def cancel_pending_order(
             )
             
             # Update static orders cache
-            await update_user_static_orders(user_id_for_operation, db, redis_client, cancel_request.user_type)
+            await update_user_static_orders_cache_after_order_change(user_id_for_operation, db, redis_client, cancel_request.user_type)
             
             # Publish updates to notify WebSocket clients
             await publish_order_update(redis_client, user_id_for_operation)
@@ -3808,5 +3762,60 @@ async def get_order_status_by_service_provider(
         status=db_order.status,
         order_status=db_order.order_status
     )
+
+# Add this helper function after the existing helper functions
+async def update_user_static_orders_cache_after_order_change(
+    user_id: int, 
+    db: AsyncSession, 
+    redis_client: Redis, 
+    user_type: str
+):
+    """
+    Helper function to update static orders cache after any order change.
+    This ensures the cache is always up-to-date for WebSocket connections.
+    """
+    try:
+        order_model = get_order_model(user_type)
+        
+        # Get open orders
+        open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+        open_orders_data = []
+        for pos in open_orders_orm:
+            pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
+                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
+                                    'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            created_at = getattr(pos, 'created_at', None)
+            if created_at:
+                pos_dict['created_at'] = created_at.isoformat() if isinstance(created_at, datetime.datetime) else str(created_at)
+            open_orders_data.append(pos_dict)
+        
+        # Get pending orders
+        pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
+        pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
+        pending_orders_data = []
+        for po in pending_orders_orm:
+            po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
+                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
+                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit']}
+            po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
+            created_at = getattr(po, 'created_at', None)
+            if created_at:
+                po_dict['created_at'] = created_at.isoformat() if isinstance(created_at, datetime.datetime) else str(created_at)
+            pending_orders_data.append(po_dict)
+        
+        # Cache the static orders data
+        static_orders_data = {
+            "open_orders": open_orders_data,
+            "pending_orders": pending_orders_data,
+            "updated_at": datetime.datetime.now().isoformat()
+        }
+        await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
+        logger.info(f"User {user_id}: Updated static orders cache after order change - {len(open_orders_data)} open orders, {len(pending_orders_data)} pending orders")
+        
+        return static_orders_data
+    except Exception as e:
+        logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
+        return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
 
 
