@@ -1,0 +1,446 @@
+2025-07-03 04:21:22,972 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-03 04:21:22,972 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-03 04:21:33,594 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY, Quantity: 0.01
+2025-07-03 04:21:33,597 - INFO - orders - [PERF] user_data_cache: 0.0024s
+2025-07-03 04:21:33,600 - INFO - orders - [PERF] group_settings_cache+db_user: 0.0028s
+2025-07-03 04:21:33,625 - INFO - orders - [PERF] crud_group.get_group_by_name: 0.0245s
+2025-07-03 04:21:33,628 - DEBUG - orders - [BARCLAYS DETECTION] user_type=live, sending_orders_normalized=rock, is_barclays_live_user=False
+2025-07-03 04:21:34,002 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD BUY order, quantity: 0.01
+2025-07-03 04:21:34,002 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:21:34,009 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:21:34,010 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:21:34,011 - INFO - orders - [MARGIN_CALC] Got BUY price for AUDCAD from cache: 0.8934800000
+2025-07-03 04:21:34,012 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:21:34,012 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01 = 1000.0000000000
+2025-07-03 04:21:34,012 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000 * 0.8934800000) / 100.00 = 8.934800000000000000
+2025-07-03 04:21:34,012 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:21:34,012 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:21:34,013 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.93 CAD
+2025-07-03 04:21:34,013 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin for AUDCAD BUY order (user_id: 4, position: )
+2025-07-03 04:21:34,013 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:21:34,015 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:21:34,016 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:21:34,016 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:21:34,018 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582400000'), 'o': Decimal('1.3581800000')}
+2025-07-03 04:21:34,018 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582400000
+2025-07-03 04:21:34,018 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3582400000 = 6.574684886323477441394746142 USD
+2025-07-03 04:21:34,018 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.93 CAD -> 6.574684886323477441394746142 USD
+2025-07-03 04:21:34,019 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD BUY: margin=6.574684886323477441394746142, price=0.8934800000, contract_value=1000.0000000000, commission=0.00
+2025-07-03 04:21:34,019 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDCAD: Calculated commission=0.00
+2025-07-03 04:21:34,026 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=6.57, AdditionalMargin=6.57
+2025-07-03 04:21:34,026 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 4 Symbol AUDCAD
+2025-07-03 04:21:34,026 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 6.574684886323477441394746142
+2025-07-03 04:21:34,027 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 0
+2025-07-03 04:21:34,027 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 0.0
+2025-07-03 04:21:34,027 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 6.57
+2025-07-03 04:21:34,027 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 6.57
+2025-07-03 04:21:34,035 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4: OriginalMarginDB=0E-8, CalculatedNewMargin=6.57
+2025-07-03 04:21:34,067 - INFO - orders - [PERF] process_new_order: 0.4366s
+2025-07-03 04:21:34,067 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '8435178864', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.8934800000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.574684886323477441394746142'), 'commission': Decimal('0.00'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-07-03 04:21:34,067 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '8435178864', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.8934800000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.574684886323477441394746142'), 'commission': Decimal('0.00'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-07-03 04:21:34,068 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 8435178864
+2025-07-03 04:21:34,097 - INFO - orders - [PERF] crud_order.create_order: 0.0296s
+2025-07-03 04:21:34,106 - INFO - orders - [PERF] db.commit+refresh: 0.0092s
+2025-07-03 04:21:34,107 - INFO - orders - [PERF] TOTAL place_order: 0.5135s
+2025-07-03 04:21:34,127 - app.api.v1.endpoints.orders - INFO - User 4: Updated static orders cache after order change - 1 open orders, 0 pending orders
+2025-07-03 04:21:45,057 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.01
+2025-07-03 04:21:45,067 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=0.89352, Current buy price=0.8935100000, Current sell price=0.8932400000
+2025-07-03 04:21:45,067 - ERROR - orders - Invalid BUY_LIMIT price: 0.89352 must be less than current buy price 0.8935100000
+2025-07-03 04:21:45,067 - ERROR - orders - Unexpected error in place_order: 400: BUY_LIMIT price must be less than the current market price. Your price: 0.89352, Current price: 0.8935100000
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 625, in place_pending_order
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 400: BUY_LIMIT price must be less than the current market price. Your price: 0.89352, Current price: 0.8935100000
+2025-07-03 04:21:47,750 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.01
+2025-07-03 04:21:47,756 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=0.89352, Current buy price=0.8934500000, Current sell price=0.8931900000
+2025-07-03 04:21:47,756 - ERROR - orders - Invalid BUY_LIMIT price: 0.89352 must be less than current buy price 0.8934500000
+2025-07-03 04:21:47,756 - ERROR - orders - Unexpected error in place_order: 400: BUY_LIMIT price must be less than the current market price. Your price: 0.89352, Current price: 0.8934500000
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 625, in place_pending_order
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 400: BUY_LIMIT price must be less than the current market price. Your price: 0.89352, Current price: 0.8934500000
+2025-07-03 04:21:59,384 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.01
+2025-07-03 04:21:59,393 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=0.89351, Current buy price=0.8935200000, Current sell price=0.8932500000
+2025-07-03 04:21:59,401 - INFO - orders - Calculated contract_value for pending order: 1000.0000000000 (contract_size: 100000.00000000 * quantity: 0.01)
+2025-07-03 04:21:59,403 - INFO - orders - [DEBUG] User data from cache: {'id': 4, 'email': 'dhanush777ss@gmail.com', 'group_name': 'Standard', 'leverage': Decimal('100.00'), 'user_type': 'live', 'account_number': 'DYY5A', 'wallet_balance': Decimal('6620.69000000'), 'margin': Decimal('6.57000000'), 'first_name': None, 'last_name': None, 'country': 'string', 'phone_number': Decimal('8618025298')}
+2025-07-03 04:21:59,404 - INFO - orders - [DEBUG] Group name: Standard
+2025-07-03 04:21:59,405 - INFO - orders - [DEBUG] Group settings from cache: None
+2025-07-03 04:21:59,424 - INFO - orders - [DEBUG] Group from database: [<app.database.models.Group object at 0x000002706FB00AF0>, <app.database.models.Group object at 0x000002706FB01260>, <app.database.models.Group object at 0x000002706FB01150>, <app.database.models.Group object at 0x000002706FB00160>, <app.database.models.Group object at 0x000002706FB017B0>, <app.database.models.Group object at 0x000002706FB018C0>, <app.database.models.Group object at 0x000002706FB019D0>, <app.database.models.Group object at 0x000002706FB01AE0>, <app.database.models.Group object at 0x000002706FB01BF0>, <app.database.models.Group object at 0x000002706FB01D00>, <app.database.models.Group object at 0x000002706FB01E10>, <app.database.models.Group object at 0x000002706FB01F20>, <app.database.models.Group object at 0x000002706FB02030>, <app.database.models.Group object at 0x000002706FB02140>, <app.database.models.Group object at 0x000002706FB02250>, <app.database.models.Group object at 0x000002706FB02360>, <app.database.models.Group object at 0x000002706FB02470>, <app.database.models.Group object at 0x000002706FB02580>, <app.database.models.Group object at 0x000002706FB02690>, <app.database.models.Group object at 0x000002706FB027A0>, <app.database.models.Group object at 0x000002706FB028B0>, <app.database.models.Group object at 0x000002706FB029C0>, <app.database.models.Group object at 0x000002706FB02AD0>, <app.database.models.Group object at 0x000002706FB02BE0>, <app.database.models.Group object at 0x000002706FB02CF0>, <app.database.models.Group object at 0x000002706FB02E00>, <app.database.models.Group object at 0x000002706FB02F10>, <app.database.models.Group object at 0x000002706FB03020>, <app.database.models.Group object at 0x000002706FB03130>, <app.database.models.Group object at 0x000002706FB03240>, <app.database.models.Group object at 0x000002706FB03350>, <app.database.models.Group object at 0x000002706FB03790>, <app.database.models.Group object at 0x000002706FB01040>, <app.database.models.Group object at 0x000002706FB00050>, <app.database.models.Group object at 0x000002706FB00F30>, <app.database.models.Group object at 0x000002706FB00D10>, <app.database.models.Group object at 0x000002706FB00E20>, <app.database.models.Group object at 0x000002706FB00380>, <app.database.models.Group object at 0x000002706FB00490>, <app.database.models.Group object at 0x000002706FB016A0>, <app.database.models.Group object at 0x000002706FB01370>, <app.database.models.Group object at 0x000002706FB006B0>, <app.database.models.Group object at 0x000002706FD6E360>, <app.database.models.Group object at 0x000002706FD6C050>, <app.database.models.Group object at 0x000002706FD6C160>, <app.database.models.Group object at 0x000002706FD6C270>, <app.database.models.Group object at 0x000002706FD6C380>, <app.database.models.Group object at 0x000002706FD6C490>, <app.database.models.Group object at 0x000002706FD6C5A0>, <app.database.models.Group object at 0x000002706FD6C6B0>, <app.database.models.Group object at 0x000002706FD6C7C0>, <app.database.models.Group object at 0x000002706FD6C8D0>, <app.database.models.Group object at 0x000002706FD6C9E0>, <app.database.models.Group object at 0x000002706FD6CAF0>, <app.database.models.Group object at 0x000002706FD6CC00>, <app.database.models.Group object at 0x000002706FD6CD10>, <app.database.models.Group object at 0x000002706FD6CE20>, <app.database.models.Group object at 0x000002706FD6CF30>, <app.database.models.Group object at 0x000002706FD6D040>, <app.database.models.Group object at 0x000002706FD6D150>, <app.database.models.Group object at 0x000002706FD6D260>, <app.database.models.Group object at 0x000002706FD6D370>, <app.database.models.Group object at 0x000002706FD6D480>, <app.database.models.Group object at 0x000002706FD6D590>, <app.database.models.Group object at 0x000002706FD6D6A0>, <app.database.models.Group object at 0x000002706FD6D7B0>, <app.database.models.Group object at 0x000002706FD6D8C0>, <app.database.models.Group object at 0x000002706FD6D9D0>, <app.database.models.Group object at 0x000002706FD6DAE0>, <app.database.models.Group object at 0x000002706FD6DBF0>, <app.database.models.Group object at 0x000002706FD6DD00>, <app.database.models.Group object at 0x000002706FD6DE10>, <app.database.models.Group object at 0x000002706FD6DF20>, <app.database.models.Group object at 0x000002706FD6E030>, <app.database.models.Group object at 0x000002706FD6E140>, <app.database.models.Group object at 0x000002706FD6E250>, <app.database.models.Group object at 0x000002706FD6E7A0>]
+2025-07-03 04:21:59,425 - INFO - orders - [DEBUG] sending_orders from database (list): Rock
+2025-07-03 04:21:59,427 - INFO - orders - [DEBUG] Updated group settings cache with: {'sending_orders': 'Rock'}
+2025-07-03 04:21:59,428 - INFO - orders - [DEBUG] sending_orders value: Rock, type: <class 'str'>
+2025-07-03 04:21:59,428 - INFO - orders - [DEBUG] sending_orders_normalized: rock
+2025-07-03 04:21:59,428 - INFO - orders - User 4 is_barclays_live_user: False (user_type: live, sending_orders_normalized: rock)
+2025-07-03 04:21:59,432 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for AUDCAD: contract_size=100000.00000000, profit_currency=CAD, digit=5.00000
+2025-07-03 04:21:59,435 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD BUY_LIMIT order, quantity: 0.01
+2025-07-03 04:21:59,435 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:21:59,441 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:21:59,441 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:21:59,442 - INFO - orders - [MARGIN_CALC] Got BUY price for AUDCAD from cache: 0.8935200000
+2025-07-03 04:21:59,443 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:21:59,443 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01 = 1000.0000000000
+2025-07-03 04:21:59,443 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000 * 0.8935200000) / 100.00 = 8.935200000000000000
+2025-07-03 04:21:59,443 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:21:59,443 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:21:59,443 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.94 CAD
+2025-07-03 04:21:59,444 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.94 CAD to USD for margin for AUDCAD BUY_LIMIT order (user_id: 4, position: )
+2025-07-03 04:21:59,444 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:21:59,445 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:21:59,445 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:21:59,445 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:21:59,446 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582900000'), 'o': Decimal('1.3582600000')}
+2025-07-03 04:21:59,446 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582900000
+2025-07-03 04:21:59,446 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.94 CAD / 1.3582900000 = 6.581805063719824190710378491 USD
+2025-07-03 04:21:59,446 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.94 CAD -> 6.581805063719824190710378491 USD
+2025-07-03 04:21:59,446 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD BUY_LIMIT: margin=6.581805063719824190710378491, price=0.8935200000, contract_value=1000.0000000000, commission=0.00
+2025-07-03 04:21:59,447 - INFO - orders - Calculated initial margin: 6.581805063719824190710378491, commission: 0.00 for pending order 3849923860
+2025-07-03 04:21:59,456 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '3849923860', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.01'), 'order_price': Decimal('0.89351'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '8166534820', 'takeprofit_id': '3726601939', 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581805063719824190710378491'), 'commission': Decimal('0.00'), 'open_time': None}
+2025-07-03 04:21:59,456 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.89351
+2025-07-03 04:21:59,457 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '3849923860', 'order_status': 'PENDING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.89351'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581805063719824190710378491'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-07-03 04:21:59,457 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '3849923860', 'order_status': 'PENDING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.89351'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581805063719824190710378491'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-07-03 04:21:59,457 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 3849923860
+2025-07-03 04:21:59,496 - INFO - orders - Order 3849923860 verified in database on attempt 1 before adding to Redis.
+2025-07-03 04:21:59,501 - INFO - orders - Pending order 3849923860 added to Redis for non-Barclays user or demo user.
+2025-07-03 04:21:59,509 - ERROR - orders - Error updating user data cache after order placement: name 'user_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 914, in place_pending_order
+    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                                            ^^^^^^^
+NameError: name 'user_id' is not defined
+2025-07-03 04:21:59,515 - ERROR - orders - Unexpected error in place_order: name 'background_tasks' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 921, in place_pending_order
+    if background_tasks:
+       ^^^^^^^^^^^^^^^^
+NameError: name 'background_tasks' is not defined. Did you mean: 'BackgroundTasks'?
+2025-07-03 04:22:05,468 - INFO - orders - Pending order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.01
+2025-07-03 04:22:05,480 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=0.8935, Current buy price=0.8935200000, Current sell price=0.8932500000
+2025-07-03 04:22:05,488 - INFO - orders - Calculated contract_value for pending order: 1000.0000000000 (contract_size: 100000.00000000 * quantity: 0.01)
+2025-07-03 04:22:05,491 - INFO - orders - [DEBUG] User data from cache: {'id': 4, 'email': 'dhanush777ss@gmail.com', 'group_name': 'Standard', 'leverage': Decimal('100.00'), 'user_type': 'live', 'account_number': 'DYY5A', 'wallet_balance': Decimal('6620.69000000'), 'margin': Decimal('6.57000000'), 'first_name': None, 'last_name': None, 'country': 'string', 'phone_number': Decimal('8618025298')}
+2025-07-03 04:22:05,491 - INFO - orders - [DEBUG] Group name: Standard
+2025-07-03 04:22:05,492 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'Rock'}
+2025-07-03 04:22:05,492 - INFO - orders - [DEBUG] sending_orders value: Rock, type: <class 'str'>
+2025-07-03 04:22:05,492 - INFO - orders - [DEBUG] sending_orders_normalized: rock
+2025-07-03 04:22:05,492 - INFO - orders - User 4 is_barclays_live_user: False (user_type: live, sending_orders_normalized: rock)
+2025-07-03 04:22:05,496 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for AUDCAD: contract_size=100000.00000000, profit_currency=CAD, digit=5.00000
+2025-07-03 04:22:05,498 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD BUY_LIMIT order, quantity: 0.01
+2025-07-03 04:22:05,498 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:22:05,501 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:22:05,501 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:22:05,502 - INFO - orders - [MARGIN_CALC] Got BUY price for AUDCAD from cache: 0.8935200000
+2025-07-03 04:22:05,502 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:22:05,502 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01 = 1000.0000000000
+2025-07-03 04:22:05,503 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000 * 0.8935200000) / 100.00 = 8.935200000000000000
+2025-07-03 04:22:05,503 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:22:05,503 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:22:05,503 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.94 CAD
+2025-07-03 04:22:05,503 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.94 CAD to USD for margin for AUDCAD BUY_LIMIT order (user_id: 4, position: )
+2025-07-03 04:22:05,503 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:22:05,504 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:22:05,505 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:22:05,505 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:22:05,506 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3583100000'), 'o': Decimal('1.3582500000')}
+2025-07-03 04:22:05,506 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3583100000
+2025-07-03 04:22:05,506 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.94 CAD / 1.3583100000 = 6.581708152041875565960642269 USD
+2025-07-03 04:22:05,506 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.94 CAD -> 6.581708152041875565960642269 USD
+2025-07-03 04:22:05,506 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD BUY_LIMIT: margin=6.581708152041875565960642269, price=0.8935200000, contract_value=1000.0000000000, commission=0.00
+2025-07-03 04:22:05,506 - INFO - orders - Calculated initial margin: 6.581708152041875565960642269, commission: 0.00 for pending order 5748222847
+2025-07-03 04:22:05,512 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '5748222847', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.01'), 'order_price': Decimal('0.8935'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '2657990062', 'takeprofit_id': '1292487074', 'order_user_id': 4, 'order_status': 'PENDING', 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581708152041875565960642269'), 'commission': Decimal('0.00'), 'open_time': None}
+2025-07-03 04:22:05,512 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 4 at price 0.8935
+2025-07-03 04:22:05,512 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '5748222847', 'order_status': 'PENDING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.8935'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581708152041875565960642269'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-07-03 04:22:05,512 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '5748222847', 'order_status': 'PENDING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.8935'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581708152041875565960642269'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'close_id': None}
+2025-07-03 04:22:05,512 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 5748222847
+2025-07-03 04:22:05,547 - INFO - orders - Order 5748222847 verified in database on attempt 1 before adding to Redis.
+2025-07-03 04:22:05,550 - INFO - orders - Pending order 5748222847 added to Redis for non-Barclays user or demo user.
+2025-07-03 04:22:05,554 - ERROR - orders - Error updating user data cache after order placement: name 'user_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 914, in place_pending_order
+    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                                            ^^^^^^^
+NameError: name 'user_id' is not defined
+2025-07-03 04:22:05,557 - ERROR - orders - Unexpected error in place_order: name 'background_tasks' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 921, in place_pending_order
+    if background_tasks:
+       ^^^^^^^^^^^^^^^^
+NameError: name 'background_tasks' is not defined. Did you mean: 'BackgroundTasks'?
+2025-07-03 04:22:05,605 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD BUY_LIMIT order, quantity: 0.01000000
+2025-07-03 04:22:05,605 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:22:05,609 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:22:05,609 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:22:05,610 - INFO - orders - [MARGIN_CALC] Got BUY price for AUDCAD from cache: 0.8934700000
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Using user's actual leverage from DB: 100.00
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01000000 = 1000.0000000000000000
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000000000 * 0.8934700000) / 100.00 = 8.93470000000000000000000
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:22:05,612 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.93 CAD
+2025-07-03 04:22:05,613 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin for AUDCAD BUY_LIMIT order (user_id: 4, position: )
+2025-07-03 04:22:05,613 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:22:05,614 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:22:05,614 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:22:05,614 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:22:05,615 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3583100000'), 'o': Decimal('1.3582500000')}
+2025-07-03 04:22:05,615 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3583100000
+2025-07-03 04:22:05,615 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3583100000 = 6.574346062386347740942789201 USD
+2025-07-03 04:22:05,615 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.93 CAD -> 6.574346062386347740942789201 USD
+2025-07-03 04:22:05,615 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD BUY_LIMIT: margin=6.574346062386347740942789201, price=0.8934700000, contract_value=1000.0000000000000000, commission=0.00
+2025-07-03 04:22:06,003 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD BUY_LIMIT order, quantity: 0.01000000
+2025-07-03 04:22:06,003 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:22:06,006 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:22:06,006 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:22:06,007 - INFO - orders - [MARGIN_CALC] Got BUY price for AUDCAD from cache: 0.8934700000
+2025-07-03 04:22:06,011 - INFO - orders - [MARGIN_CALC] Using user's actual leverage from DB: 100.00
+2025-07-03 04:22:06,011 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:22:06,011 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01000000 = 1000.0000000000000000
+2025-07-03 04:22:06,011 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000000000 * 0.8934700000) / 100.00 = 8.93470000000000000000000
+2025-07-03 04:22:06,012 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:22:06,012 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:22:06,012 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.93 CAD
+2025-07-03 04:22:06,012 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin for AUDCAD BUY_LIMIT order (user_id: 4, position: )
+2025-07-03 04:22:06,012 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:22:06,013 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:22:06,013 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:22:06,013 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:22:06,014 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3583100000'), 'o': Decimal('1.3582500000')}
+2025-07-03 04:22:06,014 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3583100000
+2025-07-03 04:22:06,014 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3583100000 = 6.574346062386347740942789201 USD
+2025-07-03 04:22:06,014 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.93 CAD -> 6.574346062386347740942789201 USD
+2025-07-03 04:22:06,015 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD BUY_LIMIT: margin=6.574346062386347740942789201, price=0.8934700000, contract_value=1000.0000000000000000, commission=0.00
+2025-07-03 04:22:11,506 - INFO - orders - Order close request received - Order ID: 3849923860, User ID: 4, Close Price: 0.89325
+2025-07-03 04:22:11,506 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000002706FA14E10>, type: <class 'app.database.models.User'>, user_type: live, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-03 04:22:11,506 - INFO - orders - Using order model: user_orders for user 4 (user_type: live)
+2025-07-03 04:22:11,506 - INFO - orders - Request to close order 3849923860 for user 4 (user_type: live) with price 0.89325. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-03 04:22:11,511 - INFO - orders - User group: Standard, sending_orders setting: rock
+2025-07-03 04:22:11,519 - INFO - orders - Live user 4 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-03 04:22:11,534 - INFO - orders - Existing entry commission for order 3849923860: 0.0
+2025-07-03 04:22:11,535 - INFO - orders - Commission calculation for order 3849923860: entry=0.0, exit=0.100000000000, total=0.10
+2025-07-03 04:22:11,535 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.220000000000000000000000 CAD to USD for PnL on Close (user_id: 4, position: 3849923860)
+2025-07-03 04:22:11,535 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:22:11,535 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:22:11,535 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:22:11,535 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:22:11,537 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582900000'), 'o': Decimal('1.3582700000')}
+2025-07-03 04:22:11,537 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582900000
+2025-07-03 04:22:11,537 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.220000000000000000000000 CAD / 1.3582900000 = -0.1619683572727473514492486877 USD
+2025-07-03 04:22:11,563 - INFO - orders - [DEBUG] DB commit completed for order 3849923860. Checking DB state...
+2025-07-03 04:22:11,568 - INFO - orders - [DEBUG] After commit & refresh: order_id=3849923860, order_status=CLOSED, close_price=0.89325000, net_profit=-0.26000000, commission=0.10000000, close_id=1095807109, updated_at=2025-07-03 04:22:11
+2025-07-03 04:22:11,569 - INFO - orders - AFTER COMMIT: User 4 wallet_balance=6620.43000000, margin=13.15000000
+2025-07-03 04:22:11,569 - INFO - orders - Setting user data cache for user 4 with wallet_balance=6620.43000000, margin=13.15000000
+2025-07-03 04:22:11,570 - INFO - orders - User data cache updated for user 4
+2025-07-03 04:22:11,570 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:22:11,570 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:22:11,574 - INFO - orders - Fetched 2 open orders for user 4
+2025-07-03 04:22:11,576 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:22:11,578 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 0 pending orders
+2025-07-03 04:22:11,578 - INFO - orders - Publishing order update for user 4
+2025-07-03 04:22:11,580 - INFO - orders - Publishing user data update for user 4
+2025-07-03 04:22:11,581 - INFO - orders - Publishing market data trigger
+2025-07-03 04:22:13,507 - INFO - orders - Order close request received - Order ID: 8435178864, User ID: 4, Close Price: 0.89325
+2025-07-03 04:22:13,507 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000002706FA14F50>, type: <class 'app.database.models.User'>, user_type: live, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-03 04:22:13,507 - INFO - orders - Using order model: user_orders for user 4 (user_type: live)
+2025-07-03 04:22:13,507 - INFO - orders - Request to close order 8435178864 for user 4 (user_type: live) with price 0.89325. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-03 04:22:13,511 - INFO - orders - User group: Standard, sending_orders setting: rock
+2025-07-03 04:22:13,520 - INFO - orders - Live user 4 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-03 04:22:13,534 - INFO - orders - Existing entry commission for order 8435178864: 0.0
+2025-07-03 04:22:13,535 - INFO - orders - Commission calculation for order 8435178864: entry=0.0, exit=0.100000000000, total=0.10
+2025-07-03 04:22:13,535 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.230000000000000000000000 CAD to USD for PnL on Close (user_id: 4, position: 8435178864)
+2025-07-03 04:22:13,535 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:22:13,536 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:22:13,536 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:22:13,536 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:22:13,537 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582900000'), 'o': Decimal('1.3582700000')}
+2025-07-03 04:22:13,537 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582900000
+2025-07-03 04:22:13,537 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.230000000000000000000000 CAD / 1.3582900000 = -0.1693305553305995037878509008 USD
+2025-07-03 04:22:13,558 - INFO - orders - [DEBUG] DB commit completed for order 8435178864. Checking DB state...
+2025-07-03 04:22:13,562 - INFO - orders - [DEBUG] After commit & refresh: order_id=8435178864, order_status=CLOSED, close_price=0.89325000, net_profit=-0.27000000, commission=0.10000000, close_id=1906648402, updated_at=2025-07-03 04:22:13
+2025-07-03 04:22:13,562 - INFO - orders - AFTER COMMIT: User 4 wallet_balance=6620.16000000, margin=6.57000000
+2025-07-03 04:22:13,563 - INFO - orders - Setting user data cache for user 4 with wallet_balance=6620.16000000, margin=6.57000000
+2025-07-03 04:22:13,564 - INFO - orders - User data cache updated for user 4
+2025-07-03 04:22:13,564 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:22:13,564 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:22:13,568 - INFO - orders - Fetched 1 open orders for user 4
+2025-07-03 04:22:13,570 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:22:13,571 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 0 pending orders
+2025-07-03 04:22:13,572 - INFO - orders - Publishing order update for user 4
+2025-07-03 04:22:13,572 - INFO - orders - Publishing user data update for user 4
+2025-07-03 04:22:13,574 - INFO - orders - Publishing market data trigger
+2025-07-03 04:22:15,444 - INFO - orders - Order close request received - Order ID: 5748222847, User ID: 4, Close Price: 0.89326
+2025-07-03 04:22:15,444 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000002706FA14E10>, type: <class 'app.database.models.User'>, user_type: live, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-03 04:22:15,444 - INFO - orders - Using order model: user_orders for user 4 (user_type: live)
+2025-07-03 04:22:15,444 - INFO - orders - Request to close order 5748222847 for user 4 (user_type: live) with price 0.89326. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-03 04:22:15,451 - INFO - orders - User group: Standard, sending_orders setting: rock
+2025-07-03 04:22:15,460 - INFO - orders - Live user 4 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-03 04:22:15,476 - INFO - orders - Existing entry commission for order 5748222847: 0.0
+2025-07-03 04:22:15,476 - INFO - orders - Commission calculation for order 5748222847: entry=0.0, exit=0.100000000000, total=0.10
+2025-07-03 04:22:15,476 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.210000000000000000000000 CAD to USD for PnL on Close (user_id: 4, position: 5748222847)
+2025-07-03 04:22:15,476 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:22:15,476 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:22:15,477 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:22:15,477 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:22:15,478 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582900000'), 'o': Decimal('1.3582600000')}
+2025-07-03 04:22:15,478 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582900000
+2025-07-03 04:22:15,478 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.210000000000000000000000 CAD / 1.3582900000 = -0.1546061592148951991106464746 USD
+2025-07-03 04:22:15,494 - INFO - orders - [DEBUG] DB commit completed for order 5748222847. Checking DB state...
+2025-07-03 04:22:15,499 - INFO - orders - [DEBUG] After commit & refresh: order_id=5748222847, order_status=CLOSED, close_price=0.89326000, net_profit=-0.25000000, commission=0.10000000, close_id=9776676107, updated_at=2025-07-03 04:22:15
+2025-07-03 04:22:15,500 - INFO - orders - AFTER COMMIT: User 4 wallet_balance=6619.91000000, margin=0E-8
+2025-07-03 04:22:15,500 - INFO - orders - Setting user data cache for user 4 with wallet_balance=6619.91000000, margin=0E-8
+2025-07-03 04:22:15,501 - INFO - orders - User data cache updated for user 4
+2025-07-03 04:22:15,501 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:22:15,501 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:22:15,505 - INFO - orders - Fetched 0 open orders for user 4
+2025-07-03 04:22:15,508 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:22:15,509 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 0 pending orders
+2025-07-03 04:22:15,509 - INFO - orders - Publishing order update for user 4
+2025-07-03 04:22:15,511 - INFO - orders - Publishing user data update for user 4
+2025-07-03 04:22:15,512 - INFO - orders - Publishing market data trigger
+2025-07-03 04:23:09,175 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDCAD, Type: BUY, Quantity: 0.01
+2025-07-03 04:23:09,178 - INFO - orders - [PERF] user_data_cache: 0.0030s
+2025-07-03 04:23:09,184 - INFO - orders - [PERF] group_settings_cache+db_user: 0.0059s
+2025-07-03 04:23:09,184 - DEBUG - orders - [BARCLAYS DETECTION] user_type=live, sending_orders_normalized=rock, is_barclays_live_user=False
+2025-07-03 04:23:09,540 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD BUY order, quantity: 0.01
+2025-07-03 04:23:09,540 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:23:09,550 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:23:09,550 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:23:09,553 - INFO - orders - [MARGIN_CALC] Got BUY price for AUDCAD from cache: 0.8935700000
+2025-07-03 04:23:09,554 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:23:09,554 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01 = 1000.0000000000
+2025-07-03 04:23:09,554 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000 * 0.8935700000) / 100.00 = 8.935700000000000000
+2025-07-03 04:23:09,554 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:23:09,554 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:23:09,554 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.94 CAD
+2025-07-03 04:23:09,554 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.94 CAD to USD for margin for AUDCAD BUY order (user_id: 4, position: )
+2025-07-03 04:23:09,554 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:23:09,560 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:23:09,561 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:23:09,561 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:23:09,564 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582500000'), 'o': Decimal('1.3582300000')}
+2025-07-03 04:23:09,565 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582500000
+2025-07-03 04:23:09,565 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.94 CAD / 1.3582500000 = 6.581998895637769188293760353 USD
+2025-07-03 04:23:09,565 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.94 CAD -> 6.581998895637769188293760353 USD
+2025-07-03 04:23:09,565 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD BUY: margin=6.581998895637769188293760353, price=0.8935700000, contract_value=1000.0000000000, commission=0.00
+2025-07-03 04:23:09,566 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDCAD: Calculated commission=0.00
+2025-07-03 04:23:09,950 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDCAD: MarginBefore=0.00, MarginAfter=6.58, AdditionalMargin=6.58
+2025-07-03 04:23:09,950 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 4 Symbol AUDCAD
+2025-07-03 04:23:09,950 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 6.581998895637769188293760353
+2025-07-03 04:23:09,950 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 0
+2025-07-03 04:23:09,950 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 0.0
+2025-07-03 04:23:09,951 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 6.58
+2025-07-03 04:23:09,951 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 6.58
+2025-07-03 04:23:09,955 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4: OriginalMarginDB=0E-8, CalculatedNewMargin=6.58
+2025-07-03 04:23:09,987 - INFO - orders - [PERF] process_new_order: 0.8033s
+2025-07-03 04:23:09,987 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '5541974426', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.8935700000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581998895637769188293760353'), 'commission': Decimal('0.00'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-07-03 04:23:09,988 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '5541974426', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.8935700000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.581998895637769188293760353'), 'commission': Decimal('0.00'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-07-03 04:23:09,988 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 5541974426
+2025-07-03 04:23:10,006 - INFO - orders - [PERF] crud_order.create_order: 0.0185s
+2025-07-03 04:23:10,016 - INFO - orders - [PERF] db.commit+refresh: 0.0100s
+2025-07-03 04:23:10,016 - INFO - orders - [PERF] TOTAL place_order: 0.8421s
+2025-07-03 04:23:10,035 - app.api.v1.endpoints.orders - INFO - User 4: Updated static orders cache after order change - 1 open orders, 0 pending orders
+2025-07-03 04:23:23,196 - INFO - orders - Add takeprofit request received - Order ID: 5541974426, User ID: 4
+2025-07-03 04:23:23,219 - INFO - orders - Generated takeprofit_id: 2605203899 for order 5541974426
+2025-07-03 04:23:23,228 - INFO - orders - User 4 is_barclays_live_user: False
+2025-07-03 04:23:23,229 - INFO - orders - Non-Barclays user. Adding takeprofit to order 5541974426 immediately
+2025-07-03 04:23:23,254 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:23:23,254 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:23:23,259 - INFO - orders - Fetched 1 open orders for user 4
+2025-07-03 04:23:23,263 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:23:23,265 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 0 pending orders
+2025-07-03 04:23:43,444 - INFO - orders - Order placement request received - User ID: 4, Symbol: AUDCAD, Type: SELL, Quantity: 0.01
+2025-07-03 04:23:43,445 - INFO - orders - [PERF] user_data_cache: 0.0009s
+2025-07-03 04:23:43,456 - INFO - orders - [PERF] group_settings_cache+db_user: 0.0104s
+2025-07-03 04:23:43,457 - DEBUG - orders - [BARCLAYS DETECTION] user_type=live, sending_orders_normalized=rock, is_barclays_live_user=False
+2025-07-03 04:23:43,757 - INFO - orders - [MARGIN_CALC] Starting margin calculation for AUDCAD SELL order, quantity: 0.01
+2025-07-03 04:23:43,757 - INFO - orders - [MARGIN_CALC] No group_name in settings, fetching for user 4
+2025-07-03 04:23:43,761 - INFO - orders - [MARGIN_CALC] Got group_name from database: Standard
+2025-07-03 04:23:43,761 - INFO - orders - [MARGIN_CALC] Contract size for AUDCAD: 100000.00000000 (raw: 100000.00000000, type: <class 'decimal.Decimal'>)
+2025-07-03 04:23:43,762 - INFO - orders - [MARGIN_CALC] Got SELL price for AUDCAD from cache: 0.8932600000
+2025-07-03 04:23:43,762 - INFO - orders - [MARGIN_CALC] Symbol type from group settings: 1
+2025-07-03 04:23:43,762 - INFO - orders - [MARGIN_CALC] Standard contract value calculation: contract_size * quantity = 100000.00000000 * 0.01 = 1000.0000000000
+2025-07-03 04:23:43,762 - INFO - orders - [MARGIN_CALC] Standard Margin calc: (contract_value * price) / effective_leverage = (1000.0000000000 * 0.8932600000) / 100.00 = 8.932600000000000000
+2025-07-03 04:23:43,762 - INFO - orders - [MARGIN_CALC] Commission settings for AUDCAD: type=2, value_type=0, rate=10.0000
+2025-07-03 04:23:43,762 - INFO - orders - [MARGIN_CALC] Profit currency for AUDCAD: CAD
+2025-07-03 04:23:43,763 - INFO - orders - [MARGIN_CALC] Converting margin from CAD to USD: 8.93 CAD
+2025-07-03 04:23:43,763 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin for AUDCAD SELL order (user_id: 4, position: )
+2025-07-03 04:23:43,763 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:23:43,763 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:23:43,764 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:23:43,764 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:23:43,764 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3582000000'), 'o': Decimal('1.3581800000')}
+2025-07-03 04:23:43,764 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3582000000
+2025-07-03 04:23:43,765 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3582000000 = 6.574878515682520983654837285 USD
+2025-07-03 04:23:43,765 - INFO - orders - [MARGIN_CALC] Margin after USD conversion: 8.93 CAD -> 6.574878515682520983654837285 USD
+2025-07-03 04:23:43,765 - INFO - orders - [MARGIN_CALC] Final results for AUDCAD SELL: margin=6.574878515682520983654837285, price=0.8932600000, contract_value=1000.0000000000, commission=0.00
+2025-07-03 04:23:43,765 - app.services.order_processing - INFO - [COMMISSION_CALC] User 4 Symbol AUDCAD: Calculated commission=0.00
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4 Symbol AUDCAD: MarginBefore=6.58, MarginAfter=6.58, AdditionalMargin=0.00
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] User 4 Symbol AUDCAD
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Full margin for this order: 6.574878515682520983654837285
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Existing open orders count: 1
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin before: 6.58
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Total margin after: 6.58
+2025-07-03 04:23:43,769 - app.services.order_processing - INFO - [MARGIN_PROCESS_DEBUG] Additional margin needed: 0.0
+2025-07-03 04:23:43,772 - app.services.order_processing - INFO - [MARGIN_PROCESS] User 4: OriginalMarginDB=6.58000000, CalculatedNewMargin=6.58
+2025-07-03 04:23:43,783 - INFO - orders - [PERF] process_new_order: 0.3265s
+2025-07-03 04:23:43,784 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '8570005281', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'SELL', 'order_price': Decimal('0.8932600000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.574878515682520983654837285'), 'commission': Decimal('0.00'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-07-03 04:23:43,784 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '8570005281', 'order_status': 'OPEN', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'SELL', 'order_price': Decimal('0.8932600000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': Decimal('6.574878515682520983654837285'), 'commission': Decimal('0.00'), 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'status': 'OPEN'}
+2025-07-03 04:23:43,784 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 8570005281
+2025-07-03 04:23:43,802 - INFO - orders - [PERF] crud_order.create_order: 0.0184s
+2025-07-03 04:23:43,808 - INFO - orders - [PERF] db.commit+refresh: 0.0060s
+2025-07-03 04:23:43,809 - INFO - orders - [PERF] TOTAL place_order: 0.3646s
+2025-07-03 04:23:43,825 - app.api.v1.endpoints.orders - INFO - User 4: Updated static orders cache after order change - 2 open orders, 0 pending orders
+2025-07-03 04:24:16,073 - INFO - orders - Add stoploss request received - Order ID: 5541974426, User ID: 4
+2025-07-03 04:24:16,079 - INFO - orders - Generated stoploss_id: 9382968321 for order 5541974426
+2025-07-03 04:24:16,082 - INFO - orders - User 4 is_barclays_live_user: False
+2025-07-03 04:24:16,082 - INFO - orders - Non-Barclays user. Adding stoploss to order 5541974426 immediately
+2025-07-03 04:24:16,098 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:24:16,098 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:24:16,102 - INFO - orders - Fetched 2 open orders for user 4
+2025-07-03 04:24:16,106 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:24:16,107 - INFO - orders - Updated static orders cache for user 4 with 2 open orders and 0 pending orders
+2025-07-03 04:24:34,166 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.33000000000000000000000000 CAD to USD for PnL on Close (user_id: 4, position: 5541974426)
+2025-07-03 04:24:34,166 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:24:34,168 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:24:34,168 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:24:34,168 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:24:34,170 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3580300000'), 'o': Decimal('1.3580100000')}
+2025-07-03 04:24:34,170 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3580300000
+2025-07-03 04:24:34,170 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.33000000000000000000000000 CAD / 1.3580300000 = -0.2429990500946223573853302210 USD
+2025-07-03 04:24:34,289 - INFO - orders - [ORDER_CLOSE] Successfully closed order 5541974426 for user 4
+2025-07-03 04:24:34,292 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:24:34,292 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:24:34,296 - INFO - orders - Fetched 1 open orders for user 4
+2025-07-03 04:24:34,301 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:24:34,305 - INFO - orders - Updated static orders cache for user 4 with 1 open orders and 0 pending orders
+2025-07-03 04:24:40,213 - INFO - orders - Order close request received - Order ID: 8570005281, User ID: 4, Close Price: 0.89351
+2025-07-03 04:24:40,213 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x000002706F5EB9D0>, type: <class 'app.database.models.User'>, user_type: live, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-03 04:24:40,213 - INFO - orders - Using order model: user_orders for user 4 (user_type: live)
+2025-07-03 04:24:40,213 - INFO - orders - Request to close order 8570005281 for user 4 (user_type: live) with price 0.89351. Frontend provided type: SELL, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-03 04:24:40,217 - INFO - orders - User group: Standard, sending_orders setting: rock
+2025-07-03 04:24:40,226 - INFO - orders - Live user 4 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-03 04:24:40,243 - INFO - orders - Existing entry commission for order 8570005281: 0.0
+2025-07-03 04:24:40,243 - INFO - orders - Commission calculation for order 8570005281: entry=0.0, exit=0.100000000000, total=0.10
+2025-07-03 04:24:40,243 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.250000000000000000000000 CAD to USD for PnL on Close (user_id: 4, position: 8570005281)
+2025-07-03 04:24:40,244 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-03 04:24:40,244 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-03 04:24:40,245 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-03 04:24:40,245 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-03 04:24:40,245 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3580300000'), 'o': Decimal('1.3580100000')}
+2025-07-03 04:24:40,245 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3580300000
+2025-07-03 04:24:40,246 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.250000000000000000000000 CAD / 1.3580300000 = -0.1840901894656229980191895613 USD
+2025-07-03 04:24:40,263 - INFO - orders - [DEBUG] DB commit completed for order 8570005281. Checking DB state...
+2025-07-03 04:24:40,268 - INFO - orders - [DEBUG] After commit & refresh: order_id=8570005281, order_status=CLOSED, close_price=0.89351000, net_profit=-0.28000000, commission=0.10000000, close_id=6275235923, updated_at=2025-07-03 04:24:40
+2025-07-03 04:24:40,269 - INFO - orders - AFTER COMMIT: User 4 wallet_balance=6619.29000000, margin=0E-8
+2025-07-03 04:24:40,269 - INFO - orders - Setting user data cache for user 4 with wallet_balance=6619.29000000, margin=0E-8
+2025-07-03 04:24:40,270 - INFO - orders - User data cache updated for user 4
+2025-07-03 04:24:40,270 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-03 04:24:40,270 - INFO - orders - Using order model: UserOrder
+2025-07-03 04:24:40,275 - INFO - orders - Fetched 0 open orders for user 4
+2025-07-03 04:24:40,278 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-03 04:24:40,279 - INFO - orders - Updated static orders cache for user 4 with 0 open orders and 0 pending orders
+2025-07-03 04:24:40,279 - INFO - orders - Publishing order update for user 4
+2025-07-03 04:24:40,282 - INFO - orders - Publishing user data update for user 4
+2025-07-03 04:24:40,283 - INFO - orders - Publishing market data trigger
