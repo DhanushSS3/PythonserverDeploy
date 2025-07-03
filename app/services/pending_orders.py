@@ -50,7 +50,6 @@ from app.schemas.wallet import WalletCreate
 from app.services.order_processing import (
     calculate_total_symbol_margin_contribution,  # Use THIS implementation, not the one from margin_calculator
     get_external_symbol_info,
-    get_order_model,
     OrderProcessingError,
     InsufficientFundsError,
     generate_unique_10_digit_id
@@ -773,7 +772,7 @@ async def process_order_stoploss_takeprofit(
                 from app.crud.user import get_demo_user_by_id
                 user = await get_demo_user_by_id(db, order_user_id)
                 if user:
-                    # If found in demo table, update user_type for this order
+                    # If found in demo table, update user_type
                     user_type = 'demo'
         else:
             from app.crud.user import get_demo_user_by_id
@@ -1100,6 +1099,16 @@ async def close_order(
         stoploss_cancel_id = get_attr(order, 'stoploss_cancel_id')
         takeprofit_cancel_id = get_attr(order, 'takeprofit_cancel_id')
         order_status = get_attr(order, 'order_status')
+
+        # Always use ORM order object for margin and DB updates
+        db_order_obj = order if not isinstance(order, dict) else None
+        if db_order_obj is None:
+            from app.crud.crud_order import get_order_by_id
+            db_order_obj = await get_order_by_id(db, order_id, get_order_model(user_type))
+            if db_order_obj is None:
+                logger.error(f"[ORDER_CLOSE] Could not fetch ORM order object for order_id={order_id} (user_id={order_user_id})")
+                return
+
         # Lock user for atomic operations
         if user_type == 'live':
             from app.crud.user import get_user_by_id_with_lock
@@ -1107,13 +1116,12 @@ async def close_order(
         else:
             from app.crud.user import get_demo_user_by_id_with_lock
             db_user_locked = await get_demo_user_by_id_with_lock(db, order_user_id)
-            
         if db_user_locked is None:
             logger.error(f"[ORDER_CLOSE] Could not retrieve and lock user record for user ID: {order_user_id}")
             return
 
         # Get all open orders for this symbol to recalculate margin
-        from app.crud.crud_order import get_order_model, get_open_orders_by_user_id_and_symbol, update_order_with_tracking
+        from app.crud.crud_order import get_open_orders_by_user_id_and_symbol, update_order_with_tracking
         order_model_class = get_order_model(user_type)
         all_open_orders_for_symbol = await get_open_orders_by_user_id_and_symbol(
             db=db, user_id=db_user_locked.id, symbol=order_company_name, order_model=order_model_class
@@ -1134,7 +1142,10 @@ async def close_order(
         non_symbol_margin = current_overall_margin - margin_before_recalc
 
         # Calculate margin after closing this order
-        remaining_orders_for_symbol_after_close = [o for o in all_open_orders_for_symbol if get_attr(o, 'order_id') != order_id]
+        remaining_orders_for_symbol_after_close = [
+            o for o in all_open_orders_for_symbol
+            if str(get_attr(o, 'order_id')) != str(order_id)
+        ]
         margin_after_symbol_recalc_dict = await calculate_total_symbol_margin_contribution(
             db=db,
             redis_client=redis_client,
@@ -1155,11 +1166,9 @@ async def close_order(
         symbol_info_stmt = select(ExternalSymbolInfo).filter(ExternalSymbolInfo.fix_symbol.ilike(order_company_name))
         symbol_info_result = await db.execute(symbol_info_stmt)
         ext_symbol_info = symbol_info_result.scalars().first()
-        
         if not ext_symbol_info or ext_symbol_info.contract_size is None or ext_symbol_info.profit is None:
             logger.error(f"[ORDER_CLOSE] Missing critical ExternalSymbolInfo for symbol {order_company_name}.")
             return
-
         contract_size = Decimal(str(ext_symbol_info.contract_size))
         profit_currency = ext_symbol_info.profit.upper()
 
@@ -1169,8 +1178,6 @@ async def close_order(
         if not group_settings:
             logger.error("[ORDER_CLOSE] Group settings not found for commission calculation.")
             return
-
-        # Calculate commission
         commission_type = int(group_settings.get('commision_type', -1))
         commission_value_type = int(group_settings.get('commision_value_type', -1))
         commission_rate = Decimal(str(group_settings.get('commision', "0.0")))
@@ -1178,7 +1185,6 @@ async def close_order(
         exit_commission = Decimal("0.0")
         quantity = Decimal(str(order_quantity))
         entry_price = Decimal(str(order_price))
-
         if commission_type in [0, 2]:
             if commission_value_type == 0:
                 exit_commission = quantity * commission_rate
@@ -1186,7 +1192,6 @@ async def close_order(
                 calculated_exit_contract_value = quantity * contract_size * close_price
                 if calculated_exit_contract_value > Decimal("0.0"):
                     exit_commission = (commission_rate / Decimal("100")) * calculated_exit_contract_value
-
         total_commission_for_trade = (existing_entry_commission + exit_commission).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         # Calculate profit/loss
@@ -1197,54 +1202,98 @@ async def close_order(
         else:
             logger.error("[ORDER_CLOSE] Invalid order type.")
             return
-
-        # Convert profit to USD if needed
         profit_usd = await _convert_to_usd(profit, profit_currency, db_user_locked.id, order_id, "PnL on Close", db=db, redis_client=redis_client)
         if profit_currency != "USD" and profit_usd == profit:
             logger.error(f"[ORDER_CLOSE] Order {order_id}: PnL conversion failed. Rates missing for {profit_currency}/USD.")
             return
-
-        # Generate close_id
         from app.services.order_processing import generate_unique_10_digit_id
         close_id_val = await generate_unique_10_digit_id(db, order_model_class, 'close_id')
 
-        # Prepare update fields for DB
-        update_fields = {
-            "order_status": "CLOSED",
-            "close_price": close_price,
-            "close_id": close_id_val,
-            "net_profit": (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-            "swap": swap or Decimal("0.0"),
-            "commission": total_commission_for_trade,
-            "close_message": f"Closed automatically due to {close_reason}"
-        }
+        # Update order fields on ORM object
+        db_order_obj.order_status = "CLOSED"
+        db_order_obj.close_price = close_price
+        db_order_obj.net_profit = (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        db_order_obj.swap = swap or Decimal("0.0")
+        db_order_obj.commission = total_commission_for_trade
+        db_order_obj.close_id = close_id_val
+        db_order_obj.close_message = f"Closed automatically due to {close_reason}"
 
-        # Always pass an ORM order object to update_order_with_tracking
-        db_order_obj = order if not isinstance(order, dict) else None
-        if db_order_obj is None:
-            from app.crud.crud_order import get_order_by_id
-            db_order_obj = await get_order_by_id(db, order_id, order_model_class)
-            if db_order_obj is None:
-                logger.error(f"[ORDER_CLOSE] Could not fetch ORM order object for order_id={order_id} (user_id={order_user_id})")
-                return
-
+        # Update order with tracking
         await update_order_with_tracking(
             db=db,
             db_order=db_order_obj,
-            update_fields=update_fields,
+            update_fields={
+                "order_status": db_order_obj.order_status,
+                "close_price": db_order_obj.close_price,
+                "close_id": db_order_obj.close_id,
+                "net_profit": db_order_obj.net_profit,
+                "swap": db_order_obj.swap,
+                "commission": db_order_obj.commission,
+                "close_message": db_order_obj.close_message
+            },
             user_id=db_user_locked.id,
             user_type=user_type,
-            action_type="AUTO_CLOSE"
+            action_type=f"AUTO_{close_reason.upper()}_CLOSE"
         )
 
         # Update user's wallet balance
         original_wallet_balance = Decimal(str(db_user_locked.wallet_balance))
-        swap_amount = swap or Decimal("0.0")
-        db_user_locked.wallet_balance = (original_wallet_balance + update_fields["net_profit"] - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+        swap_amount = db_order_obj.swap
+        db_user_locked.wallet_balance = (original_wallet_balance + db_order_obj.net_profit - swap_amount).quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)
+
+        # Create wallet transactions
+        from app.database.models import Wallet
+        from app.schemas.wallet import WalletCreate
+        transaction_time = datetime.now(timezone.utc)
+        wallet_common_data = {
+            "symbol": order_company_name,
+            "order_quantity": quantity,
+            "is_approved": 1,
+            "order_type": order_type,
+            "transaction_time": transaction_time,
+            "order_id": str(order_id)
+        }
+        if user_type == 'demo':
+            wallet_common_data["demo_user_id"] = db_user_locked.id
+        else:
+            wallet_common_data["user_id"] = db_user_locked.id
+        if db_order_obj.net_profit != Decimal("0.0"):
+            transaction_id_profit = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=db_order_obj.net_profit, description=f"P/L for closing order {order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_profit))
+        if total_commission_for_trade > Decimal("0.0"):
+            transaction_id_commission = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for closing order {order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_commission))
+        if swap_amount != Decimal("0.0"):
+            transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
+            db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
 
         await db.commit()
+        await db.refresh(db_order_obj)
         await db.refresh(db_user_locked)
         logger.info(f"[ORDER_CLOSE] Successfully closed order {order_id} for user {order_user_id}")
+
+        # --- Websocket and cache updates ---
+        user_type_str = 'demo' if user_type == 'demo' else 'live'
+        user_data_to_cache = {
+            "id": db_user_locked.id,
+            "email": getattr(db_user_locked, 'email', None),
+            "group_name": db_user_locked.group_name,
+            "leverage": db_user_locked.leverage,
+            "user_type": user_type_str,
+            "account_number": getattr(db_user_locked, 'account_number', None),
+            "wallet_balance": db_user_locked.wallet_balance,
+            "margin": db_user_locked.margin,
+            "first_name": getattr(db_user_locked, 'first_name', None),
+            "last_name": getattr(db_user_locked, 'last_name', None),
+            "country": getattr(db_user_locked, 'country', None),
+            "phone_number": getattr(db_user_locked, 'phone_number', None),
+        }
+        await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
+        from app.api.v1.endpoints.orders import update_user_static_orders, publish_order_update, publish_user_data_update, publish_market_data_trigger
+        await update_user_static_orders(db_user_locked.id, db, redis_client, user_type_str)
+        await publish_order_update(redis_client, db_user_locked.id)
+        await publish_user_data_update(redis_client, db_user_locked.id)
+        await publish_market_data_trigger(redis_client)
     except Exception as e:
         logger.error(f"[ORDER_CLOSE] Error closing order {get_attr(order, 'order_id')}: {e}", exc_info=True)
 
