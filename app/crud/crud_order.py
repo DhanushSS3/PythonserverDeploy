@@ -28,10 +28,24 @@ async def create_order(db: AsyncSession, order_data: dict, order_model: Type[Use
     orders_logger = logging.getLogger('orders')
     orders_logger.info(f"[ENTER-CRUD] create_order called with: {order_data}")
     orders_logger.debug(f"[DEBUG][create_order] Received order_data: {order_data}")
-    # Ensure 'status' is present and valid
-    if 'status' not in order_data or not isinstance(order_data['status'], str) or not (0 <= len(order_data['status']) <= 30):
-        orders_logger.debug(f"[DEBUG][create_order] status field value: {order_data.get('status')}")
-        raise ValueError("'status' is required and must be a string of length 10-30.")
+    
+    # Handle status field validation based on model type
+    status_value = order_data.get('status')
+    if status_value is not None:  # Only validate if status is provided
+        if not isinstance(status_value, str):
+            orders_logger.debug(f"[DEBUG][create_order] status field value: {status_value}")
+            raise ValueError("'status' must be a string if provided.")
+        
+        # Different validation rules for different models
+        if order_model.__name__ == 'DemoUserOrder':
+            if not (10 <= len(status_value) <= 30):
+                orders_logger.debug(f"[DEBUG][create_order] DemoUserOrder status length: {len(status_value)}")
+                raise ValueError("'status' must be a string of length 10-30 for demo orders.")
+        else:  # UserOrder
+            if not (0 <= len(status_value) <= 30):
+                orders_logger.debug(f"[DEBUG][create_order] UserOrder status length: {len(status_value)}")
+                raise ValueError("'status' must be a string of length 0-30 for live orders.")
+    
     db_order = order_model(**order_data)
     db.add(db_order)
     
@@ -321,10 +335,23 @@ async def create_user_order(
     orders_logger = logging.getLogger('orders')
     orders_logger.debug(f"[DEBUG][create_user_order] Received order_data: {order_data}")
     try:
-        # Ensure 'status' is present and valid
-        if 'status' not in order_data or not isinstance(order_data['status'], str) or not (0 <= len(order_data['status']) <= 30):
-            orders_logger.debug(f"[DEBUG][create_user_order] status field value: {order_data.get('status')}")
-            raise ValueError("'status' is required and must be a string of length 10-30.")
+        # Handle status field validation based on model type
+        status_value = order_data.get('status')
+        if status_value is not None:  # Only validate if status is provided
+            if not isinstance(status_value, str):
+                orders_logger.debug(f"[DEBUG][create_user_order] status field value: {status_value}")
+                raise ValueError("'status' must be a string if provided.")
+            
+            # Different validation rules for different models
+            if order_model.__name__ == 'DemoUserOrder':
+                if not (10 <= len(status_value) <= 30):
+                    orders_logger.debug(f"[DEBUG][create_user_order] DemoUserOrder status length: {len(status_value)}")
+                    raise ValueError("'status' must be a string of length 10-30 for demo orders.")
+            else:  # UserOrder
+                if not (0 <= len(status_value) <= 30):
+                    orders_logger.debug(f"[DEBUG][create_user_order] UserOrder status length: {len(status_value)}")
+                    raise ValueError("'status' must be a string of length 0-30 for live orders.")
+        
         db_order = order_model(**order_data)
         db.add(db_order)
         
@@ -368,10 +395,21 @@ async def update_order(
     db_order = result.scalars().first()
     if not db_order:
         return None
+    
     # If 'status' is being updated, validate it
     if 'status' in order_data and order_data['status'] is not None:
-        if not isinstance(order_data['status'], str) or not (10 <= len(order_data['status']) <= 30):
-            raise ValueError("'status' must be a string of length 10-30.")
+        status_value = order_data['status']
+        if not isinstance(status_value, str):
+            raise ValueError("'status' must be a string if provided.")
+        
+        # Different validation rules for different models
+        if order_model.__name__ == 'DemoUserOrder':
+            if not (10 <= len(status_value) <= 30):
+                raise ValueError("'status' must be a string of length 10-30 for demo orders.")
+        else:  # UserOrder
+            if not (0 <= len(status_value) <= 30):
+                raise ValueError("'status' must be a string of length 0-30 for live orders.")
+    
     for key, value in order_data.items():
         setattr(db_order, key, value)
     await db.commit()

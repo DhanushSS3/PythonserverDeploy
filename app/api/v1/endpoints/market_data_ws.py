@@ -473,18 +473,26 @@ async def per_connection_redis_listener(
                         
                         # IMPORTANT: Create a new database session for this operation to ensure fresh data
                         async with AsyncSessionLocal() as refresh_db:
-                            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
-                        
-                        # Log the static orders that were fetched
-                        open_orders_count = len(static_orders.get("open_orders", []))
-                        pending_orders_count = len(static_orders.get("pending_orders", []))
-                        logger.info(f"User {user_id}: Refreshed static orders cache: {open_orders_count} open orders, {pending_orders_count} pending orders")
-                        logger.info(f"User {user_id}: Static orders content: {json.dumps(static_orders, cls=DecimalEncoder)}")
+                            try:
+                                static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+                                
+                                # Log the static orders that were fetched
+                                open_orders_count = len(static_orders.get("open_orders", []))
+                                pending_orders_count = len(static_orders.get("pending_orders", []))
+                                logger.info(f"User {user_id}: Refreshed static orders cache: {open_orders_count} open orders, {pending_orders_count} pending orders")
+                                logger.info(f"User {user_id}: Static orders content: {json.dumps(static_orders, cls=DecimalEncoder)}")
+                            except Exception as e:
+                                logger.error(f"User {user_id}: Error updating static orders cache: {e}", exc_info=True)
+                                static_orders = {"open_orders": [], "pending_orders": []}
                         
                         # Get fresh user data to ensure we have the latest balance and margin
+                        user_data = None
                         async with AsyncSessionLocal() as refresh_db:
-                            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
-                            logger.info(f"User {user_id}: Fresh user data fetched for order update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+                            try:
+                                user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+                                logger.info(f"User {user_id}: Fresh user data fetched for order update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+                            except Exception as e:
+                                logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
                         
                         # Get the latest dynamic portfolio data
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
@@ -536,16 +544,20 @@ async def per_connection_redis_listener(
                         logger.info(f"User {user_id}: Received user data update notification")
                         
                         # Refresh user data cache with a fresh database session
+                        user_data = None
                         async with AsyncSessionLocal() as refresh_db:
-                            logger.info(f"User {user_id}: Fetching fresh user data from database")
-                            user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
-                            logger.info(f"User {user_id}: User data fetched from database: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
-                            
-                            # Log specific wallet_balance and margin values
-                            if user_data:
-                                wallet_balance = user_data.get("wallet_balance", "0.0")
-                                margin = user_data.get("margin", "0.0")
-                                logger.info(f"User {user_id}: IMPORTANT - Fresh wallet_balance={wallet_balance}, margin={margin}")
+                            try:
+                                logger.info(f"User {user_id}: Fetching fresh user data from database")
+                                user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+                                logger.info(f"User {user_id}: User data fetched from database: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
+                                
+                                # Log specific wallet_balance and margin values
+                                if user_data:
+                                    wallet_balance = user_data.get("wallet_balance", "0.0")
+                                    margin = user_data.get("margin", "0.0")
+                                    logger.info(f"User {user_id}: IMPORTANT - Fresh wallet_balance={wallet_balance}, margin={margin}")
+                            except Exception as e:
+                                logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
                         
                         # Get the latest dynamic portfolio data
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
@@ -562,10 +574,15 @@ async def per_connection_redis_listener(
                             }
                         
                         # Get static orders to include in the response - use fresh database session
+                        static_orders = None
                         async with AsyncSessionLocal() as refresh_db:
-                            logger.info(f"User {user_id}: Fetching fresh static orders from database")
-                            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
-                            logger.info(f"User {user_id}: Static orders fetched from database: {len(static_orders.get('open_orders', []))} open orders, {len(static_orders.get('pending_orders', []))} pending orders")
+                            try:
+                                logger.info(f"User {user_id}: Fetching fresh static orders from database")
+                                static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+                                logger.info(f"User {user_id}: Static orders fetched from database: {len(static_orders.get('open_orders', []))} open orders, {len(static_orders.get('pending_orders', []))} pending orders")
+                            except Exception as e:
+                                logger.error(f"User {user_id}: Error updating static orders cache: {e}", exc_info=True)
+                                static_orders = {"open_orders": [], "pending_orders": []}
                         
                         # Send update to client using market_update type for consistency
                         if websocket.client_state == WebSocketState.CONNECTED:
@@ -667,6 +684,12 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
     except Exception as e:
         logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
         return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
+    finally:
+        # Ensure database session is properly handled
+        try:
+            await db.close()
+        except Exception:
+            pass  # Ignore close errors
 
 async def update_dynamic_portfolio_cache(
     user_id: int,
@@ -720,6 +743,12 @@ async def update_dynamic_portfolio_cache(
     except Exception as e:
         logger.error(f"Error updating dynamic portfolio cache for user {user_id}: {e}", exc_info=True)
         return None
+    finally:
+        # Ensure database session is properly handled
+        try:
+            await db.close()
+        except Exception:
+            pass  # Ignore close errors
 
 async def process_portfolio_update(
     user_id: int,
@@ -749,21 +778,28 @@ async def process_portfolio_update(
             
             # Create a new database session for fresh data
             async with AsyncSessionLocal() as refresh_db:
-                static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+                try:
+                    static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
+                except Exception as e:
+                    logger.error(f"User {user_id}: Error updating static orders cache: {e}", exc_info=True)
+                    static_orders = {"open_orders": [], "pending_orders": []}
         
         open_positions = static_orders.get("open_orders", []) if static_orders else []
         pending_orders = static_orders.get("pending_orders", []) if static_orders else []
         
         # Update dynamic portfolio cache with current market prices
-        await update_dynamic_portfolio_cache(
-            user_id=user_id,
-            group_name=group_name,
-            open_positions=open_positions,
-            adjusted_market_prices=adjusted_prices,
-            redis_client=redis_client,
-            db=db,
-            user_type=user_type
-        )
+        try:
+            await update_dynamic_portfolio_cache(
+                user_id=user_id,
+                group_name=group_name,
+                open_positions=open_positions,
+                adjusted_market_prices=adjusted_prices,
+                redis_client=redis_client,
+                db=db,
+                user_type=user_type
+            )
+        except Exception as e:
+            logger.error(f"User {user_id}: Error updating dynamic portfolio cache: {e}", exc_info=True)
         
         # Get dynamic portfolio from cache
         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
@@ -773,7 +809,10 @@ async def process_portfolio_update(
         if not user_data:
             logger.warning(f"User {user_id}: User data cache empty. Fetching from database.")
             async with AsyncSessionLocal() as refresh_db:
-                user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+                try:
+                    user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
+                except Exception as e:
+                    logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
         
         if not dynamic_portfolio:
             dynamic_portfolio = {
@@ -815,6 +854,12 @@ async def process_portfolio_update(
             logger.debug(f"User {user_id}: Sent positions + market prices update")
     except Exception as e:
         logger.error(f"User {user_id}: Error processing portfolio update: {e}", exc_info=True)
+    finally:
+        # Ensure database session is properly handled
+        try:
+            await db.close()
+        except Exception:
+            pass  # Ignore close errors
 
 
 # app/api/v1/endpoints/market_data_ws.py
@@ -920,7 +965,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             "country": getattr(db_user_instance, 'country', None),
             "phone_number": getattr(db_user_instance, 'phone_number', None)
         }
-        await set_user_data_cache(redis_client, db_user_id, user_data_to_cache)
+        await set_user_data_cache(redis_client, db_user_id, user_data_to_cache, user_type)
 
         # Always use user_type to select the correct order model
         order_model_class = get_order_model(user_type)

@@ -33,11 +33,14 @@ class OrderCreateInternal(BaseModel):
     order_quantity: Decimal
     contract_value: Optional[Decimal]
     margin: Optional[Decimal]
+    commission: Optional[Decimal] = None
     status: Optional[str] = Field(None, description="Order status string (0-30 chars)")
 
     # Optional financials
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
+    stoploss_id: Optional[str] = None
+    takeprofit_id: Optional[str] = None
     close_id: Optional[str] = None # Added for tracking closed orders
 
 
@@ -49,7 +52,7 @@ class OrderResponse(BaseModel):
     order_type: str
     order_quantity: Decimal
     order_price: Decimal
-    status: str
+    status: Optional[str] = None  # Allow None to match database nullable=True
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
     order_status: str

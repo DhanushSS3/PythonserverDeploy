@@ -1,0 +1,75 @@
+2025-07-03 22:24:02,697 - ERROR - error - Error in place_order: cannot access local variable 'validate_user_order_permissions' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 329, in place_order
+    validate_user_order_permissions(current_user, symbol, order_type, quantity),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'validate_user_order_permissions' where it is not associated with a value
+2025-07-03 22:27:04,573 - ERROR - error - Error in place_order: Failed to process order: Margin calculation failed
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 260, in process_new_order_ultra_optimized
+    raise OrderProcessingError("Margin calculation failed")
+app.services.order_processing.OrderProcessingError: Margin calculation failed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 380, in place_order
+    processed_order_data = await process_new_order(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 343, in process_new_order_ultra_optimized
+    raise OrderProcessingError(f"Failed to process order: {str(e)}")
+app.services.order_processing.OrderProcessingError: Failed to process order: Margin calculation failed
+2025-07-03 22:28:17,049 - ERROR - error - Error in place_order: Failed to process order: Margin calculation failed
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 260, in process_new_order_ultra_optimized
+    raise OrderProcessingError("Margin calculation failed")
+app.services.order_processing.OrderProcessingError: Margin calculation failed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 380, in place_order
+    processed_order_data = await process_new_order(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\app\services\order_processing.py", line 343, in process_new_order_ultra_optimized
+    raise OrderProcessingError(f"Failed to process order: {str(e)}")
+app.services.order_processing.OrderProcessingError: Failed to process order: Margin calculation failed
+2025-07-03 22:31:28,151 - ERROR - error - Error in place_order: 'status' is required and must be a string of length 10-30.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 413, in place_order
+    new_order = await crud_order.create_user_order(db=db, order_data=order_create_data.dict())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\crud\crud_order.py", line 359, in create_user_order
+    raise e
+  File "C:\Users\Dhanush\FASTAPI\app\crud\crud_order.py", line 327, in create_user_order
+    raise ValueError("'status' is required and must be a string of length 10-30.")
+ValueError: 'status' is required and must be a string of length 10-30.
+2025-07-03 22:35:52,858 - ERROR - error - Error in place_order: cannot access local variable 'update_user_cache' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 420, in place_order
+    background_tasks.add_task(update_user_cache)
+                              ^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'update_user_cache' where it is not associated with a value
+2025-07-03 22:39:41,140 - ERROR - error - Error in place_order: 1 validation error for OrderResponse
+status
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 472, in place_order
+    return OrderResponse(
+        id=new_order.id,
+    ...<26 lines>...
+        updated_at=new_order.updated_at
+    )
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\pydantic\main.py", line 253, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for OrderResponse
+status
+  Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type

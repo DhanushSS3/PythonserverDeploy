@@ -7,7 +7,10 @@ from redis.asyncio import Redis
 import decimal # Import Decimal for type hinting and serialization
 import datetime
 from app.core.firebase import get_latest_market_data
-
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
+from decimal import Decimal
+from functools import wraps
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
@@ -32,6 +35,7 @@ REDIS_ORDER_UPDATES_CHANNEL = 'order_updates'
 REDIS_USER_DATA_UPDATES_CHANNEL = 'user_data_updates'
 
 # Expiry times (adjust as needed)
+CACHE_EXPIRY = 60 * 60  # Default cache expiry: 1 hour
 USER_DATA_CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60 # Example: User session length
 # USER_DATA_CACHE_EXPIRY_SECONDS = 10
 USER_PORTFOLIO_CACHE_EXPIRY_SECONDS = 5 * 60 # Example: Short expiry, updated frequently
@@ -63,7 +67,7 @@ def decode_decimal(obj):
 
 
 # --- User Data Cache (Modified) ---
-async def set_user_data_cache(redis_client: Redis, user_id: int, data: Dict[str, Any]):
+async def set_user_data_cache(redis_client: Redis, user_id: int, data: Dict[str, Any], user_type: str = 'live'):
     """
     Stores relatively static user data (like group_name, leverage) in Redis.
     """
@@ -71,12 +75,12 @@ async def set_user_data_cache(redis_client: Redis, user_id: int, data: Dict[str,
         cache_logger.warning(f"Redis client not available for setting user data cache for user {user_id}.")
         return
 
-    key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_id}"
+    key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_type}:{user_id}"
     try:
         # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(data, cls=DecimalEncoder)
         await redis_client.set(key, data_serializable, ex=USER_DATA_CACHE_EXPIRY_SECONDS)
-        cache_logger.debug(f"User data cached for user {user_id}")
+        cache_logger.debug(f"User data cached for user {user_id} (type: {user_type})")
     except Exception as e:
         logger.error(f"Error setting user data cache for user {user_id}: {e}", exc_info=True)
 
@@ -95,7 +99,7 @@ async def get_user_data_cache(
         logger.warning(f"Redis client not available for getting user data cache for user {user_id}.")
         return None
 
-    key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_id}"
+    key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_type}:{user_id}"
     try:
         data_json = await redis_client.get(key)
         if data_json:
@@ -108,31 +112,42 @@ async def get_user_data_cache(
             cache_logger.info(f"User data for user {user_id} (type: {user_type}) not in cache. Fetching from DB.")
             db_user_instance = None
             actual_user_type = user_type.lower()
-            if actual_user_type == 'live':
-                db_user_instance = await get_user_by_id(db, user_id, user_type=actual_user_type)
-            elif actual_user_type == 'demo':
-                db_user_instance = await get_demo_user_by_id(db, user_id, user_type=actual_user_type)
-            if db_user_instance:
-                user_data_to_cache = {
-                    "id": db_user_instance.id,
-                    "email": db_user_instance.email,
-                    "group_name": db_user_instance.group_name,
-                    "leverage": db_user_instance.leverage,
-                    "user_type": db_user_instance.user_type,
-                    "account_number": getattr(db_user_instance, 'account_number', None),
-                    "wallet_balance": db_user_instance.wallet_balance,
-                    "margin": db_user_instance.margin,
-                    "first_name": getattr(db_user_instance, 'first_name', None),
-                    "last_name": getattr(db_user_instance, 'last_name', None),
-                    "country": getattr(db_user_instance, 'country', None),
-                    "phone_number": getattr(db_user_instance, 'phone_number', None),
-                }
-                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                logger.info(f"User data for user {user_id} (type: {actual_user_type}) fetched from DB and cached.")
-                return user_data_to_cache
-            else:
-                logger.warning(f"User {user_id} (type: {actual_user_type}) not found in DB. Cannot cache.")
+            try:
+                if actual_user_type == 'live':
+                    db_user_instance = await get_user_by_id(db, user_id, user_type=actual_user_type)
+                elif actual_user_type == 'demo':
+                    db_user_instance = await get_demo_user_by_id(db, user_id, user_type=actual_user_type)
+                
+                if db_user_instance:
+                    user_data_to_cache = {
+                        "id": db_user_instance.id,
+                        "email": db_user_instance.email,
+                        "group_name": db_user_instance.group_name,
+                        "leverage": db_user_instance.leverage,
+                        "user_type": db_user_instance.user_type,
+                        "account_number": getattr(db_user_instance, 'account_number', None),
+                        "wallet_balance": db_user_instance.wallet_balance,
+                        "margin": db_user_instance.margin,
+                        "first_name": getattr(db_user_instance, 'first_name', None),
+                        "last_name": getattr(db_user_instance, 'last_name', None),
+                        "country": getattr(db_user_instance, 'country', None),
+                        "phone_number": getattr(db_user_instance, 'phone_number', None),
+                    }
+                    await set_user_data_cache(redis_client, user_id, user_data_to_cache, actual_user_type)
+                    logger.info(f"User data for user {user_id} (type: {actual_user_type}) fetched from DB and cached.")
+                    return user_data_to_cache
+                else:
+                    logger.warning(f"User {user_id} (type: {actual_user_type}) not found in DB. Cannot cache.")
+                    return None
+            except Exception as db_error:
+                logger.error(f"Database error fetching user data for {user_id}: {db_error}", exc_info=True)
                 return None
+            finally:
+                # Ensure database session is properly handled
+                try:
+                    await db.close()
+                except Exception:
+                    pass  # Ignore close errors
         return None
     except Exception as e:
         logger.error(f"Error getting user data cache for user {user_id}: {e}", exc_info=True)
@@ -666,3 +681,363 @@ async def publish_market_data_trigger(redis_client: Redis, symbol: str = "TRIGGE
         cache_logger.info(f"Published market data trigger for symbol {symbol} to {REDIS_MARKET_DATA_CHANNEL}, received by {result} subscribers")
     except Exception as e:
         logger.error(f"Error publishing market data trigger: {e}", exc_info=True)
+
+# Add optimized batch cache functions for order placement performance
+
+async def get_order_placement_data_batch(
+    redis_client: Redis,
+    user_id: int,
+    symbol: str,
+    group_name: str,
+    db: AsyncSession = None,
+    user_type: str = 'live'
+) -> Dict[str, Any]:
+    """
+    Batch fetch all required data for order placement to reduce Redis round trips.
+    Returns a dictionary with all necessary data for order processing.
+    """
+    try:
+        # Create all cache keys for batch operations
+        user_data_key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_type}:{user_id}"
+        group_settings_key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}"
+        group_symbol_settings_key = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}"
+        adjusted_price_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}"
+        last_price_key = f"{LAST_KNOWN_PRICE_KEY_PREFIX}{symbol.upper()}"
+        
+        # Batch fetch from Redis
+        cache_keys = [user_data_key, group_settings_key, group_symbol_settings_key, adjusted_price_key, last_price_key]
+        cache_results = await redis_client.mget(cache_keys)
+        
+        # Parse results
+        user_data = None
+        group_settings = None
+        group_symbol_settings = None
+        adjusted_prices = None
+        last_price = None
+        
+        if cache_results[0]:  # user_data
+            try:
+                user_data = json.loads(cache_results[0], object_hook=decode_decimal)
+            except (json.JSONDecodeError, Exception) as e:
+                cache_logger.error(f"Error parsing user data cache: {e}")
+        
+        if cache_results[1]:  # group_settings
+            try:
+                group_settings = json.loads(cache_results[1], object_hook=decode_decimal)
+            except (json.JSONDecodeError, Exception) as e:
+                cache_logger.error(f"Error parsing group settings cache: {e}")
+        
+        if cache_results[2]:  # group_symbol_settings
+            try:
+                group_symbol_settings = json.loads(cache_results[2], object_hook=decode_decimal)
+            except (json.JSONDecodeError, Exception) as e:
+                cache_logger.error(f"Error parsing group symbol settings cache: {e}")
+        
+        if cache_results[3]:  # adjusted_prices
+            try:
+                adjusted_prices = json.loads(cache_results[3])
+            except (json.JSONDecodeError, Exception) as e:
+                cache_logger.error(f"Error parsing adjusted prices cache: {e}")
+        
+        if cache_results[4]:  # last_price
+            try:
+                last_price = json.loads(cache_results[4])
+            except (json.JSONDecodeError, Exception) as e:
+                cache_logger.error(f"Error parsing last price cache: {e}")
+        
+        return {
+            'user_data': user_data,
+            'group_settings': group_settings,
+            'group_symbol_settings': group_symbol_settings,
+            'adjusted_prices': adjusted_prices,
+            'last_price': last_price,
+            'cache_hits': sum(1 for r in cache_results if r is not None),
+            'total_keys': len(cache_keys)
+        }
+        
+    except Exception as e:
+        cache_logger.error(f"Error in batch cache fetch: {e}", exc_info=True)
+        return {
+            'user_data': None,
+            'group_settings': None,
+            'group_symbol_settings': None,
+            'adjusted_prices': None,
+            'last_price': None,
+            'cache_hits': 0,
+            'total_keys': 5
+        }
+
+async def get_market_data_batch(
+    redis_client: Redis,
+    symbols: List[str],
+    group_name: str
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Batch fetch market data for multiple symbols to reduce Redis round trips.
+    """
+    try:
+        # Create cache keys for all symbols
+        adjusted_price_keys = [f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}" for symbol in symbols]
+        last_price_keys = [f"{LAST_KNOWN_PRICE_KEY_PREFIX}{symbol.upper()}" for symbol in symbols]
+        
+        # Batch fetch
+        all_keys = adjusted_price_keys + last_price_keys
+        cache_results = await redis_client.mget(all_keys)
+        
+        # Split results
+        adjusted_results = cache_results[:len(adjusted_price_keys)]
+        last_price_results = cache_results[len(adjusted_price_keys):]
+        
+        # Build result dictionary
+        market_data = {}
+        for i, symbol in enumerate(symbols):
+            symbol_data = {}
+            
+            # Parse adjusted prices
+            if adjusted_results[i]:
+                try:
+                    adjusted_prices = json.loads(adjusted_results[i])
+                    symbol_data['adjusted_prices'] = adjusted_prices
+                except (json.JSONDecodeError, Exception):
+                    symbol_data['adjusted_prices'] = None
+            
+            # Parse last price
+            if last_price_results[i]:
+                try:
+                    last_price = json.loads(last_price_results[i])
+                    symbol_data['last_price'] = last_price
+                except (json.JSONDecodeError, Exception):
+                    symbol_data['last_price'] = None
+            
+            market_data[symbol.upper()] = symbol_data
+        
+        return market_data
+        
+    except Exception as e:
+        cache_logger.error(f"Error in batch market data fetch: {e}", exc_info=True)
+        return {}
+
+# Optimized price fetching function
+async def get_price_for_order_type(
+    redis_client: Redis,
+    symbol: str,
+    order_type: str,
+    group_name: str,
+    raw_market_data: Dict[str, Any] = None
+) -> Optional[Decimal]:
+    """
+    Get the appropriate price for an order type with optimized caching.
+    """
+    try:
+        # Try cache first
+        cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}"
+        cached_data = await redis_client.get(cache_key)
+        
+        if cached_data:
+            try:
+                price_data = json.loads(cached_data)
+                if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                    buy_price = price_data.get("buy")
+                    if buy_price:
+                        return Decimal(str(buy_price))
+                else:  # SELL orders
+                    sell_price = price_data.get("sell")
+                    if sell_price:
+                        return Decimal(str(sell_price))
+            except (json.JSONDecodeError, decimal.InvalidOperation):
+                pass
+        
+        # Fallback to raw market data
+        if raw_market_data and symbol in raw_market_data:
+            symbol_data = raw_market_data[symbol]
+            if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                price_raw = symbol_data.get('ask', symbol_data.get('o', '0'))
+            else:
+                price_raw = symbol_data.get('bid', symbol_data.get('b', '0'))
+            
+            if price_raw and price_raw != '0':
+                return Decimal(str(price_raw))
+        
+        # Final fallback to last known price
+        last_price_key = f"{LAST_KNOWN_PRICE_KEY_PREFIX}{symbol.upper()}"
+        last_price_data = await redis_client.get(last_price_key)
+        
+        if last_price_data:
+            try:
+                last_price = json.loads(last_price_data)
+                if order_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                    price_raw = last_price.get('o', last_price.get('ask', '0'))
+                else:
+                    price_raw = last_price.get('b', last_price.get('bid', '0'))
+                
+                if price_raw and price_raw != '0':
+                    return Decimal(str(price_raw))
+            except (json.JSONDecodeError, decimal.InvalidOperation):
+                pass
+        
+        return None
+        
+    except Exception as e:
+        cache_logger.error(f"Error getting price for {symbol} {order_type}: {e}", exc_info=True)
+        return None
+
+# Add ultra-optimized batch cache functions for maximum performance
+
+async def get_order_placement_data_batch_ultra(
+    redis_client: Redis,
+    user_id: int,
+    symbol: str,
+    group_name: str,
+    db: AsyncSession = None,
+    user_type: str = 'live'
+) -> Dict[str, Any]:
+    """
+    ULTRA-OPTIMIZED batch fetch all required data for order placement.
+    Uses pipeline operations to minimize Redis round trips.
+    """
+    try:
+        # Create all cache keys for batch operations
+        user_data_key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_type}:{user_id}"
+        group_settings_key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}"
+        group_symbol_settings_key = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}"
+        market_data_key = f"market_data:{symbol.upper()}"
+        last_price_key = f"last_price:{symbol.upper()}"
+        
+        # Use Redis pipeline for batch operations
+        async with redis_client.pipeline() as pipe:
+            # Queue all operations
+            await pipe.get(user_data_key)
+            await pipe.get(group_settings_key)
+            await pipe.get(group_symbol_settings_key)
+            await pipe.get(market_data_key)
+            await pipe.get(last_price_key)
+            
+            # Execute all operations in one round trip
+            results = await pipe.execute()
+        
+        # Parse results
+        user_data = json.loads(results[0]) if results[0] else None
+        group_settings = json.loads(results[1]) if results[1] else None
+        group_symbol_settings = json.loads(results[2]) if results[2] else None
+        market_data = json.loads(results[3]) if results[3] else None
+        last_price = json.loads(results[4]) if results[4] else None
+        
+        return {
+            'user_data': user_data,
+            'group_settings': group_settings,
+            'group_symbol_settings': group_symbol_settings,
+            'market_data': market_data,
+            'last_price': last_price,
+            'cache_hit_rate': sum(1 for r in results if r is not None) / len(results)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in batch cache fetch: {e}", exc_info=True)
+        return None
+
+async def set_order_placement_data_batch_ultra(
+    redis_client: Redis,
+    user_id: int,
+    symbol: str,
+    group_name: str,
+    data: Dict[str, Any],
+    user_type: str = 'live'
+) -> bool:
+    """
+    ULTRA-OPTIMIZED batch set all data for order placement.
+    Uses pipeline operations to minimize Redis round trips.
+    """
+    try:
+        # Create all cache keys
+        user_data_key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_type}:{user_id}"
+        group_settings_key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}"
+        group_symbol_settings_key = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}"
+        
+        # Use Redis pipeline for batch operations
+        async with redis_client.pipeline() as pipe:
+            # Queue all set operations
+            if data.get('user_data'):
+                await pipe.setex(user_data_key, CACHE_EXPIRY, json.dumps(data['user_data'], cls=DecimalEncoder))
+            if data.get('group_settings'):
+                await pipe.setex(group_settings_key, CACHE_EXPIRY, json.dumps(data['group_settings'], cls=DecimalEncoder))
+            if data.get('group_symbol_settings'):
+                await pipe.setex(group_symbol_settings_key, CACHE_EXPIRY, json.dumps(data['group_symbol_settings'], cls=DecimalEncoder))
+            
+            # Execute all operations in one round trip
+            await pipe.execute()
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error in batch cache set: {e}", exc_info=True)
+        return False
+
+# Add connection pooling optimization
+class RedisConnectionPool:
+    """
+    Optimized Redis connection pool for high-performance operations.
+    """
+    def __init__(self, redis_client: Redis):
+        self.redis_client = redis_client
+        self._pipeline_cache = {}
+    
+    async def get_batch(self, keys: List[str]) -> Dict[str, Any]:
+        """
+        Batch get multiple keys in one operation.
+        """
+        try:
+            async with self.redis_client.pipeline() as pipe:
+                for key in keys:
+                    await pipe.get(key)
+                results = await pipe.execute()
+            
+            return {key: json.loads(result) if result else None for key, result in zip(keys, results)}
+        except Exception as e:
+            logger.error(f"Error in batch get: {e}", exc_info=True)
+            return {}
+    
+    async def set_batch(self, data: Dict[str, Any], expiry: int = CACHE_EXPIRY) -> bool:
+        """
+        Batch set multiple keys in one operation.
+        """
+        try:
+            async with self.redis_client.pipeline() as pipe:
+                for key, value in data.items():
+                    await pipe.setex(key, expiry, json.dumps(value, cls=DecimalEncoder))
+                await pipe.execute()
+            return True
+        except Exception as e:
+            logger.error(f"Error in batch set: {e}", exc_info=True)
+            return False
+
+# Add ultra-fast cache decorator
+def ultra_fast_cache(expiry: int = 300):
+    """
+    Ultra-fast cache decorator with intelligent invalidation.
+    """
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Generate cache key
+            cache_key = f"ultra_cache:{func.__name__}:{hash(str(args) + str(sorted(kwargs.items())))}"
+            
+            # Try to get from cache
+            try:
+                cached_result = await redis_client.get(cache_key)
+                if cached_result:
+                    return json.loads(cached_result)
+            except Exception:
+                pass
+            
+            # Execute function
+            result = await func(*args, **kwargs)
+            
+            # Cache result
+            try:
+                await redis_client.setex(cache_key, expiry, json.dumps(result, cls=DecimalEncoder))
+            except Exception:
+                pass
+            
+            return result
+        return wrapper
+    return decorator

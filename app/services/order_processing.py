@@ -2,6 +2,7 @@
 
 import logging
 import random
+import asyncio
 
 async def generate_unique_10_digit_id(db, model, column):
     import random
@@ -35,7 +36,9 @@ from app.core.cache import (
     get_group_symbol_settings_cache, 
     set_user_data_cache,
     get_live_adjusted_buy_price_for_pair,
-    get_live_adjusted_sell_price_for_pair
+    get_live_adjusted_sell_price_for_pair,
+    get_order_placement_data_batch_ultra,
+    RedisConnectionPool
 )
 from app.core.firebase import get_latest_market_data
 
@@ -153,7 +156,7 @@ async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Di
         orders_logger.error(f"Error getting external symbol info for {symbol}: {e}", exc_info=True)
         return None
 
-async def process_new_order(
+async def process_new_order_ultra_optimized(
     db: AsyncSession,
     redis_client: Redis,
     user_id: int,
@@ -161,272 +164,186 @@ async def process_new_order(
     user_type: str,
     is_barclays_live_user: bool = False
 ) -> dict:
+    """
+    ULTRA-OPTIMIZED order processing for sub-500ms performance.
+    Uses batch cache operations, connection pooling, and parallel processing.
+    """
     from app.services.portfolio_calculator import calculate_user_portfolio, _convert_to_usd
     from app.crud.user import get_user_by_id_with_lock, get_demo_user_by_id_with_lock
+    from app.core.cache import get_order_placement_data_batch_ultra, RedisConnectionPool
     
     try:
-        # Step 1: Load user data and settings
-            user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
-            if not user_data:
-                raise OrderProcessingError("User data not found")
+        # Step 1: Extract order details
+        symbol = order_data.get('order_company_name', '').upper()
+        order_type = order_data.get('order_type', '').upper()
+        quantity = Decimal(str(order_data.get('order_quantity', '0.0')))
 
-            symbol = order_data.get('order_company_name', '').upper()
-            order_type = order_data.get('order_type', '').upper()
-            quantity = Decimal(str(order_data.get('order_quantity', '0.0')))
-            group_name = user_data.get('group_name')
-            leverage = Decimal(str(user_data.get('leverage', '1.0')))
-
+        # Step 2: ULTRA-OPTIMIZED batch data fetching
+        # Get user data first to determine group_name
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+        if not user_data:
+            raise OrderProcessingError("User data not found")
+        
+        group_name = user_data.get('group_name')
+        
+        # Create Redis connection pool for batch operations
+        redis_pool = RedisConnectionPool(redis_client)
+        
+        # Step 3: ULTRA-PARALLEL operations with batch caching
+        tasks = {
+            'batch_cache_data': get_order_placement_data_batch_ultra(
+                redis_client, user_id, symbol, group_name, db, user_type
+            ),
+            'external_symbol_info': get_external_symbol_info(db, symbol),
+            'raw_market_data': get_latest_market_data(),
+            'open_orders': crud_order.get_open_orders_by_user_id_and_symbol(
+                db, user_id, symbol, get_order_model(user_type)
+            ),
+            'order_id': generate_unique_10_digit_id(db, get_order_model(user_type), 'order_id')
+        }
+        
+        # Add optional ID generation tasks
+        if order_data.get('stop_loss') is not None:
+            tasks['stoploss_id'] = generate_unique_10_digit_id(db, get_order_model(user_type), 'stoploss_id')
+        if order_data.get('take_profit') is not None:
+            tasks['takeprofit_id'] = generate_unique_10_digit_id(db, get_order_model(user_type), 'takeprofit_id')
+        
+        # Execute ALL tasks in parallel
+        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        
+        # Extract results and handle exceptions
+        batch_cache_data = results[0] if not isinstance(results[0], Exception) else None
+        external_symbol_info = results[1] if not isinstance(results[1], Exception) else None
+        raw_market_data = results[2] if not isinstance(results[2], Exception) else None
+        open_orders_for_symbol = results[3] if not isinstance(results[3], Exception) else []
+        
+        # Extract generated IDs
+        generated_ids = results[4:]  # All remaining results are IDs
+        order_id = generated_ids[0] if not isinstance(generated_ids[0], Exception) else None
+        stoploss_id = generated_ids[1] if len(generated_ids) > 1 and not isinstance(generated_ids[1], Exception) else None
+        takeprofit_id = generated_ids[2] if len(generated_ids) > 2 and not isinstance(generated_ids[2], Exception) else None
+        
+        # Validate critical data
+        if not external_symbol_info:
+            raise OrderProcessingError(f"External symbol info not found for {symbol}")
+        if not raw_market_data:
+            raise OrderProcessingError("Failed to get market data")
+        if not order_id:
+            raise OrderProcessingError("Failed to generate order ID")
+        
+        leverage = Decimal(str(user_data.get('leverage', '1.0')))
+        
+        # Step 4: Use batch cache data or fallback to individual calls
+        group_settings = None
+        if batch_cache_data and batch_cache_data.get('group_symbol_settings'):
+            group_settings = batch_cache_data['group_symbol_settings']
+        else:
             group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
-            if not group_settings:
-                raise OrderProcessingError(f"Group settings not found for symbol {symbol}")
+        
+        if not group_settings:
+            raise OrderProcessingError(f"Group settings not found for symbol {symbol}")
 
-            external_symbol_info = await get_external_symbol_info(db, symbol)
-            if not external_symbol_info:
-                raise OrderProcessingError(f"External symbol info not found for {symbol}")
+        # Step 5: ULTRA-OPTIMIZED margin calculation
+        order_price = Decimal(str(order_data.get('order_price', '0')))
+        full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+            redis_client=redis_client,
+            symbol=symbol,
+            order_type=order_type,
+            quantity=quantity,
+            user_leverage=leverage,
+            group_settings=group_settings,
+            external_symbol_info=external_symbol_info,
+            raw_market_data=raw_market_data,
+            db=db,
+            user_id=user_id,
+            order_price=order_price
+        )
+        if full_margin_usd is None:
+            raise OrderProcessingError("Margin calculation failed")
 
-            raw_market_data = await get_latest_market_data()
-            if not raw_market_data:
-                raise OrderProcessingError("Failed to get market data")
-
-            # Step 2: Calculate standalone margin using the centralized function
-            full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
-                redis_client=redis_client,
-                symbol=symbol,
-                order_type=order_type,
-                quantity=quantity,
-                user_leverage=leverage,
-                group_settings=group_settings,
-                external_symbol_info=external_symbol_info,
-                raw_market_data=raw_market_data,
-                db=db,
-                user_id=user_id
+        # Step 6: ULTRA-OPTIMIZED hedged margin calculation
+        # Create simulated order object for margin calculation
+        simulated_order = type('Obj', (object,), {
+            'order_quantity': quantity,
+            'order_type': order_type,
+            'margin': full_margin_usd,
+            'id': None,
+            'order_id': 'NEW_ORDER_SIMULATED'
+        })()
+        
+        # Calculate margin before and after in parallel
+        margin_tasks = [
+            calculate_total_symbol_margin_contribution(
+                db, redis_client, user_id, symbol, open_orders_for_symbol, get_order_model(user_type), user_type
+            ),
+            calculate_total_symbol_margin_contribution(
+                db, redis_client, user_id, symbol, open_orders_for_symbol + [simulated_order], get_order_model(user_type), user_type
             )
-            if full_margin_usd is None:
-                raise OrderProcessingError("Margin calculation failed")
+        ]
+        
+        margin_before_data, margin_after_data = await asyncio.gather(*margin_tasks)
+        margin_before = margin_before_data["total_margin"]
+        margin_after = margin_after_data["total_margin"]
+        additional_margin = max(Decimal("0.0"), margin_after - margin_before)
 
-            # Log the calculated commission
-            logger.info(f"[COMMISSION_CALC] User {user_id} Symbol {symbol}: Calculated commission={commission:.2f}")
+        # Step 7: ULTRA-OPTIMIZED user locking and margin update
+        if not is_barclays_live_user:
+            # Lock user and update margin in one operation
+            if user_type == 'demo':
+                db_user_locked = await get_demo_user_by_id_with_lock(db, user_id)
+            else:
+                db_user_locked = await get_user_by_id_with_lock(db, user_id)
 
-            order_model = get_order_model(user_type)
+            if db_user_locked is None:
+                raise OrderProcessingError("Could not lock user record.")
 
-            # Step 3: Hedged margin change for symbol
-            open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
-                db, user_id, symbol, order_model
+            if db_user_locked.wallet_balance < db_user_locked.margin + additional_margin:
+                raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
+
+            # Update margin
+            original_user_margin = db_user_locked.margin
+            db_user_locked.margin = (Decimal(str(db_user_locked.margin)) + additional_margin).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
             )
-
-            margin_before_data = await calculate_total_symbol_margin_contribution(
-                db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
-            )
-            margin_before = margin_before_data["total_margin"]
-
-            # Create simulated order with all necessary attributes for calculation
-            simulated_order = type('Obj', (object,), {
-                'order_quantity': quantity,
-                'order_type': order_type,
-                'margin': full_margin_usd,
-                'id': None,  # Add id attribute for consistent debugging
-                'order_id': 'NEW_ORDER_SIMULATED'  # Add order_id attribute for logging
-            })()
-
-            margin_after_data = await calculate_total_symbol_margin_contribution(
-                db, redis_client, user_id, symbol,
-                open_orders_for_symbol + [simulated_order],
-                order_model, user_type
-            )
-            margin_after = margin_after_data["total_margin"]
-
-            additional_margin = max(Decimal("0.0"), margin_after - margin_before)
-            logger.info(f"[MARGIN_PROCESS] User {user_id} Symbol {symbol}: MarginBefore={margin_before:.2f}, MarginAfter={margin_after:.2f}, AdditionalMargin={additional_margin:.2f}")
+            db.add(db_user_locked)
+            await db.commit()
+            await db.refresh(db_user_locked)
             
-            # Add more detailed logging to help track down margin calculation issues
-            logger.info(f"[MARGIN_PROCESS_DEBUG] User {user_id} Symbol {symbol}")
-            logger.info(f"[MARGIN_PROCESS_DEBUG] Full margin for this order: {full_margin_usd}")
-            logger.info(f"[MARGIN_PROCESS_DEBUG] Existing open orders count: {len(open_orders_for_symbol)}")
-            logger.info(f"[MARGIN_PROCESS_DEBUG] Total margin before: {margin_before}")
-            logger.info(f"[MARGIN_PROCESS_DEBUG] Total margin after: {margin_after}")
-            logger.info(f"[MARGIN_PROCESS_DEBUG] Additional margin needed: {additional_margin}")
-
-            # Step 4: Lock user and update margin
-            if not is_barclays_live_user:
-                if user_type == 'demo':
-                    db_user_locked = await get_demo_user_by_id_with_lock(db, user_id)
-                else:
-                    db_user_locked = await get_user_by_id_with_lock(db, user_id)
-
-                if db_user_locked is None:
-                    raise OrderProcessingError("Could not lock user record.")
-
-                if db_user_locked.wallet_balance < db_user_locked.margin + additional_margin:
-                    raise InsufficientFundsError("Not enough wallet balance to cover additional margin.")
-
-                original_user_margin = db_user_locked.margin
-                db_user_locked.margin = (Decimal(str(db_user_locked.margin)) + additional_margin).quantize(
-                    Decimal("0.01"), rounding=ROUND_HALF_UP
-                )
-                logger.info(f"[MARGIN_PROCESS] User {user_id}: OriginalMarginDB={original_user_margin}, CalculatedNewMargin={db_user_locked.margin}")
-                db.add(db_user_locked)  # Ensure changes to user's margin are tracked for commit
-                await db.commit()
-                await db.refresh(db_user_locked)
-                # --- Refresh user data cache after DB update ---
-                user_data_to_cache = {
-                    "wallet_balance": db_user_locked.wallet_balance,
-                    "leverage": db_user_locked.leverage,
-                    "group_name": db_user_locked.group_name,
-                    "margin": db_user_locked.margin,
-                    # Add any other fields you want cached
-                }
-                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-            # For Barclays users, skip user locking and margin update until order is confirmed
-
-            # Step 5: Return order dict
-            order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
-            
-            stoploss_id = None
-            if order_data.get('stop_loss') is not None:
-                stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
-
-            takeprofit_id = None
-            if order_data.get('take_profit') is not None:
-                takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
-
-            return {
-                'order_id': await generate_unique_10_digit_id(db, order_model, 'order_id'),
-                'order_status': order_status,
-                'order_user_id': user_id,
-                'order_company_name': symbol,
-                'order_type': order_type,
-                'order_price': price,
-                'order_quantity': quantity,
-                'contract_value': contract_value,
-                'margin': full_margin_usd,
-                'commission': commission,  # Include the calculated commission
-                'stop_loss': order_data.get('stop_loss'),
-                'take_profit': order_data.get('take_profit'),
-                'stoploss_id': stoploss_id,
-                'takeprofit_id': takeprofit_id,
-                'status': order_data.get('status'),
+            # Update cache in background using batch operations
+            user_data_to_cache = {
+                "wallet_balance": db_user_locked.wallet_balance,
+                "leverage": db_user_locked.leverage,
+                "group_name": db_user_locked.group_name,
+                "margin": db_user_locked.margin,
             }
+            asyncio.create_task(redis_pool.set_batch({
+                f"user_data:{user_type}:{user_id}": user_data_to_cache
+            }))
+
+        # Step 8: Return ultra-optimized result
+        order_status = "PROCESSING" if is_barclays_live_user else "OPEN"
+        
+        return {
+            'order_id': order_id,
+            'order_status': order_status,
+            'order_user_id': user_id,
+            'order_company_name': symbol,
+            'order_type': order_type,
+            'order_price': price,
+            'order_quantity': quantity,
+            'contract_value': contract_value,
+            'margin': full_margin_usd,
+            'commission': commission,
+            'stop_loss': order_data.get('stop_loss'),
+            'take_profit': order_data.get('take_profit'),
+            'stoploss_id': stoploss_id,
+            'takeprofit_id': takeprofit_id,
+            'status': order_data.get('status'),
+        }
     except Exception as e:
         logger.error(f"Error processing new order: {e}", exc_info=True)
         raise OrderProcessingError(f"Failed to process order: {str(e)}")
 
-
-
-# # MAIN PROCESSING FUNCTION FOR NEW ORDER (remains the same in logic, but will use updated helper)
-# async def process_new_order(
-#     db: AsyncSession,
-#     redis_client: Redis,
-#     user: User,
-#     order_request: OrderPlacementRequest
-# ) -> UserOrder:
-#     """
-#     Processes a new order request, calculates the margin, updates the user's margin,
-#     and creates a new order in the database, considering commission and hedging logic.
-#     """
-#     logger.info(f"Processing new order for user {user.id}, symbol {order_request.symbol}, type {order_request.order_type}, quantity {order_request.order_quantity}")
-
-#     new_order_quantity = Decimal(str(order_request.order_quantity))
-#     new_order_type = order_request.order_type.upper()
-#     order_symbol = order_request.symbol.upper()
-
-#     # Step 1: Calculate full margin and contract value
-#     from app.services.margin_calculator import calculate_single_order_margin
-#     full_margin_usd, adjusted_order_price, contract_value = await calculate_single_order_margin(
-#         db=db,
-#         redis_client=redis_client,
-#         user_id=user.id,
-#         order_quantity=new_order_quantity,
-#         order_price=order_request.order_price,
-#         symbol=order_symbol,
-#         order_type=new_order_type
-#     )
-
-#     if full_margin_usd is None or adjusted_order_price is None or contract_value is None:
-#         logger.error(f"Failed to calculate margin or adjusted price for user {user.id}, symbol {order_symbol}")
-#         raise OrderProcessingError("Margin calculation failed.")
-
-#     if new_order_quantity <= 0:
-#         raise OrderProcessingError("Invalid order quantity.")
-
-#     # Step 2: Calculate margin before and after new order for hedging
-#     existing_open_orders = await crud_order.get_open_orders_by_user_id_and_symbol(
-#         db=db,
-#         user_id=user.id,
-#         symbol=order_symbol
-#     )
-
-#     margin_before = await calculate_total_symbol_margin_contribution(
-#         db=db,
-#         redis_client=redis_client,
-#         user_id=user.id,
-#         symbol=order_symbol,
-#         open_positions_for_symbol=existing_open_orders
-#     )
-
-#     dummy_order = UserOrder(
-#         order_quantity=new_order_quantity,
-#         order_type=new_order_type,
-#         margin=full_margin_usd
-#     )
-#     orders_after = existing_open_orders + [dummy_order]
-
-#     margin_after = await calculate_total_symbol_margin_contribution(
-#         db=db,
-#         redis_client=redis_client,
-#         user_id=user.id,
-#         symbol=order_symbol,
-#         open_positions_for_symbol=orders_after
-#     )
-
-#     additional_margin = margin_after - margin_before
-#     additional_margin = max(Decimal("0.0"), additional_margin)
-
-#     # Step 3: Lock user and update margin
-#     db_user_locked = await crud_user.get_user_by_id_with_lock(db, user.id)
-#     if db_user_locked is None:
-#         raise OrderProcessingError("Could not lock user record.")
-
-#     db_user_locked.margin = (Decimal(str(db_user_locked.margin)) + additional_margin).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-#     # Step 4: Calculate commission if applicable
-#     from app.core.cache import get_group_symbol_settings_cache
-#     commission = Decimal("0.0")
-
-#     group_symbol_settings = await get_group_symbol_settings_cache(redis_client, getattr(user, 'group_name', 'default'), order_symbol)
-#     if group_symbol_settings:
-#         commission_type = int(group_symbol_settings.get('commision_type', 0))
-#         commission_value_type = int(group_symbol_settings.get('commision_value_type', 0))
-#         commission_rate = Decimal(str(group_symbol_settings.get('commision', 0)))
-
-#         if commission_type in [0, 1]:  # "Every Trade" or "In"
-#             if commission_value_type == 0:  # Per lot
-#                 commission = new_order_quantity * commission_rate
-#             elif commission_value_type == 1:  # Percent of price
-#                 commission = ((commission_rate * adjusted_order_price) / Decimal("100")) * new_order_quantity
-
-#         commission = commission.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-#     # Step 5: Create order record
-#     from app.schemas.order import OrderCreateInternal
-#     order_data_internal = OrderCreateInternal(
-#         order_id=order_request.order_id,
-#         order_status="OPEN",
-#         order_user_id=user.id,
-#         order_company_name=order_symbol,
-#         order_type=new_order_type,
-#         order_price=adjusted_order_price,
-#         order_quantity=new_order_quantity,
-#         contract_value=contract_value,
-#         margin=full_margin_usd,
-#         commission=commission,
-#         stop_loss=order_request.stop_loss,
-#         take_profit=order_request.take_profit
-#     )
-
-#     new_order = await crud_order.create_user_order(db=db, order_data=order_data_internal.dict())
-
-#     await db.commit()
-#     await db.refresh(new_order)
-
-#     return new_order
+# Replace the original function with the ultra-optimized version
+process_new_order = process_new_order_ultra_optimized
 
