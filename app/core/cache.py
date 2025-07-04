@@ -1041,3 +1041,25 @@ def ultra_fast_cache(expiry: int = 300):
             return result
         return wrapper
     return decorator
+
+# --- Utility: Cache group settings, group symbol settings, and external symbol info for a user ---
+async def cache_user_group_settings_and_symbols(user, db, redis_client):
+    from app.crud import group as crud_group
+    from app.crud.external_symbol_info import get_all_external_symbol_info
+    group_name = getattr(user, "group_name", None)
+    if not group_name:
+        return
+    # Cache group settings
+    db_group = await crud_group.get_group_by_name(db, group_name)
+    if db_group:
+        settings = {"sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)}
+        await set_group_settings_cache(redis_client, group_name, settings)
+    # Cache group symbol settings
+    group_symbol_settings = await crud_group.get_group_symbol_settings_for_all_symbols(db, group_name)
+    for symbol, settings in group_symbol_settings.items():
+        await set_group_symbol_settings_cache(redis_client, group_name, symbol, settings)
+    # Cache all external symbol info (if you have a cache function for this, call it here)
+    all_symbol_info = await get_all_external_symbol_info(db)
+    for info in all_symbol_info:
+        # Optionally cache to Redis if you have a cache function for external symbol info
+        pass

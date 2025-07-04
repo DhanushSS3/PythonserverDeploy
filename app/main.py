@@ -617,7 +617,22 @@ async def startup_event():
     global background_tasks
     global global_redis_client_instance
     logger.info("Application startup initiated")
-    
+    # import redis.asyncio as redis
+
+    # r = redis.Redis(host="127.0.0.1", port=6379)
+    # await r.flushall()
+    # print("Redis flushed")
+    # Print Redis connection info for debugging
+    redis_url = os.getenv("REDIS_URL")
+    redis_host = os.getenv("REDIS_HOST")
+    redis_port = os.getenv("REDIS_PORT")
+    redis_password = os.getenv("REDIS_PASSWORD")
+    print(f"[DEBUG] Redis connection info:")
+    print(f"  REDIS_URL: {redis_url}")
+    print(f"  REDIS_HOST: {redis_host}")
+    print(f"  REDIS_PORT: {redis_port}")
+    print(f"  REDIS_PASSWORD: {redis_password}")
+
     # Initialize Firebase
     try:
         cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)

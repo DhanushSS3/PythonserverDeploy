@@ -15,6 +15,7 @@ from sqlalchemy import select
 from fastapi.security import OAuth2PasswordBearer
 import asyncio
 import orjson
+from fastapi import BackgroundTasks, Depends
 
 from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user, get_user_from_service_token
@@ -49,6 +50,7 @@ from app.core.cache import (
     publish_user_data_update,
     publish_market_data_trigger,
     set_group_settings_cache,
+    set_group_symbol_settings_cache,
 )
 
 from app.utils.validation import enforce_service_user_id_restriction
@@ -93,6 +95,25 @@ router = APIRouter(
     prefix="/orders",
     tags=["orders"]
 )
+
+async def is_barclays_live_user(user, db, redis_client):
+    from app.core.cache import get_group_settings_cache, set_group_settings_cache
+    from app.crud import group as crud_group
+    group_name = getattr(user, "group_name", None)
+    if not group_name:
+        return False
+    group_settings = await get_group_settings_cache(redis_client, group_name)
+    sending_orders = group_settings.get("sending_orders") if group_settings else None
+    if not sending_orders:
+        # Fallback to DB if not in cache
+        db_group = await crud_group.get_group_by_name(db, group_name)
+        if db_group:
+            sending_orders_db = getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)
+            if sending_orders_db:
+                sending_orders = sending_orders_db
+                # Repopulate the cache for next time
+                await set_group_settings_cache(redis_client, group_name, {'sending_orders': sending_orders_db})
+    return (getattr(user, "user_type", "live") == "live" and sending_orders and sending_orders.lower() == "barclays")
 
 async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client: Redis, user_type: str):
     """
@@ -302,10 +323,11 @@ class OrderPlacementRequest(BaseModel):
 @router.post("/", response_model=OrderResponse)
 async def place_order(
     order_request: OrderPlacementRequest,
+    background_tasks: BackgroundTasks,
     current_user: User | DemoUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
-    background_tasks: BackgroundTasks = None
+     
 ):
     """
     Place a new order. ULTRA-OPTIMIZED for sub-500ms performance.
@@ -327,25 +349,39 @@ async def place_order(
         # Step 2: ULTRA-OPTIMIZED parallel validation and data preparation
         # Define validation functions inline to avoid scope issues
         async def validate_user_order_permissions(user, symbol, order_type, quantity):
-            """Validate user permissions for order placement"""
-            # Add your validation logic here
-            pass
+            # Check if user is active
+            if not getattr(user, "isActive", True):
+                raise Exception("User account is inactive.")
+            # Check if user has sufficient balance (for live users)
+            if hasattr(user, "wallet_balance") and hasattr(user, "margin"):
+                # You may want to check margin requirements here, or do it later
+                if float(user.wallet_balance) <= 0:
+                    raise Exception("Insufficient wallet balance.")
+            # Add more permission checks as needed (e.g., KYC, country restrictions, etc.)
+            return True
         
         async def check_barclays_user_status(user):
-            """Check if user is Barclays live user"""
-            # Add your Barclays check logic here
-            return False
+            return await is_barclays_live_user(user, db, redis_client)
         
         async def validate_order_parameters(order_request):
-            """Validate order parameters"""
-            # Add your parameter validation logic here
-            pass
+            # Check order quantity
+            if order_request.order_quantity <= 0:
+                raise Exception("Order quantity must be positive.")
+            # Check order type
+            valid_types = ["MARKET", "LIMIT", "STOP", "BUY", "SELL", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]
+            if order_request.order_type.upper() not in valid_types:
+                raise Exception(f"Invalid order type: {order_request.order_type}")
+            # Check price (if required)
+            if order_request.order_price <= 0:
+                raise Exception("Order price must be positive.")
+            # Add more parameter checks as needed (e.g., min/max lot size, symbol restrictions, etc.)
+            return True
         
         validation_tasks = [
             # Validate user permissions
             validate_user_order_permissions(current_user, symbol, order_type, quantity),
             # Check if user is Barclays live user
-            check_barclays_user_status(current_user),
+            is_barclays_live_user(current_user, db, redis_client),
             # Validate order parameters
             validate_order_parameters(order_request)
         ]
@@ -354,7 +390,7 @@ async def place_order(
         validation_results = await asyncio.gather(*validation_tasks, return_exceptions=True)
         
         # Handle validation results
-        is_barclays_live_user = validation_results[1] if not isinstance(validation_results[1], Exception) else False
+        is_barclays_user_result = validation_results[1] if not isinstance(validation_results[1], Exception) else False
         
         # Check for validation errors
         for i, result in enumerate(validation_results):
@@ -384,7 +420,7 @@ async def place_order(
             user_id=user_id,
             order_data=order_data,
             user_type=user_type,
-            is_barclays_live_user=is_barclays_live_user
+            is_barclays_live_user=is_barclays_user_result
         )
         processing_time = time.perf_counter() - start_processing
         orders_logger.info(f"[PERF] Order processing: {processing_time:.4f}s")
@@ -411,7 +447,7 @@ async def place_order(
             takeprofit_id=processed_order_data.get('takeprofit_id')
         )
         
-        new_order = await crud_order.create_user_order(db=db, order_data=order_create_data.dict())
+        new_order = await crud_order.create_user_order(db=db, order_data=order_create_data.dict(), order_model=order_model)
         creation_time = time.perf_counter() - start_creation
         orders_logger.info(f"[PERF] Order creation: {creation_time:.4f}s")
         
@@ -435,11 +471,13 @@ async def place_order(
                     orders_logger.error(f"Error updating portfolio: {e}")
         
         async def barclays_push():
-            """Handle Barclays-specific operations"""
+            orders_logger.info("[BARCLAYS] barclays_push called in place_order")
             from app.database.session import async_session_factory
             async with await async_session_factory() as background_db:
                 try:
-                    if is_barclays_live_user:
+                    # Recompute Barclays check inside the task for safety
+                    barclays_check = await is_barclays_live_user(current_user, db, redis_client)
+                    if barclays_check:
                         firebase_order_data = {
                             "order_id": processed_order_data['order_id'],
                             "user_id": user_id,
@@ -447,28 +485,27 @@ async def place_order(
                             "order_type": order_type,
                             "quantity": float(quantity),
                             "price": float(processed_order_data['order_price']),
-                            "status": "PROCESSING"
+                            "status": "OPEN",
+                            "contract_value": float(processed_order_data['contract_value'])
                         }
                         orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
                         await send_order_to_firebase(firebase_order_data, "live")
                 except Exception as e:
-                    orders_logger.error(f"Error in Barclays push: {e}")
+                    orders_logger.error(f"[BARCLAYS] Exception in barclays_push: {e}", exc_info=True)
         
         # Step 6: Background tasks (non-blocking)
+        orders_logger.info(f"is_barclays_live_user in place_order: {is_barclays_user_result}")
         if background_tasks:
-            # Update user cache in background
             background_tasks.add_task(update_user_cache)
-            # Update portfolio in background
             background_tasks.add_task(update_portfolio)
-            
-            # Barclays-specific background tasks
-            if is_barclays_live_user:
+            if is_barclays_user_result:
+                orders_logger.info("[BARCLAYS] Scheduling barclays_push in place_order")
                 background_tasks.add_task(barclays_push)
         else:
-            # Schedule background tasks asynchronously
             asyncio.create_task(update_user_cache())
             asyncio.create_task(update_portfolio())
-            if is_barclays_live_user:
+            if is_barclays_user_result:
+                orders_logger.info("[BARCLAYS] Scheduling barclays_push in place_order (asyncio.create_task)")
                 asyncio.create_task(barclays_push())
         
         # Step 7: Publish websocket updates
@@ -651,7 +688,7 @@ async def place_pending_order(
         orders_logger.info(f"Calculated contract_value for pending order: {contract_value} (contract_size: {contract_size} * quantity: {order_request.order_quantity})")
 
         # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, user_id_for_order, db, user_type)
+        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
         orders_logger.info(f"[DEBUG] User data from cache: {user_data}")
         
         group_name = user_data.get('group_name') if user_data else None
@@ -944,6 +981,7 @@ async def place_pending_order(
                 """
                 Background task to send Barclays order details to Firebase after order placement, if user is a Barclays live user.
                 """
+                orders_logger.info(f"[BARCLAYS] barclays_push called for user {user_id}, is_barclays_live_user={is_barclays_live_user}")
                 from app.database.session import async_session_factory
                 async with await async_session_factory() as background_db:
                     orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
@@ -1954,9 +1992,11 @@ async def cancel_pending_order(
 @router.post("/add-stoploss", response_model=dict)
 async def add_stoploss(
     request: AddStopLossRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
-    current_user: User | DemoUser = Depends(get_current_user)
+    current_user: User | DemoUser = Depends(get_current_user),
+    
 ):
     """
     Add or update stop loss for an existing order.
@@ -2014,17 +2054,13 @@ async def add_stoploss(
         stoploss_id = await generate_unique_10_digit_id(db, order_model, 'stoploss_id')
         orders_logger.info(f"Generated stoploss_id: {stoploss_id} for order {request.order_id}")
         
-        # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
-        group_name = user_data.get('group_name') if user_data else None
-        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
-        sending_orders = group_settings.get('sending_orders') if group_settings else None
-        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
-        
-        is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
-        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
-        
-        if is_barclays_live_user:
+        # Robust Barclays check
+        from app.crud.user import get_user_by_id
+        user_obj = current_user if user_id_for_operation == getattr(current_user, 'id', None) else await get_user_by_id(db, user_id_for_operation)
+        is_barclays_live_user_flag = await is_barclays_live_user(user_obj, db, redis_client)
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user_flag}")
+
+        if is_barclays_live_user_flag:
             # For Barclays users, just store stoploss_id and send to Firebase
             orders_logger.info(f"Barclays user detected. Sending stoploss request to Firebase for order {request.order_id}")
             
@@ -2116,9 +2152,11 @@ async def add_stoploss(
 @router.post("/add-takeprofit", response_model=dict)
 async def add_takeprofit(
     request: AddTakeProfitRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client),
-    current_user: User | DemoUser = Depends(get_current_user)
+    current_user: User | DemoUser = Depends(get_current_user),
+    
 ):
     """
     Add or update take profit for an existing order.
@@ -2176,17 +2214,13 @@ async def add_takeprofit(
         takeprofit_id = await generate_unique_10_digit_id(db, order_model, 'takeprofit_id')
         orders_logger.info(f"Generated takeprofit_id: {takeprofit_id} for order {request.order_id}")
         
-        # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, request.user_type)
-        group_name = user_data.get('group_name') if user_data else None
-        group_settings = await get_group_settings_cache(redis_client, group_name) if group_name else None
-        sending_orders = group_settings.get('sending_orders') if group_settings else None
-        sending_orders_normalized = sending_orders.lower() if isinstance(sending_orders, str) else sending_orders
-        
-        is_barclays_live_user = (request.user_type == 'live' and sending_orders_normalized == 'barclays')
-        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user}")
-        
-        if is_barclays_live_user:
+        # Robust Barclays check
+        from app.crud.user import get_user_by_id
+        user_obj = current_user if user_id_for_operation == getattr(current_user, 'id', None) else await get_user_by_id(db, user_id_for_operation)
+        is_barclays_live_user_flag = await is_barclays_live_user(user_obj, db, redis_client)
+        orders_logger.info(f"User {user_id_for_operation} is_barclays_live_user: {is_barclays_live_user_flag}")
+
+        if is_barclays_live_user_flag:
             # For Barclays users, just store takeprofit_id and send to Firebase
             orders_logger.info(f"Barclays user detected. Sending takeprofit request to Firebase for order {request.order_id}")
             
