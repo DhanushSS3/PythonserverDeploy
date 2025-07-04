@@ -1,0 +1,17 @@
+2025-07-04 06:46:11,530 - INFO - service_provider - SERVICE PROVIDER ORDER EXECUTION - REQUEST: {"order_id": "5320207948", "cancel_id": null, "close_id": null, "modify_id": null, "stoploss_id": null, "takeprofit_id": null, "stoploss_cancel_id": null, "takeprofit_cancel_id": null, "order_status": null, "order_type": "BUY", "status": "BUY", "order_price": "95.1", "order_quantity": "0.01", "margin": null, "close_price": null, "net_profit": null, "stop_loss": null, "take_profit": null, "contract_value": null, "commission": null, "swap": null, "cancel_message": null, "close_message": null}
+2025-07-04 06:46:11,541 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=5320207948, status=PROCESSING, user_id=4
+2025-07-04 06:46:11,542 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: PROCESSING -> PROCESSING
+2025-07-04 06:46:11,542 - ERROR - service_provider - SERVICE PROVIDER ERROR: Invalid status transition from PROCESSING to PROCESSING
+2025-07-04 06:46:11,546 - ERROR - service_provider - SERVICE PROVIDER EXCEPTION: Error in service_provider_order_execution: 400: Invalid status transition from PROCESSING to PROCESSING
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3386, in service_provider_order_execution
+    raise HTTPException(status_code=400, detail=error_msg)
+fastapi.exceptions.HTTPException: 400: Invalid status transition from PROCESSING to PROCESSING
+2025-07-04 06:46:37,295 - INFO - service_provider - SERVICE PROVIDER ORDER EXECUTION - REQUEST: {"order_id": "5320207948", "cancel_id": null, "close_id": null, "modify_id": null, "stoploss_id": null, "takeprofit_id": null, "stoploss_cancel_id": null, "takeprofit_cancel_id": null, "order_status": "OPEN", "order_type": "BUY", "status": "BUY", "order_price": "95.1", "order_quantity": "0.01", "margin": null, "close_price": null, "net_profit": null, "stop_loss": null, "take_profit": null, "contract_value": null, "commission": null, "swap": null, "cancel_message": null, "close_message": null}
+2025-07-04 06:46:37,304 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=5320207948, status=PROCESSING, user_id=4
+2025-07-04 06:46:37,305 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: PROCESSING -> OPEN
+2025-07-04 06:46:37,451 - INFO - service_provider - SERVICE PROVIDER ORDER OPENED: order_id=5320207948, status=OPEN
+2025-07-04 06:51:05,693 - INFO - service_provider - SERVICE PROVIDER ORDER EXECUTION - REQUEST: {"order_id": "1621588803", "cancel_id": null, "close_id": null, "modify_id": null, "stoploss_id": null, "takeprofit_id": null, "stoploss_cancel_id": null, "takeprofit_cancel_id": null, "order_status": "OPEN", "order_type": "BUY", "status": "BUY", "order_price": "95.1", "order_quantity": "0.01", "margin": null, "close_price": null, "net_profit": null, "stop_loss": null, "take_profit": null, "contract_value": null, "commission": null, "swap": null, "cancel_message": null, "close_message": null}
+2025-07-04 06:51:05,704 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=1621588803, status=PROCESSING, user_id=4
+2025-07-04 06:51:05,704 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: PROCESSING -> OPEN
+2025-07-04 06:51:06,214 - INFO - service_provider - SERVICE PROVIDER ORDER OPENED: order_id=1621588803, status=OPEN

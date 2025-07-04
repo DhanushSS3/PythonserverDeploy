@@ -1780,3 +1780,187 @@ NameError: name 'user_id' is not defined
 2025-07-04 05:45:35,838 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
 2025-07-04 05:45:42,387 - INFO - orders - Application starting up - Orders logging initialized
 2025-07-04 05:45:42,387 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 05:58:29,490 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 05:58:29,490 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 05:59:47,091 - INFO - orders - Half-spread calculation request for order_id: 9048631985, symbol: AUDJPY
+2025-07-04 06:21:15,799 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 06:21:15,800 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 06:21:32,909 - INFO - orders - Order close request received - Order ID: 9836469641, User ID: 4, Close Price: 0.89097
+2025-07-04 06:21:32,910 - INFO - orders - user_to_operate_on: <app.database.models.User object at 0x0000018F595165D0>, type: <class 'app.database.models.User'>, user_type: live, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'address_proof', 'address_proof_image', 'bank_account_number', 'bank_branch_name', 'bank_holder_name', 'bank_ifsc_code', 'city', 'country', 'created_at', 'email', 'fund_manager', 'group_name', 'hashed_password', 'id', 'id_proof', 'id_proof_image', 'isActive', 'is_self_trading', 'is_service_account', 'leverage', 'margin', 'metadata', 'money_requests', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'rock_orders', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_favorites', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-04 06:21:32,910 - INFO - orders - Using order model: user_orders for user 4 (user_type: live)
+2025-07-04 06:21:32,910 - INFO - orders - Request to close order 9836469641 for user 4 (user_type: live) with price 0.89097. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-04 06:21:32,916 - INFO - orders - User group: Standard, sending_orders setting: barclays
+2025-07-04 06:21:32,916 - INFO - orders - Live user 4 from group 'Standard' has 'sending_orders' set to 'barclays'. Pushing close request to Firebase and skipping local DB update.
+2025-07-04 06:21:32,921 - INFO - orders - [FIREBASE_CLOSE_REQUEST] Preparing to send payload for user-initiated close: {'order_id': '9836469641', 'close_price': '0.89097', 'user_id': 4, 'order_type': 'BUY', 'order_company_name': 'AUDCAD', 'order_quantity': '0.01000000', 'contract_value': '891.40000000', 'order_status': 'CLOSED', 'status': 'CLOSED', 'action': 'close_order', 'close_id': '1105305705'}
+2025-07-04 06:27:59,200 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 06:27:59,200 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 06:28:22,655 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: demo
+2025-07-04 06:28:33,736 - INFO - orders - Order placement request received - User: 1, Symbol: AUDCAD, Type: BUY
+2025-07-04 06:28:34,047 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8914300000', 'o': '0.8913900000'}
+2025-07-04 06:28:34,047 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8914300000, ask=0.89151914300000
+2025-07-04 06:28:34,047 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8914300000, ask=0.89151914300000
+2025-07-04 06:28:34,050 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.92 CAD to USD for margin_calculation (user_id: 1, position: None)
+2025-07-04 06:28:34,051 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-04 06:28:34,052 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-04 06:28:34,052 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-04 06:28:34,052 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-04 06:28:34,056 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3609100000'), 'o': Decimal('1.3608500000')}
+2025-07-04 06:28:34,056 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3609100000
+2025-07-04 06:28:34,056 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.92 CAD / 1.3609100000 = 6.554437839386880837086949174 USD
+2025-07-04 06:28:34,056 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.89151914300000, Margin: 6.554437839386880837086949174, Commission: 0.10
+2025-07-04 06:28:34,096 - INFO - orders - [PERF] Order processing: 0.3575s
+2025-07-04 06:28:34,096 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '5255051389', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.89151914300000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.554437839386880837086949174'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-04 06:28:34,097 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 5255051389
+2025-07-04 06:28:34,181 - INFO - orders - [PERF] Order creation: 0.0847s
+2025-07-04 06:28:34,181 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-04 06:28:34,182 - INFO - orders - Publishing order update for user 1
+2025-07-04 06:28:34,185 - INFO - orders - Publishing user data update for user 1
+2025-07-04 06:28:34,187 - INFO - orders - Publishing market data trigger
+2025-07-04 06:28:34,190 - INFO - orders - [PERF] TOTAL place_order: 0.4543s
+2025-07-04 06:28:34,228 - app.api.v1.endpoints.orders - INFO - User 1: Updated static orders cache after order change - 4 open orders, 2 pending orders
+2025-07-04 06:28:34,232 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-04 06:31:30,551 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 06:31:30,551 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 06:31:54,159 - app.api.v1.endpoints.orders - INFO - [get_rejected_orders] user_type: live
+2025-07-04 06:31:58,683 - INFO - orders - Order placement request received - User: 4, Symbol: AUDCAD, Type: BUY
+2025-07-04 06:31:59,047 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8914600000', 'o': '0.8914300000'}
+2025-07-04 06:31:59,047 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8914600000, ask=0.89154914600000
+2025-07-04 06:31:59,047 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8914600000, ask=0.89154914600000
+2025-07-04 06:31:59,049 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.92 CAD to USD for margin_calculation (user_id: 4, position: None)
+2025-07-04 06:31:59,049 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-04 06:31:59,050 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-04 06:31:59,050 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-04 06:31:59,050 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-04 06:31:59,051 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3606600000'), 'o': Decimal('1.3606400000')}
+2025-07-04 06:31:59,051 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3606600000
+2025-07-04 06:31:59,051 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.92 CAD / 1.3606600000 = 6.555642114856025752208487058 USD
+2025-07-04 06:31:59,051 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.89154914600000, Margin: 6.555642114856025752208487058, Commission: 0.00
+2025-07-04 06:31:59,052 - INFO - orders - [PERF] Order processing: 0.3630s
+2025-07-04 06:31:59,053 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '4379851186', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.89154914600000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.555642114856025752208487058'), 'commission': Decimal('0.00'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-04 06:31:59,054 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 4379851186
+2025-07-04 06:31:59,077 - INFO - orders - [PERF] Order creation: 0.0239s
+2025-07-04 06:31:59,077 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-04 06:31:59,077 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-04 06:31:59,077 - INFO - orders - Publishing order update for user 4
+2025-07-04 06:31:59,078 - INFO - orders - Publishing user data update for user 4
+2025-07-04 06:31:59,080 - INFO - orders - Publishing market data trigger
+2025-07-04 06:31:59,081 - INFO - orders - [PERF] TOTAL place_order: 0.3987s
+2025-07-04 06:31:59,111 - app.api.v1.endpoints.orders - INFO - User 4: Updated static orders cache after order change - 6 open orders, 0 pending orders
+2025-07-04 06:31:59,120 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-04 06:31:59,123 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-04 06:31:59,149 - DEBUG - orders - [BARCLAYS] Calling send_order_to_firebase with data: {'order_id': '4379851186', 'user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_quantity': 0.01, 'price': 0.891549146, 'status': 'OPEN', 'contract_value': 1000.0}
+2025-07-04 06:43:04,997 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 06:43:04,997 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 06:43:11,253 - INFO - orders - Order placement request received - User: 4, Symbol: AUDJPY, Type: BUY
+2025-07-04 06:43:11,574 - INFO - orders - [MARGIN_CALC] Market data for AUDJPY: {'b': '94.6750000000', 'o': '94.6690000000'}
+2025-07-04 06:43:11,575 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDJPY, using bid price with spread: bid=94.6750000000, ask=94.68446750000000
+2025-07-04 06:43:11,575 - INFO - orders - [MARGIN_CALC] Using prices for AUDJPY: bid=94.6750000000, ask=94.68446750000000
+2025-07-04 06:43:11,577 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 946.84 JPY to USD for margin_calculation (user_id: 4, position: None)
+2025-07-04 06:43:11,578 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-07-04 06:43:11,579 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-04 06:43:11,579 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-07-04 06:43:11,579 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-07-04 06:43:11,580 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.4460000000'), 'o': Decimal('144.4410000000')}
+2025-07-04 06:43:11,580 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.4460000000
+2025-07-04 06:43:11,580 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 946.84 JPY / 144.4460000000 = 6.554975561801642136161610567 USD
+2025-07-04 06:43:11,580 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDJPY, Type: BUY, Qty: 0.01, Price: 94.68446750000000, Margin: 6.554975561801642136161610567, Commission: 0.10
+2025-07-04 06:43:11,584 - INFO - orders - [PERF] Order processing: 0.3161s
+2025-07-04 06:43:11,584 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '5320207948', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_price': Decimal('94.68446750000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.554975561801642136161610567'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-04 06:43:11,584 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 5320207948
+2025-07-04 06:43:11,622 - INFO - orders - [PERF] Order creation: 0.0384s
+2025-07-04 06:43:11,622 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-04 06:43:11,622 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-04 06:43:11,623 - INFO - orders - Publishing order update for user 4
+2025-07-04 06:43:11,624 - INFO - orders - Publishing user data update for user 4
+2025-07-04 06:43:11,626 - INFO - orders - Publishing market data trigger
+2025-07-04 06:43:11,628 - INFO - orders - [PERF] TOTAL place_order: 0.3753s
+2025-07-04 06:43:11,782 - app.api.v1.endpoints.orders - INFO - User 4: Updated static orders cache after order change - 6 open orders, 0 pending orders
+2025-07-04 06:43:11,789 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-04 06:43:11,792 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-04 06:43:11,797 - DEBUG - orders - [BARCLAYS] Calling send_order_to_firebase with data: {'order_id': '5320207948', 'user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_quantity': 0.01, 'price': 94.6844675, 'status': 'OPEN', 'contract_value': 1000.0}
+2025-07-04 06:45:32,444 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 06:45:32,445 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 06:46:37,305 - INFO - orders - Order 5320207948 transitioning to OPEN. Calculating margin.
+2025-07-04 06:46:37,305 - INFO - orders - Using fixed UserOrder model for Barclays service provider integration
+2025-07-04 06:46:37,307 - INFO - orders - Using group_name: Standard for order 5320207948
+2025-07-04 06:46:37,340 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for AUDJPY: contract_size=100000.00000000, profit_currency=JPY, digit=3.00000
+2025-07-04 06:46:37,341 - INFO - orders - Using user's leverage from cache: 100.00
+2025-07-04 06:46:37,341 - ERROR - orders - [MARGIN_CALC] Error in calculate_single_order_margin: argument of type 'coroutine' is not iterable
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\margin_calculator.py", line 121, in calculate_single_order_margin
+    if not raw_market_data or symbol not in raw_market_data:
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: argument of type 'coroutine' is not iterable
+2025-07-04 06:46:37,344 - ERROR - orders - Failed to calculate margin or contract_value, using fallback calculation
+2025-07-04 06:46:37,345 - INFO - orders - Fallback margin calculation: (100000.00000000 * 0.01 * 95.1) / 100.00 = 951.000000000
+2025-07-04 06:46:37,345 - INFO - orders - New margin calculated: 951.000000000, contract_value: 1000.0000000000
+2025-07-04 06:46:37,345 - INFO - orders - Recalculating total hedged margin for user 4 on symbol AUDJPY
+2025-07-04 06:46:37,355 - INFO - orders - Found 0 existing open positions for this symbol
+2025-07-04 06:46:37,355 - INFO - orders - Old total margin for AUDJPY: 0.0
+2025-07-04 06:46:37,355 - INFO - orders - New total margin for AUDJPY: 951.00
+2025-07-04 06:46:37,355 - INFO - orders - Margin change for user 4: 951.00
+2025-07-04 06:46:37,363 - INFO - orders - User 4 margin updated from 26.22000000 to 977.22000000
+2025-07-04 06:46:37,424 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-04 06:46:37,424 - INFO - orders - Using order model: UserOrder
+2025-07-04 06:46:37,428 - INFO - orders - Fetched 7 open orders for user 4
+2025-07-04 06:46:37,432 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-04 06:46:37,433 - INFO - orders - Updated static orders cache for user 4 with 7 open orders and 0 pending orders
+2025-07-04 06:50:31,960 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-04 06:50:31,960 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-04 06:50:38,237 - INFO - orders - Order placement request received - User: 4, Symbol: AUDJPY, Type: BUY
+2025-07-04 06:50:38,653 - INFO - orders - [MARGIN_CALC] Market data for AUDJPY: {'b': '94.6300000000', 'o': '94.6230000000'}
+2025-07-04 06:50:38,654 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDJPY, using bid price with spread: bid=94.6300000000, ask=94.63946300000000
+2025-07-04 06:50:38,654 - INFO - orders - [MARGIN_CALC] Using prices for AUDJPY: bid=94.6300000000, ask=94.63946300000000
+2025-07-04 06:50:38,655 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 946.39 JPY to USD for margin_calculation (user_id: 4, position: None)
+2025-07-04 06:50:38,655 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-07-04 06:50:38,656 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-04 06:50:38,656 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-07-04 06:50:38,656 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-07-04 06:50:38,657 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.4860000000'), 'o': Decimal('144.4790000000')}
+2025-07-04 06:50:38,658 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.4860000000
+2025-07-04 06:50:38,658 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 946.39 JPY / 144.4860000000 = 6.550046371274725578948825492 USD
+2025-07-04 06:50:38,658 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDJPY, Type: BUY, Qty: 0.01, Price: 94.63946300000000, Margin: 6.550046371274725578948825492, Commission: 0.10
+2025-07-04 06:50:38,659 - INFO - orders - [PERF] Order processing: 0.4208s
+2025-07-04 06:50:38,660 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '1621588803', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_price': Decimal('94.63946300000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.550046371274725578948825492'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-04 06:50:38,661 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 1621588803
+2025-07-04 06:50:38,692 - INFO - orders - [PERF] Order creation: 0.0332s
+2025-07-04 06:50:38,692 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-04 06:50:38,693 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-04 06:50:38,693 - INFO - orders - Publishing order update for user 4
+2025-07-04 06:50:38,694 - INFO - orders - Publishing user data update for user 4
+2025-07-04 06:50:38,694 - INFO - orders - Publishing market data trigger
+2025-07-04 06:50:38,695 - INFO - orders - [PERF] TOTAL place_order: 0.4615s
+2025-07-04 06:50:38,711 - app.api.v1.endpoints.orders - INFO - User 4: Updated static orders cache after order change - 7 open orders, 0 pending orders
+2025-07-04 06:50:38,714 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-04 06:50:38,714 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-04 06:50:38,715 - DEBUG - orders - [BARCLAYS] Calling send_order_to_firebase with data: {'order_id': '1621588803', 'user_id': 4, 'order_company_name': 'AUDJPY', 'order_type': 'BUY', 'order_quantity': 0.01, 'price': 94.639463, 'status': 'OPEN', 'contract_value': 1000.0}
+2025-07-04 06:51:05,704 - INFO - orders - Order 1621588803 transitioning to OPEN. Calculating margin.
+2025-07-04 06:51:05,705 - INFO - orders - Using fixed UserOrder model for Barclays service provider integration
+2025-07-04 06:51:05,706 - INFO - orders - Using group_name: Standard for order 1621588803
+2025-07-04 06:51:06,065 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for AUDJPY: contract_size=100000.00000000, profit_currency=JPY, digit=3.00000
+2025-07-04 06:51:06,065 - INFO - orders - Using user's leverage from cache: 100.00
+2025-07-04 06:51:06,065 - INFO - orders - [MARGIN_CALC] Market data for AUDJPY: {'b': '94.6240000000', 'o': '94.6210000000'}
+2025-07-04 06:51:06,066 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDJPY, using bid price with spread: bid=94.6240000000, ask=94.63346240000000
+2025-07-04 06:51:06,066 - INFO - orders - [MARGIN_CALC] Using prices for AUDJPY: bid=94.6240000000, ask=94.63346240000000
+2025-07-04 06:51:06,068 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 946.33 JPY to USD for margin_calculation (user_id: 4, position: None)
+2025-07-04 06:51:06,069 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-07-04 06:51:06,071 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-04 06:51:06,072 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-07-04 06:51:06,072 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-07-04 06:51:06,075 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('144.4550000000'), 'o': Decimal('144.4530000000')}
+2025-07-04 06:51:06,075 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 144.4550000000
+2025-07-04 06:51:06,075 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 946.33 JPY / 144.4550000000 = 6.551036655013672077809698522 USD
+2025-07-04 06:51:06,075 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDJPY, Type: BUY, Qty: 0.01, Price: 94.63346240000000, Margin: 6.551036655013672077809698522, Commission: 0.10
+2025-07-04 06:51:06,076 - INFO - orders - New margin calculated: 6.551036655013672077809698522, contract_value: 1000.00
+2025-07-04 06:51:06,076 - INFO - orders - [MARGIN] Final stored margin (USD): 6.551036655013672077809698522
+2025-07-04 06:51:06,076 - INFO - orders - Recalculating total hedged margin for user 4 on symbol AUDJPY
+2025-07-04 06:51:06,083 - INFO - orders - Found 1 existing open positions for this symbol
+2025-07-04 06:51:06,084 - INFO - orders - Old total margin for AUDJPY: 951.00
+2025-07-04 06:51:06,085 - INFO - orders - New total margin for AUDJPY: 1902.00
+2025-07-04 06:51:06,086 - INFO - orders - Margin change for user 4: 951.00
+2025-07-04 06:51:06,096 - INFO - orders - User 4 margin updated from 977.22000000 to 1928.22000000
+2025-07-04 06:51:06,179 - INFO - orders - Starting update_user_static_orders for user 4, user_type live
+2025-07-04 06:51:06,179 - INFO - orders - Using order model: UserOrder
+2025-07-04 06:51:06,189 - INFO - orders - Fetched 8 open orders for user 4
+2025-07-04 06:51:06,194 - INFO - orders - Fetched 0 pending orders for user 4
+2025-07-04 06:51:06,197 - INFO - orders - Updated static orders cache for user 4 with 8 open orders and 0 pending orders

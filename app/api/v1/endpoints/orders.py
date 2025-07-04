@@ -1092,7 +1092,7 @@ async def close_order(
                             "user_id": user_to_operate_on.id,
                             "stoploss_id": db_order_for_firebase.stoploss_id,
                             "stoploss_cancel_id": stoploss_cancel_id,
-                            "symbol": db_order_for_firebase.order_company_name,
+                            "order_company_name": db_order_for_firebase.order_company_name,
                             "order_type": db_order_for_firebase.order_type
                         }
                         orders_logger.info(f"[FIREBASE_SL_CANCEL] Sending stop loss cancellation: {sl_cancel_payload}")
@@ -1113,7 +1113,7 @@ async def close_order(
                             "user_id": user_to_operate_on.id,
                             "takeprofit_id": db_order_for_firebase.takeprofit_id,
                             "takeprofit_cancel_id": takeprofit_cancel_id,
-                            "symbol": db_order_for_firebase.order_company_name,
+                            "order_company_name": db_order_for_firebase.order_company_name,
                             "order_type": db_order_for_firebase.order_type
                         }
                         orders_logger.info(f"[FIREBASE_TP_CANCEL] Sending take profit cancellation: {tp_cancel_payload}")
@@ -3126,50 +3126,46 @@ async def _handle_order_open_transition(
     Handles the logic for when an order transitions to an OPEN state
     from a service provider confirmation. This includes margin calculation
     and updating the user's overall margin based on hedging.
-    
-    Note: For Barclays service provider, we always use the UserOrder model as they only handle live users.
+    Always uses the final confirmed price and quantity from update_fields if present.
+    Ensures contract_value is always set and margin is in USD.
     """
     orders_logger.info(f"Order {db_order.order_id} transitioning to OPEN. Calculating margin.")
-    
-    # For Barclays service integration: always use UserOrder model
     order_model_class = UserOrder
     orders_logger.info(f"Using fixed UserOrder model for Barclays service provider integration")
-    
-    # Get the user's group_name from cache or database
+
     user_data = await get_user_data_cache(redis_client, db_order.order_user_id, db, 'live')
     group_name = user_data.get("group_name") if user_data else None
-    
     if not group_name:
-        # Fetch from database directly
         db_user = await get_user_by_id(db, db_order.order_user_id, user_type='live')
         group_name = getattr(db_user, 'group_name', None)
-        
     if not group_name:
         raise HTTPException(status_code=400, detail=f"Cannot process order: Group name not found for user {db_order.order_user_id}")
-    
     orders_logger.info(f"Using group_name: {group_name} for order {db_order.order_id}")
     group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
     symbol_settings = group_settings.get(db_order.order_company_name.upper())
-
     if not symbol_settings:
         raise HTTPException(status_code=400, detail=f"Symbol settings not found for {db_order.order_company_name} in group {group_name}")
 
-    # Calculate margin for this specific order using the price from the service provider
-    orders_logger.info(f"Calculating new margin for order {db_order.order_id} with price {update_fields.get('order_price', db_order.order_price)}")
+    final_price = update_fields.get('order_price', db_order.order_price)
+    final_quantity = update_fields.get('order_quantity', db_order.order_quantity)
+    if final_price is None or final_quantity is None:
+        orders_logger.error(f"Missing final price or quantity for margin calculation. order_price={final_price}, order_quantity={final_quantity}")
+        raise HTTPException(status_code=400, detail="Missing final price or quantity for margin calculation.")
+
     try:
-        # Get market data for price calculation
-        try:
-            # The get_latest_market_data function from firebase_stream is not async
-            raw_market_data = get_latest_market_data()
-            
-            if not raw_market_data:
-                orders_logger.error(f"Failed to get market data for margin calculation")
-                raw_market_data = {}
-        except Exception as e:
-            orders_logger.error(f"Error getting market data: {e}", exc_info=True)
+        # Await get_latest_market_data if it's async
+        raw_market_data = get_latest_market_data
+        if callable(raw_market_data):
+            try:
+                raw_market_data = await get_latest_market_data()
+            except TypeError:
+                # If not async, just call it
+                raw_market_data = get_latest_market_data()
+        else:
+            raw_market_data = await get_latest_market_data()
+        if not raw_market_data:
+            orders_logger.error(f"Failed to get market data for margin calculation")
             raw_market_data = {}
-            
-        # Get external symbol info
         ext_symbol_info = await get_external_symbol_info(db, db_order.order_company_name)
         if not ext_symbol_info:
             orders_logger.error(f"External symbol info not found for {db_order.order_company_name}")
@@ -3178,17 +3174,12 @@ async def _handle_order_open_transition(
                 'profit_currency': 'USD',
                 'digit': 5
             }
-            
-        # Add group_name to symbol_settings for proper price lookup
         symbol_settings['group_name'] = group_name
-        
-        # Get user's leverage from cache or database
-        user_leverage = Decimal('100')  # Default fallback leverage
+        user_leverage = Decimal('100')
         if user_data and user_data.get('leverage') and Decimal(str(user_data.get('leverage'))) > 0:
             user_leverage = Decimal(str(user_data.get('leverage')))
             orders_logger.info(f"Using user's leverage from cache: {user_leverage}")
         else:
-            # Try to get from database
             try:
                 actual_user = await get_user_by_id(db, db_order.order_user_id, user_type='live')
                 if actual_user and actual_user.leverage and actual_user.leverage > 0:
@@ -3196,47 +3187,50 @@ async def _handle_order_open_transition(
                     orders_logger.info(f"Using user's leverage from DB: {user_leverage}")
             except Exception as e:
                 orders_logger.error(f"Error getting user leverage: {e}")
-                # Keep default leverage = 100
-        
-        # Use calculate_single_order_margin which is more reliable
         margin_result, price, contract_value, commission = await calculate_single_order_margin(
-            redis_client,  # Pass redis_client as positional argument, not keyword
-            db_order.order_company_name,  # symbol
-            db_order.order_type,  # order_type
-            db_order.order_quantity,  # quantity
-            user_leverage,  # Use the user's actual leverage
-            symbol_settings,  # group_settings with group_name added
-            ext_symbol_info,  # external_symbol_info
-            raw_market_data,  # raw_market_data
-            db,  # db session
-            db_order.order_user_id  # user_id
+            redis_client,
+            db_order.order_company_name,
+            db_order.order_type,
+            final_quantity,
+            user_leverage,
+            symbol_settings,
+            ext_symbol_info,
+            raw_market_data,
+            db,
+            db_order.order_user_id
         )
-        
-        if margin_result is None:
-            orders_logger.error(f"Failed to calculate margin, using fallback calculation")
-            # Fallback to a simplified calculation - get a more reasonable number
+        if margin_result is None or contract_value is None:
+            orders_logger.error(f"Failed to calculate margin or contract_value, using fallback calculation")
             contract_size = ext_symbol_info.get('contract_size', 100000)
-            order_price = update_fields.get('order_price', db_order.order_price)
-            
-            # Calculate realistic margin
-            new_order_margin = (Decimal(str(contract_size)) * db_order.order_quantity * order_price) / user_leverage
-            orders_logger.info(f"Fallback margin calculation: ({contract_size} * {db_order.order_quantity} * {order_price}) / {user_leverage} = {new_order_margin}")
+            contract_value = Decimal(str(contract_size)) * Decimal(str(final_quantity))
+            new_order_margin = (contract_value * Decimal(str(final_price))) / user_leverage
+            orders_logger.info(f"Fallback margin calculation: ({contract_size} * {final_quantity} * {final_price}) / {user_leverage} = {new_order_margin}")
+            # Convert margin to USD if needed
+            profit_currency = ext_symbol_info.get('profit_currency', 'USD').upper()
+            if profit_currency != 'USD':
+                orders_logger.info(f"Converting fallback margin from {profit_currency} to USD...")
+                from app.services.portfolio_calculator import _convert_to_usd
+                new_order_margin = await _convert_to_usd(
+                    new_order_margin,
+                    profit_currency,
+                    db_order.order_user_id,
+                    db_order.order_id,
+                    "margin on open",
+                    db,
+                    redis_client
+                )
+                orders_logger.info(f"Converted fallback margin to USD: {new_order_margin}")
         else:
             new_order_margin = margin_result
-            
-        orders_logger.info(f"New margin calculated: {new_order_margin}")
+        orders_logger.info(f"New margin calculated: {new_order_margin}, contract_value: {contract_value}")
     except Exception as e:
         orders_logger.error(f"Error calculating margin: {e}", exc_info=True)
         raise
-    
     update_fields['margin'] = new_order_margin
     update_fields['contract_value'] = contract_value
-    
+    orders_logger.info(f"[MARGIN] Final stored margin (USD): {new_order_margin}")
     # --- Correct Hedged Margin Calculation (Mirrors place_order) ---
     orders_logger.info(f"Recalculating total hedged margin for user {db_order.order_user_id} on symbol {db_order.order_company_name}")
-
-    # 1. Get all OPEN positions for the symbol BEFORE the new one is included
-    orders_logger.info(f"Fetching open positions for user {db_order.order_user_id}, symbol {db_order.order_company_name} using UserOrder model")
     try:
         open_positions_before = await crud_order.get_open_orders_by_user_id_and_symbol(
             db, user_id=db_order.order_user_id, symbol=db_order.order_company_name, order_model=order_model_class
@@ -3245,47 +3239,32 @@ async def _handle_order_open_transition(
     except Exception as e:
         orders_logger.error(f"Error fetching open positions: {e}", exc_info=True)
         raise
-    
-    # 2. Calculate the margin contribution of the symbol BEFORE this order was opened
     margin_before_data = await calculate_total_symbol_margin_contribution(
         db, redis_client, db_order.order_user_id, db_order.order_company_name, 
         open_positions_before, order_model_class, 'live'
     )
     margin_before = margin_before_data["total_margin"]
     orders_logger.info(f"Old total margin for {db_order.order_company_name}: {margin_before}")
-
-    # 3. Create a temporary order object with the new margin
     simulated_order = type('Obj', (object,), {
-        'order_quantity': db_order.order_quantity,
+        'order_quantity': final_quantity,
         'order_type': db_order.order_type,
         'margin': new_order_margin
     })()
-
-    # 4. Calculate the new total margin including the new order
     margin_after_data = await calculate_total_symbol_margin_contribution(
         db, redis_client, db_order.order_user_id, db_order.order_company_name,
         open_positions_before + [simulated_order], order_model_class, 'live'
     )
     margin_after = margin_after_data["total_margin"]
     orders_logger.info(f"New total margin for {db_order.order_company_name}: {margin_after}")
-    
-    # 5. Calculate the change and apply it to the user's overall margin
     margin_change = margin_after - margin_before
     orders_logger.info(f"Margin change for user {db_order.order_user_id}: {margin_change}")
-    
-    # Get the actual user, not the service account
     actual_user = await get_user_by_id_with_lock(db, db_order.order_user_id)
     if actual_user:
-        # Record original margin for verification
         original_margin = actual_user.margin or Decimal('0')
         new_margin = original_margin + margin_change
-        
-        # Check if user has enough free margin
         if actual_user.wallet_balance < new_margin:
             orders_logger.error(f"User {db_order.order_user_id} does not have enough wallet balance to cover margin. wallet_balance={actual_user.wallet_balance}, new_margin={new_margin}")
             raise HTTPException(status_code=400, detail="Insufficient funds to cover margin")
-        
-        # Update the user's margin in database
         actual_user.margin = new_margin
         db.add(actual_user)
         update_fields['user_margin_after'] = new_margin
@@ -3293,24 +3272,17 @@ async def _handle_order_open_transition(
     else:
         orders_logger.error(f"Could not find user with ID {db_order.order_user_id} to update margin")
         raise HTTPException(status_code=404, detail=f"User {db_order.order_user_id} not found")
-
-    # Update the order in the database with all new fields
     updated_order_db = await crud_order.update_order_with_tracking(
         db,
         db_order,
         update_fields,
         current_user.id,
-        'live',  # For Barclays service provider, always use 'live'
+        'live',
         action_type=action_type
     )
-
     await db.commit()
     await db.refresh(updated_order_db)
-
-    # Update caches and publish events
-    # Get the user to access their group_name and other attributes
     actual_user = await get_user_by_id(db, updated_order_db.order_user_id, user_type='live')
-    
     user_data_to_cache = {
         "id": updated_order_db.order_user_id, 
         "email": getattr(actual_user, 'email', None),
@@ -3328,7 +3300,6 @@ async def _handle_order_open_transition(
     await publish_order_update(redis_client, updated_order_db.order_user_id)
     await publish_user_data_update(redis_client, updated_order_db.order_user_id)
     await publish_market_data_trigger(redis_client)
-    
     return updated_order_db
 
 
