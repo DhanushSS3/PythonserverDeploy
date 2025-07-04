@@ -418,35 +418,41 @@ async def place_order(
         # Helper functions for background tasks (defined after all variables are available)
         async def update_user_cache():
             """Update user cache in background"""
-            try:
-                await update_user_static_orders_cache_after_order_change(user_id, db, redis_client, user_type)
-            except Exception as e:
-                orders_logger.error(f"Error updating user cache: {e}")
+            from app.database.session import async_session_factory
+            async with await async_session_factory() as background_db:
+                try:
+                    await update_user_static_orders_cache_after_order_change(user_id, background_db, redis_client, user_type)
+                except Exception as e:
+                    orders_logger.error(f"Error updating user cache: {e}")
         
         async def update_portfolio():
             """Update portfolio in background"""
-            try:
-                await calculate_user_portfolio(db, redis_client, user_id, user_type)
-            except Exception as e:
-                orders_logger.error(f"Error updating portfolio: {e}")
+            from app.database.session import async_session_factory
+            async with await async_session_factory() as background_db:
+                try:
+                    await calculate_user_portfolio(background_db, redis_client, user_id, user_type)
+                except Exception as e:
+                    orders_logger.error(f"Error updating portfolio: {e}")
         
         async def barclays_push():
             """Handle Barclays-specific operations"""
-            try:
-                if is_barclays_live_user:
-                    firebase_order_data = {
-                        "order_id": processed_order_data['order_id'],
-                        "user_id": user_id,
-                        "symbol": symbol,
-                        "order_type": order_type,
-                        "quantity": float(quantity),
-                        "price": float(processed_order_data['order_price']),
-                        "status": "PROCESSING"
-                    }
-                    orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
-                    await send_order_to_firebase(firebase_order_data, "live")
-            except Exception as e:
-                orders_logger.error(f"Error in Barclays push: {e}")
+            from app.database.session import async_session_factory
+            async with await async_session_factory() as background_db:
+                try:
+                    if is_barclays_live_user:
+                        firebase_order_data = {
+                            "order_id": processed_order_data['order_id'],
+                            "user_id": user_id,
+                            "symbol": symbol,
+                            "order_type": order_type,
+                            "quantity": float(quantity),
+                            "price": float(processed_order_data['order_price']),
+                            "status": "PROCESSING"
+                        }
+                        orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
+                        await send_order_to_firebase(firebase_order_data, "live")
+                except Exception as e:
+                    orders_logger.error(f"Error in Barclays push: {e}")
         
         # Step 6: Background tasks (non-blocking)
         if background_tasks:
