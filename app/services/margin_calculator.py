@@ -195,35 +195,43 @@ async def calculate_single_order_margin(
             # For market orders, use appropriate price
             adjusted_price = ask_price if order_type == 'BUY' else bid_price
         
-        # Step 4: Calculate contract value and margin
-        contract_value = (adjusted_price * quantity * contract_size).quantize(
+        # Step 4: Calculate contract value (always quantity * contract_size)
+        contract_value = (quantity * contract_size).quantize(
             Decimal('0.01'), rounding=ROUND_HALF_UP
         )
-        
-        # Calculate margin using leverage
+
+        # Step 5: Calculate margin using correct formula
+        group_type = int(group_settings.get('type', 0))
+        margin_from_group = Decimal(str(group_settings.get('margin', 1)))
+        if margin_from_group == 0:
+            margin_from_group = Decimal('1')
         if user_leverage <= 0:
             orders_logger.error(f"[MARGIN_CALC] Invalid leverage: {user_leverage}")
             return None, None, None, None
-        
-        margin = (contract_value / user_leverage).quantize(
-            Decimal('0.01'), rounding=ROUND_HALF_UP
-        )
-        
-        # Step 5: Calculate commission in parallel with margin conversion
+        if group_type == 4:
+            # Crypto: margin = (contract_value * adjusted_price * margin_from_group) / user_leverage
+            margin = (contract_value * adjusted_price * margin_from_group / user_leverage).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+        else:
+            # Commodities, indices, forex: margin = (contract_value * adjusted_price) / user_leverage
+            margin = (contract_value * adjusted_price / user_leverage).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+
+        # Step 6: Calculate commission in parallel with margin conversion
         commission = Decimal('0.0')
         commission_type = int(group_settings.get('commision_type', 0))
         commission_value_type = int(group_settings.get('commision_value_type', 0))
         commission_rate = Decimal(str(group_settings.get('commision', '0')))
-        
         if commission_type in [0, 1]:  # "Every Trade" or "In"
             if commission_value_type == 0:  # Per lot
                 commission = quantity * commission_rate
             elif commission_value_type == 1:  # Percent of price
                 commission = ((commission_rate * adjusted_price) / Decimal("100")) * quantity
-        
         commission = commission.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        
-        # Step 6: Convert margin to USD if needed (only if profit_currency is not USD)
+
+        # Step 7: Convert margin to USD if needed (only if profit_currency is not USD)
         margin_usd = margin
         if profit_currency != 'USD' and user_id and db:
             # Use cached conversion rates if available
@@ -251,10 +259,9 @@ async def calculate_single_order_margin(
             except Exception as e:
                 orders_logger.warning(f"[MARGIN_CALC] Currency conversion failed for {profit_currency}: {e}")
                 margin_usd = margin  # Fallback to original margin
-        
+
         orders_logger.info(f"[MARGIN_CALC_OPTIMIZED] Symbol: {symbol}, Type: {order_type}, Qty: {quantity}, "
                           f"Price: {adjusted_price}, Margin: {margin_usd}, Commission: {commission}")
-        
         return margin_usd, adjusted_price, contract_value, commission
         
     except Exception as e:
@@ -289,55 +296,55 @@ async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Di
 from app.core.cache import get_last_known_price
 from app.core.firebase import get_latest_market_data
 
-def calculate_pending_order_margin(
-    order_type: str,
-    order_quantity: Decimal,
-    order_price: Decimal,
-    symbol_settings: Dict[str, Any],
-    user_leverage: Decimal = None
-) -> Decimal:
-    """
-    Calculate margin for a pending order based on order details and symbol settings.
-    This simplified version is used for pending order processing.
-    Returns the calculated margin.
-    """
-    try:
-        # Get required settings from symbol_settings
-        contract_size_raw = symbol_settings.get('contract_size', 100000)
-        contract_size = Decimal(str(contract_size_raw))
+# def calculate_pending_order_margin(
+#     order_type: str,
+#     order_quantity: Decimal,
+#     order_price: Decimal,
+#     symbol_settings: Dict[str, Any],
+#     user_leverage: Decimal = None
+# ) -> Decimal:
+#     """
+#     Calculate margin for a pending order based on order details and symbol settings.
+#     This simplified version is used for pending order processing.
+#     Returns the calculated margin.
+#     """
+#     try:
+#         # Get required settings from symbol_settings
+#         contract_size_raw = symbol_settings.get('contract_size', 100000)
+#         contract_size = Decimal(str(contract_size_raw))
         
-        # Get leverage - use explicitly provided user_leverage if available,
-        # otherwise get from symbol_settings with a safer default
-        if user_leverage is not None:
-            leverage = Decimal(str(user_leverage))
-            orders_logger.info(f"[PENDING_MARGIN_CALC] Using provided user leverage: {leverage}")
-        else:
-            leverage_raw = symbol_settings.get('leverage', 100)  # Use more reasonable default leverage
-            leverage = Decimal(str(leverage_raw))
-            orders_logger.info(f"[PENDING_MARGIN_CALC] Using symbol settings leverage: {leverage} (raw: {leverage_raw})")
+#         # Get leverage - use explicitly provided user_leverage if available,
+#         # otherwise get from symbol_settings with a safer default
+#         if user_leverage is not None:
+#             leverage = Decimal(str(user_leverage))
+#             orders_logger.info(f"[PENDING_MARGIN_CALC] Using provided user leverage: {leverage}")
+#         else:
+#             leverage_raw = symbol_settings.get('leverage', 100)  # Use more reasonable default leverage
+#             leverage = Decimal(str(leverage_raw))
+#             orders_logger.info(f"[PENDING_MARGIN_CALC] Using symbol settings leverage: {leverage} (raw: {leverage_raw})")
         
-        # Make sure leverage is reasonable (typically 100-500 for forex)
-        # If it's too small (like 1), it would make margin requirements excessive
-        if leverage < Decimal('10'):
-            orders_logger.warning(f"[PENDING_MARGIN_CALC] Leverage very low ({leverage}), using default 100")
-            leverage = Decimal('100')
+#         # Make sure leverage is reasonable (typically 100-500 for forex)
+#         # If it's too small (like 1), it would make margin requirements excessive
+#         if leverage < Decimal('10'):
+#             orders_logger.warning(f"[PENDING_MARGIN_CALC] Leverage very low ({leverage}), using default 100")
+#             leverage = Decimal('100')
         
-        orders_logger.info(f"[PENDING_MARGIN_CALC] Calculating margin for pending {order_type} order: quantity={order_quantity}, price={order_price}")
-        orders_logger.info(f"[PENDING_MARGIN_CALC] Settings: contract_size={contract_size} (raw: {contract_size_raw}), leverage={leverage}")
+#         orders_logger.info(f"[PENDING_MARGIN_CALC] Calculating margin for pending {order_type} order: quantity={order_quantity}, price={order_price}")
+#         orders_logger.info(f"[PENDING_MARGIN_CALC] Settings: contract_size={contract_size} (raw: {contract_size_raw}), leverage={leverage}")
         
-        # Calculate contract value using the CORRECT formula
-        contract_value = contract_size * order_quantity
-        orders_logger.info(f"[PENDING_MARGIN_CALC] Contract value = contract_size * order_quantity = {contract_size} * {order_quantity} = {contract_value}")
+#         # Calculate contract value using the CORRECT formula
+#         contract_value = contract_size * order_quantity
+#         orders_logger.info(f"[PENDING_MARGIN_CALC] Contract value = contract_size * order_quantity = {contract_size} * {order_quantity} = {contract_value}")
         
-        # Calculate margin using the CORRECT formula
-        margin_raw = (contract_value * order_price) / leverage
-        margin = margin_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-        orders_logger.info(f"[PENDING_MARGIN_CALC] Margin = (contract_value * order_price) / leverage = ({contract_value} * {order_price}) / {leverage} = {margin_raw} (rounded to {margin})")
+#         # Calculate margin using the CORRECT formula
+#         margin_raw = (contract_value * order_price) / leverage
+#         margin = margin_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+#         orders_logger.info(f"[PENDING_MARGIN_CALC] Margin = (contract_value * order_price) / leverage = ({contract_value} * {order_price}) / {leverage} = {margin_raw} (rounded to {margin})")
         
-        return margin
-    except Exception as e:
-        orders_logger.error(f"[PENDING_MARGIN_CALC] Error calculating margin for pending order: {e}", exc_info=True)
-        return Decimal('0')
+#         return margin
+#     except Exception as e:
+#         orders_logger.error(f"[PENDING_MARGIN_CALC] Error calculating margin for pending order: {e}", exc_info=True)
+#         return Decimal('0')
 
 # async def calculate_total_symbol_margin_contribution(
 #     db: AsyncSession,

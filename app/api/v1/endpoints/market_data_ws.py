@@ -879,8 +879,8 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     """
     WebSocket endpoint for market data.
     - Authenticates user as before.
-    - Only reads adjusted prices from Redis (no per-user calculation or writes).
-    - All adjusted price calculations are now centralized in a background worker.
+    - Accepts the connection as early as possible, then does heavy DB/Redis work.
+    - Sends a loading message immediately after accepting.
     """
     logger.info("--- MINIMAL TEST: ENTERED websocket_endpoint ---")
     for handler in logger.handlers:
@@ -896,6 +896,19 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     # Clean up token - remove any trailing quotes or encoded characters
     token = token.strip('"').strip("'").replace('%22', '').replace('%27', '')
+
+    # Accept the WebSocket connection as early as possible
+    try:
+        await websocket.accept()
+        logger.info(f"WebSocket connection accepted (early) for {websocket.client.host}:{websocket.client.port}")
+        # Send a loading message to the client
+        await websocket.send_text(json.dumps({
+            "type": "loading",
+            "message": "Initializing connection, please wait..."
+        }))
+    except Exception as accept_error:
+        logger.error(f"Failed to accept WebSocket connection: {accept_error}")
+        return
 
     # Initialize Redis client
     redis_client = await get_redis_client()
@@ -928,7 +941,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                 return
             
             if not getattr(db_user_instance, 'isActive', True):
-                logger.warning(f"Authentication failed for user ID {user_id}: User inactive.")
+                logger.warning(f"Authentication failed for user ID {getattr(db_user_instance, 'id', None)}: User inactive.")
                 await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="User inactive")
                 return
 
@@ -1003,14 +1016,6 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         logger.error(f"Unexpected WS auth error for {websocket.client.host}:{websocket.client.port}: {e}", exc_info=True)
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason="Authentication error")
-        return
-
-    # Accept the WebSocket connection
-    try:
-        await websocket.accept()
-        logger.info(f"WebSocket connection accepted for user {account_number} (Group: {group_name}).")
-    except Exception as accept_error:
-        logger.error(f"Failed to accept WebSocket connection for user {account_number}: {accept_error}")
         return
 
     # Initialize static orders cache

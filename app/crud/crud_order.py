@@ -38,7 +38,7 @@ async def create_order(db: AsyncSession, order_data: dict, order_model: Type[Use
         
         # Different validation rules for different models
         if order_model.__name__ == 'DemoUserOrder':
-            if not (10 <= len(status_value) <= 30):
+            if not (1 <= len(status_value) <= 30):
                 orders_logger.debug(f"[DEBUG][create_order] DemoUserOrder status length: {len(status_value)}")
                 raise ValueError("'status' must be a string of length 10-30 for demo orders.")
         else:  # UserOrder
@@ -344,7 +344,7 @@ async def create_user_order(
             
             # Different validation rules for different models
             if order_model.__name__ == 'DemoUserOrder':
-                if not (10 <= len(status_value) <= 30):
+                if not (1 <= len(status_value) <= 30):
                     orders_logger.debug(f"[DEBUG][create_user_order] DemoUserOrder status length: {len(status_value)}")
                     raise ValueError("'status' must be a string of length 10-30 for demo orders.")
             else:  # UserOrder
@@ -404,7 +404,7 @@ async def update_order(
         
         # Different validation rules for different models
         if order_model.__name__ == 'DemoUserOrder':
-            if not (10 <= len(status_value) <= 30):
+            if not (1 <= len(status_value) <= 30):
                 raise ValueError("'status' must be a string of length 10-30 for demo orders.")
         else:  # UserOrder
             if not (0 <= len(status_value) <= 30):

@@ -440,6 +440,11 @@ async def get_user_from_service_token(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if token is None:
+        logger.warning("Service account token is missing.")
+        raise credentials_exception
+    
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         service_name: str = payload.get("sub")

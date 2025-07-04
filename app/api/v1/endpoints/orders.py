@@ -65,7 +65,7 @@ from app.services.order_processing import (
     generate_unique_10_digit_id
 )
 from app.services.portfolio_calculator import _convert_to_usd, calculate_user_portfolio
-from app.services.margin_calculator import calculate_single_order_margin, get_live_adjusted_buy_price_for_pair, calculate_pending_order_margin, get_live_adjusted_sell_price_for_pair
+from app.services.margin_calculator import calculate_single_order_margin, get_live_adjusted_buy_price_for_pair, get_live_adjusted_sell_price_for_pair
 from app.services.pending_orders import add_pending_order, remove_pending_order
 
 from app.crud import crud_order, group as crud_group
@@ -463,7 +463,8 @@ async def place_order(
             stop_loss=order_request.stop_loss,
             take_profit=order_request.take_profit,
             stoploss_id=processed_order_data.get('stoploss_id'),
-            takeprofit_id=processed_order_data.get('takeprofit_id')
+            takeprofit_id=processed_order_data.get('takeprofit_id'),
+            status=order_request.order_status
         )
         
         new_order = await crud_order.create_user_order(db=db, order_data=order_create_data.dict(), order_model=order_model)
@@ -897,10 +898,10 @@ async def place_pending_order(
                     "account_number": getattr(db_user, 'account_number', None),
                     "wallet_balance": db_user.wallet_balance,
                     "margin": db_user.margin,
-                    "first_name": getattr(db_user, 'first_name', None),
-                    "last_name": getattr(db_user, 'last_name', None),
-                    "country": getattr(db_user, 'country', None),
-                    "phone_number": getattr(db_user, 'phone_number', None),
+                    # "first_name": getattr(db_user, 'first_name', None),
+                    # "last_name": getattr(db_user, 'last_name', None),
+                    # "country": getattr(db_user, 'country', None),
+                    # "phone_number": getattr(db_user, 'phone_number', None),
                 }
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache, user_type)
                 

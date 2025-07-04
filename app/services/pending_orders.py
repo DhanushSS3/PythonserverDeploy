@@ -37,7 +37,7 @@ from app.core.cache import (
     get_user_static_orders_cache,
     DecimalEncoder  # Import for JSON serialization of decimals
 )
-from app.services.margin_calculator import calculate_single_order_margin, calculate_pending_order_margin
+from app.services.margin_calculator import calculate_single_order_margin
 from app.services.portfolio_calculator import calculate_user_portfolio, _convert_to_usd
 from app.core.firebase import send_order_to_firebase, get_latest_market_data
 from app.database.models import User, DemoUser, UserOrder, DemoUserOrder, ExternalSymbolInfo, Wallet
