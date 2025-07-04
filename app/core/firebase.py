@@ -68,6 +68,7 @@ def _stringify_value(value: Any) -> str:
 async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str = "live") -> bool:
     """
     Sends order data to Firebase Realtime Database under 'trade_data'.
+    Only the fields present in order_data are sent (plus account_type and timestamp).
     All field values are converted to strings before sending.
     Returns True if successful, False otherwise.
     """
@@ -76,54 +77,25 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
         # Log the original order data received
         firebase_comm_logger.info(f"OUTGOING ORDER DATA: {json.dumps(order_data, default=str)}")
         
-        # Define all possible order fields to ensure all are present and sent as strings.
-        # This list should be comprehensive for all data structures passed to this function.
-        all_order_fields = [
-            "order_id", "order_user_id", # user_id can be an alias for order_user_id
-            "order_company_name", "order_type", "order_status",
-            "order_price", "order_quantity", "contract_value", "margin",
-            "stop_loss", "take_profit", "close_price", "net_profit",
-            "swap", "commission", "cancel_message", "close_message",
-            "takeprofit_id", "stoploss_id", "cancel_id", "close_id", "modify_id",
-            "stoploss_cancel_id", "takeprofit_cancel_id", "status",
-            "timestamp", "account_type", "action"
-        ]
-
-        payload = {}
-        for field in all_order_fields:
-            current_value = order_data.get(field)
-
-            if field == "timestamp":
-                # Always generate a fresh UTC timestamp string for the Firebase record
-                payload[field] = _stringify_value(datetime.utcnow().isoformat())
-            elif field == "account_type":
-                payload[field] = _stringify_value(account_type)
-            elif field == "user_id" and current_value is None and 'order_user_id' in order_data:
-                # If 'user_id' is expected but not present, use 'order_user_id' if available
-                payload[field] = _stringify_value(order_data.get('order_user_id'))
-            else:
-                payload[field] = _stringify_value(current_value)
+        # Stringify all present fields
+        payload = {k: _stringify_value(v) for k, v in order_data.items()}
+        # Always add account_type and timestamp
+        payload["account_type"] = account_type
+        payload["timestamp"] = _stringify_value(datetime.utcnow().isoformat())
         
         # Log the fully stringified payload that will be pushed to Firebase.
         logger.info(f"[FIREBASE] Payload being pushed to Firebase (all stringified): {payload}")
-        
-        # Log to specialized firebase_comm logger
         firebase_comm_logger.info(f"FIREBASE PUSH: trade_data/{account_type} - {json.dumps(payload, default=str)}")
         
-        # Ensure firebase_db is the correct Realtime Database reference
-        firebase_database_ref = db.reference("trade_data") # Use the db from firebase_admin
-        push_result = firebase_database_ref.push(payload) # Single push operation
+        firebase_database_ref = db.reference("trade_data")
+        push_result = firebase_database_ref.push(payload)
         
-        # Log the push result with the generated key
         if push_result and hasattr(push_result, 'key'):
             firebase_comm_logger.info(f"FIREBASE PUSH RESULT: Key={push_result.key}")
-        
-        # Use a consistent key for logging the order identifier
         log_order_id = order_data.get('order_id') or order_data.get('user_id', 'N/A')
         logger.info(f"Order data (ID: {log_order_id}) sent to Firebase successfully.")
         return True
     except Exception as e:
-        # Log the specific order_data as well for better debugging if it's not too large
         error_msg = f"Error sending order data to Firebase (ID: {order_data.get('order_id', 'N/A')}): {e}"
         logger.error(error_msg, exc_info=True)
         firebase_comm_logger.error(f"FIREBASE ERROR: {error_msg}", exc_info=True)

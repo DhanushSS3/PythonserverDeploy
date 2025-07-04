@@ -1041,84 +1041,49 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         initial_symbols_data = {}
         
         if group_settings:
-            # Import Firebase function to get latest market data
-            from app.firebase_stream import get_latest_market_data as get_latest_market_data_sync
-            
             # Get all symbols for this group
             group_symbols = list(group_settings.keys())
-            logger.info(f"User {account_number}: Fetching initial market data for {len(group_symbols)} symbols from Firebase")
-            
-            # Fetch fresh market data from Firebase for all symbols
+            logger.info(f"User {account_number}: Fetching initial market data for {len(group_symbols)} symbols from cache (adjusted or last known price)")
             for symbol in group_symbols:
-                try:
-                    # Get raw market data from Firebase
-                    raw_market_data = get_latest_market_data_sync(symbol)
-                    
-                    if raw_market_data and raw_market_data.get('b') and raw_market_data.get('o'):
-                        # Calculate adjusted prices using the same logic as _calculate_and_cache_adjusted_prices
-                        symbol_group_settings = group_settings.get(symbol)
-                        if symbol_group_settings:
-                            try:
-                                raw_ask_price = raw_market_data.get('b')  # Ask from Firebase
-                                raw_bid_price = raw_market_data.get('o')  # Bid from Firebase
-                                
-                                ask_decimal = Decimal(str(raw_ask_price))
-                                bid_decimal = Decimal(str(raw_bid_price))
-                                spread_setting = Decimal(str(symbol_group_settings.get('spread', 0)))
-                                spread_pip_setting = Decimal(str(symbol_group_settings.get('spread_pip', 0)))
-                                
-                                configured_spread_amount = spread_setting * spread_pip_setting
-                                half_spread = configured_spread_amount / Decimal(2)
-
-                                # Adjusted prices for user display and trading
-                                adjusted_buy_price = ask_decimal + half_spread  # User buys at adjusted ask
-                                adjusted_sell_price = bid_decimal - half_spread  # User sells at adjusted bid
-
-                                effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
-                                effective_spread_in_pips = Decimal("0.0")
-                                if spread_pip_setting > Decimal("0.0"):
-                                    effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
-
-                                # Store in initial symbols data
-                                initial_symbols_data[symbol] = {
-                                    'buy': float(adjusted_buy_price),
-                                    'sell': float(adjusted_sell_price),
-                                    'spread': float(effective_spread_in_pips)
-                                }
-                                
-                                logger.debug(f"User {account_number}: Fetched fresh data for {symbol}: Buy={adjusted_buy_price}, Sell={adjusted_sell_price}")
-                                
-                            except Exception as calc_error:
-                                logger.error(f"User {account_number}: Error calculating adjusted prices for {symbol}: {calc_error}")
-                                # Fallback to cached data if available
-                                cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
-                                if cached_prices:
-                                    initial_symbols_data[symbol] = {
-                                        'buy': float(cached_prices.get('buy', 0)),
-                                        'sell': float(cached_prices.get('sell', 0)),
-                                        'spread': float(cached_prices.get('spread', 0))
-                                    }
-                    else:
-                        logger.warning(f"User {account_number}: No market data from Firebase for {symbol}, trying cache")
-                        # Fallback to cached data if Firebase has no data
-                        cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
-                        if cached_prices:
-                            initial_symbols_data[symbol] = {
-                                'buy': float(cached_prices.get('buy', 0)),
-                                'sell': float(cached_prices.get('sell', 0)),
-                                'spread': float(cached_prices.get('spread', 0))
-                            }
-                        
-                except Exception as symbol_error:
-                    logger.error(f"User {account_number}: Error fetching data for {symbol}: {symbol_error}")
-                    # Fallback to cached data
-                    cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
-                    if cached_prices:
+                # 1. Try adjusted price cache
+                cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                if cached_prices:
+                    initial_symbols_data[symbol] = {
+                        'buy': float(cached_prices.get('buy', 0)),
+                        'sell': float(cached_prices.get('sell', 0)),
+                        'spread': float(cached_prices.get('spread', 0))
+                    }
+                    continue
+                # 2. Fallback to last known price
+                last_price = await get_last_known_price(redis_client, symbol)
+                symbol_group_settings = group_settings.get(symbol)
+                if last_price and last_price.get('b') and last_price.get('o') and symbol_group_settings:
+                    try:
+                        raw_ask_price = last_price.get('b')  # Ask
+                        raw_bid_price = last_price.get('o')  # Bid
+                        ask_decimal = Decimal(str(raw_ask_price))
+                        bid_decimal = Decimal(str(raw_bid_price))
+                        spread_setting = Decimal(str(symbol_group_settings.get('spread', 0)))
+                        spread_pip_setting = Decimal(str(symbol_group_settings.get('spread_pip', 0)))
+                        configured_spread_amount = spread_setting * spread_pip_setting
+                        half_spread = configured_spread_amount / Decimal(2)
+                        adjusted_buy_price = ask_decimal + half_spread
+                        adjusted_sell_price = bid_decimal - half_spread
+                        effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+                        effective_spread_in_pips = Decimal("0.0")
+                        if spread_pip_setting > Decimal("0.0"):
+                            effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
                         initial_symbols_data[symbol] = {
-                            'buy': float(cached_prices.get('buy', 0)),
-                            'sell': float(cached_prices.get('sell', 0)),
-                            'spread': float(cached_prices.get('spread', 0))
+                            'buy': float(adjusted_buy_price),
+                            'sell': float(adjusted_sell_price),
+                            'spread': float(effective_spread_in_pips)
                         }
+                        logger.debug(f"User {account_number}: Fallback last price for {symbol}: Buy={adjusted_buy_price}, Sell={adjusted_sell_price}")
+                    except Exception as calc_error:
+                        logger.error(f"User {account_number}: Error calculating adjusted prices for {symbol} from last known price: {calc_error}")
+                    continue
+                # 3. If neither, skip or send placeholder (optional)
+                # initial_symbols_data[symbol] = {'buy': 0.0, 'sell': 0.0, 'spread': 0.0}
         
         # Check connection state again before sending
         if websocket.client_state == WebSocketState.CONNECTED:
@@ -1138,7 +1103,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             
             try:
                 await websocket.send_text(json.dumps(initial_response, cls=DecimalEncoder))
-                logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from Firebase)")
+                logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from cache)")
             except WebSocketDisconnect:
                 logger.warning(f"User {account_number}: Client disconnected during initial data send")
                 return

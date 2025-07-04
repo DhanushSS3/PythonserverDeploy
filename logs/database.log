@@ -10439,3 +10439,234 @@ Traceback (most recent call last):
     raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
 fastapi.exceptions.HTTPException: 500: Failed to process order: name 'is_barclays_live_user' is not defined
 2025-07-04 03:06:49,247 - INFO - database - Session rolled back due to error
+2025-07-04 03:14:29,089 - ERROR - database - Error in database session: 500: Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1562, in close_order
+    raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
+fastapi.exceptions.HTTPException: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1633, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1636, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+2025-07-04 03:14:29,103 - INFO - database - Session rolled back due to error
+2025-07-04 03:28:32,826 - ERROR - database - Error in database session: 500: Failed to process order: name 'user_id_for_operation' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 691, in place_pending_order
+    user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+                                                        ^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'user_id_for_operation' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1064, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'user_id_for_operation' is not defined
+2025-07-04 03:28:32,843 - INFO - database - Session rolled back due to error
+2025-07-04 03:28:38,816 - ERROR - database - Error in database session: 500: Failed to process order: name 'user_id_for_operation' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 691, in place_pending_order
+    user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+                                                        ^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'user_id_for_operation' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1064, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'user_id_for_operation' is not defined
+2025-07-04 03:28:38,839 - INFO - database - Session rolled back due to error
+2025-07-04 03:29:52,917 - ERROR - database - Error in database session: 500: Failed to process order: name 'background_tasks' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 945, in place_pending_order
+    if background_tasks:
+       ^^^^^^^^^^^^^^^^
+NameError: name 'background_tasks' is not defined. Did you mean: 'BackgroundTasks'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1064, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'background_tasks' is not defined
+2025-07-04 03:29:52,931 - INFO - database - Session rolled back due to error
+2025-07-04 03:30:00,439 - ERROR - database - Error in database session: 500: Failed to process order: name 'background_tasks' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 945, in place_pending_order
+    if background_tasks:
+       ^^^^^^^^^^^^^^^^
+NameError: name 'background_tasks' is not defined. Did you mean: 'BackgroundTasks'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1064, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'background_tasks' is not defined
+2025-07-04 03:30:00,445 - INFO - database - Session rolled back due to error
+2025-07-04 03:31:11,647 - ERROR - database - Error in database session: 500: Failed to process order: name 'update_user_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 947, in place_pending_order
+    background_tasks.add_task(update_user_cache)
+                              ^^^^^^^^^^^^^^^^^
+NameError: name 'update_user_cache' is not defined. Did you mean: 'update_user_margin'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1065, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'update_user_cache' is not defined
+2025-07-04 03:31:11,664 - INFO - database - Session rolled back due to error
+2025-07-04 03:37:27,416 - ERROR - database - Error in database session: 500: Failed to process order: name 'update_user_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 947, in place_pending_order
+    background_tasks.add_task(update_user_cache, user_id, db, redis_client, user_type)
+                              ^^^^^^^^^^^^^^^^^
+NameError: name 'update_user_cache' is not defined. Did you mean: 'update_user_margin'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1065, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'update_user_cache' is not defined
+2025-07-04 03:37:27,436 - INFO - database - Session rolled back due to error
+2025-07-04 03:38:58,133 - ERROR - database - Error in database session: 500: Failed to process order: name 'update_user_cache' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 947, in place_pending_order
+    background_tasks.add_task(update_user_cache, user_id_for_order, db, redis_client, user_type)
+                              ^^^^^^^^^^^^^^^^^
+NameError: name 'update_user_cache' is not defined. Did you mean: 'update_user_margin'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1038, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'update_user_cache' is not defined
+2025-07-04 03:38:58,151 - INFO - database - Session rolled back due to error
+2025-07-04 03:40:18,924 - ERROR - database - Error in database session: 500: Failed to process order: name 'start_total' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1008, in place_pending_order
+    orders_logger.info(f"[PERF] TOTAL place_order: {time.perf_counter() - start_total:.4f}s")
+                                                                          ^^^^^^^^^^^
+NameError: name 'start_total' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1040, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: name 'start_total' is not defined
+2025-07-04 03:40:18,943 - INFO - database - Session rolled back due to error

@@ -96,6 +96,25 @@ router = APIRouter(
     tags=["orders"]
 )
 
+# --- Global Helper Functions for Cache and Portfolio Updates ---
+async def update_user_cache(user_id, db, redis_client, user_type):
+    """Update user cache in background after order changes."""
+    from app.database.session import async_session_factory
+    async with await async_session_factory() as background_db:
+        try:
+            await update_user_static_orders_cache_after_order_change(user_id, background_db, redis_client, user_type)
+        except Exception as e:
+            orders_logger.error(f"Error updating user cache: {e}")
+
+async def update_portfolio(user_id, db, redis_client, user_type):
+    """Update portfolio in background after order changes."""
+    from app.database.session import async_session_factory
+    async with await async_session_factory() as background_db:
+        try:
+            await calculate_user_portfolio(background_db, redis_client, user_id, user_type)
+        except Exception as e:
+            orders_logger.error(f"Error updating portfolio: {e}")
+
 async def is_barclays_live_user(user, db, redis_client):
     from app.core.cache import get_group_settings_cache, set_group_settings_cache
     from app.crud import group as crud_group
@@ -451,24 +470,7 @@ async def place_order(
         creation_time = time.perf_counter() - start_creation
         orders_logger.info(f"[PERF] Order creation: {creation_time:.4f}s")
         
-        # Helper functions for background tasks (defined after all variables are available)
-        async def update_user_cache():
-            """Update user cache in background"""
-            from app.database.session import async_session_factory
-            async with await async_session_factory() as background_db:
-                try:
-                    await update_user_static_orders_cache_after_order_change(user_id, background_db, redis_client, user_type)
-                except Exception as e:
-                    orders_logger.error(f"Error updating user cache: {e}")
         
-        async def update_portfolio():
-            """Update portfolio in background"""
-            from app.database.session import async_session_factory
-            async with await async_session_factory() as background_db:
-                try:
-                    await calculate_user_portfolio(background_db, redis_client, user_id, user_type)
-                except Exception as e:
-                    orders_logger.error(f"Error updating portfolio: {e}")
         
         async def barclays_push():
             orders_logger.info("[BARCLAYS] barclays_push called in place_order")
@@ -481,9 +483,9 @@ async def place_order(
                         firebase_order_data = {
                             "order_id": processed_order_data['order_id'],
                             "user_id": user_id,
-                            "symbol": symbol,
+                            "order_company_name": symbol,
                             "order_type": order_type,
-                            "quantity": float(quantity),
+                            "order_quantity": float(quantity),
                             "price": float(processed_order_data['order_price']),
                             "status": "OPEN",
                             "contract_value": float(processed_order_data['contract_value'])
@@ -496,14 +498,14 @@ async def place_order(
         # Step 6: Background tasks (non-blocking)
         orders_logger.info(f"is_barclays_live_user in place_order: {is_barclays_user_result}")
         if background_tasks:
-            background_tasks.add_task(update_user_cache)
-            background_tasks.add_task(update_portfolio)
+            background_tasks.add_task(update_user_cache, user_id, db, redis_client, user_type)
+            background_tasks.add_task(update_portfolio, user_id, db, redis_client, user_type)
             if is_barclays_user_result:
                 orders_logger.info("[BARCLAYS] Scheduling barclays_push in place_order")
                 background_tasks.add_task(barclays_push)
         else:
-            asyncio.create_task(update_user_cache())
-            asyncio.create_task(update_portfolio())
+            asyncio.create_task(update_user_cache(user_id, db, redis_client, user_type))
+            asyncio.create_task(update_portfolio(user_id, db, redis_client, user_type))
             if is_barclays_user_result:
                 orders_logger.info("[BARCLAYS] Scheduling barclays_push in place_order (asyncio.create_task)")
                 asyncio.create_task(barclays_push())
@@ -560,6 +562,7 @@ async def place_order(
 @router.post("/pending-place", response_model=OrderResponse)
 async def place_pending_order(
     order_request: PendingOrderPlacementRequest,
+    background_tasks: BackgroundTasks,
     current_user: User | DemoUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis_client)
@@ -567,6 +570,7 @@ async def place_pending_order(
     """
     Place a new PENDING order (BUY_LIMIT, SELL_LIMIT, BUY_STOP, SELL_STOP).
     """
+    start_total = time.perf_counter()
     try:
         orders_logger.info(f"Pending order placement request received - User ID: {current_user.id}, Symbol: {order_request.symbol}, Type: {order_request.order_type}, Quantity: {order_request.order_quantity}")
         
@@ -688,7 +692,7 @@ async def place_pending_order(
         orders_logger.info(f"Calculated contract_value for pending order: {contract_value} (contract_size: {contract_size} * quantity: {order_request.order_quantity})")
 
         # Check if user is a Barclays live user
-        user_data = await get_user_data_cache(redis_client, user_id_for_operation, db, user_type)
+        user_data = await get_user_data_cache(redis_client, user_id_for_order, db, user_type)
         orders_logger.info(f"[DEBUG] User data from cache: {user_data}")
         
         group_name = user_data.get('group_name') if user_data else None
@@ -841,44 +845,7 @@ async def place_pending_order(
             orders_logger.error(f"Order {db_order.order_id} could not be verified in database after {max_verification_attempts} attempts. Not adding to Redis.")
             raise HTTPException(status_code=500, detail="Order created but could not be verified in database.")
 
-        # For Barclays live users, send to Firebase
-        if is_barclays_live_user:
-            orders_logger.info(f"Barclays live user detected. Sending pending order to Firebase.")
-            
-            # Prepare data to send to Firebase
-            firebase_order_data = {
-                'order_id': db_order.order_id,
-                'order_user_id': db_order.order_user_id,
-                'order_company_name': db_order.order_company_name,
-                'order_type': db_order.order_type,
-                'order_status': db_order.order_status,  # Will be PENDING_PROCESSING for Barclays users
-                'order_price': str(db_order.order_price),
-                'order_quantity': str(db_order.order_quantity),
-                'contract_value': str(db_order.contract_value),
-                'margin': str(db_order.margin) if db_order.margin else None,
-                'stop_loss': str(db_order.stop_loss) if db_order.stop_loss else None,
-                'take_profit': str(db_order.take_profit) if db_order.take_profit else None,
-                'stoploss_id': db_order.stoploss_id,
-                'takeprofit_id': db_order.takeprofit_id,
-                'status': getattr(db_order, 'status', None),
-                'action': 'pending_order',
-                'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            }
-            
-            orders_logger.info(f"[FIREBASE] Prepared Firebase payload for pending order: {firebase_order_data}")
-            
-            try:
-                # Send to Firebase
-                # Note: For Barclays users, the order starts with status PENDING_PROCESSING
-                # The service provider should confirm receipt and execution, after which
-                # the status will be changed to PENDING through a separate API call
-                result = await send_order_to_firebase(firebase_order_data, "live")
-                if result:
-                    orders_logger.info(f"[FIREBASE] Successfully sent pending order {db_order.order_id} to Firebase for Barclays user {user_id_for_order}")
-                else:
-                    orders_logger.error(f"[FIREBASE] Failed to send pending order {db_order.order_id} to Firebase for Barclays user {user_id_for_order}")
-            except Exception as e:
-                orders_logger.error(f"[FIREBASE] Exception while sending pending order to Firebase: {str(e)}", exc_info=True)
+
         
         # For non-Barclays users or as a backup for all users, add to Redis pending orders
         # Ensure the order dict passed to add_pending_order has all necessary fields
@@ -943,84 +910,35 @@ async def place_pending_order(
             orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
 
         if background_tasks:
-            background_tasks.add_task(update_user_cache)
+            background_tasks.add_task(update_user_cache, user_id_for_order, db, redis_client, user_type)
+            background_tasks.add_task(update_portfolio, user_id_for_order, db, redis_client, user_type)
         else:
-            asyncio.create_task(update_user_cache())
-        # Portfolio update (background)
-        async def update_portfolio():
-            from app.database.session import async_session_factory
-            async with await async_session_factory() as background_db:
-                user_id = db_order.order_user_id
-                user_data = await get_user_data_cache(redis_client, user_id, background_db, current_user.user_type)
-                if user_data:
-                    group_name = user_data.get('group_name')
-                    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-                    open_positions = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
-                    open_positions_dicts = [
-                        {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                        for pos in open_positions
-                    ]
-                    # Batch price fetch
-                    symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
-                    if symbol_keys:
-                        prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
-                        adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
-                    else:
-                        adjusted_market_prices = {}
-                    portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                    await set_user_portfolio_cache(redis_client, user_id, portfolio)
-                    await publish_account_structure_changed_event(redis_client, user_id)
-        if background_tasks:
-            background_tasks.add_task(update_portfolio)
-        else:
-            asyncio.create_task(update_portfolio())
+            asyncio.create_task(update_user_cache(user_id_for_order, db, redis_client, user_type))
+            asyncio.create_task(update_portfolio(user_id_for_order, db, redis_client, user_type))
         # Barclays Firebase push (background)
         if is_barclays_live_user:
             async def barclays_push():
                 """
                 Background task to send Barclays order details to Firebase after order placement, if user is a Barclays live user.
                 """
-                orders_logger.info(f"[BARCLAYS] barclays_push called for user {user_id}, is_barclays_live_user={is_barclays_live_user}")
-                from app.database.session import async_session_factory
-                async with await async_session_factory() as background_db:
-                    orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
-                    user_id = db_order.order_user_id
-                    user_data = await get_user_data_cache(redis_client, user_id, background_db, current_user.user_type)
-                    group_name = user_data.get('group_name') if user_data else None
-                    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
-                    open_positions = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
-                    open_positions_dicts = [
-                        {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                        for pos in open_positions
-                    ]
-                    symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
-                    if symbol_keys:
-                        prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
-                        adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
-                    else:
-                        adjusted_market_prices = {}
-                    portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                    free_margin = Decimal(str(portfolio.get('free_margin', '0')))
-                    order_margin = Decimal(str(db_order.margin or 0))
-                    orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
-                    if free_margin > order_margin:
-                        firebase_order_data = {
-                            'order_id': db_order.order_id,
-                            'order_user_id': db_order.order_user_id,
-                            'order_company_name': db_order.order_company_name,
-                            'order_type': db_order.order_type,
-                            'order_status': db_order.order_status,
-                            'order_price': db_order.order_price,
-                            'order_quantity': db_order.order_quantity,
-                            'contract_value': db_order.contract_value,
-                            'margin': db_order.margin,
-                            'stop_loss': db_order.stop_loss,
-                            'take_profit': db_order.take_profit,
-                        }
-                        orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
-                        await send_order_to_firebase(firebase_order_data, "live")
+                orders_logger.info(f"[BARCLAYS] barclays_push called for user {user_id_for_order}, is_barclays_live_user={is_barclays_live_user}")
+                try:
+                    # Use data from request and calculated values (no DB queries)
+                    firebase_order_data = {
+                        "order_id": db_order.order_id,  # Generated during creation
+                        "order_company_name": order_request.symbol,  # From request
+                        "order_price": float(order_request.order_price),  # From request
+                        "contract_value": float(contract_value),  # Calculated during creation
+                        "order_quantity": float(order_request.order_quantity),  # From request
+                        "order_type": order_request.order_type,  # From request
+                        "order_status": "PENDING-PROCESSING",  # Fixed for pending orders
+                        "status": "PENDING",  # Fixed for pending orders
+                        "action": "place_pending_order"  # Operation identifier
+                    }
+                    orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
+                    await send_order_to_firebase(firebase_order_data, "live")
+                except Exception as e:
+                    orders_logger.error(f"[BARCLAYS] Exception in barclays_push: {e}", exc_info=True)
             
             # SCHEDULE THE TASK!
             if background_tasks:
@@ -1921,11 +1839,11 @@ async def cancel_pending_order(
                 "order_id": cancel_request.order_id,
                 "cancel_id": cancel_id,
                 "user_id": user_id_for_operation,
-                "symbol": cancel_request.symbol,
+                # "symbol": cancel_request.symbol,
                 "order_type": cancel_request.order_type,
-                "action": "cancel_order",
+                # "action": "cancel_order",
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "cancel_message": cancel_request.cancel_message,
+                # "cancel_message": cancel_request.cancel_message,
                 "status": cancel_request.status or db_order.status,
                 "order_quantity": str(cancel_request.order_quantity or db_order.order_quantity),
                 "order_status": cancel_request.order_status or db_order.order_status,

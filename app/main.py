@@ -622,16 +622,16 @@ async def startup_event():
     # r = redis.Redis(host="127.0.0.1", port=6379)
     # await r.flushall()
     # print("Redis flushed")
-    # Print Redis connection info for debugging
-    redis_url = os.getenv("REDIS_URL")
-    redis_host = os.getenv("REDIS_HOST")
-    redis_port = os.getenv("REDIS_PORT")
-    redis_password = os.getenv("REDIS_PASSWORD")
-    print(f"[DEBUG] Redis connection info:")
-    print(f"  REDIS_URL: {redis_url}")
-    print(f"  REDIS_HOST: {redis_host}")
-    print(f"  REDIS_PORT: {redis_port}")
-    print(f"  REDIS_PASSWORD: {redis_password}")
+    # # Print Redis connection info for debugging
+    # redis_url = os.getenv("REDIS_URL")
+    # redis_host = os.getenv("REDIS_HOST")
+    # redis_port = os.getenv("REDIS_PORT")
+    # redis_password = os.getenv("REDIS_PASSWORD")
+    # print(f"[DEBUG] Redis connection info:")
+    # print(f"  REDIS_URL: {redis_url}")
+    # print(f"  REDIS_HOST: {redis_host}")
+    # print(f"  REDIS_PORT: {redis_port}")
+    # print(f"  REDIS_PASSWORD: {redis_password}")
 
     # Initialize Firebase
     try:
