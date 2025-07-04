@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 from app.database.models import UserOrder, User
 from app.crud.crud_order import get_all_system_open_orders
 from app.core.cache import get_group_symbol_settings_cache
-from app.firebase_stream import get_latest_market_data
+from app.core.firebase import get_latest_market_data
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ async def apply_daily_swap_charges_for_all_open_orders(db: AsyncSession, redis_c
             swap_rate_to_use = swap_buy_rate if order_type == "BUY" else swap_sell_rate
 
             # 2. Get Market Close Price (using only the offer price)
-            market_data = get_latest_market_data(order_symbol)
+            market_data = await get_latest_market_data(order_symbol)
 
              # --- ADDED LOGGING HERE ---
             if market_data:

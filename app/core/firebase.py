@@ -23,19 +23,27 @@ try:
 except ImportError as e:
     raise ImportError("Could not import firebase_db from app.firebase_stream: " + str(e))
 
-# Initialize firebase_admin if not already initialized
-import os
-service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH")
-database_url = os.getenv("FIREBASE_DATABASE_URL")
+# Initialize firebase_admin lazily
+_firebase_initialized = False
 
-if not service_account_path:
-    raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_KEY_PATH is not set in environment or .env file!")
-if not database_url:
-    raise RuntimeError("FIREBASE_DATABASE_URL is not set in environment or .env file!")
+def _ensure_firebase_initialized():
+    """Ensure Firebase is initialized before use."""
+    global _firebase_initialized
+    if not _firebase_initialized:
+        import os
+        service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH")
+        database_url = os.getenv("FIREBASE_DATABASE_URL")
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(service_account_path)
-    firebase_admin.initialize_app(cred, {'databaseURL': database_url})
+        if not service_account_path:
+            raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_KEY_PATH is not set in environment or .env file!")
+        if not database_url:
+            raise RuntimeError("FIREBASE_DATABASE_URL is not set in environment or .env file!")
+
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred, {'databaseURL': database_url})
+        
+        _firebase_initialized = True
 
 # Use the logger defined for this module
 logger = logging.getLogger(__name__)
@@ -64,6 +72,7 @@ async def send_order_to_firebase(order_data: Dict[str, Any], account_type: str =
     Returns True if successful, False otherwise.
     """
     try:
+        _ensure_firebase_initialized()
         # Log the original order data received
         firebase_comm_logger.info(f"OUTGOING ORDER DATA: {json.dumps(order_data, default=str)}")
         
@@ -126,6 +135,7 @@ async def get_latest_market_data(symbol: str = None) -> Optional[Dict[str, Any]]
     Returns None if data is not available.
     """
     try:
+        _ensure_firebase_initialized()
         # Ensure db refers to firebase_admin.db
         ref = db.reference('datafeeds')
         if symbol:
@@ -152,6 +162,7 @@ def get_latest_market_data_sync(symbol: str = None) -> Optional[Dict[str, Any]]:
     Returns None if data is not available.
     """
     try:
+        _ensure_firebase_initialized()
         # Ensure db refers to firebase_admin.db
         ref = db.reference('datafeeds')
         if symbol:

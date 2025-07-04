@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 from redis.asyncio import Redis
 import decimal # Import Decimal for type hinting and serialization
 import datetime
-from app.firebase_stream import get_latest_market_data
+from app.core.firebase import get_latest_market_data
 
 logger = logging.getLogger(__name__)
 

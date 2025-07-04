@@ -82,7 +82,7 @@ from app.schemas.wallet import WalletCreate
 
 from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
 from app.crud.group import get_all_symbols_for_group
-from app.firebase_stream import get_latest_market_data
+from app.core.firebase import get_latest_market_data
 from app.services.margin_calculator import get_external_symbol_info
 from app.core.firebase import send_order_to_firebase
 
@@ -393,31 +393,33 @@ async def place_order(
         log_time("db.commit+refresh", t5)
         # Update user data cache (background)
         async def update_user_cache():
-            user_id = db_order.order_user_id
-            db_user = None
-            if user_type == 'live':
-                db_user = await get_user_by_id(db, user_id, user_type=user_type)
-            else:
-                db_user = await get_demo_user_by_id(db, user_id, user_type=user_type)
-            if db_user:
-                user_data_to_cache = {
-                    "id": db_user.id,
-                    "email": getattr(db_user, 'email', None),
-                    "group_name": db_user.group_name,
-                    "leverage": db_user.leverage,
-                    "user_type": user_type,
-                    "account_number": getattr(db_user, 'account_number', None),
-                    "wallet_balance": db_user.wallet_balance,
-                    "margin": db_user.margin,
-                    "first_name": getattr(db_user, 'first_name', None),
-                    "last_name": getattr(db_user, 'last_name', None),
-                    "country": getattr(db_user, 'country', None),
-                    "phone_number": getattr(db_user, 'phone_number', None),
-                }
-                await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-                
-                # Update static orders cache after order placement
-                await update_user_static_orders_cache_after_order_change(user_id, db, redis_client, user_type)
+            from app.database.session import async_session_factory
+            async with await async_session_factory() as background_db:
+                user_id = db_order.order_user_id
+                db_user = None
+                if user_type == 'live':
+                    db_user = await get_user_by_id(background_db, user_id, user_type=user_type)
+                else:
+                    db_user = await get_demo_user_by_id(background_db, user_id, user_type=user_type)
+                if db_user:
+                    user_data_to_cache = {
+                        "id": db_user.id,
+                        "email": getattr(db_user, 'email', None),
+                        "group_name": db_user.group_name,
+                        "leverage": db_user.leverage,
+                        "user_type": user_type,
+                        "account_number": getattr(db_user, 'account_number', None),
+                        "wallet_balance": db_user.wallet_balance,
+                        "margin": db_user.margin,
+                        "first_name": getattr(db_user, 'first_name', None),
+                        "last_name": getattr(db_user, 'last_name', None),
+                        "country": getattr(db_user, 'country', None),
+                        "phone_number": getattr(db_user, 'phone_number', None),
+                    }
+                    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
+                    
+                    # Update static orders cache after order placement
+                    await update_user_static_orders_cache_after_order_change(user_id, background_db, redis_client, user_type)
                 
         if background_tasks:
             background_tasks.add_task(update_user_cache)
@@ -425,27 +427,29 @@ async def place_order(
             asyncio.create_task(update_user_cache())
         # Portfolio update (background)
         async def update_portfolio():
-            user_id = db_order.order_user_id
-            user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
-            if user_data:
-                group_name = user_data.get('group_name')
-                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                open_positions_dicts = [
-                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                    for pos in open_positions
-                ]
-                # Batch price fetch
-                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
-                if symbol_keys:
-                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
-                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
-                else:
-                    adjusted_market_prices = {}
-                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                await set_user_portfolio_cache(redis_client, user_id, portfolio)
-                await publish_account_structure_changed_event(redis_client, user_id)
+            from app.database.session import async_session_factory
+            async with await async_session_factory() as background_db:
+                user_id = db_order.order_user_id
+                user_data = await get_user_data_cache(redis_client, user_id, background_db, current_user.user_type)
+                if user_data:
+                    group_name = user_data.get('group_name')
+                    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                    open_positions = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
+                    open_positions_dicts = [
+                        {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                        for pos in open_positions
+                    ]
+                    # Batch price fetch
+                    symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                    if symbol_keys:
+                        prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                        adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                    else:
+                        adjusted_market_prices = {}
+                    portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                    await set_user_portfolio_cache(redis_client, user_id, portfolio)
+                    await publish_account_structure_changed_event(redis_client, user_id)
         if background_tasks:
             background_tasks.add_task(update_portfolio)
         else:
@@ -456,43 +460,45 @@ async def place_order(
                 """
                 Background task to send Barclays order details to Firebase after order placement, if user is a Barclays live user.
                 """
-                orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
-                user_id = db_order.order_user_id
-                user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
-                group_name = user_data.get('group_name') if user_data else None
-                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
-                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                open_positions_dicts = [
-                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                    for pos in open_positions
-                ]
-                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
-                if symbol_keys:
-                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
-                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
-                else:
-                    adjusted_market_prices = {}
-                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                free_margin = Decimal(str(portfolio.get('free_margin', '0')))
-                order_margin = Decimal(str(db_order.margin or 0))
-                orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
-                if free_margin > order_margin:
-                    firebase_order_data = {
-                        'order_id': db_order.order_id,
-                        'order_user_id': db_order.order_user_id,
-                        'order_company_name': db_order.order_company_name,
-                        'order_type': db_order.order_type,
-                        'order_status': db_order.order_status,
-                        'order_price': db_order.order_price,
-                        'order_quantity': db_order.order_quantity,
-                        'contract_value': db_order.contract_value,
-                        'margin': db_order.margin,
-                        'stop_loss': db_order.stop_loss,
-                        'take_profit': db_order.take_profit,
-                    }
-                    orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
-                    await send_order_to_firebase(firebase_order_data, "live")
+                from app.database.session import async_session_factory
+                async with await async_session_factory() as background_db:
+                    orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
+                    user_id = db_order.order_user_id
+                    user_data = await get_user_data_cache(redis_client, user_id, background_db, current_user.user_type)
+                    group_name = user_data.get('group_name') if user_data else None
+                    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
+                    open_positions = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
+                    open_positions_dicts = [
+                        {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                        for pos in open_positions
+                    ]
+                    symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                    if symbol_keys:
+                        prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                        adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                    else:
+                        adjusted_market_prices = {}
+                    portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                    free_margin = Decimal(str(portfolio.get('free_margin', '0')))
+                    order_margin = Decimal(str(db_order.margin or 0))
+                    orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
+                    if free_margin > order_margin:
+                        firebase_order_data = {
+                            'order_id': db_order.order_id,
+                            'order_user_id': db_order.order_user_id,
+                            'order_company_name': db_order.order_company_name,
+                            'order_type': db_order.order_type,
+                            'order_status': db_order.order_status,
+                            'order_price': db_order.order_price,
+                            'order_quantity': db_order.order_quantity,
+                            'contract_value': db_order.contract_value,
+                            'margin': db_order.margin,
+                            'stop_loss': db_order.stop_loss,
+                            'take_profit': db_order.take_profit,
+                        }
+                        orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
+                        await send_order_to_firebase(firebase_order_data, "live")
             # SCHEDULE THE TASK!
             if background_tasks:
                 background_tasks.add_task(barclays_push)
@@ -924,27 +930,29 @@ async def place_pending_order(
             asyncio.create_task(update_user_cache())
         # Portfolio update (background)
         async def update_portfolio():
-            user_id = db_order.order_user_id
-            user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
-            if user_data:
-                group_name = user_data.get('group_name')
-                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
-                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                open_positions_dicts = [
-                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                    for pos in open_positions
-                ]
-                # Batch price fetch
-                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
-                if symbol_keys:
-                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
-                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
-                else:
-                    adjusted_market_prices = {}
-                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                await set_user_portfolio_cache(redis_client, user_id, portfolio)
-                await publish_account_structure_changed_event(redis_client, user_id)
+            from app.database.session import async_session_factory
+            async with await async_session_factory() as background_db:
+                user_id = db_order.order_user_id
+                user_data = await get_user_data_cache(redis_client, user_id, background_db, current_user.user_type)
+                if user_data:
+                    group_name = user_data.get('group_name')
+                    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                    open_positions = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
+                    open_positions_dicts = [
+                        {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                        for pos in open_positions
+                    ]
+                    # Batch price fetch
+                    symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                    if symbol_keys:
+                        prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                        adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                    else:
+                        adjusted_market_prices = {}
+                    portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                    await set_user_portfolio_cache(redis_client, user_id, portfolio)
+                    await publish_account_structure_changed_event(redis_client, user_id)
         if background_tasks:
             background_tasks.add_task(update_portfolio)
         else:
@@ -955,43 +963,45 @@ async def place_pending_order(
                 """
                 Background task to send Barclays order details to Firebase after order placement, if user is a Barclays live user.
                 """
-                orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
-                user_id = db_order.order_user_id
-                user_data = await get_user_data_cache(redis_client, user_id, db, current_user.user_type)
-                group_name = user_data.get('group_name') if user_data else None
-                group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
-                open_positions = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                open_positions_dicts = [
-                    {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
-                     for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
-                    for pos in open_positions
-                ]
-                symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
-                if symbol_keys:
-                    prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
-                    adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
-                else:
-                    adjusted_market_prices = {}
-                portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                free_margin = Decimal(str(portfolio.get('free_margin', '0')))
-                order_margin = Decimal(str(db_order.margin or 0))
-                orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
-                if free_margin > order_margin:
-                    firebase_order_data = {
-                        'order_id': db_order.order_id,
-                        'order_user_id': db_order.order_user_id,
-                        'order_company_name': db_order.order_company_name,
-                        'order_type': db_order.order_type,
-                        'order_status': db_order.order_status,
-                        'order_price': db_order.order_price,
-                        'order_quantity': db_order.order_quantity,
-                        'contract_value': db_order.contract_value,
-                        'margin': db_order.margin,
-                        'stop_loss': db_order.stop_loss,
-                        'take_profit': db_order.take_profit,
-                    }
-                    orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
-                    await send_order_to_firebase(firebase_order_data, "live")
+                from app.database.session import async_session_factory
+                async with await async_session_factory() as background_db:
+                    orders_logger.debug(f"[BARCLAYS] Preparing to send order to Firebase for user_id={db_order.order_user_id}, order_id={db_order.order_id}, order_status={db_order.order_status}")
+                    user_id = db_order.order_user_id
+                    user_data = await get_user_data_cache(redis_client, user_id, background_db, current_user.user_type)
+                    group_name = user_data.get('group_name') if user_data else None
+                    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL") if group_name else None
+                    open_positions = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
+                    open_positions_dicts = [
+                        {attr: str(getattr(pos, attr)) if isinstance(getattr(pos, attr), Decimal) else getattr(pos, attr)
+                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'commission']}
+                        for pos in open_positions
+                    ]
+                    symbol_keys = list(group_symbol_settings.keys()) if group_symbol_settings else []
+                    if symbol_keys:
+                        prices = await redis_client.mget([f"last_price:{k}" for k in symbol_keys])
+                        adjusted_market_prices = {k: p for k, p in zip(symbol_keys, prices) if p}
+                    else:
+                        adjusted_market_prices = {}
+                    portfolio = await calculate_user_portfolio(user_data, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
+                    free_margin = Decimal(str(portfolio.get('free_margin', '0')))
+                    order_margin = Decimal(str(db_order.margin or 0))
+                    orders_logger.debug(f"[BARCLAYS] free_margin={free_margin}, order_margin={order_margin} for user_id={user_id}")
+                    if free_margin > order_margin:
+                        firebase_order_data = {
+                            'order_id': db_order.order_id,
+                            'order_user_id': db_order.order_user_id,
+                            'order_company_name': db_order.order_company_name,
+                            'order_type': db_order.order_type,
+                            'order_status': db_order.order_status,
+                            'order_price': db_order.order_price,
+                            'order_quantity': db_order.order_quantity,
+                            'contract_value': db_order.contract_value,
+                            'margin': db_order.margin,
+                            'stop_loss': db_order.stop_loss,
+                            'take_profit': db_order.take_profit,
+                        }
+                        orders_logger.debug(f"[BARCLAYS] Calling send_order_to_firebase with data: {firebase_order_data}")
+                        await send_order_to_firebase(firebase_order_data, "live")
             # SCHEDULE THE TASK!
             if background_tasks:
                 background_tasks.add_task(barclays_push)

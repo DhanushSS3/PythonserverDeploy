@@ -29,7 +29,7 @@ from app.core.cache import (
     get_live_adjusted_sell_price_for_pair,
     get_adjusted_market_price_cache
 )
-from app.firebase_stream import get_latest_market_data
+from app.core.firebase import get_latest_market_data
 from app.crud.crud_symbol import get_symbol_type
 from app.services.portfolio_calculator import _convert_to_usd, _calculate_adjusted_prices_from_raw
 from app.core.logging_config import orders_logger
@@ -335,7 +335,7 @@ async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Di
         return None
 
 from app.core.cache import get_last_known_price
-from app.firebase_stream import get_latest_market_data
+from app.core.firebase import get_latest_market_data
 
 def calculate_pending_order_margin(
     order_type: str,
