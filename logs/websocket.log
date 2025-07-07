@@ -1,0 +1,472 @@
+2025-07-07 00:13:02,751 - INFO - websocket - Redis publisher task started. Publishing to channel 'market_data_updates'.
+2025-07-07 00:13:15,909 - INFO - websocket - --- MINIMAL TEST: ENTERED websocket_endpoint --- Connection ID: 127.0.0.1:56528-1751872395909
+2025-07-07 00:13:15,909 - INFO - websocket - WebSocket connection accepted (early) for 127.0.0.1:56528 in 0.001s
+2025-07-07 00:13:15,912 - DEBUG - websocket - User 0: Successfully sent loading message
+2025-07-07 00:13:15,913 - INFO - websocket - WebSocket auth: token payload={'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751874192, 'iat': 1751872392}, account_number=DYY5A, user_type=live
+2025-07-07 00:13:15,914 - INFO - websocket - WebSocket auth: About to call get_user_by_account_number with account_number=DYY5A, user_type=live
+2025-07-07 00:13:15,922 - INFO - websocket - WebSocket auth: get_user_by_account_number(DYY5A, live) returned: <app.database.models.User object at 0x0000023A70BB0910>
+2025-07-07 00:13:15,924 - INFO - websocket - [WS] Using order model: UserOrder for user_type=live, account_number=DYY5A
+2025-07-07 00:13:15,934 - INFO - websocket - [WS] Open positions from DB for user_id=4: [<app.database.models.UserOrder object at 0x0000023A707ECEC0>, <app.database.models.UserOrder object at 0x0000023A70BB0B90>, <app.database.models.UserOrder object at 0x0000023A70BB0410>, <app.database.models.UserOrder object at 0x0000023A70BB02D0>, <app.database.models.UserOrder object at 0x0000023A70BB0690>, <app.database.models.UserOrder object at 0x0000023A70BB07D0>, <app.database.models.UserOrder object at 0x0000023A70BB0CD0>, <app.database.models.UserOrder object at 0x0000023A70BB0E10>]
+2025-07-07 00:13:16,420 - DEBUG - websocket - Cached/updated group-symbol settings for group 'Standard'.
+2025-07-07 00:13:16,423 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 00:13:16,428 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 00:13:16,429 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 00:13:16,448 - INFO - websocket - User DYY5A: Fetching initial market data for 77 symbols from cache (adjusted or last known price)
+2025-07-07 00:13:16,483 - DEBUG - websocket - User DYY5A: Fallback last price for XAUUSD: Buy=2050.00070000, Sell=2049.49770000
+2025-07-07 00:13:16,494 - DEBUG - websocket - User DYY5A: Fallback last price for GBPJPY: Buy=187.81255000, Sell=187.73755000
+2025-07-07 00:13:16,520 - DEBUG - websocket - User 4: Successfully sent initial connection data
+2025-07-07 00:13:16,520 - INFO - websocket - User DYY5A: Sent initial connection data with 50 symbols (fresh from cache)
+2025-07-07 00:13:16,521 - INFO - websocket - User 4: Subscribed to Redis channels for market data and updates
+2025-07-07 00:13:16,526 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 00:13:16,529 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 00:13:16,531 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 00:13:16,532 - INFO - websocket - User 4: WebSocket state: WebSocketState.CONNECTED
+2025-07-07 00:13:16,895 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0053000000", "o": "13.0027000000"}, "XAGUSD": {"b": "36.5900000000", "o": "36.5830000000"}, "GBPAUD": {"b": "2.0912500000", "o": "2.0910800000"}, "BTCUSD": {"b": "108824.000000000...
+2025-07-07 00:13:16,895 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0039 seconds.
+2025-07-07 00:13:16,920 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0055000000, Sell=13.0025000000, Spread=30.000000
+2025-07-07 00:13:16,921 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6050000000, Sell=36.5680000000, Spread=3.700000
+2025-07-07 00:13:16,926 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0913750000, Sell=2.0909550000, Spread=4.200000
+2025-07-07 00:13:16,929 - DEBUG - websocket - Adjusted prices for BTCUSD: Buy=108874.0000000000, Sell=108773.9000000000, Spread=10010.000000
+2025-07-07 00:13:16,930 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1739250000, Sell=7.1734750000, Spread=4.500000
+2025-07-07 00:13:16,933 - DEBUG - websocket - Adjusted prices for CADCHF: Buy=0.5828600000, Sell=0.5825300000, Spread=3.300000
+2025-07-07 00:13:16,937 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546450000, Sell=1.9540950000, Spread=5.500000
+2025-07-07 00:13:16,938 - DEBUG - websocket - Adjusted prices for USDSGD: Buy=1.2770050000, Sell=1.2767050000, Spread=3.000000
+2025-07-07 00:13:16,942 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9103500000, Sell=20.9024100000, Spread=79.400000
+2025-07-07 00:13:16,946 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2250450000, Sell=11.2232850000, Spread=17.600000
+2025-07-07 00:13:16,948 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7840150000, Sell=17.7779950000, Spread=60.200000
+2025-07-07 00:13:16,955 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2458600000, Sell=4.2448800000, Spread=9.800000
+2025-07-07 00:13:16,961 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5750000000, Sell=113.5250000000, Spread=5.000000
+2025-07-07 00:13:16,964 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952900000, Sell=0.7950200000, Spread=2.700000
+2025-07-07 00:13:17,005 - DEBUG - websocket - Adjusted prices for USDNOK: Buy=10.1186200000, Sell=10.1161800000, Spread=24.400000
+2025-07-07 00:13:17,013 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5485900000, Sell=9.5467000000, Spread=18.900000
+2025-07-07 00:13:17,015 - DEBUG - websocket - Adjusted prices for US30: Buy=44685.2100000000, Sell=44683.1000000000, Spread=211.000000
+2025-07-07 00:13:17,020 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3620650000, Sell=1.3619050000, Spread=1.600000
+2025-07-07 00:13:17,022 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051600000, Sell=1.8048000000, Spread=3.600000
+2025-07-07 00:13:17,024 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6062050000, Sell=1.6056850000, Spread=5.200000
+2025-07-07 00:13:17,025 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016400000, Sell=0.6014100000, Spread=2.300000
+2025-07-07 00:13:17,027 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8951250000, Sell=11.8925450000, Spread=25.800000
+2025-07-07 00:13:17,032 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349200000, Sell=0.9345700000, Spread=3.500000
+2025-07-07 00:13:17,034 - DEBUG - websocket - Adjusted prices for D30: Buy=23878.0000000000, Sell=23876.8000000000, Spread=120.000000
+2025-07-07 00:13:17,037 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209600000, Sell=0.8206700000, Spread=2.900000
+2025-07-07 00:13:17,039 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7817000000, Sell=13.7779000000, Spread=38.000000
+2025-07-07 00:13:17,042 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757150000, Sell=1.1755050000, Spread=2.100000
+2025-07-07 00:13:17,045 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5180000000, Sell=0.5177700000, Spread=2.300000
+2025-07-07 00:13:17,048 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5012400000, Sell=1.5008400000, Spread=4.000000
+2025-07-07 00:13:17,050 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633100000, Sell=0.8629900000, Spread=3.200000
+2025-07-07 00:13:17,052 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4580000000, Sell=170.4230000000, Spread=3.500000
+2025-07-07 00:13:17,055 - INFO - websocket - User 4: Initial connection - fetching fresh orders from database.
+2025-07-07 00:13:17,063 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 00:13:17,068 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 00:13:17,071 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 00:13:17,426 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:17,433 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:17,433 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 00:13:17,434 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:17,434 - INFO - websocket - User 4: Initial connection completed, switching to incremental updates
+2025-07-07 00:13:19,551 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0046600000", "o": "13.0025000000"}, "XAGUSD": {"b": "36.5910000000", "o": "36.5840000000"}, "NZDJPY": {"b": "87.2160000000", "o": "87.2070000000"}, "GBPAUD": {"b": "2.0912100000",...
+2025-07-07 00:13:19,551 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0026 seconds.
+2025-07-07 00:13:19,560 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0048600000, Sell=13.0023000000, Spread=25.600000
+2025-07-07 00:13:19,560 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6060000000, Sell=36.5690000000, Spread=3.700000
+2025-07-07 00:13:19,561 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2310000000, Sell=87.1920000000, Spread=3.900000
+2025-07-07 00:13:19,562 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0913350000, Sell=2.0909750000, Spread=3.600000
+2025-07-07 00:13:19,562 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9950000000, Sell=144.9730000000, Spread=2.200000
+2025-07-07 00:13:19,564 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1738350000, Sell=7.1734450000, Spread=3.900000
+2025-07-07 00:13:19,565 - DEBUG - websocket - Adjusted prices for CADCHF: Buy=0.5828800000, Sell=0.5825300000, Spread=3.500000
+2025-07-07 00:13:19,566 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546250000, Sell=1.9540850000, Spread=5.400000
+2025-07-07 00:13:19,566 - DEBUG - websocket - Adjusted prices for USDSGD: Buy=1.2769750000, Sell=1.2766650000, Spread=3.100000
+2025-07-07 00:13:19,567 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9103100000, Sell=20.9022100000, Spread=81.000000
+2025-07-07 00:13:19,568 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4460000000, Sell=94.4140000000, Spread=3.200000
+2025-07-07 00:13:19,569 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2238650000, Sell=11.2219150000, Spread=19.500000
+2025-07-07 00:13:19,571 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7847350000, Sell=17.7791050000, Spread=56.300000
+2025-07-07 00:13:19,573 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2457700000, Sell=4.2447900000, Spread=9.800000
+2025-07-07 00:13:19,574 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5740000000, Sell=113.5230000000, Spread=5.100000
+2025-07-07 00:13:19,575 - DEBUG - websocket - Adjusted prices for JP225: Buy=39591.6900000000, Sell=39587.6900000000, Spread=400.000000
+2025-07-07 00:13:19,575 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952200000, Sell=0.7949800000, Spread=2.400000
+2025-07-07 00:13:19,576 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6043750000, Sell=1.6040950000, Spread=2.800000
+2025-07-07 00:13:19,577 - DEBUG - websocket - Adjusted prices for USDCZK: Buy=20.9695000000, Sell=20.9045000000, Spread=6.500000
+2025-07-07 00:13:19,577 - DEBUG - websocket - Adjusted prices for USDNOK: Buy=10.1178000000, Sell=10.1161200000, Spread=16.800000
+2025-07-07 00:13:19,578 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2670000000, Sell=106.2350000000, Spread=3.200000
+2025-07-07 00:13:19,578 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5482600000, Sell=9.5461800000, Spread=20.800000
+2025-07-07 00:13:19,579 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3620450000, Sell=1.3618850000, Spread=1.600000
+2025-07-07 00:13:19,579 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051700000, Sell=1.8048100000, Spread=3.600000
+2025-07-07 00:13:19,580 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016500000, Sell=0.6014000000, Spread=2.500000
+2025-07-07 00:13:19,580 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889000000, Sell=0.8886600000, Spread=2.400000
+2025-07-07 00:13:19,581 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8953750000, Sell=11.8930650000, Spread=23.100000
+2025-07-07 00:13:19,582 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2644850000, Sell=2.2640050000, Spread=4.800000
+2025-07-07 00:13:19,582 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9348800000, Sell=0.9345300000, Spread=3.500000
+2025-07-07 00:13:19,583 - DEBUG - websocket - Adjusted prices for D30: Buy=23881.3000000000, Sell=23879.8000000000, Spread=150.000000
+2025-07-07 00:13:19,583 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209600000, Sell=0.8206900000, Spread=2.700000
+2025-07-07 00:13:19,584 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7809600000, Sell=13.7781000000, Spread=28.600000
+2025-07-07 00:13:19,584 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757150000, Sell=1.1754950000, Spread=2.200000
+2025-07-07 00:13:19,585 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5180200000, Sell=0.5177600000, Spread=2.600000
+2025-07-07 00:13:19,585 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9439650000, Sell=0.9433250000, Spread=6.400000
+2025-07-07 00:13:19,586 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5012600000, Sell=1.5008400000, Spread=4.200000
+2025-07-07 00:13:19,586 - DEBUG - websocket - Adjusted prices for USDCAD: Buy=1.3647600000, Sell=1.3645000000, Spread=2.600000
+2025-07-07 00:13:19,587 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633200000, Sell=0.8629900000, Spread=3.300000
+2025-07-07 00:13:19,950 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:19,952 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:19,952 - DEBUG - websocket - User 4: Sending 38 changed/updated symbols
+2025-07-07 00:13:19,952 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:21,484 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0046600000", "o": "13.0024000000"}, "XAGUSD": {"b": "36.5880000000", "o": "36.5820000000"}, "NZDJPY": {"b": "87.2140000000", "o": "87.2090000000"}, "GBPAUD": {"b": "2.0911900000",...
+2025-07-07 00:13:21,484 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0011 seconds.
+2025-07-07 00:13:21,495 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0048600000, Sell=13.0022000000, Spread=26.600000
+2025-07-07 00:13:21,496 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6030000000, Sell=36.5670000000, Spread=3.600000
+2025-07-07 00:13:21,496 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2290000000, Sell=87.1940000000, Spread=3.500000
+2025-07-07 00:13:21,497 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0913150000, Sell=2.0909150000, Spread=4.000000
+2025-07-07 00:13:21,498 - DEBUG - websocket - Adjusted prices for BTCUSD: Buy=108878.4000000000, Sell=108778.3000000000, Spread=10010.000000
+2025-07-07 00:13:21,498 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1738150000, Sell=7.1734150000, Spread=4.000000
+2025-07-07 00:13:21,499 - DEBUG - websocket - Adjusted prices for CADCHF: Buy=0.5828400000, Sell=0.5824900000, Spread=3.500000
+2025-07-07 00:13:21,500 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9547450000, Sell=1.9541750000, Spread=5.700000
+2025-07-07 00:13:21,500 - DEBUG - websocket - Adjusted prices for USDSGD: Buy=1.2769750000, Sell=1.2766750000, Spread=3.000000
+2025-07-07 00:13:21,501 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9098300000, Sell=20.9017300000, Spread=81.000000
+2025-07-07 00:13:21,502 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4510000000, Sell=94.4150000000, Spread=3.600000
+2025-07-07 00:13:21,502 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2250450000, Sell=11.2232050000, Spread=18.400000
+2025-07-07 00:13:21,503 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7847350000, Sell=17.7792550000, Spread=54.800000
+2025-07-07 00:13:21,503 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2454300000, Sell=4.2444500000, Spread=9.800000
+2025-07-07 00:13:21,504 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5730000000, Sell=113.5260000000, Spread=4.700000
+2025-07-07 00:13:21,505 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952200000, Sell=0.7949700000, Spread=2.500000
+2025-07-07 00:13:21,506 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044550000, Sell=1.6041650000, Spread=2.900000
+2025-07-07 00:13:21,506 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2660000000, Sell=106.2310000000, Spread=3.500000
+2025-07-07 00:13:21,507 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5482600000, Sell=9.5461600000, Spread=21.000000
+2025-07-07 00:13:21,508 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3620950000, Sell=1.3619350000, Spread=1.600000
+2025-07-07 00:13:21,509 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051400000, Sell=1.8047900000, Spread=3.500000
+2025-07-07 00:13:21,509 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061450000, Sell=1.6056250000, Spread=5.200000
+2025-07-07 00:13:21,509 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016400000, Sell=0.6013900000, Spread=2.500000
+2025-07-07 00:13:21,510 - DEBUG - websocket - Adjusted prices for AUDUSD: Buy=0.6514650000, Sell=0.6512050000, Spread=2.600000
+2025-07-07 00:13:21,510 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889500000, Sell=0.8887000000, Spread=2.500000
+2025-07-07 00:13:21,510 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8948650000, Sell=11.8930350000, Spread=18.300000
+2025-07-07 00:13:21,511 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2644150000, Sell=2.2639150000, Spread=5.000000
+2025-07-07 00:13:21,511 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349400000, Sell=0.9345700000, Spread=3.700000
+2025-07-07 00:13:21,512 - DEBUG - websocket - Adjusted prices for D30: Buy=23876.7500000000, Sell=23875.7500000000, Spread=100.000000
+2025-07-07 00:13:21,512 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209700000, Sell=0.8206600000, Spread=3.100000
+2025-07-07 00:13:21,512 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7809600000, Sell=13.7782000000, Spread=27.600000
+2025-07-07 00:13:21,512 - DEBUG - websocket - Adjusted prices for CHFJPY: Buy=182.3750000000, Sell=182.3250000000, Spread=5.000000
+2025-07-07 00:13:21,513 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757750000, Sell=1.1755550000, Spread=2.200000
+2025-07-07 00:13:21,513 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5180000000, Sell=0.5177400000, Spread=2.600000
+2025-07-07 00:13:21,513 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9439750000, Sell=0.9433250000, Spread=6.500000
+2025-07-07 00:13:21,514 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5013000000, Sell=1.5008900000, Spread=4.100000
+2025-07-07 00:13:21,514 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633300000, Sell=0.8630100000, Spread=3.200000
+2025-07-07 00:13:21,514 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4680000000, Sell=170.4330000000, Spread=3.500000
+2025-07-07 00:13:21,850 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:21,853 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:21,853 - DEBUG - websocket - User 4: Sending 38 changed/updated symbols
+2025-07-07 00:13:21,853 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:23,812 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0046600000", "o": "13.0022000000"}, "XAGUSD": {"b": "36.5900000000", "o": "36.5830000000"}, "NZDJPY": {"b": "87.2160000000", "o": "87.2090000000"}, "GBPAUD": {"b": "2.0911400000",...
+2025-07-07 00:13:23,813 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0008 seconds.
+2025-07-07 00:13:23,823 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0048600000, Sell=13.0020000000, Spread=28.600000
+2025-07-07 00:13:23,824 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6050000000, Sell=36.5680000000, Spread=3.700000
+2025-07-07 00:13:23,825 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2310000000, Sell=87.1940000000, Spread=3.700000
+2025-07-07 00:13:23,825 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0912650000, Sell=2.0909250000, Spread=3.400000
+2025-07-07 00:13:23,826 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9920000000, Sell=144.9710000000, Spread=2.100000
+2025-07-07 00:13:23,827 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1738550000, Sell=7.1735050000, Spread=3.500000
+2025-07-07 00:13:23,828 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546650000, Sell=1.9541550000, Spread=5.100000
+2025-07-07 00:13:23,828 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9091800000, Sell=20.9010600000, Spread=81.200000
+2025-07-07 00:13:23,829 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4480000000, Sell=94.4160000000, Spread=3.200000
+2025-07-07 00:13:23,830 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2250450000, Sell=11.2231350000, Spread=19.100000
+2025-07-07 00:13:23,831 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7843950000, Sell=17.7786450000, Spread=57.500000
+2025-07-07 00:13:23,831 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2463000000, Sell=4.2453200000, Spread=9.800000
+2025-07-07 00:13:23,832 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5780000000, Sell=113.5270000000, Spread=5.100000
+2025-07-07 00:13:23,833 - DEBUG - websocket - Adjusted prices for JP225: Buy=39591.4400000000, Sell=39587.4400000000, Spread=400.000000
+2025-07-07 00:13:23,833 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952100000, Sell=0.7949500000, Spread=2.600000
+2025-07-07 00:13:23,834 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044550000, Sell=1.6041550000, Spread=3.000000
+2025-07-07 00:13:23,834 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2660000000, Sell=106.2290000000, Spread=3.700000
+2025-07-07 00:13:23,835 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5482600000, Sell=9.5461000000, Spread=21.600000
+2025-07-07 00:13:23,835 - DEBUG - websocket - Adjusted prices for US30: Buy=44684.7000000000, Sell=44682.6000000000, Spread=210.000000
+2025-07-07 00:13:23,835 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051300000, Sell=1.8047500000, Spread=3.800000
+2025-07-07 00:13:23,835 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061550000, Sell=1.6056250000, Spread=5.300000
+2025-07-07 00:13:23,836 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016800000, Sell=0.6014500000, Spread=2.300000
+2025-07-07 00:13:23,836 - DEBUG - websocket - Adjusted prices for AUDUSD: Buy=0.6514850000, Sell=0.6512050000, Spread=2.800000
+2025-07-07 00:13:23,836 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889300000, Sell=0.8886700000, Spread=2.600000
+2025-07-07 00:13:23,836 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8955550000, Sell=11.8932850000, Spread=22.700000
+2025-07-07 00:13:23,837 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2643850000, Sell=2.2640450000, Spread=3.400000
+2025-07-07 00:13:23,837 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349300000, Sell=0.9345600000, Spread=3.700000
+2025-07-07 00:13:23,837 - DEBUG - websocket - Adjusted prices for D30: Buy=23876.9000000000, Sell=23875.8000000000, Spread=110.000000
+2025-07-07 00:13:23,837 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209700000, Sell=0.8207000000, Spread=2.700000
+2025-07-07 00:13:23,838 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7809600000, Sell=13.7781000000, Spread=28.600000
+2025-07-07 00:13:23,838 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757650000, Sell=1.1755550000, Spread=2.100000
+2025-07-07 00:13:23,838 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5179900000, Sell=0.5177300000, Spread=2.600000
+2025-07-07 00:13:23,839 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5013000000, Sell=1.5008800000, Spread=4.200000
+2025-07-07 00:13:23,839 - DEBUG - websocket - Adjusted prices for USDCAD: Buy=1.3647500000, Sell=1.3644900000, Spread=2.600000
+2025-07-07 00:13:23,840 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4650000000, Sell=170.4300000000, Spread=3.500000
+2025-07-07 00:13:24,158 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:24,159 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:24,159 - DEBUG - websocket - User 4: Sending 35 changed/updated symbols
+2025-07-07 00:13:24,160 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:26,102 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0033700000", "o": "13.0008000000"}, "XAGUSD": {"b": "36.5960000000", "o": "36.5960000000"}, "NZDJPY": {"b": "87.2160000000", "o": "87.2100000000"}, "GBPAUD": {"b": "2.0911100000",...
+2025-07-07 00:13:26,103 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0019 seconds.
+2025-07-07 00:13:26,111 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0035700000, Sell=13.0006000000, Spread=29.700000
+2025-07-07 00:13:26,112 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6110000000, Sell=36.5810000000, Spread=3.000000
+2025-07-07 00:13:26,113 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2310000000, Sell=87.1950000000, Spread=3.600000
+2025-07-07 00:13:26,113 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0912350000, Sell=2.0908550000, Spread=3.800000
+2025-07-07 00:13:26,114 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9920000000, Sell=144.9700000000, Spread=2.200000
+2025-07-07 00:13:26,115 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1738450000, Sell=7.1734150000, Spread=4.300000
+2025-07-07 00:13:26,115 - DEBUG - websocket - Adjusted prices for CADCHF: Buy=0.5828400000, Sell=0.5825000000, Spread=3.400000
+2025-07-07 00:13:26,116 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546450000, Sell=1.9541350000, Spread=5.100000
+2025-07-07 00:13:26,116 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9087800000, Sell=20.9009000000, Spread=78.800000
+2025-07-07 00:13:26,116 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4510000000, Sell=94.4150000000, Spread=3.600000
+2025-07-07 00:13:26,117 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2238650000, Sell=11.2218950000, Spread=19.700000
+2025-07-07 00:13:26,118 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7839950000, Sell=17.7781650000, Spread=58.300000
+2025-07-07 00:13:26,119 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2460700000, Sell=4.2450900000, Spread=9.800000
+2025-07-07 00:13:26,119 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5740000000, Sell=113.5260000000, Spread=4.800000
+2025-07-07 00:13:26,120 - DEBUG - websocket - Adjusted prices for JP225: Buy=39588.4000000000, Sell=39584.4000000000, Spread=400.000000
+2025-07-07 00:13:26,120 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952000000, Sell=0.7949500000, Spread=2.500000
+2025-07-07 00:13:26,120 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044550000, Sell=1.6041650000, Spread=2.900000
+2025-07-07 00:13:26,121 - DEBUG - websocket - Adjusted prices for USDNOK: Buy=10.1182700000, Sell=10.1161500000, Spread=21.200000
+2025-07-07 00:13:26,121 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2640000000, Sell=106.2270000000, Spread=3.700000
+2025-07-07 00:13:26,122 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5471900000, Sell=9.5450500000, Spread=21.400000
+2025-07-07 00:13:26,122 - DEBUG - websocket - Adjusted prices for US30: Buy=44684.2000000000, Sell=44682.1000000000, Spread=210.000000
+2025-07-07 00:13:26,123 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3620850000, Sell=1.3619250000, Spread=1.600000
+2025-07-07 00:13:26,124 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051400000, Sell=1.8047600000, Spread=3.800000
+2025-07-07 00:13:26,126 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061650000, Sell=1.6056450000, Spread=5.200000
+2025-07-07 00:13:26,127 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016600000, Sell=0.6014400000, Spread=2.200000
+2025-07-07 00:13:26,127 - DEBUG - websocket - Adjusted prices for AUDUSD: Buy=0.6514650000, Sell=0.6512050000, Spread=2.600000
+2025-07-07 00:13:26,128 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889700000, Sell=0.8887100000, Spread=2.600000
+2025-07-07 00:13:26,128 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8950950000, Sell=11.8930350000, Spread=20.600000
+2025-07-07 00:13:26,128 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2643650000, Sell=2.2638450000, Spread=5.200000
+2025-07-07 00:13:26,129 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349200000, Sell=0.9345600000, Spread=3.600000
+2025-07-07 00:13:26,129 - DEBUG - websocket - Adjusted prices for D30: Buy=23883.7500000000, Sell=23882.7500000000, Spread=100.000000
+2025-07-07 00:13:26,129 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8210000000, Sell=0.8206800000, Spread=3.200000
+2025-07-07 00:13:26,130 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757450000, Sell=1.1755250000, Spread=2.200000
+2025-07-07 00:13:26,131 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9438650000, Sell=0.9432150000, Spread=6.500000
+2025-07-07 00:13:26,131 - DEBUG - websocket - Adjusted prices for USDCAD: Buy=1.3647700000, Sell=1.3645000000, Spread=2.700000
+2025-07-07 00:13:26,132 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633400000, Sell=0.8630200000, Spread=3.200000
+2025-07-07 00:13:26,132 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4640000000, Sell=170.4290000000, Spread=3.500000
+2025-07-07 00:13:26,518 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:26,519 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:26,519 - DEBUG - websocket - User 4: Sending 37 changed/updated symbols
+2025-07-07 00:13:26,519 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:28,225 - INFO - websocket - User 4: Received message on channel order_updates: {"type": "ORDER_UPDATE", "user_id": 4, "timestamp": "2025-07-07T00:13:28.224537"}...
+2025-07-07 00:13:28,225 - INFO - websocket - User 4: ORDER UPDATE CHANNEL - Full message data: {"type": "ORDER_UPDATE", "user_id": 4, "timestamp": "2025-07-07T00:13:28.224537"}
+2025-07-07 00:13:28,225 - INFO - websocket - User 4: Received order update notification, timestamp: 2025-07-07T00:13:28.224537
+2025-07-07 00:13:28,226 - INFO - websocket - User 4: Forcing refresh of static orders cache from database
+2025-07-07 00:13:28,232 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 00:13:28,237 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 00:13:28,242 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 00:13:28,246 - INFO - websocket - User 4: Refreshed static orders cache: 8 open orders, 0 pending orders
+2025-07-07 00:13:28,247 - INFO - websocket - User 4: Static orders content: {"open_orders": [{"order_id": "5239114834", "order_company_name": "AUDCAD", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.89131912", "margin": "6.55706338", "contract_value": "891.32000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:39:46"}, {"order_id": "6253049859", "order_company_name": "AUDCAD", "order_type": "SELL", "order_quantity": "0.01000000", "order_price": "0.89122000", "margin": "6.55701512", "contract_value": "891.22000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:39:54"}, {"order_id": "5338478143", "order_company_name": "AUDCAD", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.89140913", "margin": "6.55759422", "contract_value": "891.41000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:44:09"}, {"order_id": "9836469641", "order_company_name": "AUDCAD", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.89139913", "margin": "6.55691862", "contract_value": "891.40000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:50:12"}, {"order_id": "7660709467", "order_company_name": "AUDCAD", "order_type": "SELL", "order_quantity": "0.01000000", "order_price": "0.89131000", "margin": "6.55696687", "contract_value": "891.31000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:50:15"}, {"order_id": "3649865209", "order_company_name": "AUDCHF", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.52031203", "margin": "6.55464939", "contract_value": "520.31000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0.10000000", "created_at": "2025-07-04T02:59:58"}, {"order_id": "5320207948", "order_company_name": "AUDJPY", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "95.10000000", "margin": "951.00000000", "contract_value": "1000.00000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0.10000000", "created_at": "2025-07-04T06:43:11"}, {"order_id": "1621588803", "order_company_name": "AUDJPY", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "95.10000000", "margin": "6.55103666", "contract_value": "1000.00000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0.10000000", "created_at": "2025-07-04T06:50:38"}], "pending_orders": [], "updated_at": "2025-07-07T00:13:28.238020"}
+2025-07-07 00:13:28,251 - INFO - websocket - User 4: Fresh user data fetched for order update: {"id": 4, "email": "dhanush777ss@gmail.com", "account_number": "DYY5A", "group_name": "Standard", "leverage": "100.00", "wallet_balance": "6599.06000000", "margin": "1928.22000000", "user_type": "live", "first_name": null, "last_name": null, "country": "string", "phone_number": "8618025298"}
+2025-07-07 00:13:28,256 - INFO - websocket - User 4: ORDER UPDATE - Formatted values for WebSocket: balance=6599.06000000 (type: <class 'str'>), margin=1928.22000000 (type: <class 'str'>)
+2025-07-07 00:13:28,256 - INFO - websocket - User 4: WebSocket response data: {"type": "market_update", "data": {"market_prices": {"GBPSEK": {"buy": 13.00357, "sell": 13.0006, "spread": 29.7}, "XAGUSD": {"buy": 36.611, "sell": 36.581, "spread": 3.0}, "GBPAUD": {"buy": 2.091235, "sell": 2.090855, "spread": 3.8}, "BTCUSD": {"buy": 108878.4, "sell": 108778.3, "spread": 10010.0}, "USDCNH": {"buy": 7.173845, "sell": 7.173415, "spread": 4.3}, "CADCHF": {"buy": 0.58284, "sell": 0.5825, "spread": 3.4}, "EURNZD": {"buy": 1.954645, "sell": 1.954135, "spread": 5.1}, "USDSGD": {"buy"...
+2025-07-07 00:13:28,257 - DEBUG - websocket - User 4: Successfully sent order update
+2025-07-07 00:13:28,257 - INFO - websocket - User 4: Sent orders update using market_update type
+2025-07-07 00:13:28,257 - INFO - websocket - User 4: Received message on channel user_data_updates: {"type": "USER_DATA_UPDATE", "user_id": 4, "timestamp": "2025-07-07T00:13:28.225333"}...
+2025-07-07 00:13:28,257 - INFO - websocket - User 4: Received user data update notification
+2025-07-07 00:13:28,257 - INFO - websocket - User 4: Fetching fresh user data from database
+2025-07-07 00:13:28,260 - INFO - websocket - User 4: User data fetched from database: {"id": 4, "email": "dhanush777ss@gmail.com", "account_number": "DYY5A", "group_name": "Standard", "leverage": "100.00", "wallet_balance": "6599.06000000", "margin": "1928.22000000", "user_type": "live", "first_name": null, "last_name": null, "country": "string", "phone_number": "8618025298"}
+2025-07-07 00:13:28,261 - INFO - websocket - User 4: IMPORTANT - Fresh wallet_balance=6599.06000000, margin=1928.22000000
+2025-07-07 00:13:28,589 - INFO - websocket - User 4: Dynamic portfolio from cache: {"balance": "6599.06000000", "equity": "6586.913680087404493798364952", "margin": "1928.22000000", "free_margin": "4658.693680087404493798364952", "profit_loss": "-12.14631991259550620163504776", "margin_level": "341.6059204907844796650986377", "positions_with_pnl": [{"order_id": "5239114834", "order_company_name": "AUDCAD", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.89131912", "margin": "6.55706338", "contract_value": "891.32000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:39:46", "profit_loss": "-1.911919452464350094529040200", "current_price": "0.88871"}, {"order_id": "6253049859", "order_company_name": "AUDCAD", "order_type": "SELL", "order_quantity": "0.01000000", "order_price": "0.89122000", "margin": "6.55701512", "contract_value": "891.22000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:39:54", "profit_loss": "1.648762329078305218882358976", "current_price": "0.88897"}, {"order_id": "5338478143", "order_company_name": "AUDCAD", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.89140913", "margin": "6.55759422", "contract_value": "891.41000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:44:09", "profit_loss": "-1.977877273460055984640862926", "current_price": "0.88871"}, {"order_id": "9836469641", "order_company_name": "AUDCAD", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.89139913", "margin": "6.55691862", "contract_value": "891.40000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:50:12", "profit_loss": "-1.970549440886374628112496886", "current_price": "0.88871"}, {"order_id": "7660709467", "order_company_name": "AUDCAD", "order_type": "SELL", "order_quantity": "0.01000000", "order_price": "0.89131000", "margin": "6.55696687", "contract_value": "891.31000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0E-8", "created_at": "2025-07-04T02:50:15", "profit_loss": "1.714712822241437427637653335", "current_price": "0.88897"}, {"order_id": "3649865209", "order_company_name": "AUDCHF", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "0.52031203", "margin": "6.55464939", "contract_value": "520.31000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0.10000000", "created_at": "2025-07-04T02:59:58", "profit_loss": "0.0", "current_price": "0.0"}, {"order_id": "5320207948", "order_company_name": "AUDJPY", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "95.10000000", "margin": "951.00000000", "contract_value": "1000.00000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0.10000000", "created_at": "2025-07-04T06:43:11", "profit_loss": "-4.824724448552234070436330027", "current_price": "94.415"}, {"order_id": "1621588803", "order_company_name": "AUDJPY", "order_type": "BUY", "order_quantity": "0.01000000", "order_price": "95.10000000", "margin": "6.55103666", "contract_value": "1000.00000000", "stop_loss": null, "take_profit": null, "order_user_id": 4, "order_status": "OPEN", "commission": "0.10000000", "created_at": "2025-07-04T06:50:38", "profit_loss": "-4.824724448552234070436330027", "current_price": "94.415"}]}
+2025-07-07 00:13:28,589 - INFO - websocket - User 4: Fetching fresh static orders from database
+2025-07-07 00:13:28,593 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 00:13:28,604 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 00:13:28,630 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 00:13:28,634 - INFO - websocket - User 4: Static orders fetched from database: 8 open orders, 0 pending orders
+2025-07-07 00:13:28,639 - INFO - websocket - User 4: IMPORTANT - Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:28,640 - INFO - websocket - User 4: Sending user data update with balance=6599.06000000, margin=1928.22000000, 8 open orders and 0 pending orders
+2025-07-07 00:13:28,640 - DEBUG - websocket - User 4: Successfully sent user data update
+2025-07-07 00:13:28,640 - INFO - websocket - User 4: Sent user data update using market_update type
+2025-07-07 00:13:28,641 - INFO - websocket - User 4: Received message on channel market_data_updates: {"type": "market_data_update", "symbol": "TRIGGER", "b": "0", "o": "0", "timestamp": "2025-07-07T00:13:28.226854"}...
+2025-07-07 00:13:28,976 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:28,978 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:28,978 - DEBUG - websocket - User 4: Sending 0 changed/updated symbols
+2025-07-07 00:13:28,979 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:28,979 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0049000000", "o": "13.0023000000"}, "XAGUSD": {"b": "36.6120000000", "o": "36.6050000000"}, "NZDJPY": {"b": "87.2140000000", "o": "87.2110000000"}, "GBPAUD": {"b": "2.0911000000",...
+2025-07-07 00:13:28,979 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.5268 seconds.
+2025-07-07 00:13:28,991 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0051000000, Sell=13.0021000000, Spread=30.000000
+2025-07-07 00:13:28,993 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6270000000, Sell=36.5900000000, Spread=3.700000
+2025-07-07 00:13:28,994 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2290000000, Sell=87.1960000000, Spread=3.300000
+2025-07-07 00:13:28,995 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0912250000, Sell=2.0908550000, Spread=3.700000
+2025-07-07 00:13:28,996 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9940000000, Sell=144.9700000000, Spread=2.400000
+2025-07-07 00:13:28,997 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1738450000, Sell=7.1734650000, Spread=3.800000
+2025-07-07 00:13:28,998 - DEBUG - websocket - Adjusted prices for CADCHF: Buy=0.5828400000, Sell=0.5824900000, Spread=3.500000
+2025-07-07 00:13:29,000 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546750000, Sell=1.9541550000, Spread=5.200000
+2025-07-07 00:13:29,001 - DEBUG - websocket - Adjusted prices for USDSGD: Buy=1.2769650000, Sell=1.2766650000, Spread=3.000000
+2025-07-07 00:13:29,002 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9087400000, Sell=20.9005300000, Spread=82.100000
+2025-07-07 00:13:29,003 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4510000000, Sell=94.4160000000, Spread=3.500000
+2025-07-07 00:13:29,003 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2250450000, Sell=11.2231150000, Spread=19.300000
+2025-07-07 00:13:29,004 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7837550000, Sell=17.7782950000, Spread=54.600000
+2025-07-07 00:13:29,004 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5750000000, Sell=113.5260000000, Spread=4.900000
+2025-07-07 00:13:29,004 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952300000, Sell=0.7949700000, Spread=2.600000
+2025-07-07 00:13:29,005 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044450000, Sell=1.6041550000, Spread=2.900000
+2025-07-07 00:13:29,005 - DEBUG - websocket - Adjusted prices for USDNOK: Buy=10.1180100000, Sell=10.1161200000, Spread=18.900000
+2025-07-07 00:13:29,005 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2650000000, Sell=106.2280000000, Spread=3.700000
+2025-07-07 00:13:29,006 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5483100000, Sell=9.5462100000, Spread=21.000000
+2025-07-07 00:13:29,008 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3621050000, Sell=1.3619450000, Spread=1.600000
+2025-07-07 00:13:29,012 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051400000, Sell=1.8047500000, Spread=3.900000
+2025-07-07 00:13:29,012 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061450000, Sell=1.6056150000, Spread=5.300000
+2025-07-07 00:13:29,013 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016500000, Sell=0.6014200000, Spread=2.300000
+2025-07-07 00:13:29,014 - DEBUG - websocket - Adjusted prices for AUDUSD: Buy=0.6514750000, Sell=0.6512250000, Spread=2.500000
+2025-07-07 00:13:29,015 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889600000, Sell=0.8887100000, Spread=2.500000
+2025-07-07 00:13:29,015 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8950950000, Sell=11.8929350000, Spread=21.600000
+2025-07-07 00:13:29,016 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2644250000, Sell=2.2639950000, Spread=4.300000
+2025-07-07 00:13:29,016 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349300000, Sell=0.9345700000, Spread=3.600000
+2025-07-07 00:13:29,016 - DEBUG - websocket - Adjusted prices for D30: Buy=23884.6500000000, Sell=23883.6500000000, Spread=100.000000
+2025-07-07 00:13:29,017 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8210000000, Sell=0.8206900000, Spread=3.100000
+2025-07-07 00:13:29,017 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757750000, Sell=1.1755350000, Spread=2.400000
+2025-07-07 00:13:29,017 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5180100000, Sell=0.5177600000, Spread=2.500000
+2025-07-07 00:13:29,017 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9439750000, Sell=0.9433250000, Spread=6.500000
+2025-07-07 00:13:29,018 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5012900000, Sell=1.5008700000, Spread=4.200000
+2025-07-07 00:13:29,018 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633300000, Sell=0.8630100000, Spread=3.200000
+2025-07-07 00:13:29,318 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:29,320 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:29,320 - DEBUG - websocket - User 4: Sending 35 changed/updated symbols
+2025-07-07 00:13:29,320 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:30,711 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0049600000", "o": "13.0024000000"}, "XAGUSD": {"b": "36.6140000000", "o": "36.6070000000"}, "NZDJPY": {"b": "87.2190000000", "o": "87.2120000000"}, "GBPAUD": {"b": "2.0911300000",...
+2025-07-07 00:13:30,711 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0027 seconds.
+2025-07-07 00:13:30,733 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0051600000, Sell=13.0022000000, Spread=29.600000
+2025-07-07 00:13:30,735 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6290000000, Sell=36.5920000000, Spread=3.700000
+2025-07-07 00:13:30,737 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2340000000, Sell=87.1970000000, Spread=3.700000
+2025-07-07 00:13:30,739 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0912550000, Sell=2.0908650000, Spread=3.900000
+2025-07-07 00:13:30,741 - DEBUG - websocket - Adjusted prices for BTCUSD: Buy=108887.3000000000, Sell=108787.3000000000, Spread=10000.000000
+2025-07-07 00:13:30,742 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9960000000, Sell=144.9730000000, Spread=2.300000
+2025-07-07 00:13:30,744 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1737850000, Sell=7.1734350000, Spread=3.500000
+2025-07-07 00:13:30,746 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546650000, Sell=1.9541550000, Spread=5.100000
+2025-07-07 00:13:30,749 - DEBUG - websocket - Adjusted prices for USDSGD: Buy=1.2769750000, Sell=1.2766750000, Spread=3.000000
+2025-07-07 00:13:30,751 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9080200000, Sell=20.9008700000, Spread=71.500000
+2025-07-07 00:13:30,752 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4550000000, Sell=94.4190000000, Spread=3.600000
+2025-07-07 00:13:30,754 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2250450000, Sell=11.2232250000, Spread=18.200000
+2025-07-07 00:13:30,756 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7837850000, Sell=17.7780050000, Spread=57.800000
+2025-07-07 00:13:30,758 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2454000000, Sell=4.2444200000, Spread=9.800000
+2025-07-07 00:13:30,760 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5770000000, Sell=113.5280000000, Spread=4.900000
+2025-07-07 00:13:30,762 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952200000, Sell=0.7949700000, Spread=2.500000
+2025-07-07 00:13:30,764 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2670000000, Sell=106.2310000000, Spread=3.600000
+2025-07-07 00:13:30,765 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5483100000, Sell=9.5462000000, Spread=21.100000
+2025-07-07 00:13:30,766 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3620750000, Sell=1.3619150000, Spread=1.600000
+2025-07-07 00:13:30,772 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061050000, Sell=1.6056250000, Spread=4.800000
+2025-07-07 00:13:30,806 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016500000, Sell=0.6014400000, Spread=2.100000
+2025-07-07 00:13:30,807 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889500000, Sell=0.8887100000, Spread=2.400000
+2025-07-07 00:13:30,808 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2644150000, Sell=2.2639550000, Spread=4.600000
+2025-07-07 00:13:30,808 - DEBUG - websocket - Adjusted prices for D30: Buy=23887.4000000000, Sell=23886.4000000000, Spread=100.000000
+2025-07-07 00:13:30,810 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209900000, Sell=0.8206900000, Spread=3.000000
+2025-07-07 00:13:30,812 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7811000000, Sell=13.7782000000, Spread=29.000000
+2025-07-07 00:13:30,813 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5012800000, Sell=1.5008800000, Spread=4.000000
+2025-07-07 00:13:30,815 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633500000, Sell=0.8630400000, Spread=3.100000
+2025-07-07 00:13:31,150 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:31,154 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:31,155 - DEBUG - websocket - User 4: Sending 28 changed/updated symbols
+2025-07-07 00:13:31,156 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:33,092 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0048400000", "o": "13.0024000000"}, "NZDJPY": {"b": "87.2150000000", "o": "87.2100000000"}, "USDJPY": {"b": "144.9860000000", "o": "144.9810000000"}, "EURNZD": {"b": "1.9544800000...
+2025-07-07 00:13:33,092 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0056 seconds.
+2025-07-07 00:13:33,119 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0050400000, Sell=13.0022000000, Spread=28.400000
+2025-07-07 00:13:33,123 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2300000000, Sell=87.1950000000, Spread=3.500000
+2025-07-07 00:13:33,126 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9960000000, Sell=144.9710000000, Spread=2.500000
+2025-07-07 00:13:33,134 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546550000, Sell=1.9541750000, Spread=4.800000
+2025-07-07 00:13:33,141 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9080200000, Sell=20.9008400000, Spread=71.800000
+2025-07-07 00:13:33,144 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4560000000, Sell=94.4200000000, Spread=3.600000
+2025-07-07 00:13:33,148 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2248250000, Sell=11.2231250000, Spread=17.000000
+2025-07-07 00:13:33,155 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7837850000, Sell=17.7778950000, Spread=58.900000
+2025-07-07 00:13:33,160 - DEBUG - websocket - Adjusted prices for EURPLN: Buy=4.2454300000, Sell=4.2444500000, Spread=9.800000
+2025-07-07 00:13:33,225 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5780000000, Sell=113.5250000000, Spread=5.300000
+2025-07-07 00:13:33,231 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952500000, Sell=0.7949900000, Spread=2.600000
+2025-07-07 00:13:33,234 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044150000, Sell=1.6041550000, Spread=2.600000
+2025-07-07 00:13:33,238 - DEBUG - websocket - Adjusted prices for USDNOK: Buy=10.1177700000, Sell=10.1157900000, Spread=19.800000
+2025-07-07 00:13:33,241 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2650000000, Sell=106.2290000000, Spread=3.600000
+2025-07-07 00:13:33,242 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5482300000, Sell=9.5461000000, Spread=21.300000
+2025-07-07 00:13:33,244 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3621050000, Sell=1.3619450000, Spread=1.600000
+2025-07-07 00:13:33,245 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051100000, Sell=1.8047300000, Spread=3.800000
+2025-07-07 00:13:33,247 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061150000, Sell=1.6056450000, Spread=4.700000
+2025-07-07 00:13:33,250 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016500000, Sell=0.6014100000, Spread=2.400000
+2025-07-07 00:13:33,251 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889500000, Sell=0.8887200000, Spread=2.300000
+2025-07-07 00:13:33,254 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8948350000, Sell=11.8925450000, Spread=22.900000
+2025-07-07 00:13:33,255 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2643650000, Sell=2.2640050000, Spread=3.600000
+2025-07-07 00:13:33,257 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349400000, Sell=0.9345800000, Spread=3.600000
+2025-07-07 00:13:33,259 - DEBUG - websocket - Adjusted prices for D30: Buy=23887.8000000000, Sell=23886.8000000000, Spread=100.000000
+2025-07-07 00:13:33,261 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209900000, Sell=0.8207100000, Spread=2.800000
+2025-07-07 00:13:33,262 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7807000000, Sell=13.7777000000, Spread=30.000000
+2025-07-07 00:13:33,263 - DEBUG - websocket - Adjusted prices for CHFJPY: Buy=182.3750000000, Sell=182.3350000000, Spread=4.000000
+2025-07-07 00:13:33,265 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757750000, Sell=1.1755450000, Spread=2.300000
+2025-07-07 00:13:33,266 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9439750000, Sell=0.9432950000, Spread=6.800000
+2025-07-07 00:13:33,267 - DEBUG - websocket - Adjusted prices for USDCAD: Buy=1.3647600000, Sell=1.3645200000, Spread=2.400000
+2025-07-07 00:13:33,268 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633600000, Sell=0.8630300000, Spread=3.300000
+2025-07-07 00:13:33,270 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4660000000, Sell=170.4320000000, Spread=3.400000
+2025-07-07 00:13:33,636 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:33,640 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:33,640 - DEBUG - websocket - User 4: Sending 32 changed/updated symbols
+2025-07-07 00:13:33,641 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:35,437 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0034200000", "o": "13.0009000000"}, "XAGUSD": {"b": "36.6170000000", "o": "36.6090000000"}, "NZDJPY": {"b": "87.2180000000", "o": "87.2100000000"}, "GBPAUD": {"b": "2.0911300000",...
+2025-07-07 00:13:35,437 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0022 seconds.
+2025-07-07 00:13:35,463 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0036200000, Sell=13.0007000000, Spread=29.200000
+2025-07-07 00:13:35,465 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6320000000, Sell=36.5940000000, Spread=3.800000
+2025-07-07 00:13:35,467 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2330000000, Sell=87.1950000000, Spread=3.800000
+2025-07-07 00:13:35,469 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0912550000, Sell=2.0908750000, Spread=3.800000
+2025-07-07 00:13:35,472 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9950000000, Sell=144.9710000000, Spread=2.400000
+2025-07-07 00:13:35,474 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546450000, Sell=1.9541050000, Spread=5.400000
+2025-07-07 00:13:35,476 - DEBUG - websocket - Adjusted prices for USDSGD: Buy=1.2769750000, Sell=1.2766850000, Spread=2.900000
+2025-07-07 00:13:35,478 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9079500000, Sell=20.9008000000, Spread=71.500000
+2025-07-07 00:13:35,481 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4530000000, Sell=94.4170000000, Spread=3.600000
+2025-07-07 00:13:35,483 - DEBUG - websocket - Adjusted prices for EURSEK: Buy=11.2243150000, Sell=11.2225650000, Spread=17.500000
+2025-07-07 00:13:35,485 - DEBUG - websocket - Adjusted prices for USDZAR: Buy=17.7837850000, Sell=17.7780250000, Spread=57.600000
+2025-07-07 00:13:35,487 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5760000000, Sell=113.5250000000, Spread=5.100000
+2025-07-07 00:13:35,489 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952300000, Sell=0.7949700000, Spread=2.600000
+2025-07-07 00:13:35,491 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044550000, Sell=1.6041650000, Spread=2.900000
+2025-07-07 00:13:35,492 - DEBUG - websocket - Adjusted prices for USDNOK: Buy=10.1179900000, Sell=10.1160100000, Spread=19.800000
+2025-07-07 00:13:35,493 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2660000000, Sell=106.2290000000, Spread=3.700000
+2025-07-07 00:13:35,495 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5477600000, Sell=9.5457500000, Spread=20.100000
+2025-07-07 00:13:35,501 - DEBUG - websocket - Adjusted prices for US30: Buy=44686.2000000000, Sell=44684.1000000000, Spread=210.000000
+2025-07-07 00:13:35,533 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051100000, Sell=1.8047600000, Spread=3.500000
+2025-07-07 00:13:35,534 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016600000, Sell=0.6014400000, Spread=2.200000
+2025-07-07 00:13:35,536 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889700000, Sell=0.8887200000, Spread=2.500000
+2025-07-07 00:13:35,537 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8950950000, Sell=11.8928050000, Spread=22.900000
+2025-07-07 00:13:35,538 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2642950000, Sell=2.2637950000, Spread=5.000000
+2025-07-07 00:13:35,539 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349200000, Sell=0.9345700000, Spread=3.500000
+2025-07-07 00:13:35,540 - DEBUG - websocket - Adjusted prices for D30: Buy=23878.7500000000, Sell=23877.7500000000, Spread=100.000000
+2025-07-07 00:13:35,541 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209900000, Sell=0.8207200000, Spread=2.700000
+2025-07-07 00:13:35,542 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7814000000, Sell=13.7779000000, Spread=35.000000
+2025-07-07 00:13:35,543 - DEBUG - websocket - Adjusted prices for CHFJPY: Buy=182.3750000000, Sell=182.3250000000, Spread=5.000000
+2025-07-07 00:13:35,544 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757650000, Sell=1.1755350000, Spread=2.300000
+2025-07-07 00:13:35,546 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5180200000, Sell=0.5177600000, Spread=2.600000
+2025-07-07 00:13:35,549 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9439550000, Sell=0.9432750000, Spread=6.800000
+2025-07-07 00:13:35,550 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4650000000, Sell=170.4300000000, Spread=3.500000
+2025-07-07 00:13:36,280 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:36,285 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:36,285 - DEBUG - websocket - User 4: Sending 32 changed/updated symbols
+2025-07-07 00:13:36,286 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:37,662 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0044200000", "o": "13.0016000000"}, "XAGUSD": {"b": "36.6170000000", "o": "36.6100000000"}, "NZDJPY": {"b": "87.2160000000", "o": "87.2110000000"}, "GBPAUD": {"b": "2.0911100000",...
+2025-07-07 00:13:37,662 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0015 seconds.
+2025-07-07 00:13:37,670 - DEBUG - websocket - Adjusted prices for GBPSEK: Buy=13.0046200000, Sell=13.0014000000, Spread=32.200000
+2025-07-07 00:13:37,671 - DEBUG - websocket - Adjusted prices for XAGUSD: Buy=36.6320000000, Sell=36.5950000000, Spread=3.700000
+2025-07-07 00:13:37,672 - DEBUG - websocket - Adjusted prices for NZDJPY: Buy=87.2310000000, Sell=87.1960000000, Spread=3.500000
+2025-07-07 00:13:37,673 - DEBUG - websocket - Adjusted prices for GBPAUD: Buy=2.0912350000, Sell=2.0908750000, Spread=3.600000
+2025-07-07 00:13:37,673 - DEBUG - websocket - Adjusted prices for USDJPY: Buy=144.9960000000, Sell=144.9720000000, Spread=2.400000
+2025-07-07 00:13:37,674 - DEBUG - websocket - Adjusted prices for USDCNH: Buy=7.1738550000, Sell=7.1735050000, Spread=3.500000
+2025-07-07 00:13:37,675 - DEBUG - websocket - Adjusted prices for CADCHF: Buy=0.5828300000, Sell=0.5824800000, Spread=3.500000
+2025-07-07 00:13:37,676 - DEBUG - websocket - Adjusted prices for EURNZD: Buy=1.9546650000, Sell=1.9541550000, Spread=5.100000
+2025-07-07 00:13:37,677 - DEBUG - websocket - Adjusted prices for EURZAR: Buy=20.9081300000, Sell=20.9007700000, Spread=73.600000
+2025-07-07 00:13:37,678 - DEBUG - websocket - Adjusted prices for AUDJPY: Buy=94.4520000000, Sell=94.4160000000, Spread=3.600000
+2025-07-07 00:13:37,680 - DEBUG - websocket - Adjusted prices for SGDJPY: Buy=113.5760000000, Sell=113.5270000000, Spread=4.900000
+2025-07-07 00:13:37,681 - DEBUG - websocket - Adjusted prices for JP225: Buy=39598.4000000000, Sell=39594.4000000000, Spread=400.000000
+2025-07-07 00:13:37,682 - DEBUG - websocket - Adjusted prices for USDCHF: Buy=0.7952600000, Sell=0.7950000000, Spread=2.600000
+2025-07-07 00:13:37,682 - DEBUG - websocket - Adjusted prices for EURCAD: Buy=1.6044650000, Sell=1.6041650000, Spread=3.000000
+2025-07-07 00:13:37,683 - DEBUG - websocket - Adjusted prices for CADJPY: Buy=106.2630000000, Sell=106.2290000000, Spread=3.400000
+2025-07-07 00:13:37,683 - DEBUG - websocket - Adjusted prices for USDSEK: Buy=9.5480000000, Sell=9.5457500000, Spread=22.500000
+2025-07-07 00:13:37,683 - DEBUG - websocket - Adjusted prices for GBPUSD: Buy=1.3620950000, Sell=1.3619350000, Spread=1.600000
+2025-07-07 00:13:37,684 - DEBUG - websocket - Adjusted prices for EURAUD: Buy=1.8051100000, Sell=1.8047500000, Spread=3.600000
+2025-07-07 00:13:37,684 - DEBUG - websocket - Adjusted prices for CHFSGD: Buy=1.6061550000, Sell=1.6056550000, Spread=5.000000
+2025-07-07 00:13:37,685 - DEBUG - websocket - Adjusted prices for NZDUSD: Buy=0.6016500000, Sell=0.6014400000, Spread=2.100000
+2025-07-07 00:13:37,685 - DEBUG - websocket - Adjusted prices for AUDCAD: Buy=0.8889400000, Sell=0.8887000000, Spread=2.400000
+2025-07-07 00:13:37,685 - DEBUG - websocket - Adjusted prices for EURNOK: Buy=11.8950950000, Sell=11.8929050000, Spread=21.900000
+2025-07-07 00:13:37,686 - DEBUG - websocket - Adjusted prices for GBPNZD: Buy=2.2644250000, Sell=2.2639650000, Spread=4.600000
+2025-07-07 00:13:37,686 - DEBUG - websocket - Adjusted prices for EURCHF: Buy=0.9349700000, Sell=0.9346100000, Spread=3.600000
+2025-07-07 00:13:37,686 - DEBUG - websocket - Adjusted prices for D30: Buy=23878.8000000000, Sell=23877.4000000000, Spread=140.000000
+2025-07-07 00:13:37,687 - DEBUG - websocket - Adjusted prices for NZDCAD: Buy=0.8209900000, Sell=0.8207100000, Spread=2.800000
+2025-07-07 00:13:37,687 - DEBUG - websocket - Adjusted prices for GBPNOK: Buy=13.7810000000, Sell=13.7780000000, Spread=30.000000
+2025-07-07 00:13:37,687 - DEBUG - websocket - Adjusted prices for CHFJPY: Buy=182.3650000000, Sell=182.3250000000, Spread=4.000000
+2025-07-07 00:13:37,688 - DEBUG - websocket - Adjusted prices for EURUSD: Buy=1.1757750000, Sell=1.1755350000, Spread=2.400000
+2025-07-07 00:13:37,688 - DEBUG - websocket - Adjusted prices for AUDCHF: Buy=0.5180000000, Sell=0.5177600000, Spread=2.400000
+2025-07-07 00:13:37,689 - DEBUG - websocket - Adjusted prices for NOKSEK: Buy=0.9438750000, Sell=0.9432950000, Spread=5.800000
+2025-07-07 00:13:37,689 - DEBUG - websocket - Adjusted prices for EURSGD: Buy=1.5013000000, Sell=1.5008800000, Spread=4.200000
+2025-07-07 00:13:37,689 - DEBUG - websocket - Adjusted prices for USDCAD: Buy=1.3647800000, Sell=1.3645100000, Spread=2.700000
+2025-07-07 00:13:37,690 - DEBUG - websocket - Adjusted prices for EURGBP: Buy=0.8633300000, Sell=0.8630100000, Spread=3.200000
+2025-07-07 00:13:37,690 - DEBUG - websocket - Adjusted prices for EURJPY: Buy=170.4670000000, Sell=170.4320000000, Spread=3.500000
+2025-07-07 00:13:38,035 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 00:13:38,036 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 00:13:38,036 - DEBUG - websocket - User 4: Sending 35 changed/updated symbols
+2025-07-07 00:13:38,037 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 00:13:39,924 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "13.0039600000", "o": "13.0014000000"}, "XAGUSD": {"b": "36.6190000000", "o": "36.6120000000"}, "NZDJPY": {"b": "87.2170000000", "o": "87.2090000000"}, "GBPAUD": {"b": "2.0911400000",...
+2025-07-07 00:13:39,924 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0018 seconds.
+2025-07-07 00:13:39,925 - INFO - websocket - User DYY5A: WebSocket disconnected by client.
+2025-07-07 00:13:39,925 - INFO - websocket - User DYY5A: Cleaning up WebSocket connection.
+2025-07-07 00:13:39,927 - INFO - websocket - User 4: Unsubscribed from Redis and cleaned up.
+2025-07-07 00:13:39,927 - INFO - websocket - User DYY5A: Listener task successfully cancelled.
+2025-07-07 00:13:39,927 - INFO - websocket - User DYY5A: WebSocket connection fully closed.
+2025-07-07 00:13:42,270 - INFO - websocket - Redis publisher task cancelled.
+2025-07-07 00:13:42,270 - INFO - websocket - Redis publisher task finished.

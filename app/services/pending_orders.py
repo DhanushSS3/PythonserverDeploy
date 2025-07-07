@@ -54,9 +54,9 @@ from app.services.order_processing import (
     InsufficientFundsError,
     generate_unique_10_digit_id
 )
-from app.core.logging_config import orders_logger
+from app.core.logging_config import orders_logger, redis_logger
 
-logger = logging.getLogger("orders")
+logger = orders_logger
 
 # Redis key prefix for pending orders
 REDIS_PENDING_ORDERS_PREFIX = "pending_orders"
@@ -77,7 +77,6 @@ async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, 
         await redis_client.lrem(general_pending_key, 0, order_id)
         
     except Exception as e:
-        logger = logging.getLogger("pending_orders")
         logger.error(f"[REDIS_CLEANUP] Error removing pending order {order_id} from Redis: {e}")
 
 async def get_all_pending_orders_from_redis(redis_client: Redis) -> List[Dict[str, Any]]:
@@ -115,8 +114,7 @@ async def get_all_pending_orders_from_redis(redis_client: Redis) -> List[Dict[st
         return all_pending_orders
         
     except Exception as e:
-        logger = logging.getLogger("redis_cleanup")
-        logger.error(f"[REDIS_CLEANUP] Error getting all pending orders from Redis: {e}")
+        redis_logger.error(f"[REDIS_CLEANUP] Error getting all pending orders from Redis: {e}")
         return []
 
 async def add_pending_order(
@@ -650,7 +648,7 @@ async def check_and_trigger_stoploss_takeprofit(
     Optimized to fetch open orders from cache if available.
     Only checks orders that have SL or TP set (>0).
     """
-    logger = logging.getLogger("sltp")
+    logger = orders_logger
     try:
         from app.crud.user import get_all_active_users_both
         live_users, demo_users = await get_all_active_users_both(db)
@@ -745,7 +743,7 @@ async def process_order_stoploss_takeprofit(
     Enhanced with epsilon accuracy to handle floating-point precision issues.
     Accepts both ORM and dict order objects.
     """
-    logger = logging.getLogger("sltp")
+    logger = orders_logger
     try:
         # Support both ORM and dict order objects
         def get_attr(o, key):
@@ -1065,7 +1063,7 @@ async def close_order(
     Close an order with the given execution price and reason.
     This function includes robust margin calculations, commission handling, and wallet transactions.
     """
-    logger = logging.getLogger("orders")
+    logger = orders_logger
     
     def get_attr(o, key):
         if isinstance(o, dict):

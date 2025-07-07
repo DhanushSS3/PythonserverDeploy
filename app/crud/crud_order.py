@@ -9,9 +9,7 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 from sqlalchemy import and_, or_
 from typing import Dict
-import logging
-
-orders_crud_logger = logging.getLogger('orders_crud')
+from app.core.logging_config import orders_crud_logger, orders_logger
 
 # Utility to get the appropriate model class
 def get_order_model(user_type: str):
@@ -25,7 +23,6 @@ def get_order_model(user_type: str):
 
 # Create a new order
 async def create_order(db: AsyncSession, order_data: dict, order_model: Type[UserOrder | DemoUserOrder]):
-    orders_logger = logging.getLogger('orders')
     orders_logger.info(f"[ENTER-CRUD] create_order called with: {order_data}")
     orders_logger.debug(f"[DEBUG][create_order] Received order_data: {order_data}")
     
@@ -332,7 +329,6 @@ async def create_user_order(
     """
     Create a new order in the database.
     """
-    orders_logger = logging.getLogger('orders')
     orders_logger.debug(f"[DEBUG][create_user_order] Received order_data: {order_data}")
     try:
         # Handle status field validation based on model type

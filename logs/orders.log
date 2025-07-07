@@ -30,3 +30,52 @@
 2025-07-07 00:06:11,044 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
 2025-07-07 00:06:25,004 - INFO - orders - Application starting up - Orders logging initialized
 2025-07-07 00:06:25,004 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 00:11:04,207 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-07 00:11:04,207 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 00:12:36,492 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-07 00:12:36,493 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 00:13:00,783 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-07 00:13:00,784 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 00:13:07,768 - INFO - orders - Starting the pending order checker background task.
+2025-07-07 00:13:07,769 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-07 00:13:09,873 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:12,287 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:14,672 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:16,893 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:19,549 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:21,484 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:23,813 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:26,102 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:27,803 - INFO - orders - Order placement request received - User: 4, Symbol: AUDCAD, Type: BUY
+2025-07-07 00:13:28,146 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8888700000', 'o': '0.8888100000'}
+2025-07-07 00:13:28,146 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8888700000, ask=0.88895888700000
+2025-07-07 00:13:28,146 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8888700000, ask=0.88895888700000
+2025-07-07 00:13:28,147 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.89 CAD to USD for margin_calculation (user_id: 4, position: None)
+2025-07-07 00:13:28,147 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-07 00:13:28,148 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-07 00:13:28,148 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-07 00:13:28,148 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-07 00:13:28,148 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3646600000'), 'o': Decimal('1.3646100000')}
+2025-07-07 00:13:28,149 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3646600000
+2025-07-07 00:13:28,149 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.89 CAD / 1.3646600000 = 6.514443158002725953717409465 USD
+2025-07-07 00:13:28,149 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.88895888700000, Margin: 6.514443158002725953717409465, Commission: 0.00
+2025-07-07 00:13:28,149 - INFO - orders - [PERF] Order processing: 0.3326s
+2025-07-07 00:13:28,150 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '9066577232', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.88895888700000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.514443158002725953717409465'), 'commission': Decimal('0.00'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-07 00:13:28,150 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 9066577232
+2025-07-07 00:13:28,223 - INFO - orders - [PERF] Order creation: 0.0742s
+2025-07-07 00:13:28,224 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-07 00:13:28,224 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-07 00:13:28,224 - INFO - orders - Publishing order update for user 4
+2025-07-07 00:13:28,225 - INFO - orders - Publishing user data update for user 4
+2025-07-07 00:13:28,226 - INFO - orders - Publishing market data trigger
+2025-07-07 00:13:28,227 - INFO - orders - [PERF] TOTAL place_order: 0.4257s
+2025-07-07 00:13:28,228 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:28,258 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-07 00:13:28,261 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-07 00:13:28,264 - DEBUG - orders - [BARCLAYS] Calling send_order_to_firebase with data: {'order_id': '9066577232', 'user_id': 4, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_quantity': 0.01, 'price': 0.888958887, 'status': 'OPEN', 'contract_value': 1000.0}
+2025-07-07 00:13:28,661 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:30,709 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:33,090 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:35,438 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:37,661 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 00:13:39,925 - INFO - orders - Market data update received, triggering SL/TP check

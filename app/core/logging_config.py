@@ -66,8 +66,8 @@ error_logger = setup_file_logger("error", "error.log", logging.ERROR)
 money_requests_logger = setup_file_logger("money_requests", "money_requests.log", logging.DEBUG)
 autocutoff_logger = setup_file_logger("autocutoff", "autocutoff.log", logging.DEBUG)
 
-# WebSocket logger with stream output
-websocket_logger  = setup_stream_logger("websocket_logger", logging.ERROR)
+# WebSocket logger with file output
+websocket_logger  = setup_file_logger("websocket", "websocket.log", logging.DEBUG)
 
 # Optionally force DEBUG level for specific modules globally
 logging.getLogger("app.core.security").setLevel(logging.DEBUG)

@@ -18,7 +18,6 @@ from decimal import Decimal
 from redis.asyncio import Redis
 
 import logging
-import sys
 
 # --- Trading Configuration ---
 # Epsilon value for SL/TP accuracy (floating-point precision tolerance)
@@ -55,50 +54,29 @@ from app.core.firebase import send_order_to_firebase
 # --- CORS Middleware Import ---
 from fastapi.middleware.cors import CORSMiddleware
 
-# Configure basic logging early
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
+# Import pre-configured loggers from logging_config
+from app.core.logging_config import (
+    orders_logger, 
+    autocutoff_logger, 
+    app_logger,
+    database_logger,
+    firebase_logger,
+    redis_logger,
+    security_logger,
+    market_data_logger,
+    cache_logger,
+    frontend_orders_logger,
+    service_provider_logger,
+    firebase_comm_logger,
+    orders_crud_logger,
+    jwt_security_logger,
+    error_logger,
+    money_requests_logger,
+    websocket_logger
+)
 
-# --- Force all stream handlers to ERROR level ---
-# This is an aggressive way to ensure only errors are shown in the console
-for logger_name in logging.Logger.manager.loggerDict:
-    logger = logging.getLogger(logger_name)
-    if not logger.handlers:
-        continue
-    for handler in logger.handlers:
-        if isinstance(handler, logging.StreamHandler):
-            # Check if the stream is stdout or stderr (console)
-            if handler.stream in (sys.stdout, sys.stderr):
-                logger.setLevel(logging.ERROR)
-                handler.setLevel(logging.ERROR)
-
-logging.getLogger('app.services.portfolio_calculator').setLevel(logging.DEBUG)
-logging.getLogger('app.services.swap_service').setLevel(logging.DEBUG)
-
-# Configure file logging for specific modules to logs/orders.log
-log_file_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'orders.log')
-os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-
-file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Orders endpoint logger to file
-orders_ep_logger = logging.getLogger('app.api.v1.endpoints.orders')
-orders_ep_logger.setLevel(logging.DEBUG)
-orders_fh = logging.FileHandler(log_file_path)
-orders_fh.setFormatter(file_formatter)
-orders_ep_logger.addHandler(orders_fh)
-orders_ep_logger.propagate = False
-
-# Order processing service logger to file
-order_proc_logger = logging.getLogger('app.services.order_processing')
-order_proc_logger.setLevel(logging.DEBUG)
-order_proc_fh = logging.FileHandler(log_file_path)
-order_proc_fh.setFormatter(file_formatter)
-order_proc_logger.addHandler(order_proc_fh)
-order_proc_logger.propagate = False
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# Use the main app logger for this module
+logger = app_logger
 
 # Import Firebase Admin SDK components
 import firebase_admin
@@ -125,8 +103,7 @@ from app.core.security import close_redis_connection, create_service_account_tok
 # Import shared state (for the queue)
 from app.shared_state import redis_publish_queue
 
-# Import orders logger
-from app.core.logging_config import orders_logger, autocutoff_logger
+# Import order processing utilities
 from app.services.order_processing import generate_unique_10_digit_id
 from app.database.models import UserOrder, DemoUser
 
@@ -775,12 +752,7 @@ async def read_root():
 
 async def run_stoploss_takeprofit_checker():
     """Background task to continuously check for stop loss and take profit conditions"""
-    logger = logging.getLogger("stoploss_takeprofit_checker")
-    logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    logger = orders_logger
     
     from sqlalchemy.ext.asyncio import AsyncSession
     from app.database.session import AsyncSessionLocal
@@ -825,14 +797,7 @@ async def run_pending_order_checker():
     Continuously runs the pending order checker in the background.
     SL/TP checks are now handled separately via market data updates.
     """
-    logger = logging.getLogger("pending_orders")
-    logger.setLevel(logging.INFO)
-    
-    pending_orders_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'pending_orders.log')
-    os.makedirs(os.path.dirname(pending_orders_log_path), exist_ok=True)
-    file_handler = logging.FileHandler(pending_orders_log_path)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(file_handler)
+    logger = orders_logger
 
     await asyncio.sleep(5)
     logger.info("Starting the pending order checker background task.")
@@ -884,15 +849,7 @@ async def run_sltp_checker_on_market_update():
     SL/TP checker that runs only when market data updates are received.
     This ensures SL/TP checks happen on every price tick.
     """
-    logger = logging.getLogger("sltp")
-    logger.setLevel(logging.INFO)
-    
-    # Add file handler for SL/TP logging
-    sltp_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'sltp.log')
-    sltp_handler = logging.FileHandler(sltp_log_path)
-    sltp_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(sltp_handler)
-    logger.propagate = False
+    logger = orders_logger
 
     # Give the application a moment to initialize everything else
     await asyncio.sleep(5) 
@@ -931,14 +888,7 @@ async def cleanup_orphaned_redis_orders():
     """
     Periodically clean up orphaned orders in Redis that no longer exist in the database.
     """
-    logger = logging.getLogger("redis_cleanup")
-    logger.setLevel(logging.INFO)
-    
-    redis_cleanup_log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'redis_cleanup.log')
-    os.makedirs(os.path.dirname(redis_cleanup_log_path), exist_ok=True)
-    file_handler = logging.FileHandler(redis_cleanup_log_path)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(file_handler)
+    logger = redis_logger
     
     while True:
         try:
