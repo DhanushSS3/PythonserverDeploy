@@ -48,6 +48,8 @@ class WebSocketTester:
         self.results: List[TestResult] = []
         self.active_connections = 0
         self.connection_lock = asyncio.Lock()
+        self.target_messages = 5
+        self.message_timeout = 10.0
         
     async def test_single_connection(self, connection_id: int, timeout: int = 30) -> TestResult:
         """Test a single WebSocket connection"""
@@ -78,12 +80,24 @@ class WebSocketTester:
                     
                     logger.info(f"Connection {connection_id}: Established in {connection_time:.3f}s (Active: {current_active})")
                     
-                    # Listen for messages for a short time
+                    # Listen for messages - wait for at least 5 messages or up to 10 seconds
                     message_start = time.time()
+                    message_timeout = self.message_timeout
+                    target_messages = self.target_messages
+                    
                     try:
-                        # Wait for initial messages (loading + market_update)
-                        for i in range(5):  # Expect at least 2 messages: loading + market_update
-                            msg = await asyncio.wait_for(ws.receive_json(), timeout=10.0)
+                        while messages_received < target_messages:
+                            # Check if we've exceeded the message timeout
+                            if time.time() - message_start > message_timeout:
+                                logger.info(f"Connection {connection_id}: Reached {message_timeout}s timeout with {messages_received} messages")
+                                break
+                            
+                            # Wait for next message with remaining timeout
+                            remaining_timeout = message_timeout - (time.time() - message_start)
+                            if remaining_timeout <= 0:
+                                break
+                                
+                            msg = await asyncio.wait_for(ws.receive_json(), timeout=remaining_timeout)
                             messages_received += 1
                             
                             if first_message_time == 0:
@@ -91,21 +105,36 @@ class WebSocketTester:
                             
                             last_message_time = time.time() - start_time
                             
-                            # Log first few messages for debugging
-                            if i < 2:
-                                logger.debug(f"Connection {connection_id}: Received message {i+1}: {msg.get('type', 'unknown')}")
+                            # Log message details for debugging
+                            msg_type = msg.get('type', 'unknown')
+                            if messages_received <= 3:  # Log first 3 messages
+                                logger.debug(f"Connection {connection_id}: Message {messages_received} - Type: {msg_type}")
+                                
+                                # Log additional details for market_update messages
+                                if msg_type == 'market_update' and 'data' in msg:
+                                    data = msg['data']
+                                    if 'account_summary' in data:
+                                        balance = data['account_summary'].get('balance', 'N/A')
+                                        margin = data['account_summary'].get('margin', 'N/A')
+                                        open_orders_count = len(data['account_summary'].get('open_orders', []))
+                                        pending_orders_count = len(data['account_summary'].get('pending_orders', []))
+                                        logger.debug(f"Connection {connection_id}: Account - Balance: {balance}, Margin: {margin}, Open Orders: {open_orders_count}, Pending: {pending_orders_count}")
+                                    
+                                    if 'market_prices' in data:
+                                        market_count = len(data['market_prices'])
+                                        logger.debug(f"Connection {connection_id}: Market prices count: {market_count}")
                             
-                            # If we got a market_update, we can stop waiting
-                            if msg.get('type') == 'market_update':
-                                break
+                            # Log progress every 5 messages
+                            if messages_received % 5 == 0:
+                                logger.info(f"Connection {connection_id}: Received {messages_received} messages so far...")
                                 
                     except asyncio.TimeoutError:
-                        logger.warning(f"Connection {connection_id}: Timeout waiting for messages")
+                        logger.info(f"Connection {connection_id}: Message collection timeout after {message_timeout}s with {messages_received} messages")
                     except Exception as msg_error:
                         logger.warning(f"Connection {connection_id}: Error receiving messages: {msg_error}")
                     
                     # Keep connection alive for a bit to test stability
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
                     
         except asyncio.TimeoutError:
             error_message = "Connection timeout"
@@ -242,6 +271,20 @@ class WebSocketTester:
         # Message statistics
         messages_received = [r.messages_received for r in successful_results]
         avg_messages = statistics.mean(messages_received) if messages_received else 0
+        median_messages = statistics.median(messages_received) if messages_received else 0
+        min_messages = min(messages_received) if messages_received else 0
+        max_messages = max(messages_received) if messages_received else 0
+        
+        # Message distribution analysis
+        message_distribution = {}
+        for msg_count in messages_received:
+            range_key = f"{msg_count} messages"
+            message_distribution[range_key] = message_distribution.get(range_key, 0) + 1
+        
+        # Success rate by message count
+        target_message_count = getattr(self, 'target_messages', 5)  # Default to 5 if not set
+        connections_with_target_messages = sum(1 for r in successful_results if r.messages_received >= target_message_count)
+        target_message_success_rate = connections_with_target_messages / successful_connections if successful_connections > 0 else 0
         
         # Generate report
         report = f"""
@@ -261,9 +304,23 @@ CONNECTION TIMES (successful connections only):
 - Maximum: {max_connection_time:.3f}s
 
 MESSAGE STATISTICS:
-- Average Messages Received: {avg_messages:.1f}
 - Total Messages Received: {sum(messages_received)}
+- Average Messages per Connection: {avg_messages:.1f}
+- Median Messages per Connection: {median_messages:.1f}
+- Minimum Messages: {min_messages}
+- Maximum Messages: {max_messages}
+- Connections with {target_message_count}+ Messages: {connections_with_target_messages}/{successful_connections} ({target_message_success_rate:.1%})
 
+MESSAGE DISTRIBUTION:
+"""
+        
+        # Sort message distribution by count
+        sorted_distribution = sorted(message_distribution.items(), key=lambda x: int(x[0].split()[0]))
+        for msg_range, count in sorted_distribution:
+            percentage = (count / successful_connections * 100) if successful_connections > 0 else 0
+            report += f"- {msg_range}: {count} connections ({percentage:.1f}%)\n"
+        
+        report += f"""
 FAILURE ANALYSIS:
 """
         
@@ -296,20 +353,61 @@ CAPACITY TEST DETAILS:
         """Save test results to CSV file"""
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = ['connection_id', 'success', 'connection_time', 'messages_received', 
-                         'first_message_time', 'last_message_time', 'total_duration', 'error_message']
+                         'first_message_time', 'last_message_time', 'total_duration', 'error_message',
+                         'messages_per_second', 'target_achieved']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             
             writer.writeheader()
+            
+            total_messages = 0
+            successful_connections = 0
+            total_connection_time = 0
+            
+            # Get target messages from instance or default to 5
+            target_messages = getattr(self, 'target_messages', 5)
+            
             for result in results:
+                # Calculate messages per second
+                messages_per_second = 0
+                if result.total_duration > 0:
+                    messages_per_second = result.messages_received / result.total_duration
+                
+                # Check if target messages were achieved
+                target_achieved = "Yes" if result.messages_received >= target_messages else "No"
+                
                 writer.writerow({
                     'connection_id': result.connection_id,
                     'success': result.success,
-                    'connection_time': result.connection_time,
+                    'connection_time': f"{result.connection_time:.3f}",
                     'messages_received': result.messages_received,
-                    'first_message_time': result.first_message_time,
-                    'last_message_time': result.last_message_time,
-                    'total_duration': result.total_duration,
-                    'error_message': result.error_message
+                    'first_message_time': f"{result.first_message_time:.3f}",
+                    'last_message_time': f"{result.last_message_time:.3f}",
+                    'total_duration': f"{result.total_duration:.3f}",
+                    'error_message': result.error_message,
+                    'messages_per_second': f"{messages_per_second:.2f}",
+                    'target_achieved': target_achieved
+                })
+                
+                if result.success:
+                    total_messages += result.messages_received
+                    successful_connections += 1
+                    total_connection_time += result.connection_time
+            
+            # Add summary row
+            if successful_connections > 0:
+                avg_messages = total_messages / successful_connections
+                avg_connection_time = total_connection_time / successful_connections
+                writer.writerow({
+                    'connection_id': 'SUMMARY',
+                    'success': f"{successful_connections}/{len(results)}",
+                    'connection_time': f"{avg_connection_time:.3f}",
+                    'messages_received': f"{avg_messages:.1f}",
+                    'first_message_time': '',
+                    'last_message_time': '',
+                    'total_duration': '',
+                    'error_message': f"Total: {total_messages}",
+                    'messages_per_second': '',
+                    'target_achieved': ''
                 })
         
         logger.info(f"Results saved to {filename}")
@@ -323,6 +421,8 @@ async def main():
     parser.add_argument('--start-capacity', type=int, default=10, help='Starting number of connections for capacity test')
     parser.add_argument('--max-capacity', type=int, default=200, help='Maximum number of connections for capacity test')
     parser.add_argument('--capacity-step', type=int, default=10, help='Step size for capacity test')
+    parser.add_argument('--target-messages', type=int, default=5, help='Target number of messages to receive per connection')
+    parser.add_argument('--message-timeout', type=float, default=10.0, help='Timeout in seconds for message collection')
     parser.add_argument('--output', default='websocket_test_results.csv', help='Output CSV filename')
     parser.add_argument('--report', default='websocket_test_report.txt', help='Output report filename')
     
@@ -330,6 +430,10 @@ async def main():
     
     # Create tester
     tester = WebSocketTester(args.url, args.token)
+    
+    # Update the target messages and timeout in the tester
+    tester.target_messages = args.target_messages
+    tester.message_timeout = args.message_timeout
     
     try:
         if args.capacity_test:

@@ -1,262 +1,329 @@
 # WebSocket Performance Testing Guide
 
-This guide provides comprehensive testing methods for your WebSocket endpoint to measure connection capacity, performance, and reliability.
+This guide explains how to use the WebSocket performance testing tools to evaluate your market data WebSocket endpoint.
+
+## Overview
+
+The testing suite includes:
+- **`test_websocket_performance.py`** - Main performance testing script
+- **`get_test_token.py`** - Helper script to get JWT tokens
+- **`run_websocket_test.py`** - Test runner with predefined configurations
 
 ## Prerequisites
 
-1. **Install required packages:**
+1. **Python Dependencies**: Make sure you have the required packages installed:
+   ```bash
+   pip install aiohttp requests
+   ```
+
+2. **Server Running**: Ensure your FastAPI server is running and accessible
+
+3. **Valid User Account**: You need a valid user account (live or demo) to get a JWT token
+
+## Quick Start
+
+### Step 1: Get a JWT Token
+
+Use the helper script to get a token:
+
 ```bash
-pip install aiohttp asyncio
+# For live user
+python get_test_token.py http://localhost:8000 your_email@example.com your_password live
+
+# For demo user
+python get_test_token.py http://localhost:8000 demo@example.com demo_password demo
 ```
 
-2. **Get a valid JWT token** for testing (you can create one using your existing authentication endpoints)
+### Step 2: Run Basic Test
 
-3. **Ensure your FastAPI server is running** with the WebSocket endpoint
-
-## Testing Tools
-
-### 1. Simple Performance Test (`test_websocket_simple.py`)
-
-**Basic usage:**
 ```bash
-python test_websocket_simple.py --url http://localhost:8000 --token "your_jwt_token" --connections 20
+python test_websocket_performance.py \
+  --url http://localhost:8000 \
+  --token YOUR_JWT_TOKEN \
+  --connections 10 \
+  --target-messages 5 \
+  --message-timeout 10.0
 ```
 
-**Parameters:**
-- `--url`: Your FastAPI server URL
-- `--token`: Valid JWT token for authentication
-- `--connections`: Number of concurrent connections to test (default: 20)
-- `--delay`: Delay between connection attempts in seconds (default: 0.1)
+### Step 3: Run Capacity Test
 
-**Example outputs:**
-```
-=== WebSocket Test Results ===
-Total Connections: 20
-Successful: 18
-Failed: 2
-Success Rate: 90.0%
-
-Connection Times (successful):
-  Average: 0.245s
-  Median: 0.231s
-  Min: 0.189s
-  Max: 0.412s
-
-Messages Received:
-  Average: 2.1
-  Total: 38
-```
-
-### 2. Comprehensive Performance Test (`test_websocket_performance.py`)
-
-**Basic usage:**
 ```bash
-python test_websocket_performance.py --url http://localhost:8000 --token "your_jwt_token" --connections 50
+python test_websocket_performance.py \
+  --url http://localhost:8000 \
+  --token YOUR_JWT_TOKEN \
+  --capacity-test \
+  --max-capacity 100
 ```
 
-**Capacity testing:**
+## Test Configurations
+
+### Basic Test (10 connections)
+- Tests 10 concurrent WebSocket connections
+- Waits for 5 messages per connection or 10 seconds
+- Good for initial validation
+
+### Capacity Test
+- Gradually increases connection count to find server limits
+- Tests from 10 to 100 connections in steps of 10
+- Identifies when success rate drops below 90%
+
+### Stress Test (50 connections)
+- Tests 50 concurrent connections
+- Good for stress testing under load
+
+## Using the Test Runner
+
+The `run_websocket_test.py` script provides easy access to predefined test configurations:
+
 ```bash
-python test_websocket_performance.py --url http://localhost:8000 --token "your_jwt_token" --capacity-test --start-capacity 10 --max-capacity 200 --capacity-step 10
+# Run basic test
+python run_websocket_test.py http://localhost:8000 YOUR_TOKEN basic
+
+# Run capacity test
+python run_websocket_test.py http://localhost:8000 YOUR_TOKEN capacity
+
+# Run stress test
+python run_websocket_test.py http://localhost:8000 YOUR_TOKEN stress
+
+# Run all tests
+python run_websocket_test.py http://localhost:8000 YOUR_TOKEN all
 ```
 
-**Parameters:**
-- `--capacity-test`: Run capacity test to find maximum connections
-- `--start-capacity`: Starting number of connections (default: 10)
-- `--max-capacity`: Maximum number of connections to test (default: 200)
-- `--capacity-step`: Step size for capacity test (default: 10)
-- `--output`: CSV output filename (default: websocket_test_results.csv)
-- `--report`: Report output filename (default: websocket_test_report.txt)
+## Command Line Options
 
-## Monitoring Endpoints
+### Main Script Options
 
-Your FastAPI app now includes monitoring endpoints to track WebSocket performance:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--url` | Base URL of your FastAPI server | Required |
+| `--token` | JWT token for authentication | Required |
+| `--connections` | Number of concurrent connections | 50 |
+| `--capacity-test` | Run capacity test to find max connections | False |
+| `--start-capacity` | Starting connections for capacity test | 10 |
+| `--max-capacity` | Maximum connections for capacity test | 200 |
+| `--capacity-step` | Step size for capacity test | 10 |
+| `--target-messages` | Target messages per connection | 5 |
+| `--message-timeout` | Timeout for message collection (seconds) | 10.0 |
+| `--output` | CSV output filename | websocket_test_results.csv |
+| `--report` | Report output filename | websocket_test_report.txt |
 
-### 1. Get WebSocket Statistics
-```bash
-curl http://localhost:8000/api/v1/market-data/monitoring/websocket-stats
+## Understanding the Results
+
+### Connection Statistics
+- **Success Rate**: Percentage of successful connections
+- **Connection Times**: Average, median, min, max connection establishment times
+- **Message Statistics**: Total messages received and distribution
+
+### Message Analysis
+The script tracks:
+- Number of messages received per connection
+- Time to first message
+- Time to last message
+- Messages per second rate
+- Whether target message count was achieved
+
+### Message Format Tracking
+For `market_update` messages, the script logs:
+- Account summary (balance, margin, open/pending orders)
+- Market prices count
+- Message types received
+
+### CSV Output
+The CSV file includes:
+- Connection ID and success status
+- Connection and message timing details
+- Messages per second calculation
+- Target achievement status
+- Summary row with totals
+
+## Example Output
+
+```
+=== WebSocket Performance Test Report ===
+Generated: 2025-01-06 15:30:45
+
+SUMMARY:
+- Total Connections Tested: 10
+- Successful Connections: 10
+- Failed Connections: 0
+- Success Rate: 100.00%
+
+CONNECTION TIMES (successful connections only):
+- Average: 0.245s
+- Median: 0.238s
+- Minimum: 0.201s
+- Maximum: 0.312s
+
+MESSAGE STATISTICS:
+- Total Messages Received: 67
+- Average Messages per Connection: 6.7
+- Median Messages per Connection: 7.0
+- Minimum Messages: 5
+- Maximum Messages: 8
+- Connections with 5+ Messages: 10/10 (100.0%)
+
+MESSAGE DISTRIBUTION:
+- 5 messages: 2 connections (20.0%)
+- 6 messages: 3 connections (30.0%)
+- 7 messages: 3 connections (30.0%)
+- 8 messages: 2 connections (20.0%)
 ```
 
-**Response:**
-```json
-{
-  "total_connections": 150,
-  "current_connections": 25,
-  "max_concurrent_connections": 45,
-  "connection_times": [0.123, 0.234, 0.189, ...],
-  "failed_connections": 3,
-  "last_connection_time": 1640995200.123,
-  "avg_connection_time": 0.245,
-  "min_connection_time": 0.189,
-  "max_connection_time": 0.412,
-  "success_rate": 98.0,
-  "timestamp": 1640995200.456
-}
-```
+## Troubleshooting
 
-### 2. Get Active Connections
-```bash
-curl http://localhost:8000/api/v1/market-data/monitoring/active-connections
-```
+### Common Issues
 
-**Response:**
-```json
-{
-  "current_connections": 25,
-  "max_concurrent_connections": 45,
-  "timestamp": 1640995200.456
-}
-```
+1. **Connection Timeouts**
+   - Increase the `--message-timeout` value
+   - Check server load and resources
 
-### 3. Reset Statistics (for testing)
-```bash
-curl -X POST http://localhost:8000/api/v1/market-data/monitoring/reset-stats
-```
+2. **Authentication Errors**
+   - Verify your JWT token is valid and not expired
+   - Check user account status (active/verified)
 
-## Testing Scenarios
+3. **Low Success Rates**
+   - Reduce the number of concurrent connections
+   - Check server capacity and configuration
+   - Monitor server logs for errors
 
-### 1. Basic Performance Test
-```bash
-# Test 20 concurrent connections
-python test_websocket_simple.py --url http://localhost:8000 --token "your_token" --connections 20
-```
+4. **Few Messages Received**
+   - Increase `--message-timeout` to allow more time
+   - Check if market data is being sent regularly
+   - Verify WebSocket endpoint is working correctly
 
-### 2. Load Testing
-```bash
-# Test 100 concurrent connections
-python test_websocket_simple.py --url http://localhost:8000 --token "your_token" --connections 100 --delay 0.05
-```
+### Debug Mode
 
-### 3. Capacity Testing
-```bash
-# Find maximum capacity
-python test_websocket_performance.py --url http://localhost:8000 --token "your_token" --capacity-test --start-capacity 10 --max-capacity 500 --capacity-step 20
-```
-
-### 4. Stress Testing
-```bash
-# Test with minimal delay to stress the server
-python test_websocket_simple.py --url http://localhost:8000 --token "your_token" --connections 200 --delay 0.01
-```
-
-### 5. Continuous Monitoring
-```bash
-# Monitor while running tests
-while true; do
-  curl -s http://localhost:8000/api/v1/market-data/monitoring/active-connections | jq .
-  sleep 5
-done
+Enable debug logging by modifying the script:
+```python
+logging.basicConfig(level=logging.DEBUG)
 ```
 
 ## Performance Benchmarks
 
-### Good Performance Indicators:
-- **Connection Time**: < 0.5 seconds average
-- **Success Rate**: > 95%
-- **Concurrent Connections**: > 100 stable connections
-- **Message Reception**: All connections receive initial messages
+### Good Performance Indicators
+- **Success Rate**: >95% for normal load
+- **Connection Time**: <1 second average
+- **Message Rate**: >1 message per second per connection
+- **Target Achievement**: >90% of connections reach target message count
 
-### Warning Signs:
-- **Connection Time**: > 1 second average
-- **Success Rate**: < 90%
-- **High Failure Rate**: Many timeout or connection refused errors
-- **Memory Usage**: Rapidly increasing during tests
+### Capacity Guidelines
+- **Development**: 10-50 connections
+- **Testing**: 50-200 connections  
+- **Production**: 200+ connections (depending on server specs)
 
-## Troubleshooting
+## Advanced Usage
 
-### Common Issues:
+### Custom Test Scenarios
 
-1. **Connection Timeouts**
-   - Check server resources (CPU, memory)
-   - Verify database connection pool settings
-   - Check Redis connection limits
+You can create custom test scenarios by modifying the parameters:
 
-2. **High Connection Times**
-   - Database queries during connection setup
-   - Redis operations blocking
-   - Network latency
+```bash
+# Test with higher message targets
+python test_websocket_performance.py \
+  --url http://localhost:8000 \
+  --token YOUR_TOKEN \
+  --connections 20 \
+  --target-messages 10 \
+  --message-timeout 15.0
 
-3. **Connection Failures**
-   - Invalid tokens
-   - Server overload
-   - Network issues
-
-### Debugging Steps:
-
-1. **Check server logs** during testing
-2. **Monitor system resources** (CPU, memory, network)
-3. **Use monitoring endpoints** to track real-time metrics
-4. **Test with different connection counts** to find breaking point
-
-## Performance Optimization Tips
-
-1. **Database Optimization**
-   - Use connection pooling
-   - Optimize queries during WebSocket setup
-   - Consider caching frequently accessed data
-
-2. **Redis Optimization**
-   - Monitor Redis memory usage
-   - Optimize Redis operations
-   - Consider Redis clustering for high load
-
-3. **Network Optimization**
-   - Use load balancers for multiple server instances
-   - Optimize WebSocket message sizes
-   - Consider CDN for static assets
-
-## Example Test Results Analysis
-
-### Good Performance Example:
-```
-=== WebSocket Test Results ===
-Total Connections: 50
-Successful: 49
-Failed: 1
-Success Rate: 98.0%
-
-Connection Times (successful):
-  Average: 0.234s
-  Median: 0.221s
-  Min: 0.189s
-  Max: 0.345s
-
-Messages Received:
-  Average: 2.1
-  Total: 103
+# Test with longer timeouts
+python test_websocket_performance.py \
+  --url http://localhost:8000 \
+  --token YOUR_TOKEN \
+  --connections 30 \
+  --target-messages 3 \
+  --message-timeout 20.0
 ```
 
-### Poor Performance Example:
-```
-=== WebSocket Test Results ===
-Total Connections: 50
-Successful: 35
-Failed: 15
-Success Rate: 70.0%
+### Continuous Monitoring
 
-Connection Times (successful):
-  Average: 1.234s
-  Median: 1.156s
-  Min: 0.789s
-  Max: 2.456s
+For continuous monitoring, you can schedule regular tests:
 
-Messages Received:
-  Average: 1.2
-  Total: 42
+```bash
+# Run basic test every 5 minutes
+while true; do
+  python test_websocket_performance.py --url http://localhost:8000 --token YOUR_TOKEN --connections 10
+  sleep 300
+done
 ```
 
-## Next Steps
+## Integration with CI/CD
 
-1. **Run baseline tests** to establish current performance
-2. **Identify bottlenecks** using monitoring endpoints
-3. **Optimize based on findings**
-4. **Re-test after optimizations**
-5. **Set up continuous monitoring** for production
+You can integrate these tests into your CI/CD pipeline:
 
-## Production Monitoring
+```yaml
+# Example GitHub Actions workflow
+- name: WebSocket Performance Test
+  run: |
+    python get_test_token.py ${{ secrets.API_URL }} ${{ secrets.USER_EMAIL }} ${{ secrets.USER_PASSWORD }} > token.txt
+    TOKEN=$(tail -1 token.txt | cut -d' ' -f3)
+    python test_websocket_performance.py --url ${{ secrets.API_URL }} --token $TOKEN --connections 20
+```
 
-For production environments, consider:
+## Support
 
-1. **Setting up alerts** for high connection times or failure rates
-2. **Monitoring system resources** during peak usage
-3. **Implementing circuit breakers** for overload protection
-4. **Using load testing in staging** before production deployments 
+If you encounter issues:
+1. Check the server logs for errors
+2. Verify your JWT token is valid
+3. Test with fewer connections first
+4. Review the detailed CSV output for specific connection failures 
+
+
+   python get_test_token.py http://localhost:8000 dhanush777ss@gmail.com 8618025298@Dh live
+
+## Understanding WebSocket Message Flow
+
+### How Your WebSocket System Works
+
+Your WebSocket endpoint only sends messages when there are **actual market data updates** from Firebase:
+
+1. **Firebase** → sends real-time market data
+2. **Firebase Stream** → processes and queues data  
+3. **Redis Publisher** → publishes to Redis channels
+4. **WebSocket Listeners** → forward updates to connected clients
+
+### Why You See Few Messages in Tests
+
+During testing, you typically see only **1-2 messages per connection** because:
+- **Initial connection**: 1 message (loading + initial market data)
+- **Market updates**: 1+ messages (only if Firebase sends new data during test)
+
+This is **normal behavior** for a real trading system where market data updates depend on external sources.
+
+### Testing with Simulated Market Data
+
+To test WebSocket performance with more messages, use the market data simulation tool:
+
+```bash
+# Simulate market data updates (every 2 seconds for 60 seconds)
+python simulate_market_data.py --duration 60 --interval 2.0
+
+# Simulate order updates for a specific user
+python simulate_market_data.py --user-id 123 --orders-only
+
+# Run both market and order simulations
+python simulate_market_data.py --user-id 123 --duration 30 --interval 1.0
+```
+
+### Testing Workflow
+
+1. **Start your FastAPI server**
+2. **Start market data simulation** (optional, for more messages)
+3. **Run WebSocket performance test**
+4. **Analyze results**
+
+Example:
+```bash
+# Terminal 1: Start simulation
+python simulate_market_data.py --duration 120 --interval 1.0
+
+# Terminal 2: Run WebSocket test
+python test_websocket_performance.py \
+  --url http://localhost:8000 \
+  --token YOUR_TOKEN \
+  --connections 20 \
+  --target-messages 10 \
+  --message-timeout 15.0
+```
+
+## Prerequisites

@@ -1,0 +1,177 @@
+{
+  "info": {
+    "name": "WebSocket Market Data Testing",
+    "description": "Collection for testing WebSocket market data endpoint",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "WebSocket Market Data Connection",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/ws/market-data?token={{jwt_token}}",
+          "protocol": "ws",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "ws", "market-data"],
+          "query": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}"
+            }
+          ]
+        },
+        "description": "Connect to WebSocket market data endpoint and monitor messages"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// WebSocket connection test script",
+              "let messageCount = 0;",
+              "let startTime = Date.now();",
+              "",
+              "// Listen for WebSocket messages",
+              "pm.ws.on('message', function(message) {",
+              "    messageCount++;",
+              "    const elapsed = (Date.now() - startTime) / 1000;",
+              "    ",
+              "    console.log(`Message ${messageCount} received at ${elapsed.toFixed(3)}s`);",
+              "    console.log('Message type:', message.type);",
+              "    console.log('Message content:', message.content);",
+              "    ",
+              "    // Parse JSON content",
+              "    try {",
+              "        const data = JSON.parse(message.content);",
+              "        console.log('Parsed data:', data);",
+              "        ",
+              "        // Log specific details for market_update messages",
+              "        if (data.type === 'market_update' && data.data) {",
+              "            const accountSummary = data.data.account_summary;",
+              "            const marketPrices = data.data.market_prices;",
+              "            ",
+              "            if (accountSummary) {",
+              "                console.log('Account Summary:');",
+              "                console.log('  Balance:', accountSummary.balance);",
+              "                console.log('  Margin:', accountSummary.margin);",
+              "                console.log('  Open Orders:', accountSummary.open_orders?.length || 0);",
+              "                console.log('  Pending Orders:', accountSummary.pending_orders?.length || 0);",
+              "            }",
+              "            ",
+              "            if (marketPrices) {",
+              "                console.log('Market Prices Count:', Object.keys(marketPrices).length);",
+              "                console.log('Sample Symbols:', Object.keys(marketPrices).slice(0, 5));",
+              "            }",
+              "        }",
+              "    } catch (e) {",
+              "        console.log('Failed to parse JSON:', e);",
+              "    }",
+              "    ",
+              "    console.log('---');",
+              "});",
+              "",
+              "// Listen for connection events",
+              "pm.ws.on('open', function() {",
+              "    console.log('WebSocket connected successfully');",
+              "    startTime = Date.now();",
+              "});",
+              "",
+              "pm.ws.on('close', function() {",
+              "    const elapsed = (Date.now() - startTime) / 1000;",
+              "    console.log(`WebSocket closed after ${elapsed.toFixed(3)}s`);",
+              "    console.log(`Total messages received: ${messageCount}`);",
+              "});",
+              "",
+              "pm.ws.on('error', function(error) {",
+              "    console.log('WebSocket error:', error);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get JWT Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\",\n  \"user_type\": \"{{user_type}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/users/login",
+          "protocol": "http",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "users", "login"]
+        },
+        "description": "Get JWT token for WebSocket authentication"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Extract JWT token from login response",
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    if (response.access_token) {",
+              "        pm.environment.set('jwt_token', response.access_token);",
+              "        console.log('JWT token saved to environment');",
+              "    } else {",
+              "        console.log('No access_token in response');",
+              "    }",
+              "} else {",
+              "    console.log('Login failed:', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "user_email",
+      "value": "your_email@example.com",
+      "type": "string"
+    },
+    {
+      "key": "user_password",
+      "value": "your_password",
+      "type": "string"
+    },
+    {
+      "key": "user_type",
+      "value": "live",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+} 
