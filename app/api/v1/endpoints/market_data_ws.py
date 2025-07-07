@@ -73,6 +73,42 @@ logger = websocket_logger
 # Redis channel for RAW market data updates from Firebase via redis_publisher_task
 REDIS_MARKET_DATA_CHANNEL = 'market_data_updates'
 
+# Add global connection tracking for monitoring
+import threading
+from collections import defaultdict
+import time
+
+# Global connection tracking
+active_websocket_connections = {}
+connection_metrics = {
+    'total_connections': 0,
+    'current_connections': 0,
+    'max_concurrent_connections': 0,
+    'connection_times': [],
+    'failed_connections': 0,
+    'last_connection_time': None
+}
+metrics_lock = threading.Lock()
+
+def update_connection_metrics(connection_id: str, connection_time: float, success: bool):
+    """Update connection metrics"""
+    with metrics_lock:
+        connection_metrics['total_connections'] += 1
+        if success:
+            connection_metrics['current_connections'] += 1
+            connection_metrics['connection_times'].append(connection_time)
+            connection_metrics['max_concurrent_connections'] = max(
+                connection_metrics['max_concurrent_connections'],
+                connection_metrics['current_connections']
+            )
+            connection_metrics['last_connection_time'] = time.time()
+        else:
+            connection_metrics['failed_connections'] += 1
+
+def remove_connection_metrics():
+    """Remove connection from metrics when disconnected"""
+    with metrics_lock:
+        connection_metrics['current_connections'] = max(0, connection_metrics['current_connections'] - 1)
 
 router = APIRouter(
     tags=["market_data"]
@@ -425,6 +461,9 @@ async def per_connection_redis_listener(
 
                         price_data_content = {k: v for k, v in message_data.items() if k not in ["type", "_timestamp"]}
                         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                        if group_settings is None:
+                            logger.warning(f"User {user_id}: group_settings is None in per_connection_redis_listener. Skipping market data update processing.")
+                            continue
                         relevant_symbols = set(group_settings.keys())
                         adjusted_prices = await _calculate_and_cache_adjusted_prices(
                             raw_market_data=price_data_content,
@@ -882,7 +921,10 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     - Accepts the connection as early as possible, then does heavy DB/Redis work.
     - Sends a loading message immediately after accepting.
     """
-    logger.info("--- MINIMAL TEST: ENTERED websocket_endpoint ---")
+    connection_start_time = time.time()
+    connection_id = f"{websocket.client.host}:{websocket.client.port}-{int(connection_start_time * 1000)}"
+    
+    logger.info(f"--- MINIMAL TEST: ENTERED websocket_endpoint --- Connection ID: {connection_id}")
     for handler in logger.handlers:
         handler.flush()
     db_user_instance: Optional[User | DemoUser] = None
@@ -891,6 +933,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     token = websocket.query_params.get("token")
     if token is None:
         logger.warning(f"WebSocket connection attempt without token from {websocket.client.host}:{websocket.client.port}")
+        update_connection_metrics(connection_id, 0, False)
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
         return
 
@@ -900,7 +943,10 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     # Accept the WebSocket connection as early as possible
     try:
         await websocket.accept()
-        logger.info(f"WebSocket connection accepted (early) for {websocket.client.host}:{websocket.client.port}")
+        connection_time = time.time() - connection_start_time
+        update_connection_metrics(connection_id, connection_time, True)
+        logger.info(f"WebSocket connection accepted (early) for {websocket.client.host}:{websocket.client.port} in {connection_time:.3f}s")
+        
         # Send a loading message to the client
         await websocket.send_text(json.dumps({
             "type": "loading",
@@ -908,6 +954,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         }))
     except Exception as accept_error:
         logger.error(f"Failed to accept WebSocket connection: {accept_error}")
+        update_connection_metrics(connection_id, time.time() - connection_start_time, False)
         return
 
     # Initialize Redis client
@@ -1137,6 +1184,8 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         logger.error(f"User {account_number}: Error in main WebSocket loop: {e}", exc_info=True)
     finally:
         logger.info(f"User {account_number}: Cleaning up WebSocket connection.")
+        remove_connection_metrics()
+        
         if not listener_task.done():
             listener_task.cancel()
             try:
@@ -1405,3 +1454,55 @@ async def debug_test_all_updates(
     except Exception as e:
         logger.error(f"Error in debug_test_all_updates: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error testing updates: {str(e)}")
+
+# Add monitoring endpoints
+@router.get("/monitoring/websocket-stats")
+async def get_websocket_stats():
+    """Get WebSocket connection statistics"""
+    with metrics_lock:
+        stats = connection_metrics.copy()
+        
+        # Calculate average connection time
+        if stats['connection_times']:
+            stats['avg_connection_time'] = sum(stats['connection_times']) / len(stats['connection_times'])
+            stats['min_connection_time'] = min(stats['connection_times'])
+            stats['max_connection_time'] = max(stats['connection_times'])
+        else:
+            stats['avg_connection_time'] = 0
+            stats['min_connection_time'] = 0
+            stats['max_connection_time'] = 0
+        
+        # Calculate success rate
+        total_attempts = stats['total_connections']
+        successful_attempts = total_attempts - stats['failed_connections']
+        stats['success_rate'] = (successful_attempts / total_attempts * 100) if total_attempts > 0 else 0
+        
+        # Add timestamp
+        stats['timestamp'] = time.time()
+        
+        return stats
+
+@router.get("/monitoring/active-connections")
+async def get_active_connections():
+    """Get currently active WebSocket connections"""
+    with metrics_lock:
+        return {
+            'current_connections': connection_metrics['current_connections'],
+            'max_concurrent_connections': connection_metrics['max_concurrent_connections'],
+            'timestamp': time.time()
+        }
+
+@router.post("/monitoring/reset-stats")
+async def reset_websocket_stats():
+    """Reset WebSocket statistics (for testing)"""
+    with metrics_lock:
+        global connection_metrics
+        connection_metrics = {
+            'total_connections': 0,
+            'current_connections': 0,
+            'max_concurrent_connections': 0,
+            'connection_times': [],
+            'failed_connections': 0,
+            'last_connection_time': None
+        }
+    return {"message": "WebSocket statistics reset"}

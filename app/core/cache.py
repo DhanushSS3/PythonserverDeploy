@@ -362,7 +362,7 @@ async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
                  cache_logger.debug(f"Aggregated {len(all_settings)} group-symbol settings for group '{group_name}'.")
                  return all_settings
             else:
-                 cache_logger.debug(f"No group-symbol settings found for group '{group_name}' using scan.")
+                 
                  return None # Return None if no settings were found for the group
 
         except Exception as e:
@@ -425,7 +425,7 @@ async def set_adjusted_market_price_cache(
             json.dumps(adjusted_prices),
             ex=ADJUSTED_MARKET_PRICE_CACHE_EXPIRY_SECONDS
         )
-        cache_logger.debug(f"Successfully cached adjusted market price for key {cache_key}: {adjusted_prices}")
+
     except Exception as e:
         cache_logger.error(f"Error setting adjusted market price in cache for key {cache_key}: {e}", exc_info=True)
 

@@ -622,7 +622,7 @@ async def startup_event():
     # r = redis.Redis(host="127.0.0.1", port=6379)
     # await r.flushall()
     # print("Redis flushed")
-    # # Print Redis connection info for debugging
+    # Print Redis connection info for debugging
     # redis_url = os.getenv("REDIS_URL")
     # redis_host = os.getenv("REDIS_HOST")
     # redis_port = os.getenv("REDIS_PORT")
@@ -634,6 +634,7 @@ async def startup_event():
     # print(f"  REDIS_PASSWORD: {redis_password}")
 
     # Initialize Firebase
+
     try:
         cred_path = os.path.join(os.path.dirname(__file__), '..', settings.FIREBASE_SERVICE_ACCOUNT_KEY_PATH)
         if not os.path.exists(cred_path):
