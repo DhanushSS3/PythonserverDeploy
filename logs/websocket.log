@@ -470,3 +470,432 @@
 2025-07-07 00:13:39,927 - INFO - websocket - User DYY5A: WebSocket connection fully closed.
 2025-07-07 00:13:42,270 - INFO - websocket - Redis publisher task cancelled.
 2025-07-07 00:13:42,270 - INFO - websocket - Redis publisher task finished.
+2025-07-07 01:36:38,966 - INFO - websocket - Redis publisher task started. Publishing to channel 'market_data_updates'.
+2025-07-07 01:36:42,685 - INFO - websocket - --- MINIMAL TEST: ENTERED websocket_endpoint --- Connection ID: 127.0.0.1:59346-1751877402685
+2025-07-07 01:36:42,687 - INFO - websocket - WebSocket connection accepted (early) for 127.0.0.1:59346 in 0.001s
+2025-07-07 01:36:42,690 - DEBUG - websocket - User 0: Successfully sent loading message
+2025-07-07 01:36:42,697 - WARNING - websocket - WebSocket auth failed: JWT error for 127.0.0.1:59346: Could not validate credentials
+2025-07-07 01:36:49,139 - INFO - websocket - --- MINIMAL TEST: ENTERED websocket_endpoint --- Connection ID: 127.0.0.1:59370-1751877409139
+2025-07-07 01:36:49,140 - INFO - websocket - WebSocket connection accepted (early) for 127.0.0.1:59370 in 0.001s
+2025-07-07 01:36:49,143 - DEBUG - websocket - User 0: Successfully sent loading message
+2025-07-07 01:36:49,144 - INFO - websocket - WebSocket auth: token payload={'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751879206, 'iat': 1751877406}, account_number=DYY5A, user_type=live
+2025-07-07 01:36:49,144 - INFO - websocket - WebSocket auth: About to call get_user_by_account_number with account_number=DYY5A, user_type=live
+2025-07-07 01:36:49,151 - INFO - websocket - WebSocket auth: get_user_by_account_number(DYY5A, live) returned: <app.database.models.User object at 0x000002403B824B90>
+2025-07-07 01:36:49,153 - INFO - websocket - [WS] Using order model: UserOrder for user_type=live, account_number=DYY5A
+2025-07-07 01:36:49,159 - INFO - websocket - [WS] Open positions from DB for user_id=4: [<app.database.models.UserOrder object at 0x000002403B824E10>, <app.database.models.UserOrder object at 0x000002403B8247D0>, <app.database.models.UserOrder object at 0x000002403B824410>, <app.database.models.UserOrder object at 0x000002403B824A50>, <app.database.models.UserOrder object at 0x000002403B824910>, <app.database.models.UserOrder object at 0x000002403B824F50>, <app.database.models.UserOrder object at 0x000002403B825090>, <app.database.models.UserOrder object at 0x000002403B8251D0>]
+2025-07-07 01:36:49,660 - DEBUG - websocket - Cached/updated group-symbol settings for group 'Standard'.
+2025-07-07 01:36:49,664 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 01:36:49,667 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 01:36:49,669 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 01:36:49,687 - INFO - websocket - User DYY5A: Fetching initial market data for 77 symbols from cache (adjusted or last known price)
+2025-07-07 01:36:49,712 - DEBUG - websocket - User DYY5A: Fallback last price for XAUUSD: Buy=2050.00070000, Sell=2049.49770000
+2025-07-07 01:36:49,723 - DEBUG - websocket - User DYY5A: Fallback last price for GBPJPY: Buy=187.81255000, Sell=187.73755000
+2025-07-07 01:36:49,750 - DEBUG - websocket - User 4: Successfully sent initial connection data
+2025-07-07 01:36:49,751 - INFO - websocket - User DYY5A: Sent initial connection data with 50 symbols (fresh from cache)
+2025-07-07 01:36:49,752 - INFO - websocket - User 4: Subscribed to Redis channels for market data and updates
+2025-07-07 01:36:49,764 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 01:36:49,768 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 01:36:49,769 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 01:36:49,771 - INFO - websocket - User 4: WebSocket state: WebSocketState.CONNECTED
+2025-07-07 01:36:50,798 - INFO - websocket - User 4: Received message on channel market_data_updates: {"NZDJPY": {"b": "87.1040000000", "o": "87.0950000000"}, "BTCUSD": {"b": "108883.1000000000", "o": "108883.0000000000"}, "USDJPY": {"b": "145.1400000000", "o": "145.1350000000"}, "USDCNH": {"b": "7.17...
+2025-07-07 01:36:50,799 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0054 seconds.
+2025-07-07 01:36:50,951 - INFO - websocket - User 4: Initial connection - fetching fresh orders from database.
+2025-07-07 01:36:50,959 - INFO - websocket - User 4: Fetched 8 open orders directly from database
+2025-07-07 01:36:50,963 - INFO - websocket - User 4: Fetched 0 pending orders directly from database
+2025-07-07 01:36:50,965 - INFO - websocket - User 4: Updated static orders cache with 8 open orders and 0 pending orders
+2025-07-07 01:36:51,299 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:36:51,303 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:36:51,303 - DEBUG - websocket - User 4: Sending 48 changed/updated symbols
+2025-07-07 01:36:51,303 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:36:51,304 - INFO - websocket - User 4: Initial connection completed, switching to incremental updates
+2025-07-07 01:36:53,073 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.6220000000", "o": "36.6210000000"}, "NZDJPY": {"b": "87.1040000000", "o": "87.0980000000"}, "GBPAUD": {"b": "2.0908200000", "o": "2.0906700000"}, "USDJPY": {"b": "145.1400000000",...
+2025-07-07 01:36:53,074 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0017 seconds.
+2025-07-07 01:36:53,548 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:36:53,555 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:36:53,555 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:36:53,556 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:36:55,444 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9376000000", "o": "12.9350000000"}, "XAGUSD": {"b": "36.6130000000", "o": "36.6050000000"}, "NZDJPY": {"b": "87.1040000000", "o": "87.0960000000"}, "GBPAUD": {"b": "2.0908800000",...
+2025-07-07 01:36:55,445 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0050 seconds.
+2025-07-07 01:36:55,996 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:36:56,002 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:36:56,002 - DEBUG - websocket - User 4: Sending 26 changed/updated symbols
+2025-07-07 01:36:56,003 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:36:57,693 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9381200000", "o": "12.9356000000"}, "XAGUSD": {"b": "36.6190000000", "o": "36.6130000000"}, "NZDJPY": {"b": "87.1060000000", "o": "87.1000000000"}, "GBPAUD": {"b": "2.0908200000",...
+2025-07-07 01:36:57,693 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0027 seconds.
+2025-07-07 01:36:58,204 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:36:58,209 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:36:58,209 - DEBUG - websocket - User 4: Sending 28 changed/updated symbols
+2025-07-07 01:36:58,210 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:00,000 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9387000000", "o": "12.9360000000"}, "XAGUSD": {"b": "36.6190000000", "o": "36.6120000000"}, "NZDJPY": {"b": "87.1060000000", "o": "87.0990000000"}, "GBPAUD": {"b": "2.0908400000",...
+2025-07-07 01:37:00,001 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0046 seconds.
+2025-07-07 01:37:00,554 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:00,557 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:00,557 - DEBUG - websocket - User 4: Sending 24 changed/updated symbols
+2025-07-07 01:37:00,558 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:02,421 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9379000000", "o": "12.9352000000"}, "NZDJPY": {"b": "87.1060000000", "o": "87.0980000000"}, "GBPAUD": {"b": "2.0908600000", "o": "2.0907100000"}, "USDJPY": {"b": "145.1430000000",...
+2025-07-07 01:37:02,421 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0047 seconds.
+2025-07-07 01:37:02,908 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:02,912 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:02,912 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:37:02,912 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:04,660 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9380000000", "o": "12.9354000000"}, "XAGUSD": {"b": "36.6110000000", "o": "36.6060000000"}, "NZDJPY": {"b": "87.1060000000", "o": "87.0990000000"}, "GBPAUD": {"b": "2.0908800000",...
+2025-07-07 01:37:04,660 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0041 seconds.
+2025-07-07 01:37:05,168 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:05,173 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:05,173 - DEBUG - websocket - User 4: Sending 26 changed/updated symbols
+2025-07-07 01:37:05,174 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:07,022 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.6110000000", "o": "36.6040000000"}, "NZDJPY": {"b": "87.0980000000", "o": "87.0980000000"}, "GBPAUD": {"b": "2.0908800000", "o": "2.0907100000"}, "USDJPY": {"b": "145.1490000000",...
+2025-07-07 01:37:07,022 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0075 seconds.
+2025-07-07 01:37:07,615 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:07,619 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:07,619 - DEBUG - websocket - User 4: Sending 26 changed/updated symbols
+2025-07-07 01:37:07,620 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:09,277 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9387000000", "o": "12.9361000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0911000000", "o": "2.0909300000"}, "USDJPY": {"b": "145.1490000000",...
+2025-07-07 01:37:09,277 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0041 seconds.
+2025-07-07 01:37:09,771 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:09,774 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:09,775 - DEBUG - websocket - User 4: Sending 34 changed/updated symbols
+2025-07-07 01:37:09,775 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:11,616 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9393000000", "o": "12.9367000000"}, "XAGUSD": {"b": "36.6120000000", "o": "36.6040000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0890000000"}, "GBPAUD": {"b": "2.0911000000",...
+2025-07-07 01:37:11,616 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0040 seconds.
+2025-07-07 01:37:12,129 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:12,134 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:12,134 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:37:12,135 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:13,873 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9390000000", "o": "12.9364000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0911100000", "o": "2.0909300000"}, "USDCNH": {"b": "7.1766100000", "...
+2025-07-07 01:37:13,873 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0015 seconds.
+2025-07-07 01:37:14,484 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:14,489 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:14,489 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:37:14,490 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:16,130 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9372000000", "o": "12.9346000000"}, "XAGUSD": {"b": "36.6060000000", "o": "36.5990000000"}, "NZDJPY": {"b": "87.0900000000", "o": "87.0830000000"}, "GBPAUD": {"b": "2.0911300000",...
+2025-07-07 01:37:16,130 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0040 seconds.
+2025-07-07 01:37:16,735 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:16,739 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:16,740 - DEBUG - websocket - User 4: Sending 24 changed/updated symbols
+2025-07-07 01:37:16,741 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:18,500 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9392000000", "o": "12.9366000000"}, "XAGUSD": {"b": "36.6050000000", "o": "36.5980000000"}, "NZDJPY": {"b": "87.0900000000", "o": "87.0820000000"}, "GBPAUD": {"b": "2.0911000000",...
+2025-07-07 01:37:18,503 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0061 seconds.
+2025-07-07 01:37:19,247 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:19,251 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:19,251 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:37:19,252 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:20,740 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9378000000", "o": "12.9352000000"}, "XAGUSD": {"b": "36.5960000000", "o": "36.5890000000"}, "NZDJPY": {"b": "87.0920000000", "o": "87.0830000000"}, "GBPAUD": {"b": "2.0910700000",...
+2025-07-07 01:37:20,740 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0036 seconds.
+2025-07-07 01:37:21,230 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:21,234 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:21,234 - DEBUG - websocket - User 4: Sending 26 changed/updated symbols
+2025-07-07 01:37:21,235 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:23,010 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9376000000", "o": "12.9348000000"}, "XAGUSD": {"b": "36.5970000000", "o": "36.5900000000"}, "NZDJPY": {"b": "87.0890000000", "o": "87.0820000000"}, "GBPAUD": {"b": "2.0910800000",...
+2025-07-07 01:37:23,011 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0037 seconds.
+2025-07-07 01:37:23,599 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:23,605 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:23,605 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:37:23,606 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:25,336 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9371000000", "o": "12.9344000000"}, "XAGUSD": {"b": "36.5920000000", "o": "36.5840000000"}, "NZDJPY": {"b": "87.0890000000", "o": "87.0790000000"}, "GBPAUD": {"b": "2.0910400000",...
+2025-07-07 01:37:25,336 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0027 seconds.
+2025-07-07 01:37:25,849 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:25,853 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:25,853 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:37:25,853 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:28,106 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9370000000", "o": "12.9344000000"}, "XAGUSD": {"b": "36.5930000000", "o": "36.5860000000"}, "NZDJPY": {"b": "87.0860000000", "o": "87.0790000000"}, "GBPAUD": {"b": "2.0910400000",...
+2025-07-07 01:37:28,106 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0038 seconds.
+2025-07-07 01:37:28,709 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:28,714 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:28,714 - DEBUG - websocket - User 4: Sending 27 changed/updated symbols
+2025-07-07 01:37:28,715 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:30,571 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9364000000", "o": "12.9338000000"}, "XAGUSD": {"b": "36.5940000000", "o": "36.5870000000"}, "NZDJPY": {"b": "87.0850000000", "o": "87.0790000000"}, "GBPAUD": {"b": "2.0910200000",...
+2025-07-07 01:37:30,572 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0041 seconds.
+2025-07-07 01:37:31,167 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:31,173 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:31,173 - DEBUG - websocket - User 4: Sending 28 changed/updated symbols
+2025-07-07 01:37:31,174 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:32,808 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5930000000", "o": "36.5860000000"}, "NZDJPY": {"b": "87.0840000000", "o": "87.0790000000"}, "GBPAUD": {"b": "2.0910000000", "o": "2.0908700000"}, "USDJPY": {"b": "145.1290000000",...
+2025-07-07 01:37:32,809 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0037 seconds.
+2025-07-07 01:37:33,335 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:33,341 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:33,341 - DEBUG - websocket - User 4: Sending 36 changed/updated symbols
+2025-07-07 01:37:33,342 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:35,119 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9365000000", "o": "12.9339000000"}, "XAGUSD": {"b": "36.5940000000", "o": "36.5870000000"}, "NZDJPY": {"b": "87.0830000000", "o": "87.0760000000"}, "GBPAUD": {"b": "2.0910400000",...
+2025-07-07 01:37:35,119 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0039 seconds.
+2025-07-07 01:37:35,630 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:35,634 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:35,634 - DEBUG - websocket - User 4: Sending 23 changed/updated symbols
+2025-07-07 01:37:35,635 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:37,617 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9367000000", "o": "12.9341000000"}, "NZDJPY": {"b": "87.0820000000", "o": "87.0740000000"}, "GBPAUD": {"b": "2.0910400000", "o": "2.0908700000"}, "USDJPY": {"b": "145.1290000000",...
+2025-07-07 01:37:37,617 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.1696 seconds.
+2025-07-07 01:37:38,196 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:38,202 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:38,203 - DEBUG - websocket - User 4: Sending 34 changed/updated symbols
+2025-07-07 01:37:38,204 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:39,711 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9366000000", "o": "12.9340000000"}, "NZDJPY": {"b": "87.0820000000", "o": "87.0750000000"}, "GBPAUD": {"b": "2.0910200000", "o": "2.0909100000"}, "USDJPY": {"b": "145.1280000000",...
+2025-07-07 01:37:39,711 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0037 seconds.
+2025-07-07 01:37:40,242 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:40,248 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:40,248 - DEBUG - websocket - User 4: Sending 33 changed/updated symbols
+2025-07-07 01:37:40,249 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:42,011 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5930000000", "o": "36.5840000000"}, "NZDJPY": {"b": "87.0810000000", "o": "87.0730000000"}, "GBPAUD": {"b": "2.0910100000", "o": "2.0909300000"}, "USDCNH": {"b": "7.1766300000", "...
+2025-07-07 01:37:42,012 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0044 seconds.
+2025-07-07 01:37:42,637 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:42,641 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:42,641 - DEBUG - websocket - User 4: Sending 32 changed/updated symbols
+2025-07-07 01:37:42,642 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:44,381 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5920000000", "o": "36.5840000000"}, "NZDJPY": {"b": "87.0810000000", "o": "87.0750000000"}, "GBPAUD": {"b": "2.0909900000", "o": "2.0908800000"}, "USDJPY": {"b": "145.1360000000",...
+2025-07-07 01:37:44,381 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0038 seconds.
+2025-07-07 01:37:44,857 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:44,862 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:44,862 - DEBUG - websocket - User 4: Sending 28 changed/updated symbols
+2025-07-07 01:37:44,863 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:46,650 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9370000000", "o": "12.9344000000"}, "NZDJPY": {"b": "87.0820000000", "o": "87.0750000000"}, "GBPAUD": {"b": "2.0910100000", "o": "2.0908600000"}, "USDJPY": {"b": "145.1400000000",...
+2025-07-07 01:37:46,650 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0038 seconds.
+2025-07-07 01:37:47,141 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:47,150 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:47,150 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:37:47,151 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:48,992 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9367000000", "o": "12.9341000000"}, "XAGUSD": {"b": "36.5840000000", "o": "36.5790000000"}, "NZDJPY": {"b": "87.0870000000", "o": "87.0800000000"}, "GBPAUD": {"b": "2.0909700000",...
+2025-07-07 01:37:48,992 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0033 seconds.
+2025-07-07 01:37:49,500 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:49,504 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:49,504 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:37:49,505 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:51,262 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5870000000", "o": "36.5800000000"}, "NZDJPY": {"b": "87.0890000000", "o": "87.0810000000"}, "GBPAUD": {"b": "2.0910000000", "o": "2.0908300000"}, "USDJPY": {"b": "145.1400000000",...
+2025-07-07 01:37:51,262 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0037 seconds.
+2025-07-07 01:37:51,852 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:51,856 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:51,856 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:37:51,857 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:53,572 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPAUD": {"b": "2.0910200000", "o": "2.0908600000"}, "USDJPY": {"b": "145.1520000000", "o": "145.1480000000"}, "CADCHF": {"b": "0.5827100000", "o": "0.5826500000"}, "EURNZD": {"b": "1.9564800000", "...
+2025-07-07 01:37:53,572 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0020 seconds.
+2025-07-07 01:37:54,206 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:54,211 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:54,211 - DEBUG - websocket - User 4: Sending 33 changed/updated symbols
+2025-07-07 01:37:54,212 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:55,870 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9366000000", "o": "12.9340000000"}, "XAGUSD": {"b": "36.5790000000", "o": "36.5720000000"}, "NZDJPY": {"b": "87.0890000000", "o": "87.0870000000"}, "GBPAUD": {"b": "2.0909100000",...
+2025-07-07 01:37:55,870 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0036 seconds.
+2025-07-07 01:37:56,361 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:56,362 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:56,362 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:37:56,363 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:37:58,213 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9361000000", "o": "12.9335000000"}, "XAGUSD": {"b": "36.5800000000", "o": "36.5730000000"}, "NZDJPY": {"b": "87.0940000000", "o": "87.0860000000"}, "GBPAUD": {"b": "2.0908500000",...
+2025-07-07 01:37:58,213 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0022 seconds.
+2025-07-07 01:37:58,716 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:37:58,721 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:37:58,721 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:37:58,722 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:00,575 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9375200000", "o": "12.9351000000"}, "XAGUSD": {"b": "36.5790000000", "o": "36.5720000000"}, "NZDJPY": {"b": "87.0940000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0909600000",...
+2025-07-07 01:38:00,575 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0018 seconds.
+2025-07-07 01:38:01,182 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:01,188 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:01,188 - DEBUG - websocket - User 4: Sending 37 changed/updated symbols
+2025-07-07 01:38:01,189 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:02,831 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5780000000", "o": "36.5710000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0909000000", "o": "2.0908300000"}, "BTCUSD": {"b": "108902.870000000...
+2025-07-07 01:38:02,832 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0066 seconds.
+2025-07-07 01:38:03,431 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:03,437 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:03,437 - DEBUG - websocket - User 4: Sending 32 changed/updated symbols
+2025-07-07 01:38:03,438 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:05,065 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5790000000", "o": "36.5700000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0890000000"}, "GBPAUD": {"b": "2.0909000000", "o": "2.0907400000"}, "BTCUSD": {"b": "108899.400000000...
+2025-07-07 01:38:05,066 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0034 seconds.
+2025-07-07 01:38:05,684 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:05,688 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:05,689 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:38:05,690 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:07,471 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9373000000", "o": "12.9347000000"}, "XAGUSD": {"b": "36.5830000000", "o": "36.5730000000"}, "GBPAUD": {"b": "2.0908300000", "o": "2.0906700000"}, "BTCUSD": {"b": "108923.000000000...
+2025-07-07 01:38:07,472 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0101 seconds.
+2025-07-07 01:38:08,313 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:08,320 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:08,320 - DEBUG - websocket - User 4: Sending 27 changed/updated symbols
+2025-07-07 01:38:08,321 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:09,692 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9375000000", "o": "12.9349000000"}, "XAGUSD": {"b": "36.5850000000", "o": "36.5770000000"}, "NZDJPY": {"b": "87.0990000000", "o": "87.0930000000"}, "GBPAUD": {"b": "2.0908100000",...
+2025-07-07 01:38:09,692 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0042 seconds.
+2025-07-07 01:38:10,203 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:10,208 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:10,208 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:38:10,209 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:12,350 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9373000000", "o": "12.9347000000"}, "XAGUSD": {"b": "36.5840000000", "o": "36.5770000000"}, "NZDJPY": {"b": "87.0990000000", "o": "87.0910000000"}, "GBPAUD": {"b": "2.0907400000",...
+2025-07-07 01:38:12,350 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0045 seconds.
+2025-07-07 01:38:12,952 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:12,957 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:12,957 - DEBUG - websocket - User 4: Sending 36 changed/updated symbols
+2025-07-07 01:38:12,957 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:14,715 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9372000000", "o": "12.9346000000"}, "XAGUSD": {"b": "36.5850000000", "o": "36.5780000000"}, "NZDJPY": {"b": "87.0950000000", "o": "87.0890000000"}, "GBPAUD": {"b": "2.0907800000",...
+2025-07-07 01:38:14,715 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0045 seconds.
+2025-07-07 01:38:15,187 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:15,193 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:15,194 - DEBUG - websocket - User 4: Sending 38 changed/updated symbols
+2025-07-07 01:38:15,195 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:16,910 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9369000000", "o": "12.9343000000"}, "NZDJPY": {"b": "87.0940000000", "o": "87.0870000000"}, "GBPAUD": {"b": "2.0907700000", "o": "2.0906100000"}, "USDJPY": {"b": "145.1430000000",...
+2025-07-07 01:38:16,910 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0031 seconds.
+2025-07-07 01:38:17,413 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:17,415 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:17,415 - DEBUG - websocket - User 4: Sending 33 changed/updated symbols
+2025-07-07 01:38:17,416 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:19,196 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9372000000", "o": "12.9346000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0907800000", "o": "2.0906400000"}, "USDJPY": {"b": "145.1410000000",...
+2025-07-07 01:38:19,196 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0041 seconds.
+2025-07-07 01:38:19,765 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:19,772 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:19,772 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:38:19,773 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:21,477 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9370000000", "o": "12.9344000000"}, "XAGUSD": {"b": "36.5840000000", "o": "36.5770000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0890000000"}, "CADCHF": {"b": "0.5827700000",...
+2025-07-07 01:38:21,478 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0033 seconds.
+2025-07-07 01:38:21,979 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:21,982 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:21,982 - DEBUG - websocket - User 4: Sending 26 changed/updated symbols
+2025-07-07 01:38:21,983 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:23,812 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9376000000", "o": "12.9350000000"}, "XAGUSD": {"b": "36.5850000000", "o": "36.5780000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0907700000",...
+2025-07-07 01:38:23,812 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0045 seconds.
+2025-07-07 01:38:24,277 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:24,282 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:24,282 - DEBUG - websocket - User 4: Sending 22 changed/updated symbols
+2025-07-07 01:38:24,283 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:26,104 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9368000000", "o": "12.9342000000"}, "NZDJPY": {"b": "87.0990000000", "o": "87.0910000000"}, "GBPAUD": {"b": "2.0908700000", "o": "2.0907700000"}, "BTCUSD": {"b": "108894.400000000...
+2025-07-07 01:38:26,105 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0030 seconds.
+2025-07-07 01:38:26,576 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:26,579 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:26,579 - DEBUG - websocket - User 4: Sending 27 changed/updated symbols
+2025-07-07 01:38:26,580 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:28,403 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9376000000", "o": "12.9350000000"}, "XAGUSD": {"b": "36.5840000000", "o": "36.5770000000"}, "NZDJPY": {"b": "87.0950000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0909200000",...
+2025-07-07 01:38:28,403 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0044 seconds.
+2025-07-07 01:38:28,888 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:28,892 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:28,892 - DEBUG - websocket - User 4: Sending 33 changed/updated symbols
+2025-07-07 01:38:28,893 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:30,680 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9366000000", "o": "12.9340000000"}, "GBPAUD": {"b": "2.0909500000", "o": "2.0908000000"}, "USDJPY": {"b": "145.1370000000", "o": "145.1340000000"}, "EURNZD": {"b": "1.9563200000",...
+2025-07-07 01:38:30,680 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0038 seconds.
+2025-07-07 01:38:31,227 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:31,234 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:31,234 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:38:31,235 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:32,985 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9367000000", "o": "12.9341000000"}, "XAGUSD": {"b": "36.5890000000", "o": "36.5830000000"}, "GBPAUD": {"b": "2.0909600000", "o": "2.0908300000"}, "USDJPY": {"b": "145.1350000000",...
+2025-07-07 01:38:32,985 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0026 seconds.
+2025-07-07 01:38:33,525 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:33,530 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:33,531 - DEBUG - websocket - User 4: Sending 19 changed/updated symbols
+2025-07-07 01:38:33,531 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:35,395 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9373000000", "o": "12.9347000000"}, "NZDJPY": {"b": "87.0930000000", "o": "87.0850000000"}, "GBPAUD": {"b": "2.0909800000", "o": "2.0908300000"}, "USDJPY": {"b": "145.1340000000",...
+2025-07-07 01:38:35,395 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0039 seconds.
+2025-07-07 01:38:35,875 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:35,879 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:35,879 - DEBUG - websocket - User 4: Sending 21 changed/updated symbols
+2025-07-07 01:38:35,880 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:37,610 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9372000000", "o": "12.9346000000"}, "NZDJPY": {"b": "87.0950000000", "o": "87.0870000000"}, "GBPAUD": {"b": "2.0909200000", "o": "2.0908000000"}, "USDJPY": {"b": "145.1410000000",...
+2025-07-07 01:38:37,610 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0077 seconds.
+2025-07-07 01:38:38,335 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:38,339 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:38,339 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:38:38,340 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:39,891 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9373000000", "o": "12.9347000000"}, "XAGUSD": {"b": "36.5930000000", "o": "36.5860000000"}, "NZDJPY": {"b": "87.0930000000", "o": "87.0850000000"}, "GBPAUD": {"b": "2.0909200000",...
+2025-07-07 01:38:39,891 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0038 seconds.
+2025-07-07 01:38:40,365 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:40,372 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:40,372 - DEBUG - websocket - User 4: Sending 32 changed/updated symbols
+2025-07-07 01:38:40,373 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:42,164 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5920000000", "o": "36.5840000000"}, "NZDJPY": {"b": "87.0970000000", "o": "87.0890000000"}, "GBPAUD": {"b": "2.0909200000", "o": "2.0907300000"}, "USDJPY": {"b": "145.1400000000",...
+2025-07-07 01:38:42,164 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0014 seconds.
+2025-07-07 01:38:42,651 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:42,656 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:42,656 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:38:42,656 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:44,461 - INFO - websocket - User 4: Received message on channel market_data_updates: {"NZDJPY": {"b": "87.0980000000", "o": "87.0910000000"}, "GBPAUD": {"b": "2.0909200000", "o": "2.0907400000"}, "BTCUSD": {"b": "108892.6000000000", "o": "108892.5000000000"}, "USDJPY": {"b": "145.1710...
+2025-07-07 01:38:44,462 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0029 seconds.
+2025-07-07 01:38:44,925 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:44,929 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:44,929 - DEBUG - websocket - User 4: Sending 24 changed/updated symbols
+2025-07-07 01:38:44,930 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:46,767 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9370000000", "o": "12.9344000000"}, "XAGUSD": {"b": "36.5890000000", "o": "36.5820000000"}, "NZDJPY": {"b": "87.0990000000", "o": "87.0930000000"}, "GBPAUD": {"b": "2.0909100000",...
+2025-07-07 01:38:46,767 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0016 seconds.
+2025-07-07 01:38:47,256 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:47,257 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:47,257 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:38:47,258 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:49,060 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9377000000", "o": "12.9351000000"}, "XAGUSD": {"b": "36.5930000000", "o": "36.5850000000"}, "NZDJPY": {"b": "87.0970000000", "o": "87.0920000000"}, "GBPAUD": {"b": "2.0909700000",...
+2025-07-07 01:38:49,060 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0066 seconds.
+2025-07-07 01:38:49,716 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:49,721 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:49,721 - DEBUG - websocket - User 4: Sending 35 changed/updated symbols
+2025-07-07 01:38:49,722 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:51,341 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9370000000", "o": "12.9344000000"}, "XAGUSD": {"b": "36.5890000000", "o": "36.5820000000"}, "NZDJPY": {"b": "87.0980000000", "o": "87.0910000000"}, "GBPAUD": {"b": "2.0909700000",...
+2025-07-07 01:38:51,342 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0029 seconds.
+2025-07-07 01:38:51,813 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:51,817 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:51,817 - DEBUG - websocket - User 4: Sending 37 changed/updated symbols
+2025-07-07 01:38:51,818 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:53,663 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9372000000", "o": "12.9346000000"}, "XAGUSD": {"b": "36.5930000000", "o": "36.5850000000"}, "USDCNH": {"b": "7.1768600000", "o": "7.1767800000"}, "EURNZD": {"b": "1.9563300000", "...
+2025-07-07 01:38:53,663 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0061 seconds.
+2025-07-07 01:38:54,141 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:54,143 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:54,143 - DEBUG - websocket - User 4: Sending 22 changed/updated symbols
+2025-07-07 01:38:54,144 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:55,957 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5890000000", "o": "36.5820000000"}, "NZDJPY": {"b": "87.0990000000", "o": "87.0910000000"}, "GBPAUD": {"b": "2.0910000000", "o": "2.0908800000"}, "USDJPY": {"b": "145.1670000000",...
+2025-07-07 01:38:55,957 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0036 seconds.
+2025-07-07 01:38:56,445 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:56,452 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:56,452 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:38:56,453 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:38:58,243 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9369000000", "o": "12.9343000000"}, "XAGUSD": {"b": "36.5960000000", "o": "36.5900000000"}, "NZDJPY": {"b": "87.0980000000", "o": "87.0900000000"}, "GBPAUD": {"b": "2.0910000000",...
+2025-07-07 01:38:58,243 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0015 seconds.
+2025-07-07 01:38:58,709 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:38:58,712 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:38:58,712 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:38:58,713 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:00,563 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9333000000", "o": "12.9306000000"}, "XAGUSD": {"b": "36.5920000000", "o": "36.5840000000"}, "NZDJPY": {"b": "87.0950000000", "o": "87.0880000000"}, "GBPAUD": {"b": "2.0909500000",...
+2025-07-07 01:39:00,563 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0044 seconds.
+2025-07-07 01:39:01,046 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:01,049 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:01,050 - DEBUG - websocket - User 4: Sending 26 changed/updated symbols
+2025-07-07 01:39:01,051 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:02,882 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5970000000", "o": "36.5890000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0890000000"}, "GBPAUD": {"b": "2.0909400000", "o": "2.0907700000"}, "BTCUSD": {"b": "108911.800000000...
+2025-07-07 01:39:02,883 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0035 seconds.
+2025-07-07 01:39:03,439 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:03,443 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:03,443 - DEBUG - websocket - User 4: Sending 36 changed/updated symbols
+2025-07-07 01:39:03,444 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:05,143 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9336000000", "o": "12.9310000000"}, "XAGUSD": {"b": "36.5990000000", "o": "36.5920000000"}, "NZDJPY": {"b": "87.0960000000", "o": "87.0920000000"}, "GBPAUD": {"b": "2.0909400000",...
+2025-07-07 01:39:05,143 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0041 seconds.
+2025-07-07 01:39:05,685 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:05,687 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:05,687 - DEBUG - websocket - User 4: Sending 30 changed/updated symbols
+2025-07-07 01:39:05,688 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:07,428 - INFO - websocket - User 4: Received message on channel market_data_updates: {"NZDJPY": {"b": "87.0990000000", "o": "87.0930000000"}, "GBPAUD": {"b": "2.0910100000", "o": "2.0908800000"}, "BTCUSD": {"b": "108911.8000000000", "o": "108911.7000000000"}, "USDCNH": {"b": "7.176680...
+2025-07-07 01:39:07,429 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0019 seconds.
+2025-07-07 01:39:08,032 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:08,037 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:08,037 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:39:08,038 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:09,789 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5940000000", "o": "36.5870000000"}, "NZDJPY": {"b": "87.0980000000", "o": "87.0930000000"}, "GBPAUD": {"b": "2.0909700000", "o": "2.0909200000"}, "USDJPY": {"b": "145.1590000000",...
+2025-07-07 01:39:09,789 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0021 seconds.
+2025-07-07 01:39:10,289 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:10,296 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:10,296 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:39:10,297 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:12,025 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9314000000", "o": "12.9288000000"}, "XAGUSD": {"b": "36.5990000000", "o": "36.5920000000"}, "NZDJPY": {"b": "87.1000000000", "o": "87.0910000000"}, "USDJPY": {"b": "145.1580000000...
+2025-07-07 01:39:12,025 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0046 seconds.
+2025-07-07 01:39:12,540 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:12,544 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:12,544 - DEBUG - websocket - User 4: Sending 29 changed/updated symbols
+2025-07-07 01:39:12,545 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:14,587 - INFO - websocket - User 4: Received message on channel market_data_updates: {"XAGUSD": {"b": "36.5950000000", "o": "36.5880000000"}, "NZDJPY": {"b": "87.0970000000", "o": "87.0920000000"}, "GBPAUD": {"b": "2.0909400000", "o": "2.0908000000"}, "USDJPY": {"b": "145.1600000000",...
+2025-07-07 01:39:14,587 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0135 seconds.
+2025-07-07 01:39:15,089 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:15,092 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:15,092 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:39:15,093 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:16,924 - INFO - websocket - User 4: Received message on channel market_data_updates: {"GBPSEK": {"b": "12.9322000000", "o": "12.9296000000"}, "XAGUSD": {"b": "36.5940000000", "o": "36.5870000000"}, "NZDJPY": {"b": "87.0970000000", "o": "87.0900000000"}, "GBPAUD": {"b": "2.0909200000",...
+2025-07-07 01:39:16,925 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0012 seconds.
+2025-07-07 01:39:17,413 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:17,418 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:17,418 - DEBUG - websocket - User 4: Sending 21 changed/updated symbols
+2025-07-07 01:39:17,419 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:19,211 - INFO - websocket - User 4: Received message on channel market_data_updates: {"NZDJPY": {"b": "87.1000000000", "o": "87.0920000000"}, "GBPAUD": {"b": "2.0910000000", "o": "2.0908600000"}, "USDJPY": {"b": "145.1600000000", "o": "145.1550000000"}, "USDCNH": {"b": "7.1765400000",...
+2025-07-07 01:39:19,211 - INFO - websocket - User 4: Market data delay from Firebase to WS listener entry: 0.0056 seconds.
+2025-07-07 01:39:19,809 - DEBUG - websocket - Updated dynamic portfolio cache for user 4
+2025-07-07 01:39:19,814 - DEBUG - websocket - User 4: Using balance_value=6599.06000000, margin_value=1928.22000000 for WebSocket response
+2025-07-07 01:39:19,814 - DEBUG - websocket - User 4: Sending 31 changed/updated symbols
+2025-07-07 01:39:19,815 - DEBUG - websocket - User 4: Successfully sent portfolio update
+2025-07-07 01:39:20,113 - INFO - websocket - User DYY5A: WebSocket disconnected by client.
+2025-07-07 01:39:20,114 - INFO - websocket - User DYY5A: Cleaning up WebSocket connection.
+2025-07-07 01:39:20,116 - INFO - websocket - User 4: Unsubscribed from Redis and cleaned up.
+2025-07-07 01:39:20,117 - INFO - websocket - User DYY5A: Listener task successfully cancelled.
+2025-07-07 01:39:20,118 - INFO - websocket - User DYY5A: WebSocket connection fully closed.
+2025-07-07 01:39:20,214 - INFO - websocket - Redis publisher task cancelled.
+2025-07-07 01:39:20,214 - INFO - websocket - Redis publisher task finished.

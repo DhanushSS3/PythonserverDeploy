@@ -139,88 +139,6 @@ router = APIRouter(
 )
 
 
-async def _calculate_and_cache_adjusted_prices(
-    raw_market_data: Dict[str, Any],
-    group_name: str,
-    relevant_symbols: Set[str],
-    group_settings: Dict[str, Any],
-    redis_client: Redis
-) -> Dict[str, Dict[str, float]]:
-    """
-    Calculates adjusted prices based on group settings and caches them.
-    Returns a dictionary of adjusted prices for symbols in raw_market_data.
-    """
-    adjusted_prices_payload = {}
-    
-    # Get all unique currencies from the group settings
-    all_currencies = set()
-    for symbol in group_settings.keys():
-        if len(symbol) == 6:  # Only process 6-character currency pairs
-            all_currencies.add(symbol[:3])  # First currency
-            all_currencies.add(symbol[3:])  # Second currency
-    
-    # Add USD conversion pairs to relevant symbols
-    for currency in all_currencies:
-        if currency != 'USD':
-            relevant_symbols.add(f"{currency}USD")  # Direct conversion
-            relevant_symbols.add(f"USD{currency}")  # Indirect conversion
-    
-    for symbol, prices in raw_market_data.items():
-        symbol_upper = symbol.upper()
-        if symbol_upper not in relevant_symbols or not isinstance(prices, dict):
-            continue
-
-        # --- Persist last known price for this symbol ---
-        await set_last_known_price(redis_client, symbol_upper, prices)
-
-        # Firebase 'b' is Ask, 'o' is Bid
-        raw_ask_price = prices.get('b')  # Ask from Firebase
-        raw_bid_price = prices.get('o')  # Bid from Firebase
-        symbol_group_settings = group_settings.get(symbol_upper)
-
-        if raw_ask_price is not None and raw_bid_price is not None and symbol_group_settings:
-            try:
-                ask_decimal = Decimal(str(raw_ask_price))
-                bid_decimal = Decimal(str(raw_bid_price))
-                spread_setting = Decimal(str(symbol_group_settings.get('spread', 0)))
-                spread_pip_setting = Decimal(str(symbol_group_settings.get('spread_pip', 0)))
-                
-                configured_spread_amount = spread_setting * spread_pip_setting
-                half_spread = configured_spread_amount / Decimal(2)
-
-                # Adjusted prices for user display and trading
-                adjusted_buy_price = ask_decimal + half_spread  # User buys at adjusted ask
-                adjusted_sell_price = bid_decimal - half_spread  # User sells at adjusted bid
-
-                effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
-                effective_spread_in_pips = Decimal("0.0")
-                if spread_pip_setting > Decimal("0.0"):
-                    effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
-
-                # Add to payload for immediate response
-                adjusted_prices_payload[symbol_upper] = {
-                    'buy': float(adjusted_buy_price),
-                    'sell': float(adjusted_sell_price),
-                    'spread': float(effective_spread_in_pips)
-                }
-
-                logger.debug(f"Adjusted prices for {symbol_upper}: Buy={adjusted_buy_price}, Sell={adjusted_sell_price}, Spread={effective_spread_in_pips}")
-
-            except Exception as e:
-                logger.error(f"Error adjusting price for {symbol_upper} in group {group_name}: {e}", exc_info=True)
-                # Optionally send raw if calculation fails
-                if raw_ask_price is not None and raw_bid_price is not None:
-                    raw_spread = (Decimal(str(raw_ask_price)) - Decimal(str(raw_bid_price)))
-                    raw_spread_pips = raw_spread / spread_pip_setting if spread_pip_setting > Decimal("0.0") else raw_spread
-                    adjusted_prices_payload[symbol_upper] = {
-                        'buy': float(raw_ask_price),
-                        'sell': float(raw_bid_price),
-                        'spread': float(raw_spread_pips)
-                    }
-
-    return adjusted_prices_payload
-
-
 async def _get_full_portfolio_details(
     user_id: int,
     group_name: str, # User's group name
@@ -483,19 +401,21 @@ async def per_connection_redis_listener(
                             delay = time.time() - firebase_ts
                             logger.info(f"User {user_id}: Market data delay from Firebase to WS listener entry: {delay:.4f} seconds.")
 
-                        price_data_content = {k: v for k, v in message_data.items() if k not in ["type", "_timestamp"]}
+                        # --- Fetch adjusted prices from cache for all group symbols ---
                         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
                         if group_settings is None:
                             logger.warning(f"User {user_id}: group_settings is None in per_connection_redis_listener. Skipping market data update processing.")
                             continue
                         relevant_symbols = set(group_settings.keys())
-                        adjusted_prices = await _calculate_and_cache_adjusted_prices(
-                            raw_market_data=price_data_content,
-                            group_name=group_name,
-                            relevant_symbols=relevant_symbols,
-                            group_settings=group_settings,
-                            redis_client=redis_client
-                        )
+                        adjusted_prices = {}
+                        for symbol in relevant_symbols:
+                            cached = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                            if cached:
+                                adjusted_prices[symbol] = {
+                                    'buy': float(cached.get('buy', 0)),
+                                    'sell': float(cached.get('sell', 0)),
+                                    'spread': float(cached.get('spread', 0))
+                                }
                         all_symbols_cache.update(adjusted_prices)
 
                         # --- Only send changed symbols ---
@@ -524,22 +444,16 @@ async def per_connection_redis_listener(
                         if is_initial_connection:
                             is_initial_connection = False
                             logger.info(f"User {user_id}: Initial connection completed, switching to incremental updates")
-                
                 elif channel == REDIS_ORDER_UPDATES_CHANNEL:
                     # Handle order updates
                     logger.info(f"User {user_id}: ORDER UPDATE CHANNEL - Full message data: {json.dumps(message_data, cls=DecimalEncoder)}")
                     if message_data.get("type") == "ORDER_UPDATE" and str(message_data.get("user_id")) == str(user_id):
                         logger.info(f"User {user_id}: Received order update notification, timestamp: {message_data.get('timestamp')}")
-                        
                         # Force refresh of static orders cache from database
                         logger.info(f"User {user_id}: Forcing refresh of static orders cache from database")
-                        
-                        # IMPORTANT: Create a new database session for this operation to ensure fresh data
                         async with AsyncSessionLocal() as refresh_db:
                             try:
                                 static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
-                                
-                                # Log the static orders that were fetched
                                 open_orders_count = len(static_orders.get("open_orders", []))
                                 pending_orders_count = len(static_orders.get("pending_orders", []))
                                 logger.info(f"User {user_id}: Refreshed static orders cache: {open_orders_count} open orders, {pending_orders_count} pending orders")
@@ -547,8 +461,6 @@ async def per_connection_redis_listener(
                             except Exception as e:
                                 logger.error(f"User {user_id}: Error updating static orders cache: {e}", exc_info=True)
                                 static_orders = {"open_orders": [], "pending_orders": []}
-                        
-                        # Get fresh user data to ensure we have the latest balance and margin
                         user_data = None
                         async with AsyncSessionLocal() as refresh_db:
                             try:
@@ -556,8 +468,6 @@ async def per_connection_redis_listener(
                                 logger.info(f"User {user_id}: Fresh user data fetched for order update: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
                             except Exception as e:
                                 logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
-                        
-                        # Get the latest dynamic portfolio data
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
                         if not dynamic_portfolio:
                             dynamic_portfolio = {
@@ -567,23 +477,28 @@ async def per_connection_redis_listener(
                                 "profit_loss": "0.0",
                                 "margin_level": "0.0"
                             }
-                        
-                        # Prepare response data for order update
                         balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
                         margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
-                        
-                        # Ensure balance and margin are properly formatted as strings
                         if isinstance(balance_value, Decimal):
                             balance_value = str(balance_value)
                         if isinstance(margin_value, Decimal):
                             margin_value = str(margin_value)
-                            
-                        logger.info(f"User {user_id}: ORDER UPDATE - Formatted values for WebSocket: balance={balance_value} (type: {type(balance_value)}), margin={margin_value} (type: {type(margin_value)})")
-                        
+                        # --- Fetch adjusted prices from cache for all group symbols ---
+                        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                        adjusted_prices = {}
+                        if group_settings:
+                            for symbol in group_settings.keys():
+                                cached = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                                if cached:
+                                    adjusted_prices[symbol] = {
+                                        'buy': float(cached.get('buy', 0)),
+                                        'sell': float(cached.get('sell', 0)),
+                                        'spread': float(cached.get('spread', 0))
+                                    }
                         response_data = {
                             "type": "market_update",
                             "data": {
-                                "market_prices": all_symbols_cache,  # Send all symbols data for order updates
+                                "market_prices": adjusted_prices,  # Always send all group symbols from cache
                                 "account_summary": {
                                     "balance": balance_value,
                                     "margin": margin_value,
@@ -593,46 +508,34 @@ async def per_connection_redis_listener(
                             }
                         }
                         logger.info(f"User {user_id}: WebSocket response data: {json.dumps(response_data, cls=DecimalEncoder)[:500]}...")
-                        
-                        # Safely send the order update
                         success = await safe_websocket_send(
                             websocket, 
                             json.dumps(response_data, cls=DecimalEncoder), 
                             user_id, 
                             "order update"
                         )
-                        
                         if not success:
                             logger.info(f"User {user_id}: Failed to send order update, connection may be closed")
                             break  # Exit the loop since connection is closed
                         else:
                             logger.info(f"User {user_id}: Sent orders update using market_update type")
-                
                 elif channel == REDIS_USER_DATA_UPDATES_CHANNEL:
-                    # Handle user data updates
                     if message_data.get("type") == "USER_DATA_UPDATE" and str(message_data.get("user_id")) == str(user_id):
                         logger.info(f"User {user_id}: Received user data update notification")
-                        
-                        # Refresh user data cache with a fresh database session
                         user_data = None
                         async with AsyncSessionLocal() as refresh_db:
                             try:
                                 logger.info(f"User {user_id}: Fetching fresh user data from database")
                                 user_data = await get_user_data_cache(redis_client, user_id, refresh_db, user_type)
                                 logger.info(f"User {user_id}: User data fetched from database: {json.dumps(user_data, cls=DecimalEncoder) if user_data else None}")
-                                
-                                # Log specific wallet_balance and margin values
                                 if user_data:
                                     wallet_balance = user_data.get("wallet_balance", "0.0")
                                     margin = user_data.get("margin", "0.0")
                                     logger.info(f"User {user_id}: IMPORTANT - Fresh wallet_balance={wallet_balance}, margin={margin}")
                             except Exception as e:
                                 logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
-                        
-                        # Get the latest dynamic portfolio data
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
                         logger.info(f"User {user_id}: Dynamic portfolio from cache: {json.dumps(dynamic_portfolio, cls=DecimalEncoder) if dynamic_portfolio else None}")
-                        
                         if not dynamic_portfolio:
                             logger.info(f"User {user_id}: No dynamic portfolio found in cache, creating default")
                             dynamic_portfolio = {
@@ -642,8 +545,6 @@ async def per_connection_redis_listener(
                                 "profit_loss": "0.0",
                                 "margin_level": "0.0"
                             }
-                        
-                        # Get static orders to include in the response - use fresh database session
                         static_orders = None
                         async with AsyncSessionLocal() as refresh_db:
                             try:
@@ -653,23 +554,28 @@ async def per_connection_redis_listener(
                             except Exception as e:
                                 logger.error(f"User {user_id}: Error updating static orders cache: {e}", exc_info=True)
                                 static_orders = {"open_orders": [], "pending_orders": []}
-                        
-                        # Prepare response data for user data update
                         balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
                         margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
-                        
-                        # Ensure balance and margin are properly formatted as strings
                         if isinstance(balance_value, Decimal):
                             balance_value = str(balance_value)
                         if isinstance(margin_value, Decimal):
                             margin_value = str(margin_value)
-                            
-                        logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
-                        
+                        # --- Fetch adjusted prices from cache for all group symbols ---
+                        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+                        adjusted_prices = {}
+                        if group_settings:
+                            for symbol in group_settings.keys():
+                                cached = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                                if cached:
+                                    adjusted_prices[symbol] = {
+                                        'buy': float(cached.get('buy', 0)),
+                                        'sell': float(cached.get('sell', 0)),
+                                        'spread': float(cached.get('spread', 0))
+                                    }
                         response_data = {
                             "type": "market_update",
                             "data": {
-                                "market_prices": all_symbols_cache,  # Send all symbols data for user data updates
+                                "market_prices": adjusted_prices,  # Always send all group symbols from cache
                                 "account_summary": {
                                     "balance": balance_value,
                                     "margin": margin_value,
@@ -679,26 +585,21 @@ async def per_connection_redis_listener(
                             }
                         }
                         logger.info(f"User {user_id}: Sending user data update with balance={balance_value}, margin={margin_value}, {len(static_orders.get('open_orders', []))} open orders and {len(static_orders.get('pending_orders', []))} pending orders")
-                        
-                        # Safely send the user data update
                         success = await safe_websocket_send(
                             websocket, 
                             json.dumps(response_data, cls=DecimalEncoder), 
                             user_id, 
                             "user data update"
                         )
-                        
                         if not success:
                             logger.info(f"User {user_id}: Failed to send user data update, connection may be closed")
                             break  # Exit the loop since connection is closed
                         else:
                             logger.info(f"User {user_id}: Sent user data update using market_update type")
-            
             except json.JSONDecodeError as e:
                 logger.error(f"User {user_id}: JSON decode error: {e}", exc_info=True)
             except Exception as e:
                 logger.error(f"User {user_id}: Error in message processing: {e}", exc_info=True)
-
     except WebSocketDisconnect:
         logger.info(f"User {user_id}: WebSocket disconnected.")
     except Exception as e:
