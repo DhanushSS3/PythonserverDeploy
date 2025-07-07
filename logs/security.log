@@ -4979,3 +4979,179 @@ jose.exceptions.JWTError: Could not validate credentials
 2025-07-06 23:54:22,098 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751872659, 'iat': 1751870859}
 2025-07-06 23:54:53,031 - INFO - app.core.security - Closing Redis connection...
 2025-07-06 23:54:53,035 - INFO - app.core.security - Redis connection closed.
+2025-07-06 23:59:50,257 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-06 23:59:50,257 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-06 23:59:50,263 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-06 23:59:50,263 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-06 23:59:50,271 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-06 23:59:50,271 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-06 23:59:50,271 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-06 23:59:50,271 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 7, 7, 34, 50, 271001), 'iat': datetime.datetime(2025, 7, 7, 6, 59, 50, 271003)}
+2025-07-06 23:59:50,271 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-06 23:59:53,790 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-06 23:59:53,790 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-06 23:59:53,791 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751872659, 'iat': 1751870859}
+2025-07-06 23:59:59,486 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-06 23:59:59,486 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-06 23:59:59,487 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751872659, 'iat': 1751870859}
+2025-07-07 00:00:04,251 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 00:00:04,252 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 00:00:04,252 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751872659, 'iat': 1751870859}
+2025-07-07 00:02:35,028 - INFO - app.core.security - Closing Redis connection...
+2025-07-07 00:02:35,030 - INFO - app.core.security - Redis connection closed.
+2025-07-07 00:06:11,129 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-07 00:06:11,129 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-07 00:06:11,135 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-07 00:06:11,135 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-07 00:06:11,141 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-07 00:06:11,141 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-07 00:06:11,141 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-07 00:06:11,141 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 7, 7, 41, 11, 141123), 'iat': datetime.datetime(2025, 7, 7, 7, 6, 11, 141127)}
+2025-07-07 00:06:11,141 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-07 00:06:18,615 - INFO - app.core.security - Closing Redis connection...
+2025-07-07 00:06:18,616 - INFO - app.core.security - Redis connection closed.
+2025-07-07 00:06:25,170 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-07 00:06:25,170 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-07 00:06:25,175 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-07 00:06:25,175 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-07 00:06:25,185 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-07 00:06:25,185 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-07 00:06:25,185 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-07 00:06:25,185 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 7, 7, 41, 25, 185392), 'iat': datetime.datetime(2025, 7, 7, 7, 6, 25, 185394)}
+2025-07-07 00:06:25,187 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-07 00:06:31,654 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 00:06:31,654 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 00:06:31,655 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 00:06:31,736 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 00:06:31,736 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 00:06:31,737 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 00:06:31,836 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 00:06:31,836 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 00:06:31,836 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 00:06:31,960 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 00:06:31,960 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 00:06:31,961 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 00:06:32,059 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 00:06:32,059 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 00:06:32,059 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\AppData\Local\Programs\Python\Python313\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 00:08:13,876 - INFO - app.core.security - Closing Redis connection...
+2025-07-07 00:08:13,877 - INFO - app.core.security - Redis connection closed.

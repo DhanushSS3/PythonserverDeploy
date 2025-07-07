@@ -110,6 +110,30 @@ def remove_connection_metrics():
     with metrics_lock:
         connection_metrics['current_connections'] = max(0, connection_metrics['current_connections'] - 1)
 
+async def safe_websocket_send(websocket: WebSocket, message: str, user_id: int, context: str = "message"):
+    """
+    Safely send a message to a WebSocket connection with proper error handling.
+    Returns True if successful, False if connection is closed.
+    """
+    try:
+        if websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.send_text(message)
+            logger.debug(f"User {user_id}: Successfully sent {context}")
+            return True
+        else:
+            logger.debug(f"User {user_id}: WebSocket not connected, skipping {context}")
+            return False
+    except WebSocketDisconnect:
+        logger.info(f"User {user_id}: WebSocket disconnected while sending {context}")
+        return False
+    except Exception as send_error:
+        logger.error(f"User {user_id}: Error sending {context}: {send_error}")
+        # Check if it's a connection-related error
+        if "ConnectionClosedOK" in str(send_error) or "ClientDisconnected" in str(send_error):
+            logger.info(f"User {user_id}: WebSocket connection closed, stopping {context}")
+            return False
+        return False
+
 router = APIRouter(
     tags=["market_data"]
 )
@@ -544,37 +568,44 @@ async def per_connection_redis_listener(
                                 "margin_level": "0.0"
                             }
                         
-                        # Send update to client - use market_update type to match existing frontend handling
-                        if websocket.client_state == WebSocketState.CONNECTED:
-                            logger.info(f"User {user_id}: Sending order update to WebSocket client")
+                        # Prepare response data for order update
+                        balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
+                        margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+                        
+                        # Ensure balance and margin are properly formatted as strings
+                        if isinstance(balance_value, Decimal):
+                            balance_value = str(balance_value)
+                        if isinstance(margin_value, Decimal):
+                            margin_value = str(margin_value)
                             
-                            # IMPORTANT: Use the values directly from user_data for balance and margin
-                            # This ensures we're sending the most up-to-date values from the database
-                            balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
-                            margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
-                            
-                            # Ensure balance and margin are properly formatted as strings
-                            if isinstance(balance_value, Decimal):
-                                balance_value = str(balance_value)
-                            if isinstance(margin_value, Decimal):
-                                margin_value = str(margin_value)
-                                
-                            logger.info(f"User {user_id}: ORDER UPDATE - Formatted values for WebSocket: balance={balance_value} (type: {type(balance_value)}), margin={margin_value} (type: {type(margin_value)})")
-                            
-                            response_data = {
-                                "type": "market_update",
-                                "data": {
-                                    "market_prices": all_symbols_cache,  # Send all symbols data for order updates
-                                    "account_summary": {
-                                        "balance": balance_value,
-                                        "margin": margin_value,
-                                        "open_orders": static_orders.get("open_orders", []) if static_orders else [],
-                                        "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
-                                    }
+                        logger.info(f"User {user_id}: ORDER UPDATE - Formatted values for WebSocket: balance={balance_value} (type: {type(balance_value)}), margin={margin_value} (type: {type(margin_value)})")
+                        
+                        response_data = {
+                            "type": "market_update",
+                            "data": {
+                                "market_prices": all_symbols_cache,  # Send all symbols data for order updates
+                                "account_summary": {
+                                    "balance": balance_value,
+                                    "margin": margin_value,
+                                    "open_orders": static_orders.get("open_orders", []) if static_orders else [],
+                                    "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
                                 }
                             }
-                            logger.info(f"User {user_id}: WebSocket response data: {json.dumps(response_data, cls=DecimalEncoder)[:500]}...")
-                            await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
+                        }
+                        logger.info(f"User {user_id}: WebSocket response data: {json.dumps(response_data, cls=DecimalEncoder)[:500]}...")
+                        
+                        # Safely send the order update
+                        success = await safe_websocket_send(
+                            websocket, 
+                            json.dumps(response_data, cls=DecimalEncoder), 
+                            user_id, 
+                            "order update"
+                        )
+                        
+                        if not success:
+                            logger.info(f"User {user_id}: Failed to send order update, connection may be closed")
+                            break  # Exit the loop since connection is closed
+                        else:
                             logger.info(f"User {user_id}: Sent orders update using market_update type")
                 
                 elif channel == REDIS_USER_DATA_UPDATES_CHANNEL:
@@ -623,35 +654,44 @@ async def per_connection_redis_listener(
                                 logger.error(f"User {user_id}: Error updating static orders cache: {e}", exc_info=True)
                                 static_orders = {"open_orders": [], "pending_orders": []}
                         
-                        # Send update to client using market_update type for consistency
-                        if websocket.client_state == WebSocketState.CONNECTED:
-                            # IMPORTANT: Use the values directly from user_data for balance and margin
-                            # This ensures we're sending the most up-to-date values from the database
-                            balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
-                            margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+                        # Prepare response data for user data update
+                        balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
+                        margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+                        
+                        # Ensure balance and margin are properly formatted as strings
+                        if isinstance(balance_value, Decimal):
+                            balance_value = str(balance_value)
+                        if isinstance(margin_value, Decimal):
+                            margin_value = str(margin_value)
                             
-                            # Ensure balance and margin are properly formatted as strings
-                            if isinstance(balance_value, Decimal):
-                                balance_value = str(balance_value)
-                            if isinstance(margin_value, Decimal):
-                                margin_value = str(margin_value)
-                                
-                            logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
-                            
-                            response_data = {
-                                "type": "market_update",
-                                "data": {
-                                    "market_prices": all_symbols_cache,  # Send all symbols data for user data updates
-                                    "account_summary": {
-                                        "balance": balance_value,
-                                        "margin": margin_value,
-                                        "open_orders": static_orders.get("open_orders", []) if static_orders else [],
-                                        "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
-                                    }
+                        logger.info(f"User {user_id}: IMPORTANT - Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
+                        
+                        response_data = {
+                            "type": "market_update",
+                            "data": {
+                                "market_prices": all_symbols_cache,  # Send all symbols data for user data updates
+                                "account_summary": {
+                                    "balance": balance_value,
+                                    "margin": margin_value,
+                                    "open_orders": static_orders.get("open_orders", []) if static_orders else [],
+                                    "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
                                 }
                             }
-                            logger.info(f"User {user_id}: Sending user data update with balance={balance_value}, margin={margin_value}, {len(static_orders.get('open_orders', []))} open orders and {len(static_orders.get('pending_orders', []))} pending orders")
-                            await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
+                        }
+                        logger.info(f"User {user_id}: Sending user data update with balance={balance_value}, margin={margin_value}, {len(static_orders.get('open_orders', []))} open orders and {len(static_orders.get('pending_orders', []))} pending orders")
+                        
+                        # Safely send the user data update
+                        success = await safe_websocket_send(
+                            websocket, 
+                            json.dumps(response_data, cls=DecimalEncoder), 
+                            user_id, 
+                            "user data update"
+                        )
+                        
+                        if not success:
+                            logger.info(f"User {user_id}: Failed to send user data update, connection may be closed")
+                            break  # Exit the loop since connection is closed
+                        else:
                             logger.info(f"User {user_id}: Sent user data update using market_update type")
             
             except json.JSONDecodeError as e:
@@ -862,35 +902,45 @@ async def process_portfolio_update(
                 "margin_level": "0.0"
             }
         
-        if websocket.client_state == WebSocketState.CONNECTED:
-            balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
-            margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
-            
-            if isinstance(balance_value, Decimal):
-                balance_value = str(balance_value)
-            if isinstance(margin_value, Decimal):
-                margin_value = str(margin_value)
-            
-            logger.debug(f"User {user_id}: Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
-            
-            # Only send changed/updated symbols after initial connection
-            market_prices_to_send = adjusted_prices
-            logger.debug(f"User {user_id}: Sending {len(market_prices_to_send)} changed/updated symbols")
-            
-            response_data = {
-                "type": "market_update",
-                "data": {
-                    "market_prices": market_prices_to_send,
-                    "account_summary": {
-                        "balance": balance_value,
-                        "margin": margin_value,
-                        "open_orders": open_positions,
-                        "pending_orders": pending_orders
-                    }
+        # Prepare response data
+        balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
+        margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+        
+        if isinstance(balance_value, Decimal):
+            balance_value = str(balance_value)
+        if isinstance(margin_value, Decimal):
+            margin_value = str(margin_value)
+        
+        logger.debug(f"User {user_id}: Using balance_value={balance_value}, margin_value={margin_value} for WebSocket response")
+        
+        # Only send changed/updated symbols after initial connection
+        market_prices_to_send = adjusted_prices
+        logger.debug(f"User {user_id}: Sending {len(market_prices_to_send)} changed/updated symbols")
+        
+        response_data = {
+            "type": "market_update",
+            "data": {
+                "market_prices": market_prices_to_send,
+                "account_summary": {
+                    "balance": balance_value,
+                    "margin": margin_value,
+                    "open_orders": open_positions,
+                    "pending_orders": pending_orders
                 }
             }
-            await websocket.send_text(json.dumps(response_data, cls=DecimalEncoder))
-            logger.debug(f"User {user_id}: Sent positions + market prices update")
+        }
+        
+        # Safely send the message
+        success = await safe_websocket_send(
+            websocket, 
+            json.dumps(response_data, cls=DecimalEncoder), 
+            user_id, 
+            "portfolio update"
+        )
+        
+        if not success:
+            logger.info(f"User {user_id}: Failed to send portfolio update, connection may be closed")
+            return  # Exit the function since connection is closed
     except Exception as e:
         logger.error(f"User {user_id}: Error processing portfolio update: {e}", exc_info=True)
     finally:
@@ -948,10 +998,15 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         logger.info(f"WebSocket connection accepted (early) for {websocket.client.host}:{websocket.client.port} in {connection_time:.3f}s")
         
         # Send a loading message to the client
-        await websocket.send_text(json.dumps({
-            "type": "loading",
-            "message": "Initializing connection, please wait..."
-        }))
+        await safe_websocket_send(
+            websocket,
+            json.dumps({
+                "type": "loading",
+                "message": "Initializing connection, please wait..."
+            }),
+            0,  # user_id not available yet, use 0
+            "loading message"
+        )
     except Exception as accept_error:
         logger.error(f"Failed to accept WebSocket connection: {accept_error}")
         update_connection_metrics(connection_id, time.time() - connection_start_time, False)
@@ -1153,14 +1208,18 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                 }
             }
             
-            try:
-                await websocket.send_text(json.dumps(initial_response, cls=DecimalEncoder))
+            # Safely send initial connection data
+            success = await safe_websocket_send(
+                websocket,
+                json.dumps(initial_response, cls=DecimalEncoder),
+                db_user_id,
+                "initial connection data"
+            )
+            
+            if success:
                 logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from cache)")
-            except WebSocketDisconnect:
-                logger.warning(f"User {account_number}: Client disconnected during initial data send")
-                return
-            except Exception as send_error:
-                logger.error(f"User {account_number}: Error sending initial data: {send_error}")
+            else:
+                logger.warning(f"User {account_number}: Failed to send initial connection data, connection may be closed")
                 return
         else:
             logger.warning(f"User {account_number}: Client disconnected before sending initial data")
