@@ -16,6 +16,9 @@ from fastapi.security import OAuth2PasswordBearer
 import asyncio
 import orjson
 from fastapi import BackgroundTasks, Depends
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+from sqlalchemy import or_
 
 from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user, get_user_from_service_token
@@ -3689,50 +3692,78 @@ async def _handle_order_close_transition(
     return updated_order
 
 
-@router.post("/service-provider/calculate-half-spread", response_model=HalfSpreadResponse, summary="Calculate Half-Spread for a Symbol in a User's Group")
-async def calculate_half_spread_for_service_provider(
-    request: HalfSpreadRequest,
+class ServiceProviderOrderInfoRequest(BaseModel):
+    order_id: str
+    symbol: str
+
+class ServiceProviderOrderInfoResponse(BaseModel):
+    symbol: str
+    half_spread: str
+    status: str
+
+@router.post("/service-provider/order-info", response_model=ServiceProviderOrderInfoResponse, summary="Get half-spread and status for a symbol in a user's group by any order ID")
+async def get_order_info_for_service_provider(
+    request: ServiceProviderOrderInfoRequest,
     db: AsyncSession = Depends(get_db),
+    redis_client = Depends(get_redis_client),
     current_user: User = Depends(get_user_from_service_token)
 ):
     """
-    Calculates the half-spread for a given symbol based on the user's group settings,
-    identified by any of the order's unique IDs. This endpoint is for use by service providers.
-    
-    The formula used is: `half_spread = (spread * spread_pip) / 2`
+    Given an order_id (can be any of: order_id, close_id, cancel_id, modify_id, stoploss_id, takeprofit_id, stoploss_cancel_id, takeprofit_cancel_id) and a symbol,
+    returns the symbol, half_spread (calculated as (spread * spread_pip) / 2 for the user's group), and the status field of the order.
     """
-    orders_logger.info(f"Half-spread calculation request for order_id: {request.order_id}, symbol: {request.symbol}")
+    orders_logger.info(f"Service provider order info request for order_id: {request.order_id}, symbol: {request.symbol}")
 
-    # 1. Find the order to get the user_id, using any provided ID.
-    # Service providers only operate on live users, so we use UserOrder model.
-    order_model = UserOrder
-    db_order = await crud_order.get_order_by_any_id(db, generic_id=request.order_id, order_model=order_model)
+    # 1. Fetch order and user in a single query using JOIN
+    result = await db.execute(
+        select(UserOrder)
+        .options(selectinload(UserOrder.user))
+        .filter(
+            or_(
+                UserOrder.order_id == request.order_id,
+                UserOrder.cancel_id == request.order_id,
+                UserOrder.close_id == request.order_id,
+                UserOrder.modify_id == request.order_id,
+                UserOrder.stoploss_id == request.order_id,
+                UserOrder.takeprofit_id == request.order_id,
+                UserOrder.stoploss_cancel_id == request.order_id,
+                UserOrder.takeprofit_cancel_id == request.order_id,
+            )
+        )
+    )
+    db_order = result.scalars().first()
     if not db_order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Order with ID '{request.order_id}' not found.")
 
-    # 2. Find the user from the order to get the group_name
-    user_id = db_order.order_user_id
-    db_user = await crud_user.get_user_by_id(db, user_id=user_id, user_type='live')
+    db_user = db_order.user
     if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {user_id} associated with the order not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User associated with the order not found.")
 
     group_name = db_user.group_name
     if not group_name:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} does not belong to any group.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User does not belong to any group.")
 
-    # 3. Find Group settings for the specific symbol and group name
-    group_settings = await crud_group.get_group_by_symbol_and_name(db, symbol=request.symbol, name=group_name)
-    if not group_settings:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No specific settings found for symbol '{request.symbol}' in group '{group_name}'.")
+    # 2. Try to get group symbol settings from Redis cache first
+    group_settings = await get_group_symbol_settings_cache(redis_client, group_name, request.symbol)
+    if group_settings:
+        orders_logger.info(f"[CACHE HIT] Group-symbol settings for group '{group_name}', symbol '{request.symbol}' found in Redis cache.")
+    else:
+        orders_logger.info(f"[CACHE MISS] Group-symbol settings for group '{group_name}', symbol '{request.symbol}' not found in cache. Fetching from DB.")
+        group_settings_db = await crud_group.get_group_by_symbol_and_name(db, symbol=request.symbol, name=group_name)
+        if not group_settings_db:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No specific settings found for symbol '{request.symbol}' in group '{group_name}'.")
+        # Convert ORM object to dict for caching
+        group_settings = {k: getattr(group_settings_db, k) for k in group_settings_db.__table__.columns.keys()}
+        await set_group_symbol_settings_cache(redis_client, group_name, request.symbol, group_settings)
 
-    # 4. Extract spread and spread_pip
-    spread = getattr(group_settings, 'spread', None)
-    spread_pip = getattr(group_settings, 'spread_pip', None)
+    # 3. Extract spread and spread_pip
+    spread = group_settings.get('spread')
+    spread_pip = group_settings.get('spread_pip')
 
     if spread is None or spread_pip is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Incomplete spread settings for symbol '{request.symbol}' in group '{group_name}'.")
 
-    # 5. Calculate half_spread
+    # 4. Calculate half_spread
     try:
         spread_dec = Decimal(str(spread))
         spread_pip_dec = Decimal(str(spread_pip))
@@ -3741,98 +3772,11 @@ async def calculate_half_spread_for_service_provider(
         orders_logger.error(f"Error during spread calculation for symbol '{request.symbol}': {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during spread calculation: {e}")
 
-    # 6. Return response
-    return HalfSpreadResponse(
+    # 5. Return response
+    return ServiceProviderOrderInfoResponse(
         symbol=request.symbol,
-        half_spread=half_spread
+        half_spread=str(half_spread),
+        status=db_order.status
     )
-
-@router.get("/service-provider/status", response_model=OrderStatusResponse, summary="Get the status of an order by any ID")
-async def get_order_status_by_service_provider(
-    id: str = Query(..., description="The ID to search for (can be order_id, close_id, cancel_id, etc.)"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_user_from_service_token)
-):
-    """
-    Allows a service provider to retrieve the status of an order using any of its unique identifiers.
-    This endpoint searches across all live user orders.
-    """
-    orders_logger.info(f"Service provider status request received for ID: {id}")
-
-    # The service provider only deals with live users, so we use the UserOrder model.
-    order_model = UserOrder
-    
-    # Use the generic lookup function to find the order by any of its IDs.
-    db_order = await crud_order.get_order_by_any_id(db, generic_id=id, order_model=order_model)
-
-    if not db_order:
-        orders_logger.warning(f"Order not found with provided identifier '{id}' for service provider status check.")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Order not found with provided ID: {id}"
-        )
-
-    orders_logger.info(f"Found order {db_order.order_id} with status: '{db_order.status}' and order_status: '{db_order.order_status}'")
-
-    return OrderStatusResponse(
-        order_id=db_order.order_id,
-        status=db_order.status,
-        order_status=db_order.order_status
-    )
-
-# Add this helper function after the existing helper functions
-async def update_user_static_orders_cache_after_order_change(
-    user_id: int, 
-    db: AsyncSession, 
-    redis_client: Redis, 
-    user_type: str
-):
-    """
-    Helper function to update static orders cache after any order change.
-    This ensures the cache is always up-to-date for WebSocket connections.
-    """
-    try:
-        order_model = get_order_model(user_type)
-        
-        # Get open orders
-        open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-        open_orders_data = []
-        for pos in open_orders_orm:
-            pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
-                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
-                                    'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
-            pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
-            created_at = getattr(pos, 'created_at', None)
-            if created_at:
-                pos_dict['created_at'] = created_at.isoformat() if isinstance(created_at, datetime.datetime) else str(created_at)
-            open_orders_data.append(pos_dict)
-        
-        # Get pending orders
-        pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
-        pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
-        pending_orders_data = []
-        for po in pending_orders_orm:
-            po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
-                      for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
-                                  'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
-            po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
-            created_at = getattr(po, 'created_at', None)
-            if created_at:
-                po_dict['created_at'] = created_at.isoformat() if isinstance(created_at, datetime.datetime) else str(created_at)
-            pending_orders_data.append(po_dict)
-        
-        # Cache the static orders data
-        static_orders_data = {
-            "open_orders": open_orders_data,
-            "pending_orders": pending_orders_data,
-            "updated_at": datetime.datetime.now().isoformat()
-        }
-        await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
-        logger.info(f"User {user_id}: Updated static orders cache after order change - {len(open_orders_data)} open orders, {len(pending_orders_data)} pending orders")
-        
-        return static_orders_data
-    except Exception as e:
-        logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
-        return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
 
 

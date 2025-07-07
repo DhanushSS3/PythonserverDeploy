@@ -13,6 +13,8 @@ from firebase_admin.db import Event
 import firebase_admin
 from firebase_admin import db
 
+from app.core.logging_config import market_data_logger
+
 # This will get the database service for the default app that was initialized in main.py
 # Ensure that firebase_admin.initialize_app() in main.py runs before this module is imported.
 firebase_db = db
@@ -215,6 +217,12 @@ async def process_firebase_events(firebase_db_instance, path: str = 'datafeeds')
 
                     loop.call_soon_threadsafe(redis_publish_queue.put_nowait, data_for_queue)
                     logger.debug(f"Successfully queued data for path '{event.path}'. Queue size (approx): {redis_publish_queue.qsize()}. Data preview: {str(data_for_queue)[:200]}...")
+                    # --- ADDITIONAL LOGGING FOR DIAGNOSTICS ---
+                    if isinstance(data_for_queue, dict):
+                        symbol_count = len([k for k in data_for_queue.keys() if not k.startswith('_')])
+                        market_data_logger.info(
+                            f"[FIREBASE->REDIS_QUEUE] Published market data update. Symbols: {symbol_count}, Timestamp: {data_for_queue.get('_timestamp')}, Queue size: {redis_publish_queue.qsize()}"
+                        )
                 except asyncio.QueueFull:
                     logger.warning(f"redis_publish_queue is full. Dropping data for path '{event.path}'. Publisher task might be stuck or slow.")
                 except Exception as e:

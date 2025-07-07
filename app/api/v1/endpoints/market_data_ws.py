@@ -369,37 +369,43 @@ async def per_connection_redis_listener(
     await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
     await pubsub.subscribe(REDIS_ORDER_UPDATES_CHANNEL)
     await pubsub.subscribe(REDIS_USER_DATA_UPDATES_CHANNEL)
-    logger.info(f"User {user_id}: Subscribed to Redis channels for market data and updates")
+    logger.info(f"[DIAG] User {user_id}: Subscribed to Redis channels for market data and updates. Active connections: {connection_metrics['current_connections']}")
 
     await update_static_orders_cache(user_id, db, redis_client, user_type)
 
     is_initial_connection = True
     all_symbols_cache = {}
     last_sent_prices = {}  # Track last sent prices per symbol
+    last_message_time = time.time()
+    message_count = 0
 
-    logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
+    logger.info(f"[DIAG] User {user_id}: WebSocket state: {websocket.client_state}")
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            now = time.time()
             if message is None:
                 if random.random() < 0.01:
-                    logger.info(f"User {user_id}: WebSocket state: {websocket.client_state}")
+                    logger.info(f"[DIAG] User {user_id}: WebSocket state: {websocket.client_state}")
                 await asyncio.sleep(0.01)
                 continue
 
             try:
                 message_data = json.loads(message['data'], object_hook=decode_decimal)
                 channel = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
-                logger.info(f"User {user_id}: Received message on channel {channel}: {json.dumps(message_data, cls=DecimalEncoder)[:200]}...")
+                logger.info(f"[DIAG] User {user_id}: Received message on channel {channel} at {now:.3f}. Type: {message_data.get('type')}, Time since last: {now - last_message_time:.3f}s")
+                last_message_time = now
+                message_count += 1
+
+                process_start = time.time()
 
                 if channel == REDIS_MARKET_DATA_CHANNEL:
                     if message_data.get("type") == "market_data_update":
                         firebase_ts = message_data.get("_timestamp")
                         if firebase_ts:
-                            import time
                             delay = time.time() - firebase_ts
-                            logger.info(f"User {user_id}: Market data delay from Firebase to WS listener entry: {delay:.4f} seconds.")
+                            logger.info(f"[DIAG] User {user_id}: Market data delay from Firebase to WS listener entry: {delay:.4f} seconds.")
 
                         # --- Fetch adjusted prices from cache for all group symbols ---
                         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
@@ -430,6 +436,7 @@ async def per_connection_redis_listener(
                                 changed_prices[symbol] = price
                                 last_sent_prices[symbol] = price
                         # If initial connection, send all; else, only changed
+                        send_start = time.time()
                         await process_portfolio_update(
                             user_id=user_id,
                             group_name=group_name,
@@ -441,9 +448,11 @@ async def per_connection_redis_listener(
                             is_initial_connection=is_initial_connection,
                             all_symbols_cache=all_symbols_cache
                         )
+                        send_end = time.time()
+                        logger.info(f"[DIAG] User {user_id}: Sent market update to client. Processing time: {send_end - process_start:.3f}s, Send time: {send_end - send_start:.3f}s")
                         if is_initial_connection:
                             is_initial_connection = False
-                            logger.info(f"User {user_id}: Initial connection completed, switching to incremental updates")
+                            logger.info(f"[DIAG] User {user_id}: Initial connection completed, switching to incremental updates")
                 elif channel == REDIS_ORDER_UPDATES_CHANNEL:
                     # Handle order updates
                     logger.info(f"User {user_id}: ORDER UPDATE CHANNEL - Full message data: {json.dumps(message_data, cls=DecimalEncoder)}")
@@ -508,17 +517,20 @@ async def per_connection_redis_listener(
                             }
                         }
                         logger.info(f"User {user_id}: WebSocket response data: {json.dumps(response_data, cls=DecimalEncoder)[:500]}...")
+                        send_start = time.time()
                         success = await safe_websocket_send(
                             websocket, 
                             json.dumps(response_data, cls=DecimalEncoder), 
                             user_id, 
                             "order update"
                         )
+                        send_end = time.time()
+                        logger.info(f"[DIAG] User {user_id}: Sent order update to client. Processing time: {send_end - process_start:.3f}s, Send time: {send_end - send_start:.3f}s")
                         if not success:
-                            logger.info(f"User {user_id}: Failed to send order update, connection may be closed")
+                            logger.info(f"[DIAG] User {user_id}: Failed to send order update, connection may be closed")
                             break  # Exit the loop since connection is closed
                         else:
-                            logger.info(f"User {user_id}: Sent orders update using market_update type")
+                            logger.info(f"[DIAG] User {user_id}: Sent orders update using market_update type")
                 elif channel == REDIS_USER_DATA_UPDATES_CHANNEL:
                     if message_data.get("type") == "USER_DATA_UPDATE" and str(message_data.get("user_id")) == str(user_id):
                         logger.info(f"User {user_id}: Received user data update notification")
@@ -585,31 +597,34 @@ async def per_connection_redis_listener(
                             }
                         }
                         logger.info(f"User {user_id}: Sending user data update with balance={balance_value}, margin={margin_value}, {len(static_orders.get('open_orders', []))} open orders and {len(static_orders.get('pending_orders', []))} pending orders")
+                        send_start = time.time()
                         success = await safe_websocket_send(
                             websocket, 
                             json.dumps(response_data, cls=DecimalEncoder), 
                             user_id, 
                             "user data update"
                         )
+                        send_end = time.time()
+                        logger.info(f"[DIAG] User {user_id}: Sent user data update to client. Processing time: {send_end - process_start:.3f}s, Send time: {send_end - send_start:.3f}s")
                         if not success:
-                            logger.info(f"User {user_id}: Failed to send user data update, connection may be closed")
+                            logger.info(f"[DIAG] User {user_id}: Failed to send user data update, connection may be closed")
                             break  # Exit the loop since connection is closed
                         else:
-                            logger.info(f"User {user_id}: Sent user data update using market_update type")
+                            logger.info(f"[DIAG] User {user_id}: Sent user data update using market_update type")
             except json.JSONDecodeError as e:
-                logger.error(f"User {user_id}: JSON decode error: {e}", exc_info=True)
+                logger.error(f"[DIAG] User {user_id}: JSON decode error: {e}", exc_info=True)
             except Exception as e:
-                logger.error(f"User {user_id}: Error in message processing: {e}", exc_info=True)
+                logger.error(f"[DIAG] User {user_id}: Error in message processing: {e}", exc_info=True)
     except WebSocketDisconnect:
-        logger.info(f"User {user_id}: WebSocket disconnected.")
+        logger.info(f"[DIAG] User {user_id}: WebSocket disconnected. Total messages received: {message_count}")
     except Exception as e:
-        logger.error(f"User {user_id}: Unexpected error: {e}", exc_info=True)
+        logger.error(f"[DIAG] User {user_id}: Unexpected error: {e}", exc_info=True)
     finally:
         await pubsub.unsubscribe(REDIS_MARKET_DATA_CHANNEL)
         await pubsub.unsubscribe(REDIS_ORDER_UPDATES_CHANNEL)
         await pubsub.unsubscribe(REDIS_USER_DATA_UPDATES_CHANNEL)
         await pubsub.close()
-        logger.info(f"User {user_id}: Unsubscribed from Redis and cleaned up.")
+        logger.info(f"[DIAG] User {user_id}: Unsubscribed from Redis and cleaned up. Total messages received: {message_count}")
 
 async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_client: Redis, user_type: str):
     """

@@ -5375,3 +5375,211 @@ jose.exceptions.ExpiredSignatureError: Signature has expired.
 2025-07-07 01:37:29,333 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
 2025-07-07 01:39:21,549 - INFO - app.core.security - Closing Redis connection...
 2025-07-07 01:39:21,553 - INFO - app.core.security - Redis connection closed.
+2025-07-07 03:09:41,471 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-07 03:09:41,471 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-07 03:09:41,475 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-07 03:09:41,475 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-07 03:09:41,487 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-07 03:09:41,487 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-07 03:09:41,487 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-07 03:09:41,487 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 7, 10, 44, 41, 487352), 'iat': datetime.datetime(2025, 7, 7, 10, 9, 41, 487360)}
+2025-07-07 03:09:41,488 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-07 03:09:46,761 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:46,762 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:46,762 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '1', 'user_type': 'demo', 'account_number': '5O42G', 'exp': 1752485052, 'iat': 1751880252}
+2025-07-07 03:09:46,763 - INFO - app.core.security - Attempting to retrieve refresh token data for key: refresh_token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcl90eXBlIjoiZGVtbyIsImFjY291bnRfbnVtYmVyIjoiNU80MkciLCJleHAiOjE3NTI0ODUwNTIsImlhdCI6MTc1MTg4MDI1Mn0.Kkeew9fqcshaxBGeS1RCZeno2XSj6QWEp9tmmknD0Z8
+2025-07-07 03:09:46,770 - INFO - app.core.security - Attempting to delete refresh token for key: refresh_token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcl90eXBlIjoiZGVtbyIsImFjY291bnRfbnVtYmVyIjoiNU80MkciLCJleHAiOjE3NTI0ODUwNTIsImlhdCI6MTc1MTg4MDI1Mn0.Kkeew9fqcshaxBGeS1RCZeno2XSj6QWEp9tmmknD0Z8
+2025-07-07 03:09:46,770 - INFO - app.core.security - Refresh token deleted from Redis for key: refresh_token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcl90eXBlIjoiZGVtbyIsImFjY291bnRfbnVtYmVyIjoiNU80MkciLCJleHAiOjE3NTI0ODUwNTIsImlhdCI6MTc1MTg4MDI1Mn0.Kkeew9fqcshaxBGeS1RCZeno2XSj6QWEp9tmmknD0Z8
+2025-07-07 03:09:47,502 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:47,502 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:47,502 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 03:09:47,790 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:47,790 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:47,791 - WARNING - app.core.security - JWTError in decode_token: ExpiredSignatureError - Signature has expired.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+2025-07-07 03:09:47,792 - WARNING - app.core.security - JWTError during access token validation.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 93, in decode_token
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
+    _validate_claims(
+    ~~~~~~~~~~~~~~~~^
+        claims,
+        ^^^^^^^
+    ...<5 lines>...
+        options=defaults,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
+    _validate_exp(claims, leeway=leeway)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
+    raise ExpiredSignatureError("Signature has expired.")
+jose.exceptions.ExpiredSignatureError: Signature has expired.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 281, in get_current_user
+    payload = decode_token(token)
+  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 98, in decode_token
+    raise JWTError("Could not validate credentials")
+jose.exceptions.JWTError: Could not validate credentials
+2025-07-07 03:09:51,291 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-07 03:09:51,291 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-07 03:09:51,292 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-07 03:09:51,292 - DEBUG - app.core.security - Payload to encode: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': datetime.datetime(2025, 7, 7, 10, 39, 51, 291159), 'iat': datetime.datetime(2025, 7, 7, 10, 9, 51, 291185)}
+2025-07-07 03:09:51,293 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-07 03:09:51,293 - INFO - app.core.security - Storing refresh token for user ID 4 (Type: N/A). Key: refresh_token:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0IiwidXNlcl90eXBlIjoibGl2ZSIsImFjY291bnRfbnVtYmVyIjoiRFlZNUEiLCJleHAiOjE3NTI0ODc3OTEsImlhdCI6MTc1MTg4Mjk5MX0.JDljJ1UGkXAzt_BjcRePx2JeLdN5RsfmiG8utRpTmog, Expiry (seconds): 604800
+2025-07-07 03:09:51,299 - INFO - app.core.security - Refresh token stored successfully for user ID: 4
+2025-07-07 03:09:52,434 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,435 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,435 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,435 - INFO - app.core.security - Token payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,435 - INFO - app.core.security - Regular user token detected. Deferring to get_current_user.
+2025-07-07 03:09:52,435 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,435 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,435 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,435 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,436 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-07 03:09:52,440 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-07 03:09:52,440 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:52,440 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:52,447 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,447 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,448 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,448 - INFO - app.core.security - Token payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,448 - INFO - app.core.security - Regular user token detected. Deferring to get_current_user.
+2025-07-07 03:09:52,448 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,448 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,448 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,448 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,448 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-07 03:09:52,454 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,454 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,455 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,456 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,456 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-07 03:09:52,463 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-07 03:09:52,463 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:52,464 - INFO - app.core.security - Authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:52,471 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-07 03:09:52,472 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:52,746 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,747 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,747 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,747 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,747 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-07 03:09:52,751 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-07 03:09:52,752 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:52,978 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:52,978 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:52,979 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,979 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:09:52,979 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-07 03:09:52,994 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-07 03:09:52,994 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:09:53,061 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:09:53,062 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:09:53,062 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:10:21,011 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:10:21,014 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:10:21,017 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:10:21,017 - INFO - app.core.security - Token payload in get_current_user: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:10:21,017 - INFO - app.core.security - Looking up live user with ID: 4, Type: live
+2025-07-07 03:10:21,043 - INFO - app.core.security - Found live user - ID: 4, Type: live
+2025-07-07 03:10:21,043 - INFO - app.core.security - Successfully authenticated user - ID: 4, Type: live, Class: User
+2025-07-07 03:14:41,213 - INFO - app.core.security - Closing Redis connection...
+2025-07-07 03:14:41,214 - INFO - app.core.security - Redis connection closed.
+2025-07-07 03:22:56,480 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-07 03:22:56,480 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-07 03:22:56,484 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-07 03:22:56,484 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-07 03:22:56,487 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-07 03:22:56,487 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-07 03:22:56,487 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-07 03:22:56,487 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 7, 10, 57, 56, 487737), 'iat': datetime.datetime(2025, 7, 7, 10, 22, 56, 487739)}
+2025-07-07 03:22:56,488 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-07 03:23:00,283 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:23:00,283 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:23:00,284 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:23:37,897 - INFO - app.core.security - Closing Redis connection...
+2025-07-07 03:23:37,898 - INFO - app.core.security - Redis connection closed.
+2025-07-07 03:30:25,366 - INFO - app.core.security - Attempting to connect to Redis...
+2025-07-07 03:30:25,366 - INFO - app.core.security - Redis connection details:
+  Host: 127.0.0.1
+  Resolved IP: 127.0.0.1
+  Port: 6379
+  DB: 0
+  Password: <not set>
+  Persistence: AOF enabled (appendonly.aof)
+2025-07-07 03:30:25,372 - INFO - app.core.security - [SUCCESS] AOF persistence is correctly configured
+2025-07-07 03:30:25,372 - INFO - app.core.security - [SUCCESS] Connected to Redis at 127.0.0.1 (127.0.0.1):6379
+2025-07-07 03:30:25,377 - DEBUG - app.core.security - 
+--- Token Creation Details ---
+2025-07-07 03:30:25,377 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for encoding
+2025-07-07 03:30:25,377 - DEBUG - app.core.security - ALGORITHM used for encoding: 'HS256'
+2025-07-07 03:30:25,377 - DEBUG - app.core.security - Payload to encode: {'sub': 'barclays_service_provider', 'is_service_account': True, 'exp': datetime.datetime(2025, 7, 7, 11, 5, 25, 377077), 'iat': datetime.datetime(2025, 7, 7, 10, 30, 25, 377079)}
+2025-07-07 03:30:25,377 - DEBUG - app.core.security - Generated JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+
+2025-07-07 03:30:27,317 - DEBUG - app.core.security - Attempting to decode token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+2025-07-07 03:30:27,317 - DEBUG - app.core.security - Using SECRET_KEY: C8mDq... for decoding
+2025-07-07 03:30:27,318 - DEBUG - app.core.security - Token decoded successfully. Payload: {'sub': '4', 'user_type': 'live', 'account_number': 'DYY5A', 'exp': 1751884791, 'iat': 1751882991}
+2025-07-07 03:30:41,499 - INFO - app.core.security - Closing Redis connection...
+2025-07-07 03:30:41,503 - INFO - app.core.security - Redis connection closed.

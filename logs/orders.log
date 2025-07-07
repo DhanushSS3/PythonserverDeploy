@@ -157,3 +157,229 @@
 2025-07-07 01:39:14,576 - INFO - orders - Market data update received, triggering SL/TP check
 2025-07-07 01:39:16,925 - INFO - orders - Market data update received, triggering SL/TP check
 2025-07-07 01:39:19,208 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:09:41,356 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-07 03:09:41,356 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 03:09:48,445 - INFO - orders - Starting the pending order checker background task.
+2025-07-07 03:09:48,446 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-07 03:09:48,577 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:09:51,312 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:09:53,190 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:09:55,542 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:09:57,783 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:00,151 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:02,490 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:04,756 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:07,025 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:09,373 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:11,636 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:13,960 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:16,216 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:18,480 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:20,824 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:21,064 - INFO - orders - Order placement request received - User: 4, Symbol: USDNOK, Type: BUY
+2025-07-07 03:10:21,452 - INFO - orders - [MARGIN_CALC] Market data for USDNOK: {'b': '10.1400000000', 'o': '10.1388100000'}
+2025-07-07 03:10:21,452 - WARNING - orders - [MARGIN_CALC] Missing ask price for USDNOK, using bid price with spread: bid=10.1400000000, ask=10.14101400000000
+2025-07-07 03:10:21,453 - INFO - orders - [MARGIN_CALC] Using prices for USDNOK: bid=10.1400000000, ask=10.14101400000000
+2025-07-07 03:10:21,456 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 101.41 NOK to USD for margin_calculation (user_id: 4, position: None)
+2025-07-07 03:10:21,456 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: NOKUSD
+2025-07-07 03:10:21,460 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-07 03:10:21,460 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for NOKUSD, trying inverse
+2025-07-07 03:10:21,460 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDNOK
+2025-07-07 03:10:21,463 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('10.1177400000'), 'o': Decimal('10.1162600000')}
+2025-07-07 03:10:21,464 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 10.1177400000
+2025-07-07 03:10:21,464 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 101.41 NOK / 10.1177400000 = 10.02298932370272412613884128 USD
+2025-07-07 03:10:21,464 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: USDNOK, Type: BUY, Qty: 0.01, Price: 10.14101400000000, Margin: 10.02298932370272412613884128, Commission: 0.10
+2025-07-07 03:10:21,469 - INFO - orders - [PERF] Order processing: 0.3873s
+2025-07-07 03:10:21,470 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '7270472652', 'order_status': 'PROCESSING', 'order_user_id': 4, 'order_company_name': 'USDNOK', 'order_type': 'BUY', 'order_price': Decimal('10.14101400000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('10.02298932370272412613884128'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-07 03:10:21,471 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 7270472652
+2025-07-07 03:10:21,715 - INFO - orders - [PERF] Order creation: 0.2457s
+2025-07-07 03:10:21,716 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-07 03:10:21,716 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-07 03:10:21,717 - INFO - orders - Publishing order update for user 4
+2025-07-07 03:10:21,722 - INFO - orders - Publishing user data update for user 4
+2025-07-07 03:10:21,730 - INFO - orders - Publishing market data trigger
+2025-07-07 03:10:21,734 - INFO - orders - [PERF] TOTAL place_order: 0.6704s
+2025-07-07 03:10:21,735 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:21,761 - ERROR - orders - Error updating user cache: name 'update_user_static_orders_cache_after_order_change' is not defined
+2025-07-07 03:10:21,772 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-07 03:10:21,787 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-07 03:10:21,807 - DEBUG - orders - [BARCLAYS] Calling send_order_to_firebase with data: {'order_id': '7270472652', 'user_id': 4, 'order_company_name': 'USDNOK', 'order_type': 'BUY', 'order_quantity': 0.01, 'price': 10.141014, 'status': 'OPEN', 'contract_value': 1000.0}
+2025-07-07 03:10:23,273 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:25,544 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:27,995 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:30,231 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:32,497 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:34,745 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:37,094 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:39,482 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:41,900 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:43,976 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:46,256 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:48,454 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:50,821 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:53,075 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:55,323 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:57,670 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:10:59,991 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:02,281 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:04,636 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:06,895 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:09,345 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:11,644 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:13,950 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:16,214 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:18,563 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:20,854 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:23,143 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:25,526 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:27,779 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:30,008 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:32,279 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:34,582 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:36,857 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:39,160 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:41,460 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:43,752 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:46,041 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:48,366 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:50,717 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:52,965 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:54,484 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:11:55,324 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:57,576 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:11:59,931 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:02,191 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:04,440 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:06,793 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:07,202 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:09,185 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:09,254 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:11,166 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:11,347 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:12,925 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:13,616 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:15,313 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:15,899 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:17,049 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:18,259 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:18,946 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:20,512 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:20,554 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:22,680 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:22,818 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:24,350 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:25,129 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:27,070 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:27,374 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:29,191 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:29,678 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:31,044 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:31,986 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:32,834 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:12:34,252 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:36,593 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:38,837 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:41,150 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:43,452 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:46,524 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:48,771 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:51,127 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:53,381 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:55,651 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:12:57,886 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:00,244 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:02,507 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:04,855 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:07,101 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:09,356 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:11,715 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:13,922 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:16,227 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:18,575 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:20,823 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:23,179 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:25,432 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:27,683 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:29,977 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:32,295 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:34,546 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:36,807 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:39,159 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:41,407 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:43,671 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:45,970 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:48,276 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:50,623 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:52,875 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:55,241 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:57,483 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:13:59,843 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:02,091 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:04,450 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:06,723 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:09,054 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:11,415 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:13,678 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:15,959 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:18,370 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:20,572 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:22,884 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:25,231 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:27,489 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:29,753 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:32,099 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:34,449 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:36,644 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:14:38,954 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:22:56,391 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-07 03:22:56,391 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 03:23:01,298 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:01,316 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:03,270 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:03,289 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:03,362 - INFO - orders - Starting the pending order checker background task.
+2025-07-07 03:23:03,364 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-07 03:23:04,992 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:05,041 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:05,044 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:07,363 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:09,656 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:11,988 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:14,846 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:16,098 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:16,110 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:17,110 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:18,398 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:18,407 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:19,424 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:21,703 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:23,982 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:26,003 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:26,014 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:26,315 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:27,518 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:27,529 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:28,586 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:29,091 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:29,115 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:30,392 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:23:30,402 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:23:31,010 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:33,298 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:23:35,611 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:30:25,270 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-07 03:30:25,271 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-07 03:30:30,574 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:30:30,593 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:30:32,082 - INFO - orders - Starting the pending order checker background task.
+2025-07-07 03:30:32,083 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-07 03:30:32,333 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:30:32,386 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:30:32,477 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:30:34,274 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:30:34,282 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:30:34,651 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:30:35,901 - INFO - orders - Service provider order info request for order_id: 7270472652, symbol: USDNOK
+2025-07-07 03:30:35,909 - INFO - orders - [CACHE HIT] Group-symbol settings for group 'Standard', symbol 'USDNOK' found in Redis cache.
+2025-07-07 03:30:36,915 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-07 03:30:39,164 - INFO - orders - Market data update received, triggering SL/TP check

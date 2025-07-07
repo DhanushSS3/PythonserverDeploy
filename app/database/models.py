@@ -357,13 +357,13 @@ class UserOrder(Base):
     close_message = Column(String(255), nullable=True)
 
     # Tracking fields
-    cancel_id = Column(String(64), nullable=True)
-    close_id = Column(String(64), nullable=True)
-    modify_id = Column(String(64), nullable=True)
-    stoploss_id = Column(String(64), nullable=True)
-    takeprofit_id = Column(String(64), nullable=True)
-    stoploss_cancel_id = Column(String(64), nullable=True)
-    takeprofit_cancel_id = Column(String(64), nullable=True)
+    cancel_id = Column(String(64),index=True, nullable=True)
+    close_id = Column(String(64), index=True, nullable=True)
+    modify_id = Column(String(64), index=True, nullable=True)
+    stoploss_id = Column(String(64), index=True, nullable=True)
+    takeprofit_id = Column(String(64), index=True, nullable=True)
+    stoploss_cancel_id = Column(String(64), index=True, nullable=True)
+    takeprofit_cancel_id = Column(String(64), index=True, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -403,13 +403,13 @@ class DemoUserOrder(Base):
     close_message = Column(String(255), nullable=True)
 
     # Tracking fields
-    cancel_id = Column(String(64), nullable=True)
-    close_id = Column(String(64), nullable=True)
-    modify_id = Column(String(64), nullable=True)
-    stoploss_id = Column(String(64), nullable=True)
-    takeprofit_id = Column(String(64), nullable=True)
-    stoploss_cancel_id = Column(String(64), nullable=True)
-    takeprofit_cancel_id = Column(String(64), nullable=True)
+    cancel_id = Column(String(64), index=True, nullable=True)
+    close_id = Column(String(64), index=True, nullable=True)
+    modify_id = Column(String(64), index=True, nullable=True)
+    stoploss_id = Column(String(64), index=True, nullable=True)
+    takeprofit_id = Column(String(64), index=True, nullable=True)
+    stoploss_cancel_id = Column(String(64), index=True, nullable=True)
+    takeprofit_cancel_id = Column(String(64), index=True, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
