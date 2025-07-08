@@ -1,3 +1,5 @@
+Version 1.2.7 Publishing and Caching
+
 # Order Placement Performance Optimization
 
 ## Overview
