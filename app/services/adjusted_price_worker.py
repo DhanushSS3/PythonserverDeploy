@@ -81,10 +81,6 @@ async def adjusted_price_worker(redis_client: Redis):
     logger.info("Adjusted price worker started. Listening for market data updates.")
     latest_market_data = None
     last_market_data_hash = None
-    debounce_delay = 0.05  # 50ms
-    last_update_time = 0
-    update_event = asyncio.Event()
-    debounce_task = None
     refresh_task = None
     process_pool = ProcessPoolExecutor()
 
@@ -143,23 +139,6 @@ async def adjusted_price_worker(redis_client: Redis):
         total_time = time.perf_counter() - tick_start
         logger.info(f"[adjusted_price_worker] Tick: {write_count} writes | calc: {calc_time*1000:.2f}ms | redis: {redis_write_time*1000:.2f}ms | total: {total_time*1000:.2f}ms")
 
-    async def debounce_loop():
-        nonlocal last_update_time
-        while True:
-            await update_event.wait()
-            now = time.time()
-            while True:
-                await asyncio.sleep(0.005)
-                if update_event.is_set():
-                    if (time.time() - now) < debounce_delay:
-                        now = time.time()
-                        update_event.clear()
-                        continue
-                break
-            await process_latest()
-            update_event.clear()
-
-    debounce_task = asyncio.create_task(debounce_loop())
     refresh_task = asyncio.create_task(refresh_settings_periodically())
     await refresh_group_settings(redis_client)  # Initial load
 
@@ -175,18 +154,13 @@ async def adjusted_price_worker(redis_client: Redis):
                 except Exception:
                     continue
                 latest_market_data = message_data
-                update_event.set()
+                await process_latest()
             except Exception as e:
                 logger.error(f"Error in adjusted_price_worker main loop: {e}", exc_info=True)
             await asyncio.sleep(0.01)
     finally:
-        debounce_task.cancel()
         refresh_task.cancel()
         process_pool.shutdown(wait=True)
-        try:
-            await debounce_task
-        except Exception:
-            pass
         try:
             await refresh_task
         except Exception:

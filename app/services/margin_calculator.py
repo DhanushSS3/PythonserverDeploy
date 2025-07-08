@@ -346,102 +346,102 @@ from app.core.firebase import get_latest_market_data
 #         orders_logger.error(f"[PENDING_MARGIN_CALC] Error calculating margin for pending order: {e}", exc_info=True)
 #         return Decimal('0')
 
-# async def calculate_total_symbol_margin_contribution(
-#     db: AsyncSession,
-#     redis_client: Redis,
-#     user_id: int,
-#     symbol: str,
-#     open_positions_for_symbol: list,
-#     user_type: str,
-#     order_model=None
-# ) -> Dict[str, Any]:
-#     """
-#     Calculate total margin contribution for a symbol considering hedged positions.
-#     Returns a dictionary with total_margin and other details.
-#     """
-#     try:
-#         total_buy_quantity = Decimal('0.0')
-#         total_sell_quantity = Decimal('0.0')
-#         all_margins_per_lot: List[Decimal] = []
+async def calculate_total_symbol_margin_contribution(
+    db: AsyncSession,
+    redis_client: Redis,
+    user_id: int,
+    symbol: str,
+    open_positions_for_symbol: list,
+    user_type: str,
+    order_model=None
+) -> Dict[str, Any]:
+    """
+    Calculate total margin contribution for a symbol considering hedged positions.
+    Returns a dictionary with total_margin and other details.
+    """
+    try:
+        total_buy_quantity = Decimal('0.0')
+        total_sell_quantity = Decimal('0.0')
+        all_margins_per_lot: List[Decimal] = []
 
-#         orders_logger.info(f"[MARGIN_CONTRIB] Calculating total margin contribution for user {user_id}, symbol {symbol}, positions: {len(open_positions_for_symbol)}")
+        orders_logger.info(f"[MARGIN_CONTRIB] Calculating total margin contribution for user {user_id}, symbol {symbol}, positions: {len(open_positions_for_symbol)}")
 
-#         # Get user data for leverage
-#         user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
-#         if not user_data:
-#             orders_logger.error(f"[MARGIN_CONTRIB] User data not found for user {user_id}")
-#             return {"total_margin": Decimal('0.0')}
+        # Get user data for leverage
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+        if not user_data:
+            orders_logger.error(f"[MARGIN_CONTRIB] User data not found for user {user_id}")
+            return {"total_margin": Decimal('0.0')}
 
-#         user_leverage_raw = user_data.get('leverage', '1.0')
-#         user_leverage = Decimal(str(user_leverage_raw))
-#         orders_logger.info(f"[MARGIN_CONTRIB] User leverage: {user_leverage} (raw: {user_leverage_raw})")
+        user_leverage_raw = user_data.get('leverage', '1.0')
+        user_leverage = Decimal(str(user_leverage_raw))
+        orders_logger.info(f"[MARGIN_CONTRIB] User leverage: {user_leverage} (raw: {user_leverage_raw})")
         
-#         if user_leverage <= 0:
-#             orders_logger.error(f"[MARGIN_CONTRIB] Invalid leverage for user {user_id}: {user_leverage}")
-#             return {"total_margin": Decimal('0.0')}
+        if user_leverage <= 0:
+            orders_logger.error(f"[MARGIN_CONTRIB] Invalid leverage for user {user_id}: {user_leverage}")
+            return {"total_margin": Decimal('0.0')}
 
-#         # Get group settings for margin calculation
-#         group_name = user_data.get('group_name')
-#         group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
-#         if not group_settings:
-#             orders_logger.error(f"[MARGIN_CONTRIB] Group settings not found for symbol {symbol}")
-#             return {"total_margin": Decimal('0.0')}
+        # Get group settings for margin calculation
+        group_name = user_data.get('group_name')
+        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+        if not group_settings:
+            orders_logger.error(f"[MARGIN_CONTRIB] Group settings not found for symbol {symbol}")
+            return {"total_margin": Decimal('0.0')}
 
-#         # Get external symbol info
-#         external_symbol_info = await get_external_symbol_info(db, symbol)
-#         if not external_symbol_info:
-#             orders_logger.error(f"[MARGIN_CONTRIB] External symbol info not found for {symbol}")
-#             return {"total_margin": Decimal('0.0')}
+        # Get external symbol info
+        external_symbol_info = await get_external_symbol_info(db, symbol)
+        if not external_symbol_info:
+            orders_logger.error(f"[MARGIN_CONTRIB] External symbol info not found for {symbol}")
+            return {"total_margin": Decimal('0.0')}
 
-#         # Get raw market data for price calculations
-#         raw_market_data = get_latest_market_data()
-#         if not raw_market_data:
-#             orders_logger.error("[MARGIN_CONTRIB] Failed to get market data")
-#             return {"total_margin": Decimal('0.0')}
+        # Get raw market data for price calculations
+        raw_market_data = get_latest_market_data()
+        if not raw_market_data:
+            orders_logger.error("[MARGIN_CONTRIB] Failed to get market data")
+            return {"total_margin": Decimal('0.0')}
 
-#         # Process each position
-#         for i, position in enumerate(open_positions_for_symbol):
-#             try:
-#                 position_quantity_raw = position.order_quantity
-#                 position_quantity = Decimal(str(position_quantity_raw))
-#                 position_type = position.order_type.upper()
-#                 position_margin_raw = position.margin
-#                 position_margin = Decimal(str(position_margin_raw))
+        # Process each position
+        for i, position in enumerate(open_positions_for_symbol):
+            try:
+                position_quantity_raw = position.order_quantity
+                position_quantity = Decimal(str(position_quantity_raw))
+                position_type = position.order_type.upper()
+                position_margin_raw = position.margin
+                position_margin = Decimal(str(position_margin_raw))
 
-#                 orders_logger.info(f"[MARGIN_CONTRIB] Position {i+1}: type={position_type}, quantity={position_quantity} (raw: {position_quantity_raw}), margin={position_margin} (raw: {position_margin_raw})")
+                orders_logger.info(f"[MARGIN_CONTRIB] Position {i+1}: type={position_type}, quantity={position_quantity} (raw: {position_quantity_raw}), margin={position_margin} (raw: {position_margin_raw})")
 
-#                 if position_quantity > 0:
-#                     # Calculate margin per lot for this position
-#                     margin_per_lot_raw = position_margin / position_quantity
-#                     margin_per_lot = margin_per_lot_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-#                     all_margins_per_lot.append(margin_per_lot)
-#                     orders_logger.info(f"[MARGIN_CONTRIB] Position {i+1} margin per lot: {position_margin} / {position_quantity} = {margin_per_lot_raw} (rounded to {margin_per_lot})")
+                if position_quantity > 0:
+                    # Calculate margin per lot for this position
+                    margin_per_lot_raw = position_margin / position_quantity
+                    margin_per_lot = margin_per_lot_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+                    all_margins_per_lot.append(margin_per_lot)
+                    orders_logger.info(f"[MARGIN_CONTRIB] Position {i+1} margin per lot: {position_margin} / {position_quantity} = {margin_per_lot_raw} (rounded to {margin_per_lot})")
 
-#                     # Add to total quantities
-#                     if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
-#                         total_buy_quantity += position_quantity
-#                     elif position_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
-#                         total_sell_quantity += position_quantity
-#             except Exception as e:
-#                 orders_logger.error(f"[MARGIN_CONTRIB] Error processing position {i+1}: {e}", exc_info=True)
-#                 continue
+                    # Add to total quantities
+                    if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
+                        total_buy_quantity += position_quantity
+                    elif position_type in ['SELL', 'SELL_LIMIT', 'SELL_STOP']:
+                        total_sell_quantity += position_quantity
+            except Exception as e:
+                orders_logger.error(f"[MARGIN_CONTRIB] Error processing position {i+1}: {e}", exc_info=True)
+                continue
 
-#         # Calculate net quantity (for hedged positions)
-#         net_quantity = max(total_buy_quantity, total_sell_quantity)
-#         orders_logger.info(f"[MARGIN_CONTRIB] Total buy quantity: {total_buy_quantity}, Total sell quantity: {total_sell_quantity}, Net quantity: {net_quantity}")
+        # Calculate net quantity (for hedged positions)
+        net_quantity = max(total_buy_quantity, total_sell_quantity)
+        orders_logger.info(f"[MARGIN_CONTRIB] Total buy quantity: {total_buy_quantity}, Total sell quantity: {total_sell_quantity}, Net quantity: {net_quantity}")
         
-#         # Get the highest margin per lot (for hedged positions)
-#         highest_margin_per_lot = max(all_margins_per_lot) if all_margins_per_lot else Decimal('0.0')
-#         orders_logger.info(f"[MARGIN_CONTRIB] All margins per lot: {all_margins_per_lot}, Highest margin per lot: {highest_margin_per_lot}")
+        # Get the highest margin per lot (for hedged positions)
+        highest_margin_per_lot = max(all_margins_per_lot) if all_margins_per_lot else Decimal('0.0')
+        orders_logger.info(f"[MARGIN_CONTRIB] All margins per lot: {all_margins_per_lot}, Highest margin per lot: {highest_margin_per_lot}")
 
-#         # Calculate total margin contribution
-#         total_margin_raw = highest_margin_per_lot * net_quantity
-#         total_margin = total_margin_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
-#         orders_logger.info(f"[MARGIN_CONTRIB] Total margin calculation: {highest_margin_per_lot} * {net_quantity} = {total_margin_raw} (rounded to {total_margin})")
+        # Calculate total margin contribution
+        total_margin_raw = highest_margin_per_lot * net_quantity
+        total_margin = total_margin_raw.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+        orders_logger.info(f"[MARGIN_CONTRIB] Total margin calculation: {highest_margin_per_lot} * {net_quantity} = {total_margin_raw} (rounded to {total_margin})")
 
-#         # Return the result
-#         return {"total_margin": total_margin, "net_quantity": net_quantity}
+        # Return the result
+        return {"total_margin": total_margin, "net_quantity": net_quantity}
 
-#     except Exception as e:
-#         orders_logger.error(f"[MARGIN_CONTRIB] Error calculating total symbol margin contribution: {e}", exc_info=True)
-#         return {"total_margin": Decimal('0.0')}
+    except Exception as e:
+        orders_logger.error(f"[MARGIN_CONTRIB] Error calculating total symbol margin contribution: {e}", exc_info=True)
+        return {"total_margin": Decimal('0.0')}

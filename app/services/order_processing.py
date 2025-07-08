@@ -286,6 +286,8 @@ async def process_new_order_ultra_optimized(
         margin_after = margin_after_data["total_margin"]
         additional_margin = max(Decimal("0.0"), margin_after - margin_before)
 
+        logger.info(f"[HEDGING_MARGIN_DEBUG] User: {user_id}, Symbol: {symbol}, OrderType: {order_type}, MarginBefore: {margin_before}, MarginAfter: {margin_after}, AdditionalMargin: {additional_margin}, OpenOrders: {len(open_orders_for_symbol)}")
+
         # Step 7: ULTRA-OPTIMIZED user locking and margin update
         if not is_barclays_live_user:
             # Lock user and update margin in one operation
