@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from decimal import Decimal
 from typing import Dict, Any
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +9,8 @@ from app.database.session import AsyncSessionLocal
 import json
 import time
 import hashlib
+from concurrent.futures import ProcessPoolExecutor
+from app.shared_state import adjusted_prices_in_memory
 
 logger = logging.getLogger("adjusted_price_worker")
 
@@ -18,6 +19,41 @@ GROUP_SETTINGS_REFRESH_INTERVAL = 300  # 5 minutes
 
 group_settings_cache = {}  # {group_name: {symbol: settings}}
 group_settings_last_refresh = 0
+
+# --- Float-based adjusted price calculation for process pool ---
+def calc_adjusted_prices_for_group_float(raw_market_data, group_settings, group_name):
+    adjusted_prices = {}
+    for symbol, settings in group_settings.items():
+        symbol_upper = symbol.upper()
+        prices = raw_market_data.get(symbol_upper)
+        if not prices or not isinstance(prices, dict):
+            continue
+        raw_ask_price = prices.get('b')
+        raw_bid_price = prices.get('o')
+        if raw_ask_price is not None and raw_bid_price is not None:
+            try:
+                ask = float(raw_ask_price)
+                bid = float(raw_bid_price)
+                spread_setting = float(settings.get('spread', 0))
+                spread_pip_setting = float(settings.get('spread_pip', 0))
+                configured_spread_amount = spread_setting * spread_pip_setting
+                half_spread = configured_spread_amount / 2.0
+                adjusted_buy_price = ask + half_spread
+                adjusted_sell_price = bid - half_spread
+                effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
+                effective_spread_in_pips = 0.0
+                if spread_pip_setting > 0.0:
+                    effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
+                adjusted_prices[symbol_upper] = {
+                    'buy': adjusted_buy_price,
+                    'sell': adjusted_sell_price,
+                    'spread': effective_spread_in_pips,
+                    'spread_value': configured_spread_amount
+                }
+            except Exception as e:
+                # Can't log from process pool, return error info if needed
+                continue
+    return group_name, adjusted_prices
 
 def hash_market_data(raw_market_data: Dict[str, Any]) -> str:
     # Hash only the symbol->price part, ignore meta keys
@@ -39,39 +75,6 @@ async def refresh_group_settings(redis_client: Redis):
     group_settings_last_refresh = time.time()
     logger.info(f"[adjusted_price_worker] Refreshed group settings for {len(group_settings_cache)} groups in {time.perf_counter()-start:.4f}s")
 
-async def calculate_adjusted_prices_for_group(raw_market_data: Dict[str, Any], group_settings: Dict[str, Any], group_name: str) -> Dict[str, Dict[str, float]]:
-    adjusted_prices = {}
-    for symbol, settings in group_settings.items():
-        symbol_upper = symbol.upper()
-        prices = raw_market_data.get(symbol_upper)
-        if not prices or not isinstance(prices, dict):
-            continue
-        raw_ask_price = prices.get('b')
-        raw_bid_price = prices.get('o')
-        if raw_ask_price is not None and raw_bid_price is not None:
-            try:
-                ask_decimal = Decimal(str(raw_ask_price))
-                bid_decimal = Decimal(str(raw_bid_price))
-                spread_setting = Decimal(str(settings.get('spread', 0)))
-                spread_pip_setting = Decimal(str(settings.get('spread_pip', 0)))
-                configured_spread_amount = spread_setting * spread_pip_setting
-                half_spread = configured_spread_amount / Decimal(2)
-                adjusted_buy_price = ask_decimal + half_spread
-                adjusted_sell_price = bid_decimal - half_spread
-                effective_spread_price_units = adjusted_buy_price - adjusted_sell_price
-                effective_spread_in_pips = Decimal("0.0")
-                if spread_pip_setting > Decimal("0.0"):
-                    effective_spread_in_pips = effective_spread_price_units / spread_pip_setting
-                adjusted_prices[symbol_upper] = {
-                    'buy': adjusted_buy_price,
-                    'sell': adjusted_sell_price,
-                    'spread': effective_spread_in_pips,
-                    'spread_value': configured_spread_amount
-                }
-            except Exception as e:
-                logger.error(f"Error adjusting price for {symbol_upper}: {e}", exc_info=True)
-    return adjusted_prices
-
 async def adjusted_price_worker(redis_client: Redis):
     pubsub = redis_client.pubsub()
     await pubsub.subscribe(REDIS_MARKET_DATA_CHANNEL)
@@ -83,6 +86,7 @@ async def adjusted_price_worker(redis_client: Redis):
     update_event = asyncio.Event()
     debounce_task = None
     refresh_task = None
+    process_pool = ProcessPoolExecutor()
 
     async def refresh_settings_periodically():
         while True:
@@ -95,40 +99,43 @@ async def adjusted_price_worker(redis_client: Redis):
             return
         tick_start = time.perf_counter()
         raw_market_data = {k: v for k, v in latest_market_data.items() if k not in ["type", "_timestamp"]}
-        # Fast-path skip: hash and compare
         new_hash = hash_market_data(raw_market_data)
         if new_hash == last_market_data_hash:
             logger.debug("[adjusted_price_worker] Market data unchanged, skipping recalculation.")
             return
         last_market_data_hash = new_hash
-        # Parallelize group calculations
         group_names = list(group_settings_cache.keys())
         group_settings_list = [group_settings_cache[g] for g in group_names]
         calc_start = time.perf_counter()
+        # Offload to process pool
+        loop = asyncio.get_running_loop()
         group_results = await asyncio.gather(*[
-            calculate_adjusted_prices_for_group(raw_market_data, group_settings, group_name)
+            loop.run_in_executor(process_pool, calc_adjusted_prices_for_group_float, raw_market_data, group_settings, group_name)
             for group_settings, group_name in zip(group_settings_list, group_names)
         ])
         calc_time = time.perf_counter() - calc_start
-        # Batch Redis writes in a single pipeline
-        pipe = redis_client.pipeline()
+        # Update in-memory dict and batch Redis writes in background
         write_count = 0
         redis_write_start = time.perf_counter()
-        for group_name, adjusted_prices in zip(group_names, group_results):
+        pipe = redis_client.pipeline()
+        for group_name, adjusted_prices in group_results:
+            # Update in-memory dict
+            if group_name not in adjusted_prices_in_memory:
+                adjusted_prices_in_memory[group_name] = {}
             for symbol, prices in adjusted_prices.items():
-                # Check cache before writing
-                cached = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
-                should_write = False
-                if not cached:
-                    should_write = True
-                else:
-                    if (
-                        Decimal(str(prices['buy'])) != cached['buy'] or
-                        Decimal(str(prices['sell'])) != cached['sell'] or
-                        Decimal(str(prices['spread_value'])) != cached['spread_value']
-                    ):
-                        should_write = True
-                if should_write:
+                # Only update if changed
+                prev = adjusted_prices_in_memory[group_name].get(symbol)
+                if not prev or (
+                    prev['buy'] != prices['buy'] or
+                    prev['sell'] != prices['sell'] or
+                    prev['spread'] != prices['spread']
+                ):
+                    adjusted_prices_in_memory[group_name][symbol] = {
+                        'buy': prices['buy'],
+                        'sell': prices['sell'],
+                        'spread': prices['spread']
+                    }
+                    # Redis persistence (not hot path)
                     await set_adjusted_market_price_cache(pipe, group_name, symbol, prices['buy'], prices['sell'], prices['spread_value'])
                     write_count += 1
         await pipe.execute()
@@ -141,7 +148,6 @@ async def adjusted_price_worker(redis_client: Redis):
         while True:
             await update_event.wait()
             now = time.time()
-            # Rolling debounce: if another update comes within 50ms, keep waiting
             while True:
                 await asyncio.sleep(0.005)
                 if update_event.is_set():
@@ -176,6 +182,7 @@ async def adjusted_price_worker(redis_client: Redis):
     finally:
         debounce_task.cancel()
         refresh_task.cancel()
+        process_pool.shutdown(wait=True)
         try:
             await debounce_task
         except Exception:

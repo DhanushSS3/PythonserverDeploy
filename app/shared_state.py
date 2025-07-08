@@ -18,6 +18,9 @@ redis_publish_queue: asyncio.Queue = asyncio.Queue(maxsize=500) # Increased size
 logger.info(f"Initialized redis_publish_queue in shared_state with maxsize={redis_publish_queue.maxsize}.")
 # logger.info("websocket_queue is not used for market data with Redis Pub/Sub.")
 
+# In-memory adjusted prices: {group_name: {symbol: {'buy': float, 'sell': float, 'spread': float}}}
+adjusted_prices_in_memory = {}
+
 
 # You can add other shared state variables here if needed later,
 # ensuring thread-safe access if modified from multiple threads/tasks.

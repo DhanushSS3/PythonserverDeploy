@@ -14004,3 +14004,60 @@ Traceback (most recent call last):
     )
 fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
 2025-07-08 04:53:00,273 - INFO - database - Session rolled back due to error
+2025-07-08 05:13:30,504 - ERROR - database - Error in database session: 500: Failed to process order: 500: Could not get current market prices for AUDCAD
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 648, in place_pending_order
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: Could not get current market prices for AUDCAD
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 987, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: 500: Could not get current market prices for AUDCAD
+2025-07-08 05:13:30,530 - INFO - database - Session rolled back due to error
+2025-07-08 05:33:42,102 - ERROR - database - Error in database session: 500: Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1485, in close_order
+    raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
+fastapi.exceptions.HTTPException: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1556, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 67, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1559, in close_order
+    raise HTTPException(status_code=500, detail=f"Error in close_order endpoint: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+2025-07-08 05:33:42,107 - INFO - database - Session rolled back due to error

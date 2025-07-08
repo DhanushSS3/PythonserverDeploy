@@ -4967,3 +4967,675 @@ NameError: name 'user_id' is not defined
 2025-07-08 05:08:45,475 - INFO - orders - Market data update received, triggering SL/TP check
 2025-07-08 05:08:47,723 - INFO - orders - Market data update received, triggering SL/TP check
 2025-07-08 05:08:50,087 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:13,804 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-08 05:13:13,804 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-08 05:13:23,096 - INFO - orders - Starting the pending order checker background task.
+2025-07-08 05:13:23,100 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-08 05:13:28,288 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:28,847 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.01
+2025-07-08 05:13:30,503 - ERROR - orders - Could not get current market prices for AUDCAD
+2025-07-08 05:13:30,503 - ERROR - orders - Unexpected error in place_order: 500: Could not get current market prices for AUDCAD
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 648, in place_pending_order
+    raise HTTPException(
+    ...<2 lines>...
+    )
+fastapi.exceptions.HTTPException: 500: Could not get current market prices for AUDCAD
+2025-07-08 05:13:32,677 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:32,795 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:32,898 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:33,022 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:33,142 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:34,208 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:36,619 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:38,843 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:38,847 - INFO - orders - Pending order placement request received - User ID: 1, Symbol: AUDCAD, Type: BUY_LIMIT, Quantity: 0.01
+2025-07-08 05:13:38,854 - INFO - orders - Validating pending order price: Order type=BUY_LIMIT, Order price=0.88, Current buy price=0.8926500000, Current sell price=0.8926100000
+2025-07-08 05:13:38,859 - INFO - orders - Calculated contract_value for pending order: 1000.0000000000 (contract_size: 100000.00000000 * quantity: 0.01)
+2025-07-08 05:13:38,861 - INFO - orders - [DEBUG] User data from cache: {'id': 1, 'email': 'dhanush777ss@gmail.com', 'account_number': '5O42G', 'group_name': 'Group B', 'leverage': Decimal('100.00'), 'wallet_balance': Decimal('24916.56000000'), 'margin': Decimal('0E-8'), 'user_type': 'demo', 'first_name': None, 'last_name': None, 'country': None, 'phone_number': Decimal('8618025298')}
+2025-07-08 05:13:38,861 - INFO - orders - [DEBUG] Group name: Group B
+2025-07-08 05:13:38,863 - INFO - orders - [DEBUG] Group settings from cache: {'sending_orders': 'barclays'}
+2025-07-08 05:13:38,863 - INFO - orders - [DEBUG] sending_orders value: barclays, type: <class 'str'>
+2025-07-08 05:13:38,863 - INFO - orders - [DEBUG] sending_orders_normalized: barclays
+2025-07-08 05:13:38,863 - INFO - orders - User 1 is_barclays_live_user: False (user_type: demo, sending_orders_normalized: barclays)
+2025-07-08 05:13:38,866 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for AUDCAD: contract_size=100000.00000000, profit_currency=CAD, digit=5.00000
+2025-07-08 05:13:38,868 - ERROR - orders - [MARGIN_CALC] Error in calculate_single_order_margin: argument of type 'coroutine' is not iterable
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\services\margin_calculator.py", line 121, in calculate_single_order_margin
+    if not raw_market_data or symbol not in raw_market_data:
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: argument of type 'coroutine' is not iterable
+2025-07-08 05:13:38,869 - INFO - orders - Calculated initial margin: None, commission: None for pending order 2482715048
+2025-07-08 05:13:38,875 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '2482715048', 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('0.01'), 'order_price': Decimal('0.88'), 'user_type': 'demo', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '4724619083', 'takeprofit_id': '4864078081', 'order_user_id': 1, 'order_status': 'PENDING', 'contract_value': Decimal('1000.0000000000'), 'margin': None, 'commission': None, 'open_time': None}
+2025-07-08 05:13:38,875 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 1 at price 0.88
+2025-07-08 05:13:38,875 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '2482715048', 'order_status': 'PENDING', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.88'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': None, 'commission': None, 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '4724619083', 'takeprofit_id': '4864078081', 'close_id': None}
+2025-07-08 05:13:38,875 - DEBUG - orders - [DEBUG][create_order] Received order_data: {'order_id': '2482715048', 'order_status': 'PENDING', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('0.88'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.0000000000'), 'margin': None, 'commission': None, 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '4724619083', 'takeprofit_id': '4864078081', 'close_id': None}
+2025-07-08 05:13:38,876 - DEBUG - orders - [DEBUG][create_order] Created OrderActionHistory record for order_id: 2482715048
+2025-07-08 05:13:38,918 - INFO - orders - Order 2482715048 verified in database on attempt 1 before adding to Redis.
+2025-07-08 05:13:38,920 - INFO - orders - Pending order 2482715048 added to Redis for non-Barclays user or demo user.
+2025-07-08 05:13:38,922 - ERROR - orders - Error updating user data cache after order placement: name 'user_id' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 910, in place_pending_order
+    await set_user_data_cache(redis_client, user_id, user_data_to_cache, user_type)
+                                            ^^^^^^^
+NameError: name 'user_id' is not defined
+2025-07-08 05:13:38,924 - INFO - orders - [PERF] TOTAL place_order: 0.0771s
+2025-07-08 05:13:38,936 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-08 05:13:41,049 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:43,486 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:46,092 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:47,944 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:49,354 - WARNING - orders - Pending order 2482715048 already exists in Redis. Skipping add.
+2025-07-08 05:13:49,355 - INFO - orders - User data cache updated for user 1 after modifying pending order
+2025-07-08 05:13:50,310 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:52,523 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:54,816 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:59,135 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:13:59,426 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:01,674 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:03,914 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:06,169 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:08,439 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:10,794 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:12,984 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:15,247 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:17,659 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:19,906 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:22,139 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:24,507 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:26,767 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:28,981 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:31,382 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:33,622 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:35,874 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:38,237 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:40,484 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:42,737 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:45,093 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:47,351 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:49,605 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:51,964 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:54,204 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:56,457 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:14:58,715 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:01,064 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:03,320 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:05,572 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:07,942 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:10,202 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:12,542 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:14,805 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:17,056 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:19,413 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:21,573 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:24,561 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:26,903 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:29,138 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:31,483 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:33,743 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:36,018 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:38,254 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:40,638 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:42,875 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:45,114 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:47,361 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:49,639 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:51,979 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:54,237 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:56,464 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:15:58,722 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:00,996 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:03,334 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:05,580 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:07,935 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:10,184 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:12,445 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:14,828 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:17,052 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:19,302 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:21,614 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:23,903 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:26,125 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:28,411 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:30,681 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:33,033 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:35,272 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:37,634 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:39,881 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:42,133 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:44,384 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:46,665 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:49,005 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:51,213 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:53,475 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:55,854 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:16:58,026 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:00,302 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:02,572 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:04,967 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:07,223 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:09,472 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:11,724 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:17:13,976 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:28,687 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-08 05:23:28,687 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-08 05:23:37,772 - INFO - orders - Starting the pending order checker background task.
+2025-07-08 05:23:37,775 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-08 05:23:40,901 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:45,096 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:45,138 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:45,182 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:45,218 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:47,214 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:49,530 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:51,898 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:56,913 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:23:59,585 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:02,233 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:04,774 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:07,153 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:09,438 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:13,795 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:13,994 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:16,371 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:18,721 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:20,979 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:23,331 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:25,949 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:28,253 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:30,605 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:32,863 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:35,242 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:37,498 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:39,867 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:42,125 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:46,580 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:46,838 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:49,119 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:51,369 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:53,657 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:55,907 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:24:58,174 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:00,452 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:02,741 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:05,111 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:07,380 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:09,621 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:11,870 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:14,227 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:16,481 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:18,732 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:21,036 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:23,341 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:25,597 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:27,854 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:30,112 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:32,398 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:34,676 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:36,970 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:39,311 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:41,566 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:43,817 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:46,101 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:48,697 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:51,087 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:53,364 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:55,601 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:25:57,864 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:00,202 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:02,433 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:04,809 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:07,062 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:09,314 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:11,566 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:13,829 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:16,149 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:18,435 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:20,804 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:23,057 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:25,438 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:27,671 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:29,934 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:32,162 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:34,538 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:36,802 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:39,025 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:41,292 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:43,658 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:45,835 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:48,252 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:50,410 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:52,763 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:55,019 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:57,364 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:26:59,590 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:01,870 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:04,527 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:06,896 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:09,137 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:11,400 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:13,664 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:16,008 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:18,354 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:20,618 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:22,873 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:25,206 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:27,565 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:29,814 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:32,076 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:34,438 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:36,691 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:38,949 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:41,191 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:43,550 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:45,756 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:48,050 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:50,309 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:52,663 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:54,944 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:57,210 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:27:59,524 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:01,795 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:04,132 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:06,430 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:08,736 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:11,017 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:13,344 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:15,647 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:17,942 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:20,187 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:22,579 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:24,800 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:27,129 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:29,413 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:31,773 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:33,979 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:36,257 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:38,619 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:40,820 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:43,153 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:45,512 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:47,750 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:50,005 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:52,262 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:54,628 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:56,850 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:28:59,134 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:01,443 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:03,727 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:06,077 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:08,325 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:10,644 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:12,945 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:15,292 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:17,548 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:19,816 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:22,061 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:24,410 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:26,664 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:28,909 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:31,245 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:33,512 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:35,792 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:38,499 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:40,793 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:43,127 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:45,371 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:47,731 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:49,954 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:52,316 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:54,591 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:56,955 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:29:59,130 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:01,455 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:03,807 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:06,077 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:08,313 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:10,610 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:12,920 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:15,212 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:17,625 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:19,805 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:22,146 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:24,498 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:26,746 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:29,013 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:31,483 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:33,709 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:35,971 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:38,204 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:40,573 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:42,837 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:45,288 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:47,580 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:49,908 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:52,253 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:30:54,608 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:24,841 - INFO - orders - Application starting up - Orders logging initialized
+2025-07-08 05:32:24,841 - INFO - orders - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-08 05:32:33,758 - INFO - orders - Starting the pending order checker background task.
+2025-07-08 05:32:33,761 - INFO - orders - Starting the SL/TP checker task (triggered by market updates).
+2025-07-08 05:32:36,949 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:43,133 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:43,166 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:43,241 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:43,308 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:43,371 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:45,218 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:47,500 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:49,901 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:52,171 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:54,446 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:57,917 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:32:59,058 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:01,341 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:03,726 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:05,943 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:08,345 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:10,584 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:12,839 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:15,190 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:17,452 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:17,823 - INFO - orders - Order placement request received - User: 1, Symbol: AUDCAD, Type: BUY
+2025-07-08 05:33:18,164 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8930300000', 'o': '0.8930000000'}
+2025-07-08 05:33:18,164 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8930300000, ask=0.89311930300000
+2025-07-08 05:33:18,165 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8930300000, ask=0.89311930300000
+2025-07-08 05:33:18,166 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin_calculation (user_id: 1, position: None)
+2025-07-08 05:33:18,166 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:18,167 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:18,167 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:18,167 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:18,167 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:18,167 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:18,167 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3645100000 = 6.544473840426233593011410690 USD
+2025-07-08 05:33:18,167 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.89311930300000, Margin: 6.544473840426233593011410690, Commission: 0.10
+2025-07-08 05:33:18,183 - INFO - orders - [PERF] Order processing: 0.3579s
+2025-07-08 05:33:18,183 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '3577948919', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.89311930300000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.544473840426233593011410690'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-08 05:33:18,183 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 3577948919
+2025-07-08 05:33:18,196 - INFO - orders - [PERF] Order creation: 0.0134s
+2025-07-08 05:33:18,196 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-08 05:33:18,196 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:18,197 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:18,197 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:18,198 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:18,199 - INFO - orders - [PERF] TOTAL place_order: 0.3760s
+2025-07-08 05:33:18,239 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-08 05:33:19,738 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:22,057 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:24,407 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:25,604 - INFO - orders - Order placement request received - User: 1, Symbol: AUDCAD, Type: SELL
+2025-07-08 05:33:25,944 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8930600000', 'o': '0.8930600000'}
+2025-07-08 05:33:25,944 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8930600000, ask=0.89314930600000
+2025-07-08 05:33:25,944 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8930600000, ask=0.89314930600000
+2025-07-08 05:33:25,944 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin_calculation (user_id: 1, position: None)
+2025-07-08 05:33:25,945 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:25,945 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:25,945 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:25,945 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:25,946 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:25,946 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:25,946 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3645100000 = 6.544473840426233593011410690 USD
+2025-07-08 05:33:25,946 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: SELL, Qty: 0.01, Price: 0.8930600000, Margin: 6.544473840426233593011410690, Commission: 0.10
+2025-07-08 05:33:25,953 - INFO - orders - [PERF] Order processing: 0.3482s
+2025-07-08 05:33:25,953 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '7924990238', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'SELL', 'order_price': Decimal('0.8930600000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.544473840426233593011410690'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-08 05:33:25,953 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 7924990238
+2025-07-08 05:33:25,966 - INFO - orders - [PERF] Order creation: 0.0131s
+2025-07-08 05:33:25,966 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-08 05:33:25,966 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:25,967 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:25,967 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:25,968 - INFO - orders - [PERF] TOTAL place_order: 0.3641s
+2025-07-08 05:33:25,968 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:26,001 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-08 05:33:26,659 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:29,012 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:29,166 - INFO - orders - Order placement request received - User: 1, Symbol: AUDCAD, Type: BUY
+2025-07-08 05:33:29,491 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8931000000', 'o': '0.8930600000'}
+2025-07-08 05:33:29,491 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8931000000, ask=0.89318931000000
+2025-07-08 05:33:29,491 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8931000000, ask=0.89318931000000
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin_calculation (user_id: 1, position: None)
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:29,492 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:29,493 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3645100000 = 6.544473840426233593011410690 USD
+2025-07-08 05:33:29,493 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.89318931000000, Margin: 6.544473840426233593011410690, Commission: 0.10
+2025-07-08 05:33:29,507 - INFO - orders - [PERF] Order processing: 0.3405s
+2025-07-08 05:33:29,507 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '1519912958', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.89318931000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.544473840426233593011410690'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-08 05:33:29,507 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 1519912958
+2025-07-08 05:33:29,520 - INFO - orders - [PERF] Order creation: 0.0130s
+2025-07-08 05:33:29,520 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-08 05:33:29,520 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:29,521 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:29,521 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:29,523 - INFO - orders - [PERF] TOTAL place_order: 0.3570s
+2025-07-08 05:33:29,524 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:29,562 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-08 05:33:31,285 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:33,624 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:34,677 - INFO - orders - Order placement request received - User: 1, Symbol: AUDCAD, Type: SELL
+2025-07-08 05:33:35,026 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8931000000', 'o': '0.8930700000'}
+2025-07-08 05:33:35,026 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8931000000, ask=0.89318931000000
+2025-07-08 05:33:35,026 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8931000000, ask=0.89318931000000
+2025-07-08 05:33:35,027 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin_calculation (user_id: 1, position: None)
+2025-07-08 05:33:35,027 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:35,027 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:35,027 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:35,027 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:35,028 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:35,028 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:35,028 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3645100000 = 6.544473840426233593011410690 USD
+2025-07-08 05:33:35,028 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: SELL, Qty: 0.01, Price: 0.8931000000, Margin: 6.544473840426233593011410690, Commission: 0.10
+2025-07-08 05:33:35,037 - INFO - orders - [PERF] Order processing: 0.3583s
+2025-07-08 05:33:35,037 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '2067016150', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'SELL', 'order_price': Decimal('0.8931000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.544473840426233593011410690'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-08 05:33:35,037 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 2067016150
+2025-07-08 05:33:35,046 - INFO - orders - [PERF] Order creation: 0.0091s
+2025-07-08 05:33:35,046 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-08 05:33:35,046 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:35,047 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:35,047 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:35,048 - INFO - orders - [PERF] TOTAL place_order: 0.3703s
+2025-07-08 05:33:35,049 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:35,077 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-08 05:33:35,875 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:37,121 - INFO - orders - Order placement request received - User: 1, Symbol: AUDCAD, Type: BUY
+2025-07-08 05:33:37,454 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8931000000', 'o': '0.8930700000'}
+2025-07-08 05:33:37,454 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8931000000, ask=0.89318931000000
+2025-07-08 05:33:37,454 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8931000000, ask=0.89318931000000
+2025-07-08 05:33:37,455 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.93 CAD to USD for margin_calculation (user_id: 1, position: None)
+2025-07-08 05:33:37,455 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:37,456 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:37,456 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:37,456 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:37,456 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:37,456 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:37,456 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.93 CAD / 1.3645100000 = 6.544473840426233593011410690 USD
+2025-07-08 05:33:37,456 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.89318931000000, Margin: 6.544473840426233593011410690, Commission: 0.10
+2025-07-08 05:33:37,466 - INFO - orders - [PERF] Order processing: 0.3432s
+2025-07-08 05:33:37,466 - DEBUG - orders - [DEBUG][create_user_order] Received order_data: {'order_id': '6354103775', 'order_status': 'OPEN', 'order_user_id': 1, 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_price': Decimal('0.89318931000000'), 'order_quantity': Decimal('0.01'), 'contract_value': Decimal('1000.00'), 'margin': Decimal('6.544473840426233593011410690'), 'commission': Decimal('0.10'), 'status': 'OPEN', 'stop_loss': None, 'take_profit': None, 'stoploss_id': None, 'takeprofit_id': None, 'close_id': None}
+2025-07-08 05:33:37,466 - DEBUG - orders - [DEBUG][create_user_order] Created OrderActionHistory record for order_id: 6354103775
+2025-07-08 05:33:37,476 - INFO - orders - [PERF] Order creation: 0.0096s
+2025-07-08 05:33:37,476 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-08 05:33:37,476 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:37,477 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:37,477 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:37,478 - INFO - orders - [PERF] TOTAL place_order: 0.3570s
+2025-07-08 05:33:37,478 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:37,521 - ERROR - orders - Error updating portfolio: calculate_user_portfolio() missing 1 required positional argument: 'redis_client'
+2025-07-08 05:33:38,153 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:40,483 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:41,499 - INFO - orders - Order close request received - Order ID: 6354103775, User ID: 1, Close Price: 0.89307
+2025-07-08 05:33:41,499 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000013313B976F0>, type: <class 'app.database.models.DemoUser'>, user_type: demo, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-08 05:33:41,499 - INFO - orders - Using order model: demo_user_orders for user 1 (user_type: demo)
+2025-07-08 05:33:41,499 - INFO - orders - Request to close order 6354103775 for user 1 (user_type: demo) with price 0.89307. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-08 05:33:41,509 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-08 05:33:41,520 - INFO - orders - Existing entry commission for order 6354103775: 0.10000000
+2025-07-08 05:33:41,520 - INFO - orders - Commission calculation for order 6354103775: entry=0.10000000, exit=0.100000000000, total=0.20
+2025-07-08 05:33:41,520 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.119310000000000000000000 CAD to USD for PnL on Close (user_id: 1, position: 6354103775)
+2025-07-08 05:33:41,520 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:41,521 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:41,521 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:41,521 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:41,521 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:41,521 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:41,521 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.119310000000000000000000 CAD / 1.3645100000 = -0.08743798139991645352544136723 USD
+2025-07-08 05:33:41,534 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24916.27000000, margin=13.09
+2025-07-08 05:33:41,535 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24916.27000000, margin=13.09
+2025-07-08 05:33:41,535 - INFO - orders - User data cache updated for user 1
+2025-07-08 05:33:41,535 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-07-08 05:33:41,535 - INFO - orders - Using order model: DemoUserOrder
+2025-07-08 05:33:41,537 - INFO - orders - Fetched 4 open orders for user 1
+2025-07-08 05:33:41,539 - INFO - orders - Fetched 1 pending orders for user 1
+2025-07-08 05:33:41,539 - INFO - orders - Updated static orders cache for user 1 with 4 open orders and 1 pending orders
+2025-07-08 05:33:41,539 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:41,540 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:41,540 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:41,542 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:42,079 - INFO - orders - Order close request received - Order ID: 2067016150, User ID: 1, Close Price: 0.8931
+2025-07-08 05:33:42,079 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000013313B94510>, type: <class 'app.database.models.DemoUser'>, user_type: demo, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-08 05:33:42,079 - INFO - orders - Using order model: demo_user_orders for user 1 (user_type: demo)
+2025-07-08 05:33:42,079 - INFO - orders - Request to close order 2067016150 for user 1 (user_type: demo) with price 0.8931. Frontend provided type: SELL, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-08 05:33:42,086 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-08 05:33:42,096 - INFO - orders - Existing entry commission for order 2067016150: 0.10000000
+2025-07-08 05:33:42,096 - INFO - orders - Commission calculation for order 2067016150: entry=0.10000000, exit=0.100000000000, total=0.20
+2025-07-08 05:33:42,096 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 0E-24 CAD to USD for PnL on Close (user_id: 1, position: 2067016150)
+2025-07-08 05:33:42,096 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:42,097 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:42,097 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:42,097 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:42,097 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:42,097 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:42,097 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 0E-24 CAD / 1.3645100000 = 0E-14 USD
+2025-07-08 05:33:42,097 - ERROR - orders - Order 2067016150: PnL conversion failed. Rates missing for CAD/USD.
+2025-07-08 05:33:42,097 - ERROR - orders - Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1485, in close_order
+    raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
+fastapi.exceptions.HTTPException: 500: Critical: Could not convert PnL from CAD to USD.
+2025-07-08 05:33:42,100 - ERROR - orders - Error in close_order endpoint: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1485, in close_order
+    raise HTTPException(status_code=500, detail=f"Critical: Could not convert PnL from {profit_currency} to USD.")
+fastapi.exceptions.HTTPException: 500: Critical: Could not convert PnL from CAD to USD.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1556, in close_order
+    raise HTTPException(status_code=500, detail=f"Error processing close order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Error processing close order: 500: Critical: Could not convert PnL from CAD to USD.
+2025-07-08 05:33:42,621 - INFO - orders - Order close request received - Order ID: 1519912958, User ID: 1, Close Price: 0.89306
+2025-07-08 05:33:42,621 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000013313D48E90>, type: <class 'app.database.models.DemoUser'>, user_type: demo, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-08 05:33:42,621 - INFO - orders - Using order model: demo_user_orders for user 1 (user_type: demo)
+2025-07-08 05:33:42,621 - INFO - orders - Request to close order 1519912958 for user 1 (user_type: demo) with price 0.89306. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-08 05:33:42,628 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-08 05:33:42,636 - INFO - orders - Existing entry commission for order 1519912958: 0.10000000
+2025-07-08 05:33:42,636 - INFO - orders - Commission calculation for order 1519912958: entry=0.10000000, exit=0.100000000000, total=0.20
+2025-07-08 05:33:42,636 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.129310000000000000000000 CAD to USD for PnL on Close (user_id: 1, position: 1519912958)
+2025-07-08 05:33:42,636 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:42,636 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:42,636 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:42,636 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:42,637 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:42,637 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:42,637 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.129310000000000000000000 CAD / 1.3645100000 = -0.09476661951909476661951909477 USD
+2025-07-08 05:33:42,651 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24915.98000000, margin=13.09
+2025-07-08 05:33:42,651 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24915.98000000, margin=13.09
+2025-07-08 05:33:42,651 - INFO - orders - User data cache updated for user 1
+2025-07-08 05:33:42,651 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-07-08 05:33:42,651 - INFO - orders - Using order model: DemoUserOrder
+2025-07-08 05:33:42,653 - INFO - orders - Fetched 3 open orders for user 1
+2025-07-08 05:33:42,655 - INFO - orders - Fetched 1 pending orders for user 1
+2025-07-08 05:33:42,656 - INFO - orders - Updated static orders cache for user 1 with 3 open orders and 1 pending orders
+2025-07-08 05:33:42,656 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:42,656 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:42,657 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:42,657 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:42,748 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:43,193 - INFO - orders - Order close request received - Order ID: 7924990238, User ID: 1, Close Price: 0.8931
+2025-07-08 05:33:43,193 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000013313D48B00>, type: <class 'app.database.models.DemoUser'>, user_type: demo, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-08 05:33:43,193 - INFO - orders - Using order model: demo_user_orders for user 1 (user_type: demo)
+2025-07-08 05:33:43,193 - INFO - orders - Request to close order 7924990238 for user 1 (user_type: demo) with price 0.8931. Frontend provided type: SELL, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-08 05:33:43,204 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-08 05:33:43,212 - INFO - orders - Existing entry commission for order 7924990238: 0.10000000
+2025-07-08 05:33:43,213 - INFO - orders - Commission calculation for order 7924990238: entry=0.10000000, exit=0.100000000000, total=0.20
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.040000000000000000000000 CAD to USD for PnL on Close (user_id: 1, position: 7924990238)
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:43,213 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.040000000000000000000000 CAD / 1.3645100000 = -0.02931455247671325237631091014 USD
+2025-07-08 05:33:43,227 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24915.75000000, margin=6.54
+2025-07-08 05:33:43,227 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24915.75000000, margin=6.54
+2025-07-08 05:33:43,227 - INFO - orders - User data cache updated for user 1
+2025-07-08 05:33:43,227 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-07-08 05:33:43,227 - INFO - orders - Using order model: DemoUserOrder
+2025-07-08 05:33:43,229 - INFO - orders - Fetched 2 open orders for user 1
+2025-07-08 05:33:43,230 - INFO - orders - Fetched 1 pending orders for user 1
+2025-07-08 05:33:43,231 - INFO - orders - Updated static orders cache for user 1 with 2 open orders and 1 pending orders
+2025-07-08 05:33:43,231 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:43,231 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:43,232 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:43,233 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:43,767 - INFO - orders - Order close request received - Order ID: 3577948919, User ID: 1, Close Price: 0.89306
+2025-07-08 05:33:43,767 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000013313D48B00>, type: <class 'app.database.models.DemoUser'>, user_type: demo, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-08 05:33:43,767 - INFO - orders - Using order model: demo_user_orders for user 1 (user_type: demo)
+2025-07-08 05:33:43,767 - INFO - orders - Request to close order 3577948919 for user 1 (user_type: demo) with price 0.89306. Frontend provided type: BUY, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-08 05:33:43,775 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-08 05:33:43,784 - INFO - orders - Existing entry commission for order 3577948919: 0.10000000
+2025-07-08 05:33:43,784 - INFO - orders - Commission calculation for order 3577948919: entry=0.10000000, exit=0.100000000000, total=0.20
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of -0.059300000000000000000000 CAD to USD for PnL on Close (user_id: 1, position: 3577948919)
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:43,784 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: -0.059300000000000000000000 CAD / 1.3645100000 = -0.04345882404672739664788092429 USD
+2025-07-08 05:33:43,796 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24915.51000000, margin=6.54
+2025-07-08 05:33:43,796 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24915.51000000, margin=6.54
+2025-07-08 05:33:43,796 - INFO - orders - User data cache updated for user 1
+2025-07-08 05:33:43,796 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-07-08 05:33:43,796 - INFO - orders - Using order model: DemoUserOrder
+2025-07-08 05:33:43,798 - INFO - orders - Fetched 1 open orders for user 1
+2025-07-08 05:33:43,801 - INFO - orders - Fetched 1 pending orders for user 1
+2025-07-08 05:33:43,802 - INFO - orders - Updated static orders cache for user 1 with 1 open orders and 1 pending orders
+2025-07-08 05:33:43,802 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:43,803 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:43,803 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:43,805 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:45,034 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:47,445 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:48,062 - INFO - orders - Order close request received - Order ID: 2067016150, User ID: 1, Close Price: 0.89305
+2025-07-08 05:33:48,062 - INFO - orders - user_to_operate_on: <app.database.models.DemoUser object at 0x0000013313D482B0>, type: <class 'app.database.models.DemoUser'>, user_type: demo, attrs: ['__abstract__', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__mapper__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__table__', '__table_args__', '__tablename__', '__weakref__', '_sa_class_manager', '_sa_instance_state', '_sa_registry', 'account_number', 'city', 'country', 'created_at', 'demo_user_favorites', 'email', 'group_name', 'hashed_password', 'id', 'isActive', 'is_service_account', 'leverage', 'margin', 'metadata', 'name', 'net_profit', 'orders', 'otps', 'phone_number', 'pincode', 'referred_by_id', 'reffered_code', 'registry', 'security_answer', 'security_question', 'state', 'status', 'updated_at', 'user_type', 'wallet_balance', 'wallet_transactions']
+2025-07-08 05:33:48,062 - INFO - orders - Using order model: demo_user_orders for user 1 (user_type: demo)
+2025-07-08 05:33:48,062 - INFO - orders - Request to close order 2067016150 for user 1 (user_type: demo) with price 0.89305. Frontend provided type: SELL, company: AUDCAD, status: CLOSED, frontend_status: CLOSED.
+2025-07-08 05:33:48,069 - INFO - orders - Demo user 1 from group 'default' ('sending_orders' is NOT 'barclays'). Processing close locally.
+2025-07-08 05:33:48,082 - INFO - orders - Existing entry commission for order 2067016150: 0.10000000
+2025-07-08 05:33:48,082 - INFO - orders - Commission calculation for order 2067016150: entry=0.10000000, exit=0.100000000000, total=0.20
+2025-07-08 05:33:48,082 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 0.050000000000000000000000 CAD to USD for PnL on Close (user_id: 1, position: 2067016150)
+2025-07-08 05:33:48,082 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-08 05:33:48,082 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-08 05:33:48,082 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-08 05:33:48,082 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-08 05:33:48,083 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3645100000'), 'o': Decimal('1.3644600000')}
+2025-07-08 05:33:48,083 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3645100000
+2025-07-08 05:33:48,083 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 0.050000000000000000000000 CAD / 1.3645100000 = 0.03664319059589156547038863768 USD
+2025-07-08 05:33:48,100 - INFO - orders - AFTER COMMIT: User 1 wallet_balance=24915.35000000, margin=0
+2025-07-08 05:33:48,100 - INFO - orders - Setting user data cache for user 1 with wallet_balance=24915.35000000, margin=0
+2025-07-08 05:33:48,101 - INFO - orders - User data cache updated for user 1
+2025-07-08 05:33:48,101 - INFO - orders - Starting update_user_static_orders for user 1, user_type demo
+2025-07-08 05:33:48,101 - INFO - orders - Using order model: DemoUserOrder
+2025-07-08 05:33:48,103 - INFO - orders - Fetched 0 open orders for user 1
+2025-07-08 05:33:48,105 - INFO - orders - Fetched 1 pending orders for user 1
+2025-07-08 05:33:48,106 - INFO - orders - Updated static orders cache for user 1 with 0 open orders and 1 pending orders
+2025-07-08 05:33:48,106 - INFO - orders - Publishing order update for user 1
+2025-07-08 05:33:48,106 - INFO - orders - Publishing user data update for user 1
+2025-07-08 05:33:48,107 - INFO - orders - Publishing market data trigger
+2025-07-08 05:33:48,108 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:49,641 - INFO - orders - Market data update received, triggering SL/TP check
+2025-07-08 05:33:51,949 - INFO - orders - Market data update received, triggering SL/TP check

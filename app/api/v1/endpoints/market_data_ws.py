@@ -52,6 +52,7 @@ from app.dependencies.redis_client import get_redis_client
 
 # Import the shared state for the Redis publish queue (for Firebase data -> Redis)
 from app.shared_state import redis_publish_queue
+from app.shared_state import adjusted_prices_in_memory
 
 # Import the new portfolio calculation service
 from app.services.portfolio_calculator import calculate_user_portfolio
@@ -379,7 +380,6 @@ async def per_connection_redis_listener(
         await websocket.close()
         return
     symbol_list = list(group_settings.keys())
-    adj_price_keys = [f"adjusted_market_price:{group_name}:{symbol}" for symbol in symbol_list]
 
     try:
         while websocket.client_state == WebSocketState.CONNECTED:
@@ -391,30 +391,22 @@ async def per_connection_redis_listener(
                 message_data = json.loads(message['data'], object_hook=decode_decimal)
                 channel = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
 
-                # --- Always fetch fresh prices before sending any message ---
-                adj_price_jsons = await redis_client.mget(adj_price_keys)
-                adjusted_prices = {}
-                for symbol, price_json in zip(symbol_list, adj_price_jsons):
-                    if price_json:
-                        cached = json.loads(price_json, object_hook=decode_decimal)
-                        adjusted_prices[symbol] = {
-                            'buy': float(cached.get('buy', 0)),
-                            'sell': float(cached.get('sell', 0)),
-                            'spread': float(cached.get('spread', 0))
-                        }
+                # --- Always fetch fresh prices from in-memory dict before sending any message ---
+                adjusted_prices = adjusted_prices_in_memory.get(group_name, {})
 
                 if channel == REDIS_MARKET_DATA_CHANNEL and message_data.get("type") == "market_data_update":
                     # Only send changed symbols after initial connection
                     changed_prices = {}
-                    for symbol, price in adjusted_prices.items():
+                    for symbol in symbol_list:
+                        price = adjusted_prices.get(symbol)
                         last = last_sent_prices.get(symbol)
-                        if not last or (
+                        if price and (not last or (
                             price['buy'] != last['buy'] or
                             price['sell'] != last['sell'] or
                             price['spread'] != last['spread']
-                        ):
+                        )):
                             changed_prices[symbol] = price
-                            last_sent_prices[symbol] = price
+                            last_sent_prices[symbol] = price.copy()
                     static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
                     user_portfolio = await get_user_portfolio_cache(redis_client, user_id) or {"balance": "0.0", "margin": "0.0"}
                     balance_value = user_portfolio.get("balance", "0.0")
