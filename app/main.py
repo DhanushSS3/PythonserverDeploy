@@ -594,7 +594,7 @@ async def startup_event():
     global background_tasks
     global global_redis_client_instance
     logger.info("Application startup initiated")
-    # import redis.asyncio as redis
+    import redis.asyncio as redis
 
     # r = redis.Redis(host="127.0.0.1", port=6379)
     # await r.flushall()
@@ -638,6 +638,14 @@ async def startup_event():
                 redis_available = True
                 global_redis_client_instance = redis_client
                 logger.info("Redis initialized")
+                # --- Print all Redis keys at startup ---
+                # try:
+                #     keys = await redis_client.keys("*")
+                #     print(f"[STARTUP] Redis contains {len(keys)} keys:")
+                #     for k in keys:
+                #         print(f"  - {k}")
+                # except Exception as e:
+                #     print(f"[STARTUP] Error fetching Redis keys: {e}")
     except Exception:
         logger.warning("Redis initialization failed")
     

@@ -19,6 +19,7 @@ from fastapi import BackgroundTasks, Depends
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
+from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
 
 from app.core.logging_config import orders_logger
 from app.core.security import get_user_from_service_or_user_token, get_current_user, get_user_from_service_token
@@ -105,7 +106,7 @@ async def update_user_cache(user_id, db, redis_client, user_type):
     from app.database.session import async_session_factory
     async with await async_session_factory() as background_db:
         try:
-            await update_user_static_orders_cache_after_order_change(user_id, background_db, redis_client, user_type)
+            await update_static_orders_cache(user_id, background_db, redis_client, user_type)
         except Exception as e:
             orders_logger.error(f"Error updating user cache: {e}")
 
@@ -907,9 +908,9 @@ async def place_pending_order(
                     # "phone_number": getattr(db_user, 'phone_number', None),
                 }
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache, user_type)
-                
-                # Update static orders cache after order placement
-                await update_user_static_orders_cache_after_order_change(user_id, background_db, redis_client, user_type)
+                await update_static_orders_cache(user_id, background_db, redis_client, user_type)
+                await publish_order_update(redis_client, user_id)
+                await publish_user_data_update(redis_client, user_id)
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
 
@@ -1168,7 +1169,7 @@ async def close_order(
                         # The OrderUpdateRequest was not defined; using a dict instead for tracking.
                         update_fields_for_history = {
                             "close_id": close_id,
-                            "close_message": "Close request sent to service provider.",
+                            "close_message": "CLOSED",
                             "close_price": close_price,
                         }
                         if has_sl_or_tp:
@@ -1734,7 +1735,7 @@ async def modify_pending_order(
             orders_logger.error(f"Error updating user data cache after pending order modification: {e}", exc_info=True)
 
         # Update static orders cache - force a fresh fetch from the database
-        await update_user_static_orders_cache_after_order_change(modify_request.user_id, db, redis_client, modify_request.user_type)
+        await update_static_orders_cache(modify_request.user_id, db, redis_client, modify_request.user_type)
 
         # Publish updates to notify WebSocket clients - make sure these are in the right order
         await publish_order_update(redis_client, modify_request.user_id)
@@ -1894,7 +1895,7 @@ async def cancel_pending_order(
             )
             
             # Update static orders cache
-            await update_user_static_orders_cache_after_order_change(user_id_for_operation, db, redis_client, cancel_request.user_type)
+            await update_static_orders_cache(user_id_for_operation, db, redis_client, cancel_request.user_type)
             
             # Publish updates to notify WebSocket clients
             await publish_order_update(redis_client, user_id_for_operation)
@@ -3231,6 +3232,7 @@ async def _handle_order_open_transition(
         raise
     update_fields['margin'] = new_order_margin
     update_fields['contract_value'] = contract_value
+    update_fields['commission'] = commission
     orders_logger.info(f"[MARGIN] Final stored margin (USD): {new_order_margin}")
     # --- Correct Hedged Margin Calculation (Mirrors place_order) ---
     orders_logger.info(f"Recalculating total hedged margin for user {db_order.order_user_id} on symbol {db_order.order_company_name}")

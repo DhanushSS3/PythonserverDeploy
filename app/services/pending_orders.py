@@ -14,6 +14,7 @@ import time
 import uuid
 import inspect  # Added for debug function
 
+
 # Import epsilon configuration
 from app.main import SLTP_EPSILON
 
@@ -1286,12 +1287,17 @@ async def close_order(
             "country": getattr(db_user_locked, 'country', None),
             "phone_number": getattr(db_user_locked, 'phone_number', None),
         }
-        await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
-        from app.api.v1.endpoints.orders import update_user_static_orders, publish_order_update, publish_user_data_update, publish_market_data_trigger
-        await update_user_static_orders(db_user_locked.id, db, redis_client, user_type_str)
-        await publish_order_update(redis_client, db_user_locked.id)
-        await publish_user_data_update(redis_client, db_user_locked.id)
-        await publish_market_data_trigger(redis_client)
+        from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
+        # await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache)
+        # from app.api.v1.endpoints.orders import update_user_static_orders, publish_order_update, publish_user_data_update, publish_market_data_trigger
+        # await update_user_static_orders(db_user_locked.id, db, redis_client, user_type_str)
+        # await publish_order_update(redis_client, db_user_locked.id)
+        # await publish_user_data_update(redis_client, db_user_locked.id)
+        # await publish_market_data_trigger(redis_client)
+        await set_user_data_cache(redis_client, order_user_id, user_data_to_cache, user_type)
+        await update_static_orders_cache(order_user_id, db, redis_client, user_type)
+        await publish_order_update(redis_client, order_user_id)
+        await publish_user_data_update(redis_client, order_user_id)
     except Exception as e:
         logger.error(f"[ORDER_CLOSE] Error closing order {get_attr(order, 'order_id')}: {e}", exc_info=True)
 
