@@ -12,6 +12,9 @@ import hashlib
 from concurrent.futures import ProcessPoolExecutor
 from app.shared_state import adjusted_prices_in_memory
 
+# Remove the circular import - we'll call the function directly when needed
+# from app.services.pending_orders import check_and_trigger_pending_orders_redis
+
 logger = logging.getLogger("adjusted_price_worker")
 
 # In-memory group settings cache
@@ -114,6 +117,10 @@ async def adjusted_price_worker(redis_client: Redis):
         write_count = 0
         redis_write_start = time.perf_counter()
         pipe = redis_client.pipeline()
+        
+        # Track symbols that were updated for pending order triggers
+        updated_symbols = set()
+        
         for group_name, adjusted_prices in group_results:
             # Update in-memory dict
             if group_name not in adjusted_prices_in_memory:
@@ -134,8 +141,60 @@ async def adjusted_price_worker(redis_client: Redis):
                     # Redis persistence (not hot path)
                     await set_adjusted_market_price_cache(pipe, group_name, symbol, prices['buy'], prices['sell'], prices['spread_value'])
                     write_count += 1
+                    
+                    # Track this symbol for pending order triggers
+                    updated_symbols.add(symbol)
+        
         await pipe.execute()
         redis_write_time = time.perf_counter() - redis_write_start
+        
+        # Trigger pending orders for updated symbols
+        if updated_symbols:
+            logger.debug(f"[PENDING_TRIGGER] Processing {len(updated_symbols)} symbols with updated prices")
+            trigger_start_time = time.time()
+            
+            # Import the function here to avoid circular imports
+            from app.services.pending_orders import check_and_trigger_pending_orders_redis, debug_pending_orders_in_redis
+            
+            # Debug: Check what pending orders exist
+            for symbol in updated_symbols:
+                await debug_pending_orders_in_redis(redis_client, symbol)
+            
+            # Process each group separately to get correct group-specific prices
+            for group_name, adjusted_prices in group_results:
+                for symbol in updated_symbols:
+                    if symbol in adjusted_prices:
+                        try:
+                            symbol_prices = adjusted_prices[symbol]
+                            adjusted_ask_price = symbol_prices.get('buy', 0.0)
+                            adjusted_bid_price = symbol_prices.get('sell', 0.0)
+                            
+                            if adjusted_ask_price > 0 and adjusted_bid_price > 0:
+                                logger.debug(f"[PENDING_TRIGGER] Checking {symbol} for group {group_name}: ask={adjusted_ask_price}, bid={adjusted_bid_price}")
+                                
+                                # Trigger pending orders with correct price logic
+                                # BUY_LIMIT and SELL_STOP: trigger when adjusted_ask_price <= pending_price
+                                # BUY_STOP and SELL_LIMIT: trigger when adjusted_ask_price >= pending_price
+                                
+                                # For BUY_LIMIT and SELL_STOP, use adjusted_ask_price (buy price)
+                                buy_limit_sell_stop_price = adjusted_ask_price
+                                logger.debug(f"[PENDING_TRIGGER] Triggering BUY_LIMIT/SELL_STOP for {symbol} at price {buy_limit_sell_stop_price}")
+                                await check_and_trigger_pending_orders_redis(redis_client, symbol, 'BUY_LIMIT', buy_limit_sell_stop_price)
+                                await check_and_trigger_pending_orders_redis(redis_client, symbol, 'SELL_STOP', buy_limit_sell_stop_price)
+                                
+                                # For BUY_STOP and SELL_LIMIT, use adjusted_ask_price (buy price) 
+                                # but the logic inside check_and_trigger_pending_orders_redis will handle the >= condition
+                                buy_stop_sell_limit_price = adjusted_ask_price
+                                logger.debug(f"[PENDING_TRIGGER] Triggering BUY_STOP/SELL_LIMIT for {symbol} at price {buy_stop_sell_limit_price}")
+                                await check_and_trigger_pending_orders_redis(redis_client, symbol, 'BUY_STOP', buy_stop_sell_limit_price)
+                                await check_and_trigger_pending_orders_redis(redis_client, symbol, 'SELL_LIMIT', buy_stop_sell_limit_price)
+                                
+                        except Exception as symbol_error:
+                            logger.error(f"[PENDING_TRIGGER] Error processing symbol {symbol} for group {group_name}: {symbol_error}")
+            
+            trigger_time = time.time() - trigger_start_time
+            logger.debug(f"[PENDING_TRIGGER] Completed in {trigger_time:.3f}s for {len(updated_symbols)} symbols")
+
         total_time = time.perf_counter() - tick_start
         logger.info(f"[adjusted_price_worker] Tick: {write_count} writes | calc: {calc_time*1000:.2f}ms | redis: {redis_write_time*1000:.2f}ms | total: {total_time*1000:.2f}ms")
 

@@ -14,6 +14,9 @@ import time
 import uuid
 import inspect  # Added for debug function
 
+# Import AsyncSessionLocal for database sessions
+from app.database.session import AsyncSessionLocal
+
 
 # Import epsilon configuration
 from app.main import SLTP_EPSILON
@@ -55,7 +58,8 @@ from app.services.order_processing import (
     get_external_symbol_info,
     OrderProcessingError,
     InsufficientFundsError,
-    generate_unique_10_digit_id
+    generate_unique_10_digit_id,
+    calculate_total_user_margin
 )
 from app.core.logging_config import orders_logger, redis_logger
 
@@ -66,6 +70,142 @@ REDIS_PENDING_ORDERS_PREFIX = "pending_orders"
 
 # Redis key prefix for users with open orders per symbol
 REDIS_USERS_WITH_ORDERS_PREFIX = "users_with_orders"
+
+# --- Redis ZSET/HASH based Pending Orders System ---
+# Key formats:
+#   ZSET: pending_zset:{symbol}:{type} (score=price, value=order_id)
+#   HASH: pending_hash:{order_id} (full order data as JSON)
+#   Stream: pending_trigger_queue (for triggered orders)
+
+PENDING_ZSET_PREFIX = "pending_zset"
+PENDING_HASH_PREFIX = "pending_hash"
+PENDING_TRIGGER_QUEUE = "pending_trigger_queue"
+
+async def add_pending_order_redis(redis: Redis, order: dict):
+    """
+    Add a pending order to Redis ZSET and HASH.
+    order must contain: order_id, order_company_name, order_type, order_price
+    """
+    symbol = order["order_company_name"]
+    order_type = order["order_type"]
+    order_id = order["order_id"]
+    # Convert to float with 6 decimal precision
+    price = round(float(order["order_price"]), 6)
+    zset_key = f"{PENDING_ZSET_PREFIX}:{symbol}:{order_type}"
+    hash_key = f"{PENDING_HASH_PREFIX}:{order_id}"
+    
+    # Debug logging
+    logger.info(f"[REDIS_DEBUG] Adding order {order_id} to ZSET: {zset_key} with price {price}")
+    logger.info(f"[REDIS_DEBUG] Adding order {order_id} to HASH: {hash_key}")
+    
+    # Add to ZSET (score=price, value=order_id)
+    await redis.zadd(zset_key, {order_id: price})
+    # Add to HASH (full order data)
+    order_json = json.dumps(order, cls=DecimalEncoder)
+    await redis.hset(hash_key, mapping={"data": order_json})
+    
+    # Verify the data was stored
+    stored_data = await redis.hget(hash_key, "data")
+    if stored_data:
+        logger.info(f"[REDIS_DEBUG] Successfully stored order {order_id} in hash")
+    else:
+        logger.error(f"[REDIS_DEBUG] Failed to store order {order_id} in hash")
+
+async def remove_pending_order_redis(redis: Redis, order_id: str, symbol: str, order_type: str):
+    zset_key = f"{PENDING_ZSET_PREFIX}:{symbol}:{order_type}"
+    hash_key = f"{PENDING_HASH_PREFIX}:{order_id}"
+    # Convert order_id to string to avoid Redis encoding issues
+    order_id_str = str(order_id)
+    await redis.zrem(zset_key, order_id_str)
+    await redis.delete(hash_key)
+
+async def get_pending_orders_by_price(redis: Redis, symbol: str, order_type: str, price: float):
+    zset_key = f"{PENDING_ZSET_PREFIX}:{symbol}:{order_type}"
+    # Convert price to float with 6 decimal precision
+    price_rounded = round(float(price), 6)
+    
+    # FIXED LOGIC:
+    # BUY_LIMIT: trigger when market_price <= pending_price (market goes down)
+    # SELL_STOP: trigger when market_price <= pending_price (market goes down)
+    # BUY_STOP: trigger when market_price >= pending_price (market goes up)
+    # SELL_LIMIT: trigger when market_price >= pending_price (market goes up)
+    
+    if order_type in ["BUY_LIMIT", "SELL_STOP"]:
+        # For BUY_LIMIT and SELL_STOP: find orders where pending_price >= market_price
+        # This means the market price has gone down to or below the pending price
+        order_ids = await redis.zrangebyscore(zset_key, price_rounded, "+inf")
+        logger.debug(f"[REDIS_ZSET] {order_type} query: zrangebyscore({zset_key}, {price_rounded}, +inf) - Market price {price_rounded} <= Pending price")
+    else:
+        # For BUY_STOP and SELL_LIMIT: find orders where pending_price <= market_price
+        # This means the market price has gone up to or above the pending price
+        order_ids = await redis.zrangebyscore(zset_key, "-inf", price_rounded)
+        logger.debug(f"[REDIS_ZSET] {order_type} query: zrangebyscore({zset_key}, -inf, {price_rounded}) - Market price {price_rounded} >= Pending price")
+    
+    logger.debug(f"[REDIS_ZSET] Found {len(order_ids)} {order_type} orders for {symbol}")
+    return [oid.decode() if isinstance(oid, bytes) else oid for oid in order_ids]
+
+async def get_order_hash(redis: Redis, order_id: str):
+    hash_key = f"{PENDING_HASH_PREFIX}:{order_id}"
+    logger.debug(f"[REDIS_DEBUG] Looking for order {order_id} in hash: {hash_key}")
+    data = await redis.hget(hash_key, "data")
+    if data:
+        logger.debug(f"[REDIS_DEBUG] Found order {order_id} in hash, data length: {len(data)}")
+        return json.loads(data, object_hook=decode_decimal)
+    else:
+        logger.warning(f"[REDIS_DEBUG] Order {order_id} not found in hash: {hash_key}")
+        # Check if the hash key exists at all
+        exists = await redis.exists(hash_key)
+        logger.warning(f"[REDIS_DEBUG] Hash key {hash_key} exists: {exists}")
+        return None
+
+async def queue_triggered_order(redis: Redis, order_id: str):
+    await redis.xadd(PENDING_TRIGGER_QUEUE, {"order_id": order_id})
+
+async def fetch_triggered_orders(redis: Redis, last_id: str = "0"):
+    """
+    Fetch triggered orders from the Redis stream.
+    last_id: The ID to start reading from. Use "0" to read from the beginning.
+    """
+    try:
+        # Use XREAD to fetch new triggered orders
+        result = await redis.xread({PENDING_TRIGGER_QUEUE: last_id}, count=10, block=1000)
+        # Returns list of (stream, [(id, {order_id: ...}), ...])
+        if not result:
+            return []
+        
+        stream_name, entries = result[0]
+        processed_entries = []
+        
+        for entry_id, entry_data in entries:
+            try:
+                # Handle both bytes and string formats
+                entry_id_str = entry_id.decode() if isinstance(entry_id, bytes) else entry_id
+                
+                # Extract order_id from entry_data - handle different formats
+                order_id = None
+                if b'order_id' in entry_data:
+                    order_id = entry_data[b'order_id']
+                elif 'order_id' in entry_data:
+                    order_id = entry_data['order_id']
+                else:
+                    logger.warning(f"Stream entry {entry_id} has no order_id field")
+                    continue
+                
+                # Decode order_id if it's bytes
+                if isinstance(order_id, bytes):
+                    order_id = order_id.decode()
+                
+                processed_entries.append((entry_id_str, order_id))
+                logger.debug(f"[STREAM_DEBUG] Processed entry {entry_id_str} -> order_id {order_id}")
+                
+            except Exception as e:
+                logger.error(f"Error processing stream entry {entry_id}: {e}")
+                continue
+                
+        return processed_entries
+    except Exception as e:
+        logger.error(f"Error fetching triggered orders: {e}")
+        return []
 
 async def get_users_with_open_orders_for_symbol(redis_client: Redis, symbol: str) -> List[Tuple[int, str]]:
     """
@@ -305,50 +445,34 @@ async def check_order_priority(order, current_price: Decimal) -> float:
         return 0.0
 
 async def remove_pending_order(redis_client: Redis, order_id: str, symbol: str, order_type: str, user_id: str):
-    """
-    Remove a pending order from Redis.
-    """
-    try:
-        # Remove from the specific pending orders list
-        pending_key = f"pending_orders:{symbol}:{order_type}:{user_id}"
-        await redis_client.lrem(pending_key, 0, order_id)
-        
-        # Also remove from the general pending orders list
-        general_pending_key = f"pending_orders:{user_id}"
-        await redis_client.lrem(general_pending_key, 0, order_id)
-        
-    except Exception as e:
-        logger.error(f"[REDIS_CLEANUP] Error removing pending order {order_id} from Redis: {e}")
+    """Removes a pending order from Redis using ZSET/HASH for non-Barclays users."""
+    # TODO: If Barclays, use old logic. For now, always use new logic.
+    await remove_pending_order_redis(redis_client, order_id, symbol, order_type)
 
 async def get_all_pending_orders_from_redis(redis_client: Redis) -> List[Dict[str, Any]]:
     """
     Get all pending orders from Redis for cleanup purposes.
-    Returns a list of order data dictionaries.
-    Handles the HASH data structure where pending orders are stored.
+    Updated for ZSET/HASH system.
     """
     try:
         all_pending_orders = []
         
-        # Pattern for keys that store pending orders as Hashes.
-        pattern = f"{REDIS_PENDING_ORDERS_PREFIX}:*:*"
+        # Pattern for keys that store pending orders as Hashes in new system
+        pattern = f"{PENDING_HASH_PREFIX}:*"
         keys = await redis_client.keys(pattern)
         
         for key in keys:
             try:
-                # This key is a HASH where each field is a user_id and the value is a JSON string of their orders.
-                user_orders_map = await redis_client.hgetall(key)
-                
-                for user_id, orders_json in user_orders_map.items():
-                    if orders_json:
-                        try:
-                            # Decode and parse the list of orders for the user.
-                            orders = json.loads(orders_json, object_hook=decode_decimal)
-                            all_pending_orders.extend(orders)
-                        except json.JSONDecodeError:
-                            logger.error(f"[REDIS_CLEANUP] Failed to decode JSON for key {key}, user {user_id}: {orders_json}")
-                            continue
+                # Get order data from hash
+                order_data = await redis_client.hget(key, "data")
+                if order_data:
+                    try:
+                        order = json.loads(order_data, object_hook=decode_decimal)
+                        all_pending_orders.append(order)
+                    except json.JSONDecodeError:
+                        logger.error(f"[REDIS_CLEANUP] Failed to decode JSON for key {key}: {order_data}")
+                        continue
             except Exception as e:
-                # This handles cases where a key matching the pattern is not a HASH.
                 logger.error(f"[REDIS_CLEANUP] Error processing Redis key {key}: {e}")
                 continue
         
@@ -362,525 +486,221 @@ async def add_pending_order(
     redis_client: Redis, 
     pending_order_data: Dict[str, Any]
 ) -> None:
-    """Adds a pending order to Redis."""
-    symbol = pending_order_data['order_company_name']
-    order_type = pending_order_data['order_type']
-    user_id = str(pending_order_data['order_user_id'])  # Ensure user_id is a string
-    redis_key = f"{REDIS_PENDING_ORDERS_PREFIX}:{symbol}:{order_type}"
+    """Adds a pending order to Redis using ZSET/HASH for non-Barclays users."""
+    # TODO: If Barclays, use old logic. For now, always use new logic.
+    await add_pending_order_redis(redis_client, pending_order_data)
 
-    try:
-        all_user_orders_json = await redis_client.hget(redis_key, user_id)
-        
-        # Handle both bytes and string JSON
-        if all_user_orders_json:
-            if isinstance(all_user_orders_json, bytes):
-                all_user_orders_json = all_user_orders_json.decode('utf-8')
-            current_orders = json.loads(all_user_orders_json)
-        else:
-            current_orders = []
-
-        # Check if an order with the same ID already exists
-        if any(order.get('order_id') == pending_order_data['order_id'] for order in current_orders):
-            logger.warning(f"Pending order {pending_order_data['order_id']} already exists in Redis. Skipping add.")
-            return
-
-        current_orders.append(pending_order_data)
-        await redis_client.hset(redis_key, user_id, json.dumps(current_orders))
-    except Exception as e:
-        logger.error(f"Error adding pending order {pending_order_data['order_id']} to Redis: {e}", exc_info=True)
-        raise
+def decimal_to_float_6dp(value) -> float:
+    """
+    Convert Decimal or any numeric value to float with 6 decimal precision.
+    """
+    if isinstance(value, Decimal):
+        return round(float(value), 6)
+    elif isinstance(value, (int, float)):
+        return round(float(value), 6)
+    else:
+        return round(float(str(value)), 6)
 
 async def trigger_pending_order(
     db,
-    redis_client: Redis,
-    order: Dict[str, Any],
-    current_price: Decimal
+    redis_client: 'Redis',
+    order: dict,
+    current_price: 'Decimal'
 ) -> None:
     """
-    Trigger a pending order for any user type.
+    Trigger a pending order that has already been matched by price.
     Updates the order status to 'OPEN' in the database,
     adjusts user margin, and updates portfolio caches.
+    Uses the same margin/hedging logic as process_new_order.
     """
+    from decimal import Decimal, ROUND_HALF_UP
+    from app.core.logging_config import orders_logger
+    from app.crud.user import get_user_by_id, get_demo_user_by_id, update_user_margin
+    from app.crud import crud_order
+    from app.crud.crud_order import get_order_model
+    from app.services.margin_calculator import calculate_single_order_margin
+    from app.services.order_processing import calculate_total_symbol_margin_contribution
+    from app.core.cache import get_user_data_cache, get_group_symbol_settings_cache, set_user_balance_margin_cache
+    from app.core.firebase import get_latest_market_data
+    import asyncio
+    
     order_id = order['order_id']
     user_id = order['order_user_id']
     user_type = order['user_type']
     symbol = order['order_company_name']
-    order_type_original = order['order_type'] # Store original order_type
-    from app.core.logging_config import orders_logger
-    
+    order_type_original = order['order_type']
+    placed_price = Decimal(str(order.get('order_price', '0')))
+    quantity = Decimal(str(order.get('order_quantity', '0')))
+
+    # Convert order_type from pending to market order type
+    order_type_mapping = {
+        'BUY_LIMIT': 'BUY',
+        'BUY_STOP': 'BUY', 
+        'SELL_LIMIT': 'SELL',
+        'SELL_STOP': 'SELL'
+    }
+    new_order_type = order_type_mapping.get(order_type_original, order_type_original)
+
     try:
+        logger = orders_logger
+        logger.info(f"[PENDING_ORDER] Starting execution of order {order_id} for user {user_id}")
+        logger.info(f"[PENDING_ORDER] Order {order_id}: Placed at {placed_price}, Triggered at {current_price}")
+        logger.info(f"[PENDING_ORDER] Order {order_id}: Type {order_type_original} -> {new_order_type}")
+
+        # 1. Fetch user data
         user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
         if not user_data:
-            user_model = User if user_type == 'live' else DemoUser
-            user_data = await user_model.by_id(db, user_id)
-            if not user_data:
-                orders_logger.error(f"[PENDING_ORDER] User data not found for user {user_id} when triggering order {order_id}. Skipping.")
-                return
-
+            logger.error(f"[PENDING_ORDER] User data not found for user {user_id}")
+            return
+        leverage = Decimal(str(user_data.get('leverage', '1.0')))
         group_name = user_data.get('group_name')
-        group_settings = await get_group_settings_cache(redis_client, group_name)
+
+        # 2. Fetch group settings
+        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
         if not group_settings:
-            orders_logger.error(f"[PENDING_ORDER] Group settings not found for group {group_name} when triggering order {order_id}. Skipping.")
+            logger.error(f"[PENDING_ORDER] Group settings not found for symbol {symbol}")
             return
 
-        order_model = get_order_model(user_type)
-        
-        # Add enhanced retry logic for database order fetch
-        max_retries = 5  # Increase from 3 to 5
-        initial_retry_delay = 0.5  # Start with a shorter delay (seconds)
-        retry_delay = initial_retry_delay
-        db_order = None
-        
-        for retry_count in range(max_retries):
-            # Try the standard method first
-            db_order = await crud_order.get_order_by_id(db, order_id, order_model)
-            
-            if db_order:
-                break
-                
-            # On the last attempt, try a direct SQL query as a backup method
-            if retry_count == max_retries - 1:
-                try:
-                    from sqlalchemy import text
-                    table_name = "demo_user_orders" if user_type == "demo" else "user_orders"
-                    result = await db.execute(text(f"SELECT * FROM {table_name} WHERE order_id = :order_id"), {"order_id": order_id})
-                    row = result.fetchone()
-                    if row:
-                        # Create order object from raw SQL result
-                        db_order = order_model()
-                        for key, value in row._mapping.items():
-                            setattr(db_order, key, value)
-                        break
-                except Exception as sql_error:
-                    orders_logger.error(f"[PENDING_ORDER] Error in direct SQL query: {str(sql_error)}", exc_info=True)
-            
-            if retry_count < max_retries - 1:
-                await asyncio.sleep(retry_delay)
-                retry_delay *= 1.5  # Less aggressive exponential backoff
-
-        if not db_order:
-            orders_logger.error(f"[PENDING_ORDER] Database order {order_id} not found after {max_retries} attempts when triggering pending order. Skipping.")
-            # Remove the order from Redis since it cannot be found in the database
-            await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
-            return
-
-        # Ensure atomicity: only update if still PENDING
-        if db_order.order_status != 'PENDING':
-            await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id) 
-            return
-
-        # Get the adjusted buy price (ask price) for the symbol from cache
-        group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
-        adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
-        
-        if not adjusted_prices:
-            orders_logger.error(f"[PENDING_ORDER] Adjusted market prices not found for symbol {symbol} when triggering order {order_id}. Skipping.")
-            return
-        
-        # Use the adjusted buy price for all trigger conditions
-        adjusted_buy_price = adjusted_prices.get('buy')
-        if not adjusted_buy_price:
-            orders_logger.error(f"[PENDING_ORDER] Adjusted buy price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
-            return
-        
-        adjusted_sell_price = adjusted_prices.get('sell')
-        if not adjusted_sell_price:
-            orders_logger.error(f"[PENDING_ORDER] Adjusted sell price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
-            return
-
-        # Normalize decimal values for comparison - round to 5 decimal places
-        try:
-            order_price = Decimal(str(db_order.order_price))
-            # Round to 5 decimal places for consistent comparison
-            order_price_normalized = Decimal(str(round(order_price, 5)))
-            
-            adjusted_buy_price_str = str(adjusted_buy_price)
-            # Ensure the price has at least 5 decimal places
-            if '.' in adjusted_buy_price_str:
-                integer_part, decimal_part = adjusted_buy_price_str.split('.')
-                if len(decimal_part) < 5:
-                    decimal_part = decimal_part.ljust(5, '0')
-                adjusted_buy_price_str = f"{integer_part}.{decimal_part}"
-            
-            adjusted_buy_price_normalized = Decimal(str(round(Decimal(adjusted_buy_price_str), 5)))
-            
-            # Similar normalization for adjusted_sell_price if needed
-            adjusted_sell_price_str = str(adjusted_sell_price)
-            if '.' in adjusted_sell_price_str:
-                integer_part, decimal_part = adjusted_sell_price_str.split('.')
-                if len(decimal_part) < 5:
-                    decimal_part = decimal_part.ljust(5, '0')
-                adjusted_sell_price_str = f"{integer_part}.{decimal_part}"
-            
-            adjusted_sell_price_normalized = Decimal(str(round(Decimal(adjusted_sell_price_str), 5)))
-            
-        except Exception as e:
-            orders_logger.error(f"[PENDING_ORDER] Error normalizing prices for comparison: {str(e)}", exc_info=True)
-            return
-        
-        # Only use adjusted_buy_price for all pending order types
-        if not adjusted_buy_price:
-            orders_logger.error(f"[PENDING_ORDER] Adjusted buy price missing for symbol {symbol} when checking order {order_id}. Skipping execution.")
-            return
-        
-        # Determine if the order should be triggered
-        should_trigger = False
-        if order_type_original in ['BUY_LIMIT', 'SELL_STOP']:
-            should_trigger = adjusted_buy_price_normalized <= order_price_normalized
-        elif order_type_original in ['SELL_LIMIT', 'BUY_STOP']:
-            should_trigger = adjusted_buy_price_normalized >= order_price_normalized
-        else:
-            orders_logger.error(f"[PENDING_ORDER] Unknown order type {order_type_original} for order {order_id}. Skipping execution.")
-            return
-        
-        # Compare with small epsilon tolerance to catch very close values
-        epsilon = Decimal(SLTP_EPSILON)  # Small tolerance
-        price_diff = abs(adjusted_buy_price_normalized - order_price_normalized)
-        is_close = price_diff < epsilon
-        
-        # Consider using epsilon for near-exact matches
-        should_trigger_with_epsilon = False
-        if order_type_original in ['BUY_LIMIT', 'SELL_STOP']:
-            should_trigger_with_epsilon = (adjusted_buy_price_normalized <= order_price_normalized) or is_close
-        elif order_type_original in ['SELL_LIMIT', 'BUY_STOP']:
-            should_trigger_with_epsilon = (adjusted_buy_price_normalized >= order_price_normalized) or is_close
-        
-        # Use epsilon-based trigger when prices are very close
-        if should_trigger_with_epsilon and not should_trigger:
-            should_trigger = True
-        
-        if not should_trigger:
-            return
-        
-        # Calculate the required margin for the order using calculate_single_order_margin
-        order_quantity_decimal = Decimal(str(db_order.order_quantity))
-        user_leverage = Decimal(str(user_data.get('leverage', '1.0')))
-        # Get external symbol info from DB
+        # 3. Fetch external symbol info
+        from app.services.margin_calculator import get_external_symbol_info
         external_symbol_info = await get_external_symbol_info(db, symbol)
-        
-        # Get raw market data (for margin calculation) using the synchronous version
-        from app.firebase_stream import get_latest_market_data as get_latest_market_data_sync
-        raw_market_data = get_latest_market_data_sync(symbol)
-        if not raw_market_data or not raw_market_data.get('o'):
-            # Fallback to last known price from Redis
-            last_known = await get_last_known_price(redis_client, symbol)
-            if last_known:
-                raw_market_data = last_known
-            else:
-                orders_logger.warning(f"[PENDING_ORDER] No market data or last known price for {symbol}. Cannot calculate margin for order {order_id}.")
-                return
-        
-        try:
-            # Wrap the calculate_single_order_margin call in a try block to catch any exceptions
-            margin, exec_price, contract_value, commission = await calculate_single_order_margin(
-                redis_client=redis_client,
-                symbol=symbol,
-                order_type=order_type_original,
-                quantity=order_quantity_decimal,
-                user_leverage=user_leverage,
-                group_settings=group_symbol_settings,
-                external_symbol_info=external_symbol_info or {},
-                raw_market_data={symbol: raw_market_data},
-                db=db,
-                user_id=user_id
-            )
-            
-            # Implement proper margin calculation using the same approach as order_processing.py
-            try:
-                # Step 1: Get all open orders for the symbol
-                open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
-                    db, user_id, symbol, order_model
-                )
-                
-                # Store original calculated margin for the individual order record
-                original_order_margin = margin
-                
-                # Step 2: Calculate total margin before adding the new order
-                margin_before_data = await calculate_total_symbol_margin_contribution(
-                    db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
-                )
-                margin_before = margin_before_data["total_margin"]
-                
-                # Step 3: Create a simulated order object for the new order
-                new_order_type = 'BUY' if order_type_original.startswith('BUY') else 'SELL'
-                simulated_order = type('Obj', (object,), {
-                    'order_quantity': order_quantity_decimal,
-                    'order_type': new_order_type,
-                    'margin': original_order_margin,
-                    'id': None,  # Add id attribute to match real orders
-                    'order_id': 'NEW_PENDING_TRIGGERED'  # Add order_id attribute for logging
-                })()
-                
-                # Step 4: Calculate total margin after adding the new order
-                margin_after_data = await calculate_total_symbol_margin_contribution(
-                    db, redis_client, user_id, symbol, 
-                    open_orders_for_symbol + [simulated_order],
-                    order_model, user_type
-                )
-                margin_after = margin_after_data["total_margin"]
-                
-                # Step 5: Calculate additional margin required (can be negative if hedging reduces margin)
-                # Let the calculate_total_symbol_margin_contribution function handle all the hedging logic
-                margin_difference = max(Decimal("0.0"), margin_after - margin_before)
-                
-                # Use margin_difference for updating user's total margin
-                # This can be positive (adding margin) or negative (reducing margin due to hedging)
-                margin = margin_difference
-                
-            except Exception as margin_calc_error:
-                orders_logger.error(f"[PENDING_ORDER] Error calculating margin effect for user {user_id}: {str(margin_calc_error)}", exc_info=True)
-                # If the advanced calculation fails, fall back to using the original calculated margin
-                margin = original_order_margin 
-        except Exception as margin_error:
-            orders_logger.error(f"[PENDING_ORDER] Error calculating margin for order {order_id}: {str(margin_error)}", exc_info=True)
-            return
-        
-        # Fetch the latest dynamic portfolio to get up-to-date free_margin
-        try:
-            dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
-            if dynamic_portfolio:
-                user_free_margin = Decimal(str(dynamic_portfolio.get('free_margin', '0.0')))
-            else:
-                # Fallback: calculate free margin from user data
-                current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
-                current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
-                user_free_margin = current_wallet_balance_decimal - current_total_margin_decimal
-        except Exception as portfolio_error:
-            orders_logger.error(f"[PENDING_ORDER] Error fetching dynamic portfolio for user {user_id}: {str(portfolio_error)}", exc_info=True)
-            # Fallback: calculate free margin from user data
-            current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
-            current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
-            user_free_margin = current_wallet_balance_decimal - current_total_margin_decimal
-        
-        # Check if user has sufficient free margin for the new order
-        if margin > user_free_margin:
-            orders_logger.warning(f"[PENDING_ORDER] Order {order_id} for user {user_id} canceled due to insufficient free margin. Required: {margin}, Available free margin: {user_free_margin}")
-            db_order.order_status = 'CANCELLED'
-            db_order.cancel_message = "InsufficientFreeMargin"
-            try:
-                await db.commit()
-                await db.refresh(db_order)
-            except Exception as commit_error:
-                orders_logger.error(f"[PENDING_ORDER] Error committing cancelled order {order_id}: {str(commit_error)}", exc_info=True)
-                await db.rollback()
-            
-            # Remove from pending orders
-            await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
-            return
-        
-        # Get contract size and profit currency from symbol settings
-        contract_size = Decimal(str(group_symbol_settings.get('contract_size', 100000)))
-        profit_currency = group_symbol_settings.get('profit', 'USD')
-        
-        # Calculate contract value using the CORRECT formula - this should match what we calculated above
-        contract_value = order_quantity_decimal * contract_size
-
-        # Update the order properties with the calculated values
-        try:
-            # Store the original calculated margin in the order (without any hedging adjustments)
-            # This ensures we always record the true margin requirement for this individual order
-            db_order.margin = original_order_margin
-            db_order.contract_value = contract_value
-            db_order.commission = commission
-            db_order.order_price = exec_price  # Use the execution price from margin calculation
-        except Exception as value_update_error:
-            orders_logger.error(f"[PENDING_ORDER] Error updating order with calculated values: {str(value_update_error)}", exc_info=True)
-
-        # Determine the new order type (removing LIMIT/STOP)
-        try:
-            new_order_type = 'BUY' if order_type_original in ['BUY_LIMIT', 'BUY_STOP'] else 'SELL'
-            db_order.open_time = datetime.now(timezone.utc) 
-            db_order.order_type = new_order_type
-            # Set stop_loss and take_profit to None
-            db_order.stop_loss = None
-            db_order.take_profit = None
-        except Exception as update_error:
-            orders_logger.error(f"[PENDING_ORDER] Error updating order object with new values: {str(update_error)}", exc_info=True)
+        if not external_symbol_info:
+            logger.error(f"[PENDING_ORDER] External symbol info not found for {symbol}")
             return
 
-        # Non-Barclays user
-        # FIX: Refresh user data right before margin calculation to get current state
-        try:
-            # Get fresh user data from database right before margin calculation
-            user = None
-            if user_type == 'live':
-                from app.crud.user import get_user_by_id
-                user = await get_user_by_id(db, user_id, user_type='live')
-                if not user:
-                    # Try demo table if live lookup fails
-                    from app.crud.user import get_demo_user_by_id
-                    user = await get_demo_user_by_id(db, user_id)
-            else:
-                from app.crud.user import get_demo_user_by_id
-                user = await get_demo_user_by_id(db, user_id)
-                if not user:
-                    # Try live table if demo lookup fails
-                    from app.crud.user import get_user_by_id
-                    user = await get_user_by_id(db, user_id, user_type='live')
+        # 4. Fetch raw market data
+        raw_market_data = await get_latest_market_data()
+        if not raw_market_data:
+            logger.error(f"[PENDING_ORDER] Failed to get market data")
+            return
 
-            if not user:
-                logger.error(f"[SLTP_CHECK] User {user_id} not found in either live or demo tables for order {get_attr(order, 'order_id')}")
-                return
-                
-            current_wallet_balance_decimal = Decimal(str(user.wallet_balance))
-            current_total_margin_decimal = Decimal(str(user.margin))
-            
-        except Exception as user_refresh_error:
-            orders_logger.error(f"[PENDING_ORDER] Error refreshing user data: {str(user_refresh_error)}", exc_info=True)
-            # Fallback to original user data
-            current_wallet_balance_decimal = Decimal(str(user_data.get('wallet_balance', '0')))
-            current_total_margin_decimal = Decimal(str(user_data.get('margin', '0')))
+        # 5. Calculate margin/commission for this order (as in process_new_order)
+        full_margin_usd, exec_price, contract_value, commission = await calculate_single_order_margin(
+            redis_client=redis_client,
+            symbol=symbol,
+            order_type=new_order_type,
+            quantity=quantity,
+            user_leverage=leverage,
+            group_settings=group_settings,
+            external_symbol_info=external_symbol_info,
+            raw_market_data=raw_market_data,
+            db=db,
+            user_id=user_id,
+            order_price=current_price
+        )
+        if full_margin_usd is None:
+            logger.error(f"[PENDING_ORDER] Margin calculation failed for order {order_id}")
+            return
 
-        # FIX: Only update the margin if there's a real change needed
-        # For perfect hedging, if margin is zero, we don't need to update the user's overall margin at all
-        if margin > Decimal('0'):
-            new_total_margin = current_total_margin_decimal + margin
+        # 6. Fetch all open orders for this symbol
+        order_model = get_order_model(user_type)
+        open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
+            db, user_id, symbol, order_model
+        )
+
+        # 7. Simulate the triggered order as an object
+        simulated_order = type('Obj', (object,), {
+            'order_quantity': quantity,
+            'order_type': new_order_type,
+            'margin': full_margin_usd,
+            'id': None,
+            'order_id': order_id
+        })()
+
+        # 8. Calculate margin before and after (hedging logic)
+        # margin_before_data, margin_after_data = await asyncio.gather(
+        #     calculate_total_symbol_margin_contribution(
+        #         db, redis_client, user_id, symbol, open_orders_for_symbol, order_model, user_type
+        #     ),
+        #     calculate_total_symbol_margin_contribution(
+        #         db, redis_client, user_id, symbol, open_orders_for_symbol + [simulated_order], order_model, user_type
+        #     )
+        # )
+        # margin_before = margin_before_data["total_margin"]
+        # margin_after = margin_after_data["total_margin"]
+        # additional_margin = max(Decimal("0.0"), margin_after - margin_before)
+        # logger.info(f"[PENDING_ORDER] Margin before: {margin_before}, after: {margin_after}, additional: {additional_margin}")
+
+        # 9. Update user margin - Calculate total user margin including all symbols
+        # Get current user margin from database
+        if user_type == "live":
+            db_user = await get_user_by_id(db, user_id)
         else:
-            # Perfect hedging case - no need to update the user's margin
-            new_total_margin = current_total_margin_decimal
+            db_user = await get_demo_user_by_id(db, user_id)
 
-        try:
-            # Update user's margin with the new total that includes hedging adjustments
-            # Only update margin in the database if there's a change to avoid unnecessary DB operations
-            if new_total_margin != current_total_margin_decimal:
-                await update_user_margin(
-                    db,
-                    user_id,
-                    user_type,
-                    new_total_margin
-                )
-            
-            # Always refresh user data in the cache, even for a perfect hedge
-            try:
-                # Get updated user data from the database
-                user_model = User if user_type == 'live' else DemoUser
-                updated_user = await db.execute(select(user_model).filter(user_model.id == user_id))
-                updated_user = updated_user.scalars().first()
-                
-                if updated_user:
-                    # Update the user data cache with fresh data from database
-                    user_data_to_cache = {
-                        "id": updated_user.id,
-                        "email": getattr(updated_user, 'email', None),
-                        "group_name": updated_user.group_name,
-                        "leverage": updated_user.leverage,
-                        "user_type": user_type,
-                        "account_number": getattr(updated_user, 'account_number', None),
-                        "wallet_balance": updated_user.wallet_balance,
-                        "margin": updated_user.margin,  # This contains the new margin value
-                        "first_name": getattr(updated_user, 'first_name', None),
-                        "last_name": getattr(updated_user, 'last_name', None),
-                        "country": getattr(updated_user, 'country', None),
-                        "phone_number": getattr(updated_user, 'phone_number', None),
-                    }
-                    await set_user_data_cache(redis_client, user_id, user_data_to_cache)
-            except Exception as cache_error:
-                orders_logger.error(f"[PENDING_ORDER] Error updating user data cache: {str(cache_error)}", exc_info=True)
-            
-            # Publish user data update notification to WebSocket clients using the existing cache function
-            await publish_user_data_update(redis_client, user_id)
-        except Exception as margin_update_error:
-            orders_logger.error(f"[PENDING_ORDER] Error updating user margin: {str(margin_update_error)}", exc_info=True)
+        # Calculate total margin across all symbols
+        from app.services.order_processing import calculate_total_user_margin
+        total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+        # total_user_margin = margin_after + additional_margin
+        logger.info(f"[PENDING_ORDER] Total user margin: {total_user_margin}")
+        # Update margin in DB with the total user margin
+        await update_user_margin(db, user_id, user_type, total_user_margin)
+        # await db.commit()
+        await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+        logger.info(f"[PENDING_ORDER] Updated user {user_id} total margin to {total_user_margin} (includes all symbols)")
+
+        # 10. Update order in database (status, margin, commission, price, etc.)
+        db_order = await crud_order.get_order_by_id(db, order_id, order_model)
+        if not db_order:
+            logger.error(f"[PENDING_ORDER] DB order not found for order_id {order_id}")
             return
-        
-        db_order.order_status = 'OPEN'
-
-        # Commit DB changes for the order status and updated fields
-        try:
-            await db.commit()
-            await db.refresh(db_order)
-        except Exception as commit_error:
-            orders_logger.error(f"[PENDING_ORDER] Error committing order status change to database: {str(commit_error)}", exc_info=True)
-            return
-
-        try:
-            # --- Portfolio Update & Websocket Event ---
-            user_data_for_portfolio = await get_user_data_cache(redis_client, user_id, db, user_type) # Re-fetch updated user data
-            if user_data_for_portfolio:
-                open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-                open_positions_dicts = []
-                
-                # Convert order objects to dictionaries safely
-                for o in open_orders:
-                    if hasattr(o, 'to_dict'):
-                        open_positions_dicts.append(o.to_dict())
-                    else:
-                        # Create a dictionary manually if to_dict method is not available
-                        order_dict = {
-                            'order_id': getattr(o, 'order_id', None),
-                            'order_company_name': getattr(o, 'order_company_name', None),
-                            'order_type': getattr(o, 'order_type', None),
-                            'order_quantity': getattr(o, 'order_quantity', None),
-                            'order_price': getattr(o, 'order_price', None),
-                            'margin': getattr(o, 'margin', None),
-                            'contract_value': getattr(o, 'contract_value', None),
-                            'stop_loss': getattr(o, 'stop_loss', None),
-                            'take_profit': getattr(o, 'take_profit', None),
-                            'commission': getattr(o, 'commission', '0.0'),
-                            'order_status': getattr(o, 'order_status', None),
-                            'order_user_id': getattr(o, 'order_user_id', None)
-                        }
-                        open_positions_dicts.append(order_dict)
-                
-                # Fetch current prices for all open positions to calculate portfolio correctly
-                adjusted_market_prices = {}
-                if group_symbol_settings: # Ensure group_symbol_settings is not None
-                    for symbol_key in group_symbol_settings.keys():
-                        prices = await get_last_known_price(redis_client, symbol_key)
-                        if prices:
-                            adjusted_market_prices[symbol_key] = prices
-                
-                portfolio = await calculate_user_portfolio(user_data_for_portfolio, open_positions_dicts, adjusted_market_prices, group_symbol_settings or {}, redis_client)
-                await set_user_portfolio_cache(redis_client, user_id, portfolio)
-                await publish_account_structure_changed_event(redis_client, user_id)
-        except Exception as e:
-            orders_logger.error(f"[PENDING_ORDER] Error updating portfolio cache or publishing websocket event: {str(e)}", exc_info=True)
-            # Continue execution - don't return here as the order is already opened
-        
-        # Remove the order from Redis pending list AFTER successful processing
-        # Use the original_order_type for removal as that's how it's stored in Redis
-        try:
-            await remove_pending_order(redis_client, order_id, symbol, order_type_original, user_id)
-            
-            # Update users with orders cache for this symbol
-            await add_user_to_symbol_cache(redis_client, symbol, user_id, user_type)
-            
-            # Notify clients about order execution through websockets
-            await publish_order_execution_notification(redis_client, user_id, order_id, symbol, new_order_type, exec_price)
-        except Exception as remove_error:
-            orders_logger.error(f"[PENDING_ORDER] Error removing order from Redis: {str(remove_error)}", exc_info=True)
-
-    except Exception as e:
-        orders_logger.error(f"[PENDING_ORDER] Critical error in trigger_pending_order for order {order.get('order_id', 'N/A')}: {str(e)}", exc_info=True)
-        raise
-
-# New function to publish order execution notification
-async def publish_order_execution_notification(redis_client: Redis, user_id: str, order_id: str, symbol: str, order_type: str, execution_price: Decimal):
-    """
-    Publishes a notification that a pending order has been executed to the Redis pub/sub channel.
-    This allows websocket clients to be notified of order execution in real-time.
-    """
-    try:
-        from app.core.logging_config import orders_logger
-        
-        # Create the notification payload
-        notification = {
-            "event": "pending_order_executed",
-            "user_id": user_id,
-            "order_id": order_id,
-            "symbol": symbol,
-            "order_type": order_type,
-            "execution_price": str(execution_price),
-            "timestamp": datetime.now().isoformat()
+        update_fields = {
+            'order_status': 'OPEN',
+            'order_type': new_order_type,
+            'order_price': current_price,
+            'margin': full_margin_usd,
+            'commission': commission,
+            'triggered_price': current_price,
         }
-        
-        # Publish to the user's channel
-        channel = f"user:{user_id}:notifications"
-        await redis_client.publish(channel, json.dumps(notification))
-    
+        updated_order = await crud_order.update_order_with_tracking(
+            db, db_order, update_fields, user_id, user_type, "PENDING_TO_OPEN"
+        )
+        await db.commit()
+        await db.refresh(updated_order)
+        await db.refresh(db_user)
+        logger.info(f"[PENDING_ORDER] Order {order_id} status is OPEN, margin/commission updated")
+
+        # 11. Remove from Redis pending orders
+        from app.services.pending_orders import remove_pending_order
+        await remove_pending_order(redis_client, order_id, symbol, order_type_original, str(user_id))
+
+        # 12. Update user data cache and balance/margin cache
+        db_user = await (get_demo_user_by_id(db, user_id) if user_type == 'demo' else get_user_by_id(db, user_id))
+        await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+        user_data_to_cache = {
+            "id": db_user.id,
+            "email": getattr(db_user, 'email', None),
+            "group_name": db_user.group_name,
+            "leverage": db_user.leverage,
+            "user_type": user_type,
+            "account_number": getattr(db_user, 'account_number', None),
+            "wallet_balance": db_user.wallet_balance,
+            "margin": total_user_margin,  # Use the calculated total margin
+        }
+        from app.core.cache import set_user_data_cache
+        await set_user_data_cache(redis_client, user_id, user_data_to_cache, user_type)
+
+        # 13. Update users with orders cache for SL/TP processing
+        from app.services.pending_orders import add_user_to_symbol_cache
+        await add_user_to_symbol_cache(redis_client, symbol, user_id, user_type)
+
+        # 14. Publish updates to websocket
+        from app.core.cache import publish_order_update, publish_user_data_update, publish_market_data_trigger
+        await publish_order_update(redis_client, user_id)
+        await publish_user_data_update(redis_client, user_id)
+        await publish_market_data_trigger(redis_client)  # Trigger immediate websocket update
+
+        # 15. Update static orders cache for websocket
+        from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
+        await update_static_orders_cache(user_id, db, redis_client, user_type)
+
+        logger.info(f"[PENDING_ORDER] Successfully executed order {order_id} for user {user_id}")
+        logger.info(f"[PENDING_ORDER] Order {order_id}: Final price={exec_price}, margin={full_margin_usd}, commission={commission}")
+        logger.info(f"[PENDING_ORDER_SUMMARY] Order {order_id} executed: {order_type_original} -> {new_order_type}, Placed: {placed_price}, Triggered: {current_price}, Margin: {full_margin_usd}, Commission: {commission}, AdditionalMargin: {additional_margin}")
+
     except Exception as e:
-        from app.core.logging_config import orders_logger
-        orders_logger.error(f"[PENDING_ORDER] Error publishing order execution notification: {str(e)}", exc_info=True)
+        logger.error(f"[PENDING_ORDER] Error triggering pending order {order_id}: {e}", exc_info=True)
+        raise
 
 async def check_and_trigger_stoploss_takeprofit(
     db: AsyncSession,
@@ -1610,7 +1430,700 @@ async def close_order(
         await update_static_orders_cache(order_user_id, db, redis_client, user_type)
         await publish_order_update(redis_client, order_user_id)
         await publish_user_data_update(redis_client, order_user_id)
+        await publish_market_data_trigger(redis_client)  # Trigger immediate websocket update
     except Exception as e:
         logger.error(f"[ORDER_CLOSE] Error closing order {get_attr(order, 'order_id')}: {e}", exc_info=True)
 
+async def check_and_trigger_pending_orders_redis(redis: Redis, symbol: str, order_type: str, adjusted_price: float):
+    """
+    On each price tick, find all matching pending orders for symbol/order_type using ZSET,
+    fetch their data from HASH, and queue them for processing.
+    """
+    # Convert adjusted_price to float with 6 decimal precision
+    adjusted_price_rounded = round(float(adjusted_price), 6)
+    
+    # Log the check for debugging
+    logger.debug(f"[PENDING_CHECK] Checking {order_type} orders for {symbol} at price {adjusted_price_rounded}")
+    
+    # 1. Find matching order_ids
+    order_ids = await get_pending_orders_by_price(redis, symbol, order_type, adjusted_price_rounded)
+    if not order_ids:
+        logger.debug(f"[PENDING_CHECK] No matching {order_type} orders found for {symbol}")
+        return 0
+    
+    logger.info(f"[PENDING_CHECK] Found {len(order_ids)} matching {order_type} orders for {symbol} at price {adjusted_price_rounded}")
+    triggered = 0
+    for order_id in order_ids:
+        # 2. Fetch order data from HASH
+        order = await get_order_hash(redis, order_id)
+        if not order:
+            logger.warning(f"[PENDING_CHECK] Order {order_id} not found in hash, skipping")
+            continue
+        
+        # Log the price matching details
+        order_price = order.get('order_price', 'unknown')
+        logger.info(f"[PENDING_CHECK] Order {order_id}: Placed at {order_price}, Market price {adjusted_price_rounded}, Type {order_type}")
+        
+        # Log the trigger condition check
+        if order_type in ["BUY_LIMIT", "SELL_STOP"]:
+            trigger_condition = f"Market price ({adjusted_price_rounded}) <= Pending price ({order_price})"
+        else:  # BUY_STOP, SELL_LIMIT
+            trigger_condition = f"Market price ({adjusted_price_rounded}) >= Pending price ({order_price})"
+        logger.info(f"[PENDING_CHECK] Order {order_id}: {trigger_condition} - TRIGGERED!")
+        
+        # 3. Queue for processing
+        await queue_triggered_order(redis, order_id)
+        logger.info(f"[PENDING_CHECK] Queued order {order_id} for processing")
+        triggered += 1
+    
+    if triggered > 0:
+        logger.info(f"[PENDING_CHECK] Total triggered: {triggered} {order_type} orders for {symbol}")
+    
+    return triggered
+
+async def pending_order_trigger_worker(redis: Redis, db_factory, concurrency: int = 10):
+    """
+    Background worker to process triggered pending orders from the Redis stream.
+    db_factory: a callable that returns a new AsyncSession (e.g. AsyncSessionLocal)
+    concurrency: max number of concurrent triggers
+    """
+    import asyncio
+    from app.services.pending_orders import trigger_pending_order
+    last_id = "0"
+    sem = asyncio.Semaphore(concurrency)
+    error_count = 0
+    max_errors = 50  # Reset stream if too many errors
+    
+    logger.info("[PENDING_TRIGGER_WORKER] Starting pending order trigger worker")
+    
+    while True:
+        try:
+            # Use fetch_triggered_orders to get new entries from the stream
+            entries = await fetch_triggered_orders(redis, last_id)
+            
+            if not entries:
+                await asyncio.sleep(0.1)
+                continue
+            
+            # Process each entry
+            for entry_id, order_id in entries:
+                async with sem:
+                    try:
+                        logger.info(f"[PENDING_TRIGGER_WORKER] Processing triggered order {order_id}")
+                        
+                        # Get order data from hash
+                        order_data = await get_order_hash(redis, order_id)
+                        if not order_data:
+                            logger.warning(f"[PENDING_TRIGGER_WORKER] Order {order_id} not found in hash")
+                            error_count += 1
+                            continue
+                        
+                        # Create new DB session
+                        async with db_factory() as db:
+                            try:
+                                # Get current price for the order
+                                symbol = order_data.get('order_company_name')
+                                placed_price = decimal_to_float_6dp(order_data.get('order_price', 0))
+                                
+                                # Get current market price for comparison
+                                current_market_price = None
+                                try:
+                                    # Try to get adjusted price from cache
+                                    user_data = await get_user_data_cache(redis, order_data.get('order_user_id'), db, order_data.get('user_type', 'live'))
+                                    group_name = user_data.get('group_name') if user_data else None
+                                    if group_name:
+                                        adjusted_prices = await get_adjusted_market_price_cache(redis, group_name, symbol)
+                                        if adjusted_prices:
+                                            # Use appropriate price based on order type
+                                            order_type = order_data.get('order_type', '')
+                                            if order_type in ['BUY_LIMIT', 'BUY_STOP']:
+                                                current_market_price = adjusted_prices.get('buy')
+                                            else:  # SELL_LIMIT, SELL_STOP
+                                                current_market_price = adjusted_prices.get('buy')
+                                except Exception as price_error:
+                                    logger.warning(f"[PENDING_TRIGGER_WORKER] Could not get current market price for {symbol}: {price_error}")
+                                
+                                logger.info(f"[PENDING_TRIGGER_WORKER] Processing order {order_id}: symbol={symbol}, placed_price={placed_price}, current_market_price={current_market_price}")
+                                
+                                if symbol and placed_price > 0:
+                                    # Use current market price if available, otherwise use placed price
+                                    trigger_price = current_market_price if current_market_price is not None else placed_price
+                                    
+                                    # Trigger the order using existing logic
+                                    await trigger_pending_order(
+                                        db=db,
+                                        redis_client=redis,
+                                        order=order_data,
+                                        current_price=Decimal(str(trigger_price))
+                                    )
+                                    logger.info(f"[PENDING_TRIGGER_WORKER] Successfully triggered order {order_id}")
+                                    error_count = 0  # Reset error count on success
+                                else:
+                                    logger.warning(f"[PENDING_TRIGGER_WORKER] Invalid order data for {order_id}: symbol={symbol}, price={placed_price}")
+                                    error_count += 1
+                            except Exception as trigger_error:
+                                logger.error(f"[PENDING_TRIGGER_WORKER] Error triggering order {order_id}: {trigger_error}", exc_info=True)
+                                error_count += 1
+                            finally:
+                                await db.close()
+                        
+                        # Update last_id to mark this entry as processed
+                        last_id = entry_id
+                        
+                    except Exception as e:
+                        logger.error(f"[PENDING_TRIGGER_WORKER] Error processing stream entry {entry_id}: {e}", exc_info=True)
+                        error_count += 1
+                        # Still update last_id to avoid infinite loop
+                        last_id = entry_id
+            
+            # If too many errors, reset the stream
+            if error_count >= max_errors:
+                logger.warning(f"[PENDING_TRIGGER_WORKER] Too many errors ({error_count}), resetting stream")
+                try:
+                    # Clear the stream and start fresh
+                    await redis.xtrim(PENDING_TRIGGER_QUEUE, maxlen=0)
+                    last_id = "0"
+                    error_count = 0
+                    logger.info("[PENDING_TRIGGER_WORKER] Stream reset successfully")
+                except Exception as reset_error:
+                    logger.error(f"[PENDING_TRIGGER_WORKER] Error resetting stream: {reset_error}")
+                    # If reset fails, just continue with current last_id
+                    error_count = 0
+            
+        except Exception as e:
+            logger.error(f"[PENDING_TRIGGER_WORKER] Error in main loop: {e}", exc_info=True)
+            await asyncio.sleep(1)  # Wait before retrying
+        
+async def cleanup_pending_order_stream(redis: Redis):
+    """
+    Clean up the pending order stream and reset the system.
+    This can be called to fix issues with old stream entries.
+    """
+    try:
+        logger.info("[CLEANUP] Starting pending order stream cleanup")
+        
+        # Clear the trigger queue stream
+        await redis.xtrim(PENDING_TRIGGER_QUEUE, maxlen=0)
+        logger.info("[CLEANUP] Cleared pending_trigger_queue stream")
+        
+        # Optionally, you can also clear all pending order hashes and zsets
+        # This is more aggressive and will remove all pending orders from Redis
+        # Uncomment the following lines if you want to clear everything:
+        
+        # # Clear all pending order hashes
+        # pattern = f"{PENDING_HASH_PREFIX}:*"
+        # keys = await redis.keys(pattern)
+        # if keys:
+        #     await redis.delete(*keys)
+        #     logger.info(f"[CLEANUP] Cleared {len(keys)} pending order hashes")
+        
+        # # Clear all pending order zsets
+        # pattern = f"{PENDING_ZSET_PREFIX}:*"
+        # keys = await redis.keys(pattern)
+        # if keys:
+        #     await redis.delete(*keys)
+        #     logger.info(f"[CLEANUP] Cleared {len(keys)} pending order zsets")
+        
+        logger.info("[CLEANUP] Pending order stream cleanup completed")
+        return True
+    except Exception as e:
+        logger.error(f"[CLEANUP] Error during cleanup: {e}", exc_info=True)
+        return False
+        
+# --- New Optimized Pending Order Processing System ---
+
+async def process_pending_orders_for_symbol(symbol: str, redis_client: Redis):
+    """
+    Main orchestrator function for processing pending orders for a specific symbol.
+    Similar to process_sltp_for_symbol but specifically for pending orders.
+    """
+    try:
+        orders_logger.info(f"[PENDING_ORDERS] Starting processing for symbol: {symbol}")
+        
+        # Get users with pending orders for this symbol
+        users_data = await get_users_with_pending_orders_for_symbol(redis_client, symbol)
+        
+        orders_logger.info(f"[PENDING_ORDERS] Found {len(users_data)} users with pending orders for {symbol}")
+        
+        if not users_data:
+            orders_logger.debug(f"[PENDING_ORDERS] No users with pending orders for symbol {symbol}")
+            return
+            
+        # Process each user's pending orders
+        for user_id, user_type in users_data:
+            try:
+                orders_logger.info(f"[PENDING_ORDERS] Processing user {user_id} ({user_type}) for symbol {symbol}")
+                await process_user_pending_orders_for_symbol(
+                    user_id=user_id,
+                    user_type=user_type,
+                    symbol=symbol,
+                    redis_client=redis_client
+                )
+            except Exception as e:
+                orders_logger.error(
+                    f"[PENDING_ORDERS] Error processing pending orders for user {user_id} "
+                    f"symbol {symbol}: {str(e)}", 
+                    exc_info=True
+                )
+                continue
+                
+    except Exception as e:
+        orders_logger.error(
+            f"[PENDING_ORDERS] Error in process_pending_orders_for_symbol for {symbol}: {str(e)}", 
+            exc_info=True
+        )
+
+async def process_user_pending_orders_for_symbol(
+    user_id: int,
+    user_type: str,
+    symbol: str,
+    redis_client: Redis
+):
+    """
+    Process all pending orders for a specific user and symbol.
+    Uses the new trigger processing system with proper margin validation.
+    """
+    try:
+        orders_logger.info(f"[PENDING_USER] Processing user {user_id} ({user_type}) for symbol {symbol}")
+        
+        # Get user's group name from cache
+        user_data = await get_user_data_cache(redis_client, user_id, None, user_type)
+        if not user_data or not user_data.get('group_name'):
+            orders_logger.warning(f"[PENDING_USER] No user data or group name for user {user_id}")
+            return
+            
+        group_name = user_data['group_name']
+        orders_logger.info(f"[PENDING_USER] User {user_id} group: {group_name}")
+        
+        # Get adjusted prices for the symbol
+        adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+        if not adjusted_prices:
+            orders_logger.warning(f"[PENDING_USER] No adjusted prices for symbol {symbol}, group {group_name}")
+            return
+            
+        # We only use adjusted ask price (buy price) for pending order triggers
+        adjusted_ask_price = adjusted_prices.get('buy')
+        if not adjusted_ask_price:
+            orders_logger.warning(f"[PENDING_USER] No adjusted ask price for symbol {symbol}")
+            return
+            
+        orders_logger.info(f"[PENDING_USER] Adjusted ask price for {symbol}: {adjusted_ask_price}")
+            
+        # Get all pending orders for this user and symbol
+        pending_orders = await get_user_pending_orders_for_symbol(
+            redis_client, 
+            str(user_id), 
+            symbol
+        )
+        
+        orders_logger.info(f"[PENDING_USER] Found {len(pending_orders)} pending orders for user {user_id}, symbol {symbol}")
+        
+        if not pending_orders:
+            orders_logger.debug(f"[PENDING_USER] No pending orders for user {user_id}, symbol {symbol}")
+            return
+
+        async with AsyncSessionLocal() as db:
+            for order in pending_orders:
+                try:
+                    order_id = order.get('order_id', 'unknown')
+                    order_type = order.get('order_type', 'unknown')
+                    pending_price = order.get('order_price', '0')
+                    
+                    orders_logger.info(
+                        f"[PENDING_USER] Processing order {order_id} ({order_type}) "
+                        f"with pending price {pending_price}"
+                    )
+                    
+                    await process_pending_order_trigger(redis_client, order, adjusted_ask_price, db)
+                except Exception as order_error:
+                    orders_logger.error(
+                        f"Error processing order {order.get('order_id', 'unknown')}: {str(order_error)}",
+                        exc_info=True
+                    )
+                    continue
+                
+    except Exception as e:
+        orders_logger.error(
+            f"Error in process_user_pending_orders_for_symbol: "
+            f"user={user_id}, symbol={symbol}: {str(e)}",
+            exc_info=True
+        )
+
+async def get_users_with_pending_orders_for_symbol(
+    redis_client: Redis,
+    symbol: str
+) -> List[Tuple[int, str]]:
+    """
+    Get list of user IDs and types who have pending orders for a given symbol.
+    Uses the actual Redis ZSET structure that's being used to store pending orders.
+    """
+    try:
+        users_data = []
+        
+        # Check for each order type that can be pending
+        order_types = ['BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP']
+        
+        for order_type in order_types:
+            zset_key = f"{PENDING_ZSET_PREFIX}:{symbol}:{order_type}"
+            
+            # Get all order IDs from this ZSET
+            order_ids = await redis_client.zrange(zset_key, 0, -1)
+            
+            for order_id in order_ids:
+                try:
+                    order_id_str = order_id.decode() if isinstance(order_id, bytes) else order_id
+                    
+                    # Get order details from hash
+                    order_data = await get_order_hash(redis_client, order_id_str)
+                    if order_data:
+                        user_id = int(order_data.get('order_user_id', 0))
+                        user_type = order_data.get('user_type', 'live')
+                        
+                        if user_id > 0:
+                            users_data.append((user_id, user_type))
+                            
+                except Exception as e:
+                    orders_logger.error(f"Error processing order {order_id}: {str(e)}")
+                    continue
+        
+        # Remove duplicates while preserving order
+        unique_users = []
+        seen = set()
+        for user_id, user_type in users_data:
+            if (user_id, user_type) not in seen:
+                unique_users.append((user_id, user_type))
+                seen.add((user_id, user_type))
+        
+        return unique_users
+        
+    except Exception as e:
+        orders_logger.error(f"Error getting users with pending orders: {str(e)}", exc_info=True)
+        return []
+
+async def get_user_pending_orders_for_symbol(
+    redis_client: Redis,
+    user_id: str,
+    symbol: str
+) -> List[Dict[str, Any]]:
+    """
+    Get all pending orders for a specific user and symbol.
+    Uses the actual Redis ZSET structure that's being used to store pending orders.
+    """
+    try:
+        orders = []
+        
+        # Check for each order type that can be pending
+        order_types = ['BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP']
+        
+        for order_type in order_types:
+            zset_key = f"{PENDING_ZSET_PREFIX}:{symbol}:{order_type}"
+            
+            # Get all order IDs from this ZSET
+            order_ids = await redis_client.zrange(zset_key, 0, -1)
+            
+            for order_id in order_ids:
+                try:
+                    order_id_str = order_id.decode() if isinstance(order_id, bytes) else order_id
+                    
+                    # Get order details from hash
+                    order_data = await get_order_hash(redis_client, order_id_str)
+                    if order_data and str(order_data.get('order_user_id', '')) == str(user_id):
+                        orders.append(order_data)
+                        
+                except Exception as e:
+                    orders_logger.error(f"Error processing order {order_id}: {str(e)}")
+                    continue
+        
+        return orders
+        
+    except Exception as e:
+        orders_logger.error(
+            f"Error getting pending orders for user {user_id}, symbol {symbol}: {str(e)}", 
+            exc_info=True
+        )
+        return []
+
+# --- End New Optimized Pending Order Processing System ---
+
+async def recalculate_margin_for_pending_order(
+    redis_client: Redis,
+    order_data: Dict[str, Any],
+    db: AsyncSession
+) -> Optional[Decimal]:
+    """
+    Recalculates margin for a pending order after price modification.
+    Returns the new margin value or None if calculation fails.
+    """
+    try:
+        user_id = int(order_data.get('order_user_id'))
+        user_type = order_data.get('user_type', 'live')
+        symbol = order_data.get('order_company_name')
+        order_type = order_data.get('order_type')
+        quantity = Decimal(str(order_data.get('order_quantity', '0')))
+        price = Decimal(str(order_data.get('order_price', '0')))
+
+        # Get user data and group settings
+        user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+        if not user_data or not user_data.get('group_name'):
+            orders_logger.error(f"No user data found for user {user_id}")
+            return None
+
+        group_name = user_data['group_name']
+        leverage = Decimal(str(user_data.get('leverage', '1')))
+        
+        group_settings = await get_group_symbol_settings_cache(redis_client, group_name, symbol)
+        if not group_settings:
+            orders_logger.error(f"No group settings found for {group_name}")
+            return None
+
+        # Get external symbol info
+        from app.services.margin_calculator import get_external_symbol_info
+        external_symbol_info = await get_external_symbol_info(db, symbol)
+        if not external_symbol_info:
+            orders_logger.error(f"No symbol info found for {symbol}")
+            return None
+
+        # Get raw market data for margin calculation
+        from app.core.firebase import get_latest_market_data
+        raw_market_data = await get_latest_market_data()
+        if not raw_market_data:
+            orders_logger.error(f"No market data available for margin calculation")
+            return None
+
+        # Calculate margin using the correct function
+        from app.services.margin_calculator import calculate_single_order_margin
+        margin_result = await calculate_single_order_margin(
+            redis_client=redis_client,
+            symbol=symbol,
+            order_type=order_type,
+            quantity=quantity,
+            user_leverage=leverage,
+            group_settings=group_settings,
+            external_symbol_info=external_symbol_info,
+            raw_market_data=raw_market_data,
+            db=db,
+            user_id=user_id,
+            order_price=price
+        )
+
+        if margin_result and len(margin_result) >= 1:
+            margin = margin_result[0]  # First element is the margin
+            orders_logger.info(f"Recalculated margin for order: {margin}")
+            return margin
+        else:
+            orders_logger.error(f"Margin calculation failed for order")
+            return None
+
+    except Exception as e:
+        orders_logger.error(f"Error recalculating margin: {str(e)}", exc_info=True)
+        return None
+
+async def update_pending_order_in_redis(
+    redis_client: Redis,
+    order_data: Dict[str, Any],
+    new_margin: Optional[Decimal] = None
+) -> bool:
+    """
+    Updates a pending order in Redis with new price and margin values.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        order_id = order_data.get('order_id')
+        symbol = order_data.get('order_company_name')
+        order_type = order_data.get('order_type')
+        user_id = str(order_data.get('order_user_id'))
+        price = Decimal(str(order_data.get('order_price', '0')))
+
+        # Remove old order from Redis
+        await remove_pending_order(redis_client, order_id, symbol, order_type, user_id)
+
+        # Update margin if provided
+        if new_margin is not None:
+            order_data['margin'] = str(new_margin)
+
+        # Add updated order back to Redis
+        await add_pending_order(redis_client, order_data)
+
+        orders_logger.info(
+            f"Updated pending order in Redis - Order: {order_id}, "
+            f"Symbol: {symbol}, Price: {price}, Margin: {new_margin}"
+        )
+        return True
+
+    except Exception as e:
+        orders_logger.error(f"Error updating pending order in Redis: {str(e)}", exc_info=True)
+        return False
+
+async def process_pending_order_trigger(
+    redis_client: Redis,
+    order: Dict[str, Any],
+    adjusted_ask_price: Decimal,
+    db: AsyncSession
+) -> bool:
+    """
+    Processes a pending order trigger with proper margin validation.
+    Returns True if order was triggered successfully.
+    """
+    try:
+        order_id = order.get('order_id')
+        user_id = int(order.get('order_user_id'))
+        user_type = order.get('user_type', 'live')
+        symbol = order.get('order_company_name')
+        order_type = order.get('order_type', '').upper()
+        pending_price = Decimal(str(order.get('order_price', '0')))
+
+        # Log trigger check
+        orders_logger.info(
+            f"[PENDING_CHECK] Order {order_id} ({order_type}): "
+            f"pending_price={pending_price}, adjusted_ask={adjusted_ask_price}"
+        )
+
+        # Check trigger conditions
+        triggered = False
+        if order_type == 'BUY_LIMIT':
+            triggered = adjusted_ask_price <= pending_price
+        elif order_type == 'SELL_LIMIT':
+            triggered = adjusted_ask_price >= pending_price
+
+        if triggered:
+            orders_logger.info(
+                f"[PENDING_TRIGGER] Order {order_id} triggered: "
+                f"Type={order_type}, Price={pending_price}, Market={adjusted_ask_price}"
+            )
+
+            # Validate margin before triggering
+            new_margin = await recalculate_margin_for_pending_order(redis_client, order, db)
+            if new_margin is None:
+                orders_logger.error(f"Failed to recalculate margin for order {order_id}")
+                return False
+
+            # Update order with new margin before queuing
+            order['margin'] = str(new_margin)
+
+            # Atomically remove from pending and queue for processing
+            async with redis_client.pipeline(transaction=True) as pipe:
+                await remove_pending_order(
+                    redis_client,
+                    order_id,
+                    symbol,
+                    order_type,
+                    str(user_id)
+                )
+                await queue_triggered_order(redis_client, order_id)
+                await pipe.execute()
+
+            return True
+
+        return False
+
+    except Exception as e:
+        orders_logger.error(f"Error processing pending order trigger: {str(e)}", exc_info=True)
+        return False
+
+# Update the process_user_pending_orders_for_symbol function to use the new trigger processing
+async def process_user_pending_orders_for_symbol(
+    user_id: int,
+    user_type: str,
+    symbol: str,
+    redis_client: Redis
+):
+    """
+    Process all pending orders for a specific user and symbol.
+    Uses the new trigger processing system with proper margin validation.
+    """
+    try:
+        # Get user's group name from cache
+        user_data = await get_user_data_cache(redis_client, user_id, None, user_type)
+        if not user_data or not user_data.get('group_name'):
+            return
+            
+        group_name = user_data['group_name']
+        
+        # Get adjusted prices for the symbol
+        adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+        if not adjusted_prices:
+            return
+            
+        # We only use adjusted ask price (buy price) for pending order triggers
+        adjusted_ask_price = adjusted_prices.get('buy')
+        if not adjusted_ask_price:
+            return
+            
+        # Get all pending orders for this user and symbol
+        pending_orders = await get_user_pending_orders_for_symbol(
+            redis_client, 
+            str(user_id), 
+            symbol
+        )
+        
+        if not pending_orders:
+            return
+
+        async with AsyncSessionLocal() as db:
+            for order in pending_orders:
+                try:
+                    await process_pending_order_trigger(redis_client, order, adjusted_ask_price, db)
+                except Exception as order_error:
+                    orders_logger.error(
+                        f"Error processing order {order.get('order_id', 'unknown')}: {str(order_error)}",
+                        exc_info=True
+                    )
+                    continue
+                
+    except Exception as e:
+        orders_logger.error(
+            f"Error in process_user_pending_orders_for_symbol: "
+            f"user={user_id}, symbol={symbol}: {str(e)}",
+            exc_info=True
+        )
+
+async def debug_pending_orders_in_redis(redis: Redis, symbol: str = None):
+    """
+    Debug function to check what pending orders exist in Redis.
+    """
+    try:
+        logger.info(f"[DEBUG_PENDING] Checking pending orders in Redis for symbol: {symbol or 'ALL'}")
+        
+        # Check for each order type
+        order_types = ['BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP']
+        
+        for order_type in order_types:
+            if symbol:
+                zset_key = f"{PENDING_ZSET_PREFIX}:{symbol}:{order_type}"
+            else:
+                # Get all symbols for this order type
+                pattern = f"{PENDING_ZSET_PREFIX}:*:{order_type}"
+                keys = await redis.keys(pattern)
+                if not keys:
+                    logger.info(f"[DEBUG_PENDING] No {order_type} orders found")
+                    continue
+                    
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    symbol_from_key = key_str.split(':')[1]
+                    await debug_pending_orders_in_redis(redis, symbol_from_key)
+                continue
+            
+            # Get all orders for this symbol and order type
+            order_ids_with_scores = await redis.zrange(zset_key, 0, -1, withscores=True)
+            
+            if order_ids_with_scores:
+                logger.info(f"[DEBUG_PENDING] Found {len(order_ids_with_scores)} {order_type} orders for {symbol}:")
+                for order_id, score in order_ids_with_scores:
+                    order_id_str = order_id.decode() if isinstance(order_id, bytes) else order_id
+                    logger.info(f"[DEBUG_PENDING]   Order {order_id_str}: price {score}")
+                    
+                    # Get order details from hash
+                    order_data = await get_order_hash(redis, order_id_str)
+                    if order_data:
+                        user_id = order_data.get('order_user_id', 'unknown')
+                        user_type = order_data.get('user_type', 'unknown')
+                        order_price = order_data.get('order_price', 'unknown')
+                        logger.info(f"[DEBUG_PENDING]     User: {user_id} ({user_type}), Placed Price: {order_price}")
+            else:
+                logger.info(f"[DEBUG_PENDING] No {order_type} orders found for {symbol}")
+                
+    except Exception as e:
+        logger.error(f"[DEBUG_PENDING] Error checking pending orders: {e}", exc_info=True)
+        
         

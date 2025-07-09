@@ -140,6 +140,62 @@ async def calculate_total_symbol_margin_contribution(
     
     return {"total_margin": calculated_total_margin, "contributing_orders_count": len(open_positions_for_symbol)}
 
+async def calculate_total_user_margin(
+    db: AsyncSession,
+    redis_client: Redis,
+    user_id: int,
+    user_type: str
+) -> Decimal:
+    """
+    Calculate total margin across all symbols for a user.
+    This includes all open orders across all symbols with proper hedging.
+    """
+    try:
+        order_model = get_order_model(user_type)
+        
+        # Get all open orders for the user
+        open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+        
+        if not open_orders:
+            return Decimal("0.0")
+        
+        # Group orders by symbol
+        orders_by_symbol = {}
+        for order in open_orders:
+            symbol = order.order_company_name
+            if symbol not in orders_by_symbol:
+                orders_by_symbol[symbol] = []
+            orders_by_symbol[symbol].append(order)
+        
+        # Calculate total margin across all symbols
+        total_margin = Decimal("0.0")
+        
+        for symbol, symbol_orders in orders_by_symbol.items():
+            try:
+                margin_data = await calculate_total_symbol_margin_contribution(
+                    db=db,
+                    redis_client=redis_client,
+                    user_id=user_id,
+                    symbol=symbol,
+                    open_positions_for_symbol=symbol_orders,
+                    order_model=order_model,
+                    user_type=user_type
+                )
+                total_margin += margin_data["total_margin"]
+                logger.debug(f"[TOTAL_USER_MARGIN] Symbol {symbol}: {margin_data['total_margin']}")
+            except Exception as e:
+                logger.error(f"[TOTAL_USER_MARGIN] Error calculating margin for symbol {symbol}: {e}")
+                continue
+        
+        total_margin = total_margin.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        logger.info(f"[TOTAL_USER_MARGIN] User {user_id} total margin across all symbols: {total_margin}")
+        
+        return total_margin
+        
+    except Exception as e:
+        logger.error(f"[TOTAL_USER_MARGIN] Error calculating total user margin for user {user_id}: {e}", exc_info=True)
+        return Decimal("0.0")
+
 async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Dict[str, Any]]:
     """
     Get external symbol info from the database.

@@ -19,7 +19,13 @@ def setup_file_logger(name: str, filename: str, level=logging.INFO) -> logging.L
     Creates a rotating file logger with specified filename and level.
     """
     log_path = os.path.join(LOG_DIR, filename)
-    handler = RotatingFileHandler(log_path, maxBytes=MAX_LOG_SIZE_MB * 1024 * 1024, backupCount=BACKUP_COUNT)
+    # Use delay=True to avoid file permission errors on Windows
+    handler = RotatingFileHandler(
+        log_path, 
+        maxBytes=MAX_LOG_SIZE_MB * 1024 * 1024, 
+        backupCount=BACKUP_COUNT,
+        delay=True  # Delay file creation until first write
+    )
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     handler.setFormatter(formatter)
 

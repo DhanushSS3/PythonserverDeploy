@@ -346,7 +346,7 @@ async def calculate_total_symbol_margin_contribution(
             return {"total_margin": Decimal('0.0')}
 
         # Get raw market data for price calculations
-        raw_market_data = get_latest_market_data()
+        raw_market_data = await get_latest_market_data()
         if not raw_market_data:
             orders_logger.error("[MARGIN_CONTRIB] Failed to get market data")
             return {"total_margin": Decimal('0.0')}

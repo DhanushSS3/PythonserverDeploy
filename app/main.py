@@ -712,6 +712,20 @@ async def startup_event():
             background_tasks.add(redis_cleanup_task)
             redis_cleanup_task.add_done_callback(background_tasks.discard)
             
+            # Start the pending order trigger worker (processes triggered orders from Redis stream)
+            from app.services.pending_orders import pending_order_trigger_worker, cleanup_pending_order_stream
+            # Clean up old stream entries on startup
+            await cleanup_pending_order_stream(global_redis_client_instance)
+            pending_trigger_worker_task = asyncio.create_task(
+                pending_order_trigger_worker(
+                    redis=global_redis_client_instance,
+                    db_factory=AsyncSessionLocal,
+                    concurrency=10
+                )
+            )
+            background_tasks.add(pending_trigger_worker_task)
+            pending_trigger_worker_task.add_done_callback(background_tasks.discard)
+            
         logger.info("Background tasks initialized")
             
     except Exception:
@@ -807,54 +821,32 @@ async def run_stoploss_takeprofit_checker():
 # --- New Pending Order Checker Task ---
 async def run_pending_order_checker():
     """
-    Continuously runs the pending order checker in the background.
-    SL/TP checks are now handled separately via market data updates.
+    Simplified pending order checker that just ensures the cache is up to date.
+    The actual triggering is now handled in the adjusted_price_worker.py
     """
     logger = orders_logger
 
     await asyncio.sleep(5)
-    logger.info("Starting the pending order checker background task.")
+    logger.info("Starting the simplified pending order checker background task.")
     
     while True:
         try:
-            async with AsyncSessionLocal() as db:
-                if global_redis_client_instance:
-                    from app.crud import group as crud_group
-                    all_groups = await crud_group.get_groups(db, skip=0, limit=1000)
-                    
-                    for group in all_groups:
-                        group_name = group.name
-                        group_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
-                        
-                        if not group_settings:
-                            continue
-                            
-                        for symbol in group_settings.keys():
-                            try:
-                                adjusted_prices = await get_adjusted_market_price_cache(global_redis_client_instance, group_name, symbol)
-                                
-                                if adjusted_prices:
-                                    from app.api.v1.endpoints.market_data_ws import check_and_trigger_pending_orders
-                                    await check_and_trigger_pending_orders(
-                                        redis_client=global_redis_client_instance,
-                                        db=db,
-                                        symbol=symbol,
-                                        adjusted_prices=adjusted_prices,
-                                        group_name=group_name
-                                    )
-                            except Exception as symbol_error:
-                                logger.error(f"Error processing symbol {symbol}")
-                                continue
-                else:
-                    await asyncio.sleep(5)
-                    continue
+            if global_redis_client_instance:
+                # Just update the cache periodically to ensure it's fresh
+                from app.services.pending_orders import update_users_with_orders_cache_periodic
+                await update_users_with_orders_cache_periodic(global_redis_client_instance)
+                logger.debug("Updated users with orders cache")
+            else:
+                await asyncio.sleep(60)
+                continue
                     
         except Exception as e:
-            logger.error("Error in pending order checker loop")
-            await asyncio.sleep(5)
+            logger.error(f"Error in pending order checker loop: {str(e)}", exc_info=True)
+            await asyncio.sleep(60)
             continue
         
-        await asyncio.sleep(1)
+        # Update cache every 5 minutes
+        await asyncio.sleep(300)
 
 # --- New SL/TP Checker Task (triggered by market data updates) ---
 async def run_sltp_checker_on_market_update():

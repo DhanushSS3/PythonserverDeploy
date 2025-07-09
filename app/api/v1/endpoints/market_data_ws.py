@@ -58,6 +58,10 @@ from app.shared_state import adjusted_prices_in_memory
 # Import the new portfolio calculation service
 from app.services.portfolio_calculator import calculate_user_portfolio
 
+# Import pending orders functions
+# Remove circular imports - these functions are not used in this file
+# from app.services.pending_orders import check_and_trigger_pending_orders_redis, process_pending_orders_for_symbol
+
 # Import the Symbol and ExternalSymbolInfo models
 from app.database.models import Symbol, ExternalSymbolInfo, User, DemoUser # Import User/DemoUser for type hints
 from sqlalchemy.future import select
@@ -195,123 +199,15 @@ async def _get_full_portfolio_details(
 
 async def check_and_trigger_pending_orders(redis_client, db, symbol, adjusted_prices, group_name):
     """
-    Check if any pending orders should be triggered based on current market prices.
-    This is called when market data updates are received.
+    Check and trigger pending orders for a symbol using the optimized processing system.
+    This function is called when market data updates are received.
     """
     try:
-        # Get all pending orders for this symbol from Redis
-        redis_keys = [
-            f"pending_orders:{symbol}:BUY_LIMIT",
-            f"pending_orders:{symbol}:SELL_LIMIT",
-            f"pending_orders:{symbol}:BUY_STOP",
-            f"pending_orders:{symbol}:SELL_STOP"
-        ]
+        # Process pending orders for this symbol using the new optimized system
+        await process_pending_orders_for_symbol(symbol, redis_client)
         
-        adjusted_buy_price = adjusted_prices.get('buy')
-        if not adjusted_buy_price:
-            orders_logger.error(f"[PENDING_ORDER_EXECUTION] Adjusted buy price missing for symbol {symbol} in check_and_trigger_pending_orders. Skipping all pending orders for this symbol.")
-        # Check each order type key
-        for redis_key in redis_keys:
-            try:
-                # Get all user orders for this key
-                all_user_orders = await redis_client.hgetall(redis_key)
-                if not all_user_orders:
-                    continue
-                
-                order_type = redis_key.split(":")[-1]
-                logger.debug(f"Checking {len(all_user_orders)} users with {order_type} orders for symbol {symbol}")
-                
-                # Process each user's orders
-                for user_id_bytes, orders_json in all_user_orders.items():
-                    user_id = user_id_bytes
-                    orders_list = json.loads(orders_json)
-                    for order in orders_list:
-                        # Normalize decimal values for comparison - round to 5 decimal places
-                        try:
-                            order_price = Decimal(str(order.get('order_price', '0')))
-                            adjusted_buy_price_str = str(adjusted_buy_price)
-                            
-                            # Ensure the adjusted_buy_price has at least 5 decimal places
-                            if '.' in adjusted_buy_price_str:
-                                integer_part, decimal_part = adjusted_buy_price_str.split('.')
-                                if len(decimal_part) < 5:
-                                    decimal_part = decimal_part.ljust(5, '0')
-                                adjusted_buy_price_str = f"{integer_part}.{decimal_part}"
-                            
-                            # Round to 5 decimal places for consistent comparison
-                            order_price_normalized = Decimal(str(round(order_price, 5)))
-                            adjusted_buy_price_normalized = Decimal(str(round(Decimal(adjusted_buy_price_str), 5)))
-                            
-                            # Log the raw values
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Raw values - order_price: {order_price}, adjusted_buy_price: {adjusted_buy_price}")
-                        except Exception as e:
-                            orders_logger.error(f"[PENDING_ORDER_EXECUTION] Error normalizing decimal values: {str(e)}", exc_info=True)
-                            continue
-                        
-                        should_trigger = False
-                        if order_type in ['BUY_LIMIT', 'SELL_STOP']:
-                            should_trigger = adjusted_buy_price_normalized <= order_price_normalized
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP check: {adjusted_buy_price_normalized} <= {order_price_normalized} = {should_trigger}")
-                        elif order_type in ['SELL_LIMIT', 'BUY_STOP']:
-                            should_trigger = adjusted_buy_price_normalized >= order_price_normalized
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP check: {adjusted_buy_price_normalized} >= {order_price_normalized} = {should_trigger}")
-                        else:
-                            # orders_logger.error(f"[PENDING_ORDER_EXECUTION] Unknown order type {order_type} for order {order.get('order_id')}. Skipping.")
-                            continue
-                        
-                        # Additional debug logging for price comparison
-                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Price comparison values - adjusted_buy_price_normalized: {adjusted_buy_price_normalized} ({type(adjusted_buy_price_normalized)}), order_price_normalized: {order_price_normalized} ({type(order_price_normalized)})")
-                        
-                        # Compare as strings for consistent comparison
-                        adjusted_price_str = str(adjusted_buy_price_normalized)
-                        order_price_str = str(order_price_normalized)
-                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] String comparison for prices: '{adjusted_price_str}' vs '{order_price_str}'")
-                        
-                        # Compare numeric difference
-                        price_diff = abs(adjusted_buy_price_normalized - order_price_normalized)
-                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Absolute price difference: {price_diff}")
-                        
-                        # Compare with small epsilon tolerance to catch very close values
-                        epsilon = Decimal('0.00001')  # Small tolerance
-                        is_close = price_diff < epsilon
-                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Prices within epsilon tolerance: {is_close} (epsilon={epsilon})")
-                        
-                        # Consider using epsilon for near-exact matches
-                        should_trigger_with_epsilon = False
-                        if order_type in ['BUY_LIMIT', 'SELL_STOP']:
-                            should_trigger_with_epsilon = (adjusted_buy_price_normalized <= order_price_normalized) or is_close
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] BUY_LIMIT/SELL_STOP with epsilon: {should_trigger_with_epsilon}")
-                        elif order_type in ['SELL_LIMIT', 'BUY_STOP']:
-                            should_trigger_with_epsilon = (adjusted_buy_price_normalized >= order_price_normalized) or is_close
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] SELL_LIMIT/BUY_STOP with epsilon: {should_trigger_with_epsilon}")
-                        
-                        # Use the epsilon-based trigger when prices are very close
-                        if should_trigger_with_epsilon and not should_trigger:
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Using epsilon-based trigger since prices are very close")
-                            should_trigger = True
-                        
-                        # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Checking order {order.get('order_id')}: type={order_type}, adjusted_buy_price={adjusted_buy_price_normalized}, order_price={order_price_normalized}, should_trigger={should_trigger}")
-                        if should_trigger:
-                            # orders_logger.info(f"[PENDING_ORDER_EXECUTION] Trigger condition met for order {order.get('order_id')}. Executing trigger_pending_order.")
-                            from app.services.pending_orders import trigger_pending_order
-                            # Use a new database session for trigger_pending_order to ensure fresh data
-                            from app.database.session import AsyncSessionLocal
-                            async with AsyncSessionLocal() as trigger_db:
-                                from app.services.pending_orders import trigger_pending_order
-                                await trigger_pending_order(
-                                    db=trigger_db,
-                                    redis_client=redis_client,
-                                    order=order,
-                                    current_price=adjusted_buy_price_normalized
-                                )
-                        # else:
-                        #     orders_logger.info(f"[PENDING_ORDER_EXECUTION] Order {order.get('order_id')} conditions not met for execution. Skipping.")
-            
-            except Exception as e:
-                logger.error(f"Error processing pending orders for key {redis_key}: {e}", exc_info=True)
-    
     except Exception as e:
-        logger.error(f"Error in check_and_trigger_pending_orders for symbol {symbol}: {e}", exc_info=True)
+        orders_logger.error(f"Error in check_and_trigger_pending_orders: {str(e)}", exc_info=True)
 
 
 async def check_and_trigger_sl_tp_orders(redis_client, db, symbol, adjusted_prices, group_name):
@@ -412,8 +308,8 @@ async def per_connection_redis_listener(
                     balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
-                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
-                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
+                    logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
+                    logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
                         "type": "market_update",
                         "data": {
@@ -441,8 +337,8 @@ async def per_connection_redis_listener(
                     balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
-                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
-                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
+                    logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
+                    logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
                         "type": "market_update",
                         "data": {
@@ -468,8 +364,8 @@ async def per_connection_redis_listener(
                     balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
-                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
-                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
+                    logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
+                    logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
                         "type": "market_update",
                         "data": {
@@ -511,7 +407,7 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
         
         # Get open orders - always fetch from database to ensure fresh data
         open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
-        logger.info(f"User {user_id}: Fetched {len(open_orders_orm)} open orders directly from database")
+        logger.debug(f"User {user_id}: Fetched {len(open_orders_orm)} open orders directly from database")
         open_orders_data = []
         for pos in open_orders_orm:
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
@@ -527,7 +423,7 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
         # Get pending orders - always fetch from database to ensure fresh data
         pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
         pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
-        logger.info(f"User {user_id}: Fetched {len(pending_orders_orm)} pending orders directly from database")
+        logger.debug(f"User {user_id}: Fetched {len(pending_orders_orm)} pending orders directly from database")
         pending_orders_data = []
         for po in pending_orders_orm:
             po_dict = {attr: str(v) if isinstance(v := getattr(po, attr, None), Decimal) else v
@@ -547,7 +443,23 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
             "updated_at": datetime.datetime.now().isoformat()
         }
         await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
-        logger.info(f"User {user_id}: Updated static orders cache with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
+        logger.debug(f"User {user_id}: Updated static orders cache with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
+        
+        # Also update balance/margin cache if we have open orders
+        if open_orders_data:
+            try:
+                from app.services.order_processing import calculate_total_user_margin
+                total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+                
+                # Get user data for balance
+                user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+                if user_data:
+                    balance = user_data.get('wallet_balance', '0.0')
+                    await set_user_balance_margin_cache(redis_client, user_id, balance, total_user_margin)
+                    logger.debug(f"User {user_id}: Updated balance/margin cache: balance={balance}, margin={total_user_margin}")
+                    
+            except Exception as e:
+                logger.error(f"Error updating balance/margin cache in update_static_orders_cache: {e}", exc_info=True)
         
         return static_orders_data
     except Exception as e:
@@ -641,9 +553,9 @@ async def process_portfolio_update(
         # Only query database if cache is empty or this is initial connection
         if not static_orders or is_initial_connection:
             if not static_orders:
-                logger.info(f"User {user_id}: Static orders cache empty. Fetching from database.")
+                logger.debug(f"User {user_id}: Static orders cache empty. Fetching from database.")
             else:
-                logger.info(f"User {user_id}: Initial connection - fetching fresh orders from database.")
+                logger.debug(f"User {user_id}: Initial connection - fetching fresh orders from database.")
             
             # Create a new database session for fresh data
             async with AsyncSessionLocal() as refresh_db:
@@ -683,7 +595,7 @@ async def process_portfolio_update(
                 except Exception as e:
                     logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
         
-        logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: user_data margin={user_data.get('margin', 'N/A') if user_data else 'N/A'}")
+        logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: user_data margin={user_data.get('margin', 'N/A') if user_data else 'N/A'}")
         
         if not dynamic_portfolio:
             dynamic_portfolio = {
@@ -698,7 +610,7 @@ async def process_portfolio_update(
         balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
         margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
         
-        logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Final margin_value={margin_value}")
+        logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Final margin_value={margin_value}")
         
         if isinstance(balance_value, Decimal):
             balance_value = str(balance_value)
@@ -895,7 +807,10 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             initial_positions_data.append(pos_dict)
 
         # Dynamically calculate margin from open positions
-        total_margin = sum(Decimal(pos['margin']) for pos in initial_positions_data if 'margin' in pos)
+        total_margin = sum(
+            Decimal(str(pos.get('margin', '0') or '0'))
+            for pos in initial_positions_data
+        )
         
         # Set minimal balance/margin cache for websocket
         await set_user_balance_margin_cache(redis_client, db_user_id, user_data_to_cache["wallet_balance"], total_margin)
@@ -1144,75 +1059,6 @@ async def redis_publisher_task(redis_client: Redis):
 
 # REMOVE redis_market_data_broadcaster function entirely
 # Its functionality is now distributed into per_connection_redis_listener tasks managed by websocket_endpoint
-
-# Add a debug endpoint to manually trigger order updates
-@router.post("/debug/publish-order-update/{user_id}")
-async def debug_publish_order_update(
-    user_id: int,
-    redis_client: Redis = Depends(get_redis_client)
-):
-    """
-    Debug endpoint to manually publish an order update message to Redis.
-    This is useful for testing WebSocket functionality.
-    """
-    try:
-        message = json.dumps({
-            "type": "ORDER_UPDATE",
-            "user_id": user_id,
-            "timestamp": datetime.datetime.now().isoformat()
-        }, cls=DecimalEncoder)
-        
-        result = await redis_client.publish(REDIS_ORDER_UPDATES_CHANNEL, message)
-        logger.info(f"DEBUG: Published order update for user {user_id} to {REDIS_ORDER_UPDATES_CHANNEL}, received by {result} subscribers")
-        
-        return {"status": "success", "message": f"Order update published for user {user_id}", "subscribers": result}
-    except Exception as e:
-        logger.error(f"Error in debug_publish_order_update: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error publishing order update: {str(e)}")
-
-# Add a debug endpoint to test the WebSocket order updates
-@router.post("/debug/refresh-orders/{user_id}")
-async def debug_refresh_orders(
-    user_id: int,
-    user_type: str = Query("demo"),
-    redis_client: Redis = Depends(get_redis_client),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Debug endpoint to manually refresh the static orders cache from the database.
-    This bypasses Redis and ensures fresh data is fetched.
-    """
-    try:
-        # Create a new database session for this operation
-        async with AsyncSessionLocal() as refresh_db:
-            # Force refresh of static orders cache from database
-            static_orders = await update_static_orders_cache(user_id, refresh_db, redis_client, user_type)
-            
-        # Log the static orders that were fetched
-        open_orders_count = len(static_orders.get("open_orders", []))
-        pending_orders_count = len(static_orders.get("pending_orders", []))
-        
-        # Publish an order update message to Redis
-        message = json.dumps({
-            "type": "ORDER_UPDATE",
-            "user_id": user_id,
-            "timestamp": datetime.datetime.now().isoformat()
-        }, cls=DecimalEncoder)
-        
-        result = await redis_client.publish(REDIS_ORDER_UPDATES_CHANNEL, message)
-        logger.info(f"DEBUG: Published order update for user {user_id} to {REDIS_ORDER_UPDATES_CHANNEL}, received by {result} subscribers")
-        
-        return {
-            "status": "success", 
-            "message": f"Orders refreshed for user {user_id}", 
-            "open_orders": open_orders_count,
-            "pending_orders": pending_orders_count,
-            "subscribers": result
-        }
-    except Exception as e:
-        logger.error(f"Error in debug_refresh_orders: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error refreshing orders: {str(e)}")
-
 
 # Add monitoring endpoints
 @router.get("/monitoring/websocket-stats")

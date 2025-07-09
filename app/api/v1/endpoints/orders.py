@@ -68,7 +68,8 @@ from app.services.order_processing import (
     OrderProcessingError,
     InsufficientFundsError,
     calculate_total_symbol_margin_contribution,
-    generate_unique_10_digit_id
+    generate_unique_10_digit_id,
+    calculate_total_user_margin,
 )
 from app.services.portfolio_calculator import _convert_to_usd, calculate_user_portfolio
 from app.services.margin_calculator import calculate_single_order_margin, get_live_adjusted_buy_price_for_pair, get_live_adjusted_sell_price_for_pair
@@ -109,6 +110,27 @@ async def update_user_cache(user_id, db, redis_client, user_type):
     async with await async_session_factory() as background_db:
         try:
             await update_static_orders_cache(user_id, background_db, redis_client, user_type)
+            
+            # Also update balance/margin cache
+            try:
+                db_user = None
+                if user_type == 'live':
+                    db_user = await get_user_by_id(background_db, user_id)
+                else:
+                    db_user = await get_demo_user_by_id(background_db, user_id)
+                
+                if db_user:
+                    # Calculate total user margin including all symbols
+                    from app.services.order_processing import calculate_total_user_margin
+                    total_user_margin = await calculate_total_user_margin(background_db, redis_client, user_id, user_type)
+                    
+                    # Update balance/margin cache for websocket
+                    await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                    orders_logger.info(f"Background balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+                    
+            except Exception as e:
+                orders_logger.error(f"Error updating balance/margin cache in background: {e}", exc_info=True)
+                
         except Exception as e:
             orders_logger.error(f"Error updating user cache: {e}")
 
@@ -815,7 +837,7 @@ async def place_pending_order(
         try:
             leverage = Decimal(str(user_data.get('leverage', '1.0')))
             external_symbol_info_dict = await get_external_symbol_info(db, order_request.symbol)
-            raw_market_data = get_latest_market_data()
+            raw_market_data = await get_latest_market_data()
             group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, order_request.symbol) if group_name else {}
 
 
@@ -962,6 +984,9 @@ async def place_pending_order(
                 db_user = await get_demo_user_by_id(db, user_id_for_order, user_type=user_type)
             
             if db_user:
+                # Calculate total user margin including all symbols
+                total_user_margin = await calculate_total_user_margin(db, redis_client, user_id_for_order, user_type)
+                
                 user_data_to_cache = {
                     "id": db_user.id,
                     "email": getattr(db_user, 'email', None),
@@ -970,16 +995,21 @@ async def place_pending_order(
                     "user_type": user_type,
                     "account_number": getattr(db_user, 'account_number', None),
                     "wallet_balance": db_user.wallet_balance,
-                    "margin": db_user.margin,
+                    "margin": total_user_margin,  # Use calculated total margin
                     # "first_name": getattr(db_user, 'first_name', None),
                     # "last_name": getattr(db_user, 'last_name', None),
                     # "country": getattr(db_user, 'country', None),
                     # "phone_number": getattr(db_user, 'phone_number', None),
                 }
-                await set_user_data_cache(redis_client, user_id, user_data_to_cache, user_type)
-                await update_static_orders_cache(user_id, background_db, redis_client, user_type)
-                await publish_order_update(redis_client, user_id)
-                await publish_user_data_update(redis_client, user_id)
+                await set_user_data_cache(redis_client, user_id_for_order, user_data_to_cache, user_type)
+                
+                # Update balance/margin cache for websocket
+                await set_user_balance_margin_cache(redis_client, user_id_for_order, db_user.wallet_balance, total_user_margin)
+                orders_logger.info(f"Balance/margin cache updated for user {user_id_for_order}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+                
+                await update_static_orders_cache(user_id_for_order, db, redis_client, user_type)
+                await publish_order_update(redis_client, user_id_for_order)
+                await publish_user_data_update(redis_client, user_id_for_order)
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after order placement: {e}", exc_info=True)
 
@@ -1741,12 +1771,33 @@ async def modify_pending_order(
             return {"message": "Order modification request sent to external service (Barclays)."}
 
         # For non-Barclays users, update the order
+        # First, prepare the order data for margin recalculation
+        order_data = {
+            "order_id": modify_request.order_id,
+            "order_user_id": modify_request.user_id,
+            "order_company_name": modify_request.order_company_name,
+            "order_type": modify_request.order_type,
+            "order_price": str(modify_request.order_price),
+            "order_quantity": str(modify_request.order_quantity),
+            "user_type": modify_request.user_type,
+            "status": modify_request.status
+        }
+
+        # Recalculate margin for the modified order
+        from app.services.pending_orders import recalculate_margin_for_pending_order
+        new_margin = await recalculate_margin_for_pending_order(redis_client, order_data, db)
+        
+        if new_margin is None:
+            raise HTTPException(status_code=400, detail="Failed to recalculate margin for modified order")
+
+        # Update order in database with new values including margin
         update_data = {
             "order_price": modify_request.order_price,
             "order_quantity": modify_request.order_quantity,
             "modify_id": modify_id,
             "status": modify_request.status,
-            "order_status": modify_request.order_status
+            "order_status": modify_request.order_status,
+            "margin": new_margin
         }
 
         updated_order = await crud_order.update_order_with_tracking(
@@ -1758,16 +1809,7 @@ async def modify_pending_order(
             action_type="MODIFY_PENDING"
         )
 
-        # --- Update Redis Cache ---
-        from app.services.pending_orders import remove_pending_order
-        await remove_pending_order(
-            redis_client,
-            modify_request.order_id,
-            modify_request.order_company_name,
-            modify_request.order_type,
-            str(modify_request.user_id)
-        )
-
+        # Prepare complete order data for Redis update
         new_pending_order_data = {
             "order_id": updated_order.order_id,
             "order_user_id": updated_order.order_user_id,
@@ -1777,7 +1819,7 @@ async def modify_pending_order(
             "order_price": str(updated_order.order_price),
             "order_quantity": str(updated_order.order_quantity),
             "contract_value": str(updated_order.contract_value) if updated_order.contract_value else None,
-            "margin": str(updated_order.margin) if updated_order.margin is not None else None,
+            "margin": str(new_margin),
             "stop_loss": str(updated_order.stop_loss) if updated_order.stop_loss is not None else None,
             "take_profit": str(updated_order.take_profit) if updated_order.take_profit is not None else None,
             "stoploss_id": updated_order.stoploss_id,
@@ -1787,12 +1829,20 @@ async def modify_pending_order(
             "created_at": updated_order.created_at.isoformat() if updated_order.created_at else None,
             "updated_at": updated_order.updated_at.isoformat() if updated_order.updated_at else None,
         }
-        from app.services.pending_orders import add_pending_order
-        await add_pending_order(redis_client, new_pending_order_data)
 
-        # --- Update user data cache after DB update ---
+        # Update the order in Redis
+        from app.services.pending_orders import update_pending_order_in_redis
+        redis_update_success = await update_pending_order_in_redis(
+            redis_client,
+            new_pending_order_data,
+            new_margin
+        )
+
+        if not redis_update_success:
+            orders_logger.error(f"Failed to update order {updated_order.order_id} in Redis")
+
+        # Update user data cache
         try:
-            # Fetch the latest user data from DB to update cache
             db_user = None
             if modify_request.user_type == 'live':
                 db_user = await get_user_by_id(db, modify_request.user_id)
@@ -1800,6 +1850,10 @@ async def modify_pending_order(
                 db_user = await get_demo_user_by_id(db, modify_request.user_id)
             
             if db_user:
+                # Calculate total user margin including all symbols
+                from app.services.order_processing import calculate_total_user_margin
+                total_user_margin = await calculate_total_user_margin(db, redis_client, modify_request.user_id, modify_request.user_type)
+                
                 user_data_to_cache = {
                     "id": db_user.id,
                     "email": getattr(db_user, 'email', None),
@@ -1808,23 +1862,29 @@ async def modify_pending_order(
                     "user_type": modify_request.user_type,
                     "account_number": getattr(db_user, 'account_number', None),
                     "wallet_balance": db_user.wallet_balance,
-                    "margin": db_user.margin,
+                    "margin": total_user_margin,  # Use calculated total margin
                     "first_name": getattr(db_user, 'first_name', None),
                     "last_name": getattr(db_user, 'last_name', None),
                     "country": getattr(db_user, 'country', None),
                     "phone_number": getattr(db_user, 'phone_number', None),
                 }
                 await set_user_data_cache(redis_client, modify_request.user_id, user_data_to_cache, modify_request.user_type)
+                
+                # Update balance/margin cache for websocket
+                await set_user_balance_margin_cache(redis_client, modify_request.user_id, db_user.wallet_balance, total_user_margin)
+                orders_logger.info(f"Balance/margin cache updated for user {modify_request.user_id}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+                
                 orders_logger.info(f"User data cache updated for user {modify_request.user_id} after modifying pending order")
         except Exception as e:
             orders_logger.error(f"Error updating user data cache after pending order modification: {e}", exc_info=True)
 
-        # Update static orders cache - force a fresh fetch from the database
+        # Update static orders cache
         await update_static_orders_cache(modify_request.user_id, db, redis_client, modify_request.user_type)
 
-        # Publish updates to notify WebSocket clients - make sure these are in the right order
+        # Publish updates to notify WebSocket clients
         await publish_order_update(redis_client, modify_request.user_id)
         await publish_user_data_update(redis_client, modify_request.user_id)
+        await publish_market_data_trigger(redis_client)
         
         return {
             "order_id": updated_order.order_id,
@@ -1832,6 +1892,7 @@ async def modify_pending_order(
             "order_quantity": updated_order.order_quantity,
             "order_status": updated_order.order_status,
             "modify_id": updated_order.modify_id,
+            "margin": str(new_margin),
             "message": "Pending order successfully modified"
         }
 
@@ -1839,8 +1900,6 @@ async def modify_pending_order(
         raise HTTPException(status_code=400, detail="Invalid decimal value for price or quantity")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to modify pending order: {str(e)}")
-
-
 
 @router.post("/cancel-pending", response_model=dict)
 async def cancel_pending_order(
@@ -1982,6 +2041,42 @@ async def cancel_pending_order(
             
             # Update static orders cache
             await update_static_orders_cache(user_id_for_operation, db, redis_client, cancel_request.user_type)
+            
+            # Update user data cache and balance/margin cache
+            try:
+                db_user = None
+                if cancel_request.user_type == 'live':
+                    db_user = await get_user_by_id(db, user_id_for_operation)
+                else:
+                    db_user = await get_demo_user_by_id(db, user_id_for_operation)
+                
+                if db_user:
+                    # Calculate total user margin including all symbols
+                    from app.services.order_processing import calculate_total_user_margin
+                    total_user_margin = await calculate_total_user_margin(db, redis_client, user_id_for_operation, cancel_request.user_type)
+                    
+                    user_data_to_cache = {
+                        "id": db_user.id,
+                        "email": getattr(db_user, 'email', None),
+                        "group_name": db_user.group_name,
+                        "leverage": db_user.leverage,
+                        "user_type": cancel_request.user_type,
+                        "account_number": getattr(db_user, 'account_number', None),
+                        "wallet_balance": db_user.wallet_balance,
+                        "margin": total_user_margin,  # Use calculated total margin
+                        "first_name": getattr(db_user, 'first_name', None),
+                        "last_name": getattr(db_user, 'last_name', None),
+                        "country": getattr(db_user, 'country', None),
+                        "phone_number": getattr(db_user, 'phone_number', None),
+                    }
+                    await set_user_data_cache(redis_client, user_id_for_operation, user_data_to_cache, cancel_request.user_type)
+                    
+                    # Update balance/margin cache for websocket
+                    await set_user_balance_margin_cache(redis_client, user_id_for_operation, db_user.wallet_balance, total_user_margin)
+                    orders_logger.info(f"Balance/margin cache updated for user {user_id_for_operation}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+                    
+            except Exception as e:
+                orders_logger.error(f"Error updating user data cache after pending order cancellation: {e}", exc_info=True)
             
             # Publish updates to notify WebSocket clients
             await publish_order_update(redis_client, user_id_for_operation)
@@ -3260,7 +3355,7 @@ async def _handle_order_open_transition(
                 raw_market_data = await get_latest_market_data()
             except TypeError:
                 # If not async, just call it
-                raw_market_data = get_latest_market_data()
+                raw_market_data = await get_latest_market_data()
         else:
             raw_market_data = await get_latest_market_data()
         if not raw_market_data:
@@ -3881,5 +3976,76 @@ async def get_order_info_for_service_provider(
         half_spread=str(half_spread),
         status=db_order.status
     )
+
+@router.post("/admin/cleanup-pending-stream", response_model=dict)
+async def cleanup_pending_order_stream_endpoint(
+    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
+    current_user: User | DemoUser = Depends(get_current_user)
+):
+    """
+    Admin endpoint to clean up the pending order stream.
+    This can be used to fix issues with old stream entries.
+    """
+    try:
+        # Check if user is admin
+        if not getattr(current_user, 'is_admin', False):
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        from app.services.pending_orders import cleanup_pending_order_stream
+        success = await cleanup_pending_order_stream(redis_client)
+        
+        if success:
+            return {"message": "Pending order stream cleanup completed successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to cleanup pending order stream")
+            
+    except Exception as e:
+        orders_logger.error(f"Error in cleanup endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup: {str(e)}")
+
+@router.get("/debug-pending-orders/{symbol}")
+async def debug_pending_orders(
+    symbol: str,
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Debug endpoint to check pending orders in Redis for a specific symbol.
+    """
+    try:
+        from app.services.pending_orders import debug_pending_orders_in_redis
+        await debug_pending_orders_in_redis(redis_client, symbol)
+        return {"message": f"Debug info logged for symbol {symbol}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Debug error: {str(e)}")
+
+@router.post("/test-pending-trigger")
+async def test_pending_trigger(
+    symbol: str,
+    order_type: str,
+    test_price: float,
+    redis_client: Redis = Depends(get_redis_client)
+):
+    """
+    Test endpoint to manually test pending order trigger logic.
+    """
+    try:
+        from app.services.pending_orders import check_and_trigger_pending_orders_redis, debug_pending_orders_in_redis
+        
+        # First, show what pending orders exist
+        await debug_pending_orders_in_redis(redis_client, symbol)
+        
+        # Then test the trigger logic
+        logger.info(f"[TEST_TRIGGER] Testing {order_type} trigger for {symbol} at price {test_price}")
+        triggered_count = await check_and_trigger_pending_orders_redis(redis_client, symbol, order_type, test_price)
+        
+        return {
+            "message": f"Test completed for {order_type} orders",
+            "symbol": symbol,
+            "test_price": test_price,
+            "triggered_count": triggered_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Test error: {str(e)}")
 
 
