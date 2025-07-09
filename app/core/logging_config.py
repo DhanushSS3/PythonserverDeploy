@@ -78,3 +78,4 @@ logging.getLogger("redis").setLevel(logging.WARNING)  # Suppress noisy internal 
 logging.getLogger("app.api.v1.endpoints.orders").setLevel(logging.DEBUG)
 logging.getLogger("app.services.order_processing").setLevel(logging.DEBUG)
 logging.getLogger("app.core.firebase").setLevel(logging.DEBUG)
+logging.getLogger("app.api.v1.endpoints.market_data_ws").setLevel(logging.DEBUG)

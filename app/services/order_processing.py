@@ -35,14 +35,17 @@ from app.core.cache import (
     get_user_data_cache, 
     get_group_symbol_settings_cache, 
     set_user_data_cache,
+    set_user_balance_margin_cache,
     get_live_adjusted_buy_price_for_pair,
     get_live_adjusted_sell_price_for_pair,
     get_order_placement_data_batch_ultra,
     RedisConnectionPool
 )
 from app.core.firebase import get_latest_market_data
+from app.core.logging_config import orders_logger
 
-logger = logging.getLogger(__name__)
+# Use the orders_logger instead of creating a new logger
+logger = orders_logger
 
 def get_order_model(user_type: str):
     """
@@ -74,17 +77,19 @@ async def calculate_total_symbol_margin_contribution(
     order_model=None,
     user_type: str = 'live'
 ) -> Dict[str, Any]: 
-    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] User {user_id}, Symbol {symbol}, Positions count: {len(open_positions_for_symbol)}")
-    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_ENTRY] Positions data: {open_positions_for_symbol}") # Can be very verbose
-
+    """
+    Calculate total margin contribution for a symbol considering hedged positions.
+    This function properly handles hedging by using the highest margin per lot for the net quantity.
+    """
     total_buy_quantity = Decimal(0)
     total_sell_quantity = Decimal(0)
     all_margins_per_lot: List[Decimal] = []
-    contributing_orders_count = 0
 
     if not open_positions_for_symbol:
-        # logger.debug(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
+        logger.info(f"[MARGIN_TOTAL_CONTRIB] No open positions for User {user_id}, Symbol {symbol}. Returning zero margin.")
         return {"total_margin": Decimal("0.0"), "contributing_orders_count": 0}
+
+    logger.info(f"[MARGIN_TOTAL_CONTRIB] Calculating margin for {len(open_positions_for_symbol)} positions for User {user_id}, Symbol {symbol}")
 
     for i, position in enumerate(open_positions_for_symbol):
         try:
@@ -102,16 +107,14 @@ async def calculate_total_symbol_margin_contribution(
             position_quantity = Decimal(position_quantity_str)
             position_full_margin = Decimal(position_full_margin_str)
 
-            # logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
+            logger.info(f"[MARGIN_TOTAL_CONTRIB_POS] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
 
             if position_quantity > 0:
                 margin_per_lot_of_position = Decimal("0.0")
                 if position_quantity != Decimal("0"): # Avoid division by zero if quantity is somehow zero
                     margin_per_lot_of_position = position_full_margin / position_quantity
                 all_margins_per_lot.append(margin_per_lot_of_position)
-                # logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS_DETAIL] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
-                if position_full_margin > Decimal("0.0"):
-                    contributing_orders_count +=1 # Count if this position itself contributes margin
+                logger.info(f"[MARGIN_TOTAL_CONTRIB_POS] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
 
             if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
                 total_buy_quantity += position_quantity
@@ -121,20 +124,21 @@ async def calculate_total_symbol_margin_contribution(
             logger.error(f"[MARGIN_TOTAL_CONTRIB_POS_ERROR] Error processing position {i}: {position}. Error: {e}", exc_info=True)
             continue
 
+    # Calculate net quantity for hedging
     net_quantity = max(total_buy_quantity, total_sell_quantity)
     highest_margin_per_lot = max(all_margins_per_lot) if all_margins_per_lot else Decimal(0)
     
-    calculated_total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) # Changed precision to 0.01
+    # Calculate total margin using the highest margin per lot for the net quantity
+    calculated_total_margin = (highest_margin_per_lot * net_quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
-    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}")
-    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
-    # logger.debug(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}, ContributingOrders={contributing_orders_count} (based on individual stored margins)")
+    # Determine if this is a hedged position
+    is_hedged = total_buy_quantity > 0 and total_sell_quantity > 0
     
-    # The contributing_orders_count here might be misleading if highest_margin_per_lot is zero.
-    # The logic of this function implies that if highest_margin_per_lot is 0, total margin is 0.
-    # The count should reflect orders that *would* contribute if their margin per lot was the highest.
-    # For now, returning the count of positions that had non-zero margin themselves.
-    return {"total_margin": calculated_total_margin, "contributing_orders_count": contributing_orders_count}
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: TotalBuyQty={total_buy_quantity}, TotalSellQty={total_sell_quantity}, NetQty={net_quantity}, IsHedged={is_hedged}")
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_CALC] User {user_id}, Symbol {symbol}: AllMarginsPerLot={all_margins_per_lot}, HighestMarginPerLot={highest_margin_per_lot}")
+    logger.info(f"[MARGIN_TOTAL_CONTRIB_EXIT] User {user_id}, Symbol {symbol}: CalculatedTotalMargin={calculated_total_margin}")
+    
+    return {"total_margin": calculated_total_margin, "contributing_orders_count": len(open_positions_for_symbol)}
 
 async def get_external_symbol_info(db: AsyncSession, symbol: str) -> Optional[Dict[str, Any]]:
     """
@@ -262,6 +266,9 @@ async def process_new_order_ultra_optimized(
             raise OrderProcessingError("Margin calculation failed")
 
         # Step 6: ULTRA-OPTIMIZED hedged margin calculation
+        logger.info(f"[HEDGING_MARGIN_DEBUG] Starting hedging calculation for User: {user_id}, Symbol: {symbol}, OrderType: {order_type}, Quantity: {quantity}, FullMargin: {full_margin_usd}")
+        logger.info(f"[HEDGING_MARGIN_DEBUG] Existing open orders count: {len(open_orders_for_symbol)}")
+        
         # Create simulated order object for margin calculation
         simulated_order = type('Obj', (object,), {
             'order_quantity': quantity,
@@ -271,7 +278,11 @@ async def process_new_order_ultra_optimized(
             'order_id': 'NEW_ORDER_SIMULATED'
         })()
         
+        logger.info(f"[HEDGING_MARGIN_DEBUG] Created simulated order: Type={simulated_order.order_type}, Qty={simulated_order.order_quantity}, Margin={simulated_order.margin}")
+        
         # Calculate margin before and after in parallel
+        logger.info(f"[HEDGING_MARGIN_DEBUG] About to calculate margin before and after for {len(open_orders_for_symbol)} existing orders + 1 new order")
+        
         margin_tasks = [
             calculate_total_symbol_margin_contribution(
                 db, redis_client, user_id, symbol, open_orders_for_symbol, get_order_model(user_type), user_type
@@ -281,12 +292,17 @@ async def process_new_order_ultra_optimized(
             )
         ]
         
+        logger.info(f"[HEDGING_MARGIN_DEBUG] Executing margin calculation tasks...")
         margin_before_data, margin_after_data = await asyncio.gather(*margin_tasks)
+        logger.info(f"[HEDGING_MARGIN_DEBUG] Margin calculation tasks completed")
         margin_before = margin_before_data["total_margin"]
         margin_after = margin_after_data["total_margin"]
         additional_margin = max(Decimal("0.0"), margin_after - margin_before)
 
         logger.info(f"[HEDGING_MARGIN_DEBUG] User: {user_id}, Symbol: {symbol}, OrderType: {order_type}, MarginBefore: {margin_before}, MarginAfter: {margin_after}, AdditionalMargin: {additional_margin}, OpenOrders: {len(open_orders_for_symbol)}")
+        
+        # Log the simulated order details
+        logger.info(f"[HEDGING_MARGIN_DEBUG] Simulated order: Type={simulated_order.order_type}, Qty={simulated_order.order_quantity}, Margin={simulated_order.margin}")
 
         # Step 7: ULTRA-OPTIMIZED user locking and margin update
         if not is_barclays_live_user:
@@ -311,12 +327,19 @@ async def process_new_order_ultra_optimized(
             await db.commit()
             await db.refresh(db_user_locked)
             
-            # Update cache in background using batch operations
+            # Synchronously update minimal balance/margin cache so websocket sees latest data
+            await set_user_balance_margin_cache(redis_client, user_id, db_user_locked.wallet_balance, db_user_locked.margin)
+            logger.info(f"[CACHE_UPDATE] Updating balance/margin cache for user {user_id}: balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin} (was {original_user_margin})")
+            logger.info(f"[CACHE_UPDATE] Balance/margin cache updated for user {user_id}")
+
+            # Update user data cache as well for consistency
             user_data_to_cache = {
-                "wallet_balance": db_user_locked.wallet_balance,
-                "leverage": db_user_locked.leverage,
-                "group_name": db_user_locked.group_name,
-                "margin": db_user_locked.margin,
+                'wallet_balance': db_user_locked.wallet_balance,
+                'margin': db_user_locked.margin,
+                'group_name': user_data.get('group_name'),
+                'leverage': user_data.get('leverage'),
+                'user_id': user_id,
+                'user_type': user_type
             }
             asyncio.create_task(redis_pool.set_batch({
                 f"user_data:{user_type}:{user_id}": user_data_to_cache

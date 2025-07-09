@@ -55,6 +55,8 @@ from app.core.cache import (
     publish_market_data_trigger,
     set_group_settings_cache,
     set_group_symbol_settings_cache,
+    # Balance/margin cache for websocket
+    set_user_balance_margin_cache,
 )
 
 from app.utils.validation import enforce_service_user_id_restriction
@@ -70,7 +72,7 @@ from app.services.order_processing import (
 )
 from app.services.portfolio_calculator import _convert_to_usd, calculate_user_portfolio
 from app.services.margin_calculator import calculate_single_order_margin, get_live_adjusted_buy_price_for_pair, get_live_adjusted_sell_price_for_pair
-from app.services.pending_orders import add_pending_order, remove_pending_order
+# Import moved inside functions to avoid circular imports
 
 from app.crud import crud_order, group as crud_group
 from app.crud.crud_order import OrderCreateInternal
@@ -113,9 +115,69 @@ async def update_user_cache(user_id, db, redis_client, user_type):
 async def update_portfolio(user_id, db, redis_client, user_type):
     """Update portfolio in background after order changes."""
     from app.database.session import async_session_factory
+    from app.core.cache import get_user_data_cache, get_group_symbol_settings_cache, get_adjusted_market_price_cache
+    from app.crud import crud_order
+    
     async with await async_session_factory() as background_db:
         try:
-            await calculate_user_portfolio(background_db, redis_client, user_id, user_type)
+            # Get user data
+            user_data = await get_user_data_cache(redis_client, user_id, background_db, user_type)
+            if not user_data:
+                orders_logger.error(f"User data not found for user {user_id}")
+                return
+            
+            # Get open positions
+            order_model = get_order_model(user_type)
+            open_orders_orm = await crud_order.get_all_open_orders_by_user_id(background_db, user_id, order_model)
+            open_positions = []
+            for o in open_orders_orm:
+                open_positions.append({
+                    'order_id': getattr(o, 'order_id', None),
+                    'order_company_name': getattr(o, 'order_company_name', None),
+                    'order_type': getattr(o, 'order_type', None),
+                    'order_quantity': getattr(o, 'order_quantity', None),
+                    'order_price': getattr(o, 'order_price', None),
+                    'margin': getattr(o, 'margin', None),
+                    'contract_value': getattr(o, 'contract_value', None),
+                    'stop_loss': getattr(o, 'stop_loss', None),
+                    'take_profit': getattr(o, 'take_profit', None),
+                    'commission': getattr(o, 'commission', None),
+                    'order_status': getattr(o, 'order_status', None),
+                    'order_user_id': getattr(o, 'order_user_id', None)
+                })
+            
+            if not open_positions:
+                return
+            
+            # Get group settings
+            group_name = user_data.get('group_name')
+            if not group_name:
+                orders_logger.error(f"User {user_id} has no group_name set")
+                return
+                
+            group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+            if not group_symbol_settings:
+                orders_logger.error(f"No group settings found for group {group_name}")
+                return
+            
+            # Get adjusted market prices for all relevant symbols
+            adjusted_market_prices = {}
+            for symbol in group_symbol_settings.keys():
+                adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+                if adjusted_prices:
+                    adjusted_market_prices[symbol] = {
+                        'buy': adjusted_prices.get('buy'),
+                        'sell': adjusted_prices.get('sell')
+                    }
+            
+            # Calculate portfolio
+            await calculate_user_portfolio(
+                user_data=user_data,
+                open_positions=open_positions,
+                adjusted_market_prices=adjusted_market_prices,
+                group_symbol_settings=group_symbol_settings,
+                redis_client=redis_client
+            )
         except Exception as e:
             orders_logger.error(f"Error updating portfolio: {e}")
 
@@ -505,22 +567,28 @@ async def place_order(
         if background_tasks:
             background_tasks.add_task(update_user_cache, user_id, db, redis_client, user_type)
             background_tasks.add_task(update_portfolio, user_id, db, redis_client, user_type)
+            # Add cache update for users with orders
+            from app.services.pending_orders import add_user_to_symbol_cache
+            background_tasks.add_task(add_user_to_symbol_cache, redis_client, symbol, user_id, user_type)
             if is_barclays_user_result:
                 orders_logger.info("[BARCLAYS] Scheduling barclays_push in place_order")
                 background_tasks.add_task(barclays_push)
         else:
             asyncio.create_task(update_user_cache(user_id, db, redis_client, user_type))
             asyncio.create_task(update_portfolio(user_id, db, redis_client, user_type))
+            # Add cache update for users with orders
+            from app.services.pending_orders import add_user_to_symbol_cache
+            asyncio.create_task(add_user_to_symbol_cache(redis_client, symbol, user_id, user_type))
             if is_barclays_user_result:
                 orders_logger.info("[BARCLAYS] Scheduling barclays_push in place_order (asyncio.create_task)")
                 asyncio.create_task(barclays_push())
         
         # Step 7: Publish websocket updates
-        orders_logger.info(f"Publishing order update for user {user_id}")
+        orders_logger.info(f"[PUBLISH_DEBUG] Publishing order update for user {user_id}")
         await publish_order_update(redis_client, user_id)
-        orders_logger.info(f"Publishing user data update for user {user_id}")
+        orders_logger.info(f"[PUBLISH_DEBUG] Publishing user data update for user {user_id}")
         await publish_user_data_update(redis_client, user_id)
-        orders_logger.info(f"Publishing market data trigger")
+        orders_logger.info(f"[PUBLISH_DEBUG] Publishing market data trigger")
         await publish_market_data_trigger(redis_client)
         
         # Step 8: Return response
@@ -878,6 +946,7 @@ async def place_pending_order(
         # We've already verified the order exists, so we can proceed with adding to Redis
         # Only store non-Barclays users' pending orders in Redis for price comparison
         if not is_barclays_live_user or user_type == 'demo':
+            from app.services.pending_orders import add_pending_order
             await add_pending_order(redis_client, order_dict_for_redis)
             orders_logger.info(f"Pending order {db_order.order_id} added to Redis for non-Barclays user or demo user.")
         else:
@@ -917,9 +986,15 @@ async def place_pending_order(
         if background_tasks:
             background_tasks.add_task(update_user_cache, user_id_for_order, db, redis_client, user_type)
             background_tasks.add_task(update_portfolio, user_id_for_order, db, redis_client, user_type)
+            # Add cache update for users with orders (pending orders don't affect SL/TP until triggered)
+            from app.services.pending_orders import add_user_to_symbol_cache
+            background_tasks.add_task(add_user_to_symbol_cache, redis_client, order_request.symbol, user_id_for_order, user_type)
         else:
             asyncio.create_task(update_user_cache(user_id_for_order, db, redis_client, user_type))
             asyncio.create_task(update_portfolio(user_id_for_order, db, redis_client, user_type))
+            # Add cache update for users with orders (pending orders don't affect SL/TP until triggered)
+            from app.services.pending_orders import add_user_to_symbol_cache
+            asyncio.create_task(add_user_to_symbol_cache(redis_client, order_request.symbol, user_id_for_order, user_type))
         # Barclays Firebase push (background)
         if is_barclays_live_user:
             async def barclays_push():
@@ -1353,6 +1428,10 @@ async def close_order(
                     await set_user_data_cache(redis_client, db_user_locked.id, user_data_to_cache, user_type)
                     orders_logger.info(f"User data cache updated for user {db_user_locked.id}")
                     
+                    # Update balance/margin cache for websocket
+                    await set_user_balance_margin_cache(redis_client, db_user_locked.id, db_user_locked.wallet_balance, db_user_locked.margin)
+                    orders_logger.info(f"Balance/margin cache updated for user {db_user_locked.id}: balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
+                    
                     await update_user_static_orders(db_user_locked.id, db, redis_client, user_type)
                     
                     # Publish updates in the correct order
@@ -1538,6 +1617,10 @@ async def close_order(
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache, user_type_str)
                 orders_logger.info(f"User data cache updated for user {user_id}")
                 
+                # Update balance/margin cache for websocket
+                await set_user_balance_margin_cache(redis_client, user_id, db_user_locked.wallet_balance, db_user_locked.margin)
+                orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
+                
                 await update_user_static_orders(user_id, db, redis_client, user_type_str)
                 
                 # Publish updates in the correct order
@@ -1575,7 +1658,7 @@ from app.database.models import User, DemoUser
 from app.api.v1.endpoints.orders import get_order_model
 from app.core.firebase import send_order_to_firebase
 from app.core.cache import get_user_data_cache, get_group_settings_cache
-from app.services.pending_orders import remove_pending_order, add_pending_order
+# Import moved inside functions to avoid circular imports
 
 class ModifyPendingOrderRequest(BaseModel):
     order_id: str
@@ -1676,6 +1759,7 @@ async def modify_pending_order(
         )
 
         # --- Update Redis Cache ---
+        from app.services.pending_orders import remove_pending_order
         await remove_pending_order(
             redis_client,
             modify_request.order_id,
@@ -1703,6 +1787,7 @@ async def modify_pending_order(
             "created_at": updated_order.created_at.isoformat() if updated_order.created_at else None,
             "updated_at": updated_order.updated_at.isoformat() if updated_order.updated_at else None,
         }
+        from app.services.pending_orders import add_pending_order
         await add_pending_order(redis_client, new_pending_order_data)
 
         # --- Update user data cache after DB update ---
@@ -1886,6 +1971,7 @@ async def cancel_pending_order(
             )
             
             # Remove from Redis pending orders
+            from app.services.pending_orders import remove_pending_order
             await remove_pending_order(
                 redis_client,
                 cancel_request.order_id,
@@ -2684,6 +2770,10 @@ async def update_order_by_service_provider(
             }
             await set_user_data_cache(redis_client, user_id, user_data_to_cache, 'live')
             
+            # Update balance/margin cache for websocket
+            await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, db_user.margin)
+            orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={db_user.margin}")
+            
             # Update static orders cache
             await update_user_static_orders(user_id, db, redis_client, 'live')
             
@@ -3003,6 +3093,7 @@ async def update_order_by_service_provider(
             orders_logger.info(f"Updating user {user_id} margin from {original_margin} to {db_user.margin}")
             
             # Remove from pending orders in Redis
+            from app.services.pending_orders import remove_pending_order
             await remove_pending_order(
                 redis_client,
                 db_order.order_id,
@@ -3041,6 +3132,10 @@ async def update_order_by_service_provider(
             }
             await set_user_data_cache(redis_client, user_id, user_data_to_cache, 'live')
             
+            # Update balance/margin cache for websocket
+            await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, db_user.margin)
+            orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={db_user.margin}")
+            
             # Update static orders cache
             await update_user_static_orders(user_id, db, redis_client, 'live')
             
@@ -3057,6 +3152,7 @@ async def update_order_by_service_provider(
             user_id = db_order.order_user_id
             
             # Remove from pending orders in Redis
+            from app.services.pending_orders import remove_pending_order
             await remove_pending_order(
                 redis_client,
                 db_order.order_id,
@@ -3686,6 +3782,11 @@ async def _handle_order_close_transition(
         "phone_number": getattr(db_user, 'phone_number', None),
     }
     await set_user_data_cache(redis_client, user_id, user_data_to_cache, 'live')
+    
+    # Update balance/margin cache for websocket
+    await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, db_user.margin)
+    orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={db_user.margin}")
+    
     await update_user_static_orders(user_id, db, redis_client, 'live')
     await publish_order_update(redis_client, user_id)
     await publish_user_data_update(redis_client, user_id)

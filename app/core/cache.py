@@ -22,6 +22,8 @@ REDIS_USER_PORTFOLIO_KEY_PREFIX = "user_portfolio:" # Stores balance, positions
 REDIS_USER_STATIC_ORDERS_KEY_PREFIX = "user_static_orders:" # Stores open and pending orders without PnL
 # New key prefix for dynamic portfolio metrics
 REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX = "user_dynamic_portfolio:" # Stores free_margin, positions with PnL, margin_level
+# New key prefix for user balance and margin only
+REDIS_USER_BALANCE_MARGIN_KEY_PREFIX = "user_balance_margin:" # Stores only wallet_balance and margin
 # New key prefix for group settings per symbol
 REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX = "group_symbol_settings:" # Stores spread, pip values, etc. per group and symbol
 # New key prefix for general group settings
@@ -41,6 +43,7 @@ USER_DATA_CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60 # Example: User session length
 USER_PORTFOLIO_CACHE_EXPIRY_SECONDS = 5 * 60 # Example: Short expiry, updated frequently
 USER_STATIC_ORDERS_CACHE_EXPIRY_SECONDS = 30 * 60 # Static order data expires after 30 minutes
 USER_DYNAMIC_PORTFOLIO_CACHE_EXPIRY_SECONDS = 60 # Dynamic portfolio metrics expire after 60 seconds
+USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS = 5 * 60 # Balance and margin expire after 5 minutes
 GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 GROUP_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 
@@ -203,6 +206,49 @@ async def get_user_positions_from_cache(redis_client: Redis, user_id: int) -> Li
         # The decode_decimal in get_user_portfolio_cache should handle Decimal conversion within positions
         return portfolio['positions']
     return []
+
+# --- New Minimal Balance and Margin Cache ---
+async def set_user_balance_margin_cache(redis_client: Redis, user_id: int, wallet_balance: Decimal, margin: Decimal):
+    """
+    Stores only user balance and margin in Redis.
+    This is the minimal cache for websocket balance/margin updates.
+    """
+    if not redis_client:
+        cache_logger.warning(f"Redis client not available for setting balance/margin cache for user {user_id}.")
+        return
+
+    key = f"{REDIS_USER_BALANCE_MARGIN_KEY_PREFIX}{user_id}"
+    try:
+        data = {
+            "wallet_balance": str(wallet_balance),
+            "margin": str(margin)
+        }
+        data_serializable = json.dumps(data, cls=DecimalEncoder)
+        await redis_client.set(key, data_serializable, ex=USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS)
+        cache_logger.debug(f"Balance/margin cached for user {user_id}: balance={wallet_balance}, margin={margin}")
+    except Exception as e:
+        cache_logger.error(f"Error setting balance/margin cache for user {user_id}: {e}", exc_info=True)
+
+async def get_user_balance_margin_cache(redis_client: Redis, user_id: int) -> Optional[Dict[str, str]]:
+    """
+    Retrieves only user balance and margin from Redis cache.
+    Returns None if data is not found.
+    """
+    if not redis_client:
+        cache_logger.warning(f"Redis client not available for getting balance/margin cache for user {user_id}.")
+        return None
+
+    key = f"{REDIS_USER_BALANCE_MARGIN_KEY_PREFIX}{user_id}"
+    try:
+        data_json = await redis_client.get(key)
+        if data_json:
+            data = json.loads(data_json, object_hook=decode_decimal)
+            cache_logger.debug(f"Balance/margin retrieved from cache for user {user_id}")
+            return data
+        return None
+    except Exception as e:
+        cache_logger.error(f"Error getting balance/margin cache for user {user_id}: {e}", exc_info=True)
+        return None
 
 # --- New Static Orders Cache ---
 async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static_orders_data: Dict[str, Any]):

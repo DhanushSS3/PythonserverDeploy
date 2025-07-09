@@ -40,6 +40,7 @@ from app.core.cache import (
     # New cache functions
     set_user_static_orders_cache, get_user_static_orders_cache,
     set_user_dynamic_portfolio_cache, get_user_dynamic_portfolio_cache,
+    set_user_balance_margin_cache, get_user_balance_margin_cache,
     DecimalEncoder, decode_decimal,
     # Redis channels
     REDIS_MARKET_DATA_CHANNEL,
@@ -60,7 +61,6 @@ from app.services.portfolio_calculator import calculate_user_portfolio
 # Import the Symbol and ExternalSymbolInfo models
 from app.database.models import Symbol, ExternalSymbolInfo, User, DemoUser # Import User/DemoUser for type hints
 from sqlalchemy.future import select
-from app.services.pending_orders import process_order_stoploss_takeprofit
 from app.crud.crud_order import get_all_open_orders_by_user_id, get_order_model
 from app.database.models import UserOrder, DemoUserOrder
 
@@ -408,9 +408,12 @@ async def per_connection_redis_listener(
                             changed_prices[symbol] = price
                             last_sent_prices[symbol] = price.copy()
                     static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
-                    user_portfolio = await get_user_portfolio_cache(redis_client, user_id) or {"balance": "0.0", "margin": "0.0"}
-                    balance_value = user_portfolio.get("balance", "0.0")
-                    margin_value = user_portfolio.get("margin", "0.0")
+                    # Get balance and margin from minimal cache (this is what order processing updates)
+                    balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
+                    balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
+                    margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
                         "type": "market_update",
                         "data": {
@@ -432,10 +435,14 @@ async def per_connection_redis_listener(
                     if is_initial_connection:
                         is_initial_connection = False
                 elif channel == REDIS_ORDER_UPDATES_CHANNEL and message_data.get("type") == "ORDER_UPDATE" and str(message_data.get("user_id")) == str(user_id):
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Received ORDER_UPDATE message")
                     static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
-                    user_portfolio = await get_user_portfolio_cache(redis_client, user_id) or {"balance": "0.0", "margin": "0.0"}
-                    balance_value = user_portfolio.get("balance", "0.0")
-                    margin_value = user_portfolio.get("margin", "0.0")
+                    # Get balance and margin from minimal cache (this is what order processing updates)
+                    balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
+                    balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
+                    margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
                         "type": "market_update",
                         "data": {
@@ -455,10 +462,14 @@ async def per_connection_redis_listener(
                         "order update"
                     )
                 elif channel == REDIS_USER_DATA_UPDATES_CHANNEL and message_data.get("type") == "USER_DATA_UPDATE" and str(message_data.get("user_id")) == str(user_id):
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Received USER_DATA_UPDATE message")
                     static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
-                    user_portfolio = await get_user_portfolio_cache(redis_client, user_id) or {"balance": "0.0", "margin": "0.0"}
-                    balance_value = user_portfolio.get("balance", "0.0")
-                    margin_value = user_portfolio.get("margin", "0.0")
+                    # Get balance and margin from minimal cache (this is what order processing updates)
+                    balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
+                    balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
+                    margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
                         "type": "market_update",
                         "data": {
@@ -672,6 +683,8 @@ async def process_portfolio_update(
                 except Exception as e:
                     logger.error(f"User {user_id}: Error fetching user data: {e}", exc_info=True)
         
+        logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: user_data margin={user_data.get('margin', 'N/A') if user_data else 'N/A'}")
+        
         if not dynamic_portfolio:
             dynamic_portfolio = {
                 "balance": user_data.get("wallet_balance", "0.0") if user_data else "0.0",
@@ -684,6 +697,8 @@ async def process_portfolio_update(
         # Prepare response data
         balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
         margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+        
+        logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Final margin_value={margin_value}")
         
         if isinstance(balance_value, Decimal):
             balance_value = str(balance_value)
@@ -881,6 +896,11 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
         # Dynamically calculate margin from open positions
         total_margin = sum(Decimal(pos['margin']) for pos in initial_positions_data if 'margin' in pos)
+        
+        # Set minimal balance/margin cache for websocket
+        await set_user_balance_margin_cache(redis_client, db_user_id, user_data_to_cache["wallet_balance"], total_margin)
+        
+        # Keep the old portfolio cache for backward compatibility (can be removed later)
         user_portfolio_data = {
             "balance": str(user_data_to_cache["wallet_balance"]),
             "equity": "0.0",
@@ -980,7 +1000,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                     "market_prices": initial_symbols_data,
                     "account_summary": {
                         "balance": str(user_data_to_cache["wallet_balance"]),
-                        "margin": str(user_data_to_cache["margin"]),
+                        "margin": str(total_margin),  # Use calculated total_margin instead of user_data_to_cache["margin"]
                         "open_orders": static_orders.get("open_orders", []) if static_orders else [],
                         "pending_orders": static_orders.get("pending_orders", []) if static_orders else []
                     }
