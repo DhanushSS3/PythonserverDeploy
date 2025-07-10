@@ -41,7 +41,7 @@ CACHE_EXPIRY = 60 * 60  # Default cache expiry: 1 hour
 USER_DATA_CACHE_EXPIRY_SECONDS = 7 * 24 * 60 * 60 # Example: User session length
 # USER_DATA_CACHE_EXPIRY_SECONDS = 10
 USER_PORTFOLIO_CACHE_EXPIRY_SECONDS = 5 * 60 # Example: Short expiry, updated frequently
-USER_STATIC_ORDERS_CACHE_EXPIRY_SECONDS = 30 * 60 # Static order data expires after 30 minutes
+USER_STATIC_ORDERS_CACHE_EXPIRY_SECONDS = 24 * 60 * 60 # Static order data expires after 24 hours (increased from 30 minutes)
 USER_DYNAMIC_PORTFOLIO_CACHE_EXPIRY_SECONDS = 60 # Dynamic portfolio metrics expire after 60 seconds
 USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS = 5 * 60 # Balance and margin expire after 5 minutes
 GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
@@ -217,15 +217,46 @@ async def set_user_balance_margin_cache(redis_client: Redis, user_id: int, walle
         cache_logger.warning(f"Redis client not available for setting balance/margin cache for user {user_id}.")
         return
 
+    # FIXED: Validate inputs before caching
+    try:
+        if margin < 0:
+            cache_logger.warning(f"Attempting to cache negative margin {margin} for user {user_id}, using 0")
+            margin = Decimal("0.0")
+        
+        if wallet_balance < 0:
+            cache_logger.warning(f"Attempting to cache negative balance {wallet_balance} for user {user_id}, using 0")
+            wallet_balance = Decimal("0.0")
+            
+        # Ensure we're working with Decimal objects
+        if not isinstance(wallet_balance, Decimal):
+            wallet_balance = Decimal(str(wallet_balance))
+        if not isinstance(margin, Decimal):
+            margin = Decimal(str(margin))
+            
+    except (ValueError, TypeError, decimal.InvalidOperation) as e:
+        cache_logger.error(f"Invalid balance/margin values for user {user_id}: balance={wallet_balance}, margin={margin}, error={e}")
+        return
+
     key = f"{REDIS_USER_BALANCE_MARGIN_KEY_PREFIX}{user_id}"
     try:
         data = {
             "wallet_balance": str(wallet_balance),
-            "margin": str(margin)
+            "margin": str(margin),
+            "updated_at": datetime.datetime.now().isoformat()  # Add timestamp for debugging
         }
         data_serializable = json.dumps(data, cls=DecimalEncoder)
         await redis_client.set(key, data_serializable, ex=USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS)
         cache_logger.debug(f"Balance/margin cached for user {user_id}: balance={wallet_balance}, margin={margin}")
+        
+        # FIXED: Verify the cache was set correctly
+        verify_data = await redis_client.get(key)
+        if verify_data:
+            verify_parsed = json.loads(verify_data, object_hook=decode_decimal)
+            if verify_parsed.get("margin") != str(margin):
+                cache_logger.error(f"Cache verification failed for user {user_id}: expected margin={margin}, cached margin={verify_parsed.get('margin')}")
+        else:
+            cache_logger.error(f"Cache verification failed for user {user_id}: cache not found after setting")
+            
     except Exception as e:
         cache_logger.error(f"Error setting balance/margin cache for user {user_id}: {e}", exc_info=True)
 
@@ -243,11 +274,149 @@ async def get_user_balance_margin_cache(redis_client: Redis, user_id: int) -> Op
         data_json = await redis_client.get(key)
         if data_json:
             data = json.loads(data_json, object_hook=decode_decimal)
-            cache_logger.debug(f"Balance/margin retrieved from cache for user {user_id}")
+            
+            # FIXED: Validate cached data
+            balance = data.get("wallet_balance", "0.0")
+            margin = data.get("margin", "0.0")
+            
+            try:
+                balance_decimal = Decimal(str(balance))
+                margin_decimal = Decimal(str(margin))
+                
+                # If margin is negative, consider cache invalid
+                if margin_decimal < 0:
+                    cache_logger.warning(f"Invalid cached margin {margin_decimal} for user {user_id}, returning None")
+                    return None
+                    
+                # If balance is negative, consider cache invalid
+                if balance_decimal < 0:
+                    cache_logger.warning(f"Invalid cached balance {balance_decimal} for user {user_id}, returning None")
+                    return None
+                    
+            except (ValueError, decimal.InvalidOperation):
+                cache_logger.warning(f"Non-numeric cached values for user {user_id}: balance={balance}, margin={margin}")
+                return None
+            
+            cache_logger.debug(f"Balance/margin retrieved from cache for user {user_id}: balance={balance}, margin={margin}")
             return data
         return None
     except Exception as e:
         cache_logger.error(f"Error getting balance/margin cache for user {user_id}: {e}", exc_info=True)
+        return None
+
+async def is_balance_margin_cache_stale(redis_client: Redis, user_id: int) -> bool:
+    """
+    Check if the balance/margin cache is stale or contains 0 values.
+    Returns True if cache should be refreshed.
+    """
+    if not redis_client:
+        return True  # Consider stale if Redis is not available
+    
+    try:
+        data = await get_user_balance_margin_cache(redis_client, user_id)
+        if not data:
+            return True  # No cache data, consider stale
+        
+        balance = data.get("wallet_balance", "0.0")
+        margin = data.get("margin", "0.0")
+        
+        # Consider stale if values are 0 or very small
+        try:
+            balance_decimal = Decimal(str(balance))
+            margin_decimal = Decimal(str(margin))
+            
+            # FIXED: More sophisticated staleness detection
+            # If margin is 0 but user might have open orders, consider stale
+            if margin_decimal == 0:
+                # Check if user has open orders (this would indicate stale cache)
+                from app.services.pending_orders import get_users_with_open_orders_for_symbol
+                # This is a simplified check - in practice you might want to check specific symbols
+                cache_logger.debug(f"Margin is 0 for user {user_id}, checking if this might be stale")
+                return True  # Consider stale if margin is 0
+                
+            # If either value is negative, consider stale
+            if balance_decimal < 0 or margin_decimal < 0:
+                cache_logger.warning(f"Balance/margin cache for user {user_id} contains invalid values: balance={balance}, margin={margin}")
+                return True
+                
+        except (ValueError, decimal.InvalidOperation):
+            cache_logger.warning(f"Balance/margin cache for user {user_id} contains non-numeric values: balance={balance}, margin={margin}")
+            return True
+        
+        return False  # Cache is valid
+        
+    except Exception as e:
+        cache_logger.error(f"Error checking balance/margin cache staleness for user {user_id}: {e}", exc_info=True)
+        return True  # Consider stale on error
+
+# FIXED: Add a new function to refresh balance/margin cache with database fallback
+async def refresh_balance_margin_cache_with_fallback(redis_client: Redis, user_id: int, user_type: str, db: AsyncSession = None):
+    """
+    Refresh balance/margin cache with database fallback.
+    This ensures the cache always has valid data.
+    """
+    try:
+        # First check if current cache is valid
+        current_cache = await get_user_balance_margin_cache(redis_client, user_id)
+        if current_cache:
+            balance = current_cache.get("wallet_balance", "0.0")
+            margin = current_cache.get("margin", "0.0")
+            
+            try:
+                balance_decimal = Decimal(str(balance))
+                margin_decimal = Decimal(str(margin))
+                
+                # If both values are reasonable, cache is valid
+                if balance_decimal >= 0 and margin_decimal >= 0:
+                    cache_logger.debug(f"Balance/margin cache for user {user_id} is valid: balance={balance}, margin={margin}")
+                    return current_cache
+                    
+            except (ValueError, decimal.InvalidOperation):
+                pass  # Continue to refresh
+        
+        # Cache is invalid or missing, refresh from database
+        cache_logger.info(f"Refreshing balance/margin cache for user {user_id} from database")
+        
+        if not db:
+            # Create a new database session if none provided
+            from app.database.session import AsyncSessionLocal
+            async with AsyncSessionLocal() as new_db:
+                return await refresh_balance_margin_cache_with_fallback(redis_client, user_id, user_type, new_db)
+        
+        # Get fresh user data from database
+        if user_type == 'live':
+            from app.crud.user import get_user_by_id
+            db_user = await get_user_by_id(db, user_id, user_type=user_type)
+        else:
+            from app.crud.user import get_demo_user_by_id
+            db_user = await get_demo_user_by_id(db, user_id)
+        
+        if not db_user:
+            cache_logger.error(f"User {user_id} not found in database")
+            return None
+        
+        # Calculate total user margin including all symbols
+        from app.services.order_processing import calculate_total_user_margin
+        total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+        
+        # Ensure margin is not negative
+        if total_user_margin < 0:
+            cache_logger.warning(f"Calculated negative margin {total_user_margin} for user {user_id}, using 0")
+            total_user_margin = Decimal("0.0")
+        
+        # Update the cache with fresh data
+        await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+        
+        cache_logger.info(f"Successfully refreshed balance/margin cache for user {user_id}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+        
+        return {
+            "wallet_balance": str(db_user.wallet_balance),
+            "margin": str(total_user_margin),
+            "updated_at": datetime.datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        cache_logger.error(f"Error refreshing balance/margin cache for user {user_id}: {e}", exc_info=True)
         return None
 
 # --- New Static Orders Cache ---

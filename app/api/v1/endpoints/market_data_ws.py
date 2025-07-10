@@ -303,11 +303,31 @@ async def per_connection_redis_listener(
                         )):
                             changed_prices[symbol] = price
                             last_sent_prices[symbol] = price.copy()
-                    static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
+                    
+                    # FIXED: Use cache refresh function to prevent orders from disappearing
+                    static_orders = await refresh_static_orders_cache_if_needed(user_id, redis_client, db, user_type)
                     # Get balance and margin from minimal cache (this is what order processing updates)
                     balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
+                    
+                    # FIXED: Use improved cache refresh function for stale/missing cache data
+                    if balance_value == "0.0" or margin_value == "0.0" or not balance_margin_data:
+                        logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Stale/missing balance_margin_cache, refreshing with fallback")
+                        try:
+                            # Use the improved cache refresh function
+                            from app.core.cache import refresh_balance_margin_cache_with_fallback
+                            refreshed_data = await refresh_balance_margin_cache_with_fallback(redis_client, user_id, user_type, db)
+                            
+                            if refreshed_data:
+                                balance_value = refreshed_data.get("wallet_balance", "0.0")
+                                margin_value = refreshed_data.get("margin", "0.0")
+                                logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Successfully refreshed cache - balance={balance_value}, margin={margin_value}")
+                            else:
+                                logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Failed to refresh cache from database")
+                        except Exception as e:
+                            logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Error refreshing cache: {e}", exc_info=True)
+                    
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
@@ -332,11 +352,41 @@ async def per_connection_redis_listener(
                         is_initial_connection = False
                 elif channel == REDIS_ORDER_UPDATES_CHANNEL and message_data.get("type") == "ORDER_UPDATE" and str(message_data.get("user_id")) == str(user_id):
                     logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Received ORDER_UPDATE message")
-                    static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
+                    # FIXED: Use cache refresh function to prevent orders from disappearing
+                    static_orders = await refresh_static_orders_cache_if_needed(user_id, redis_client, db, user_type)
                     # Get balance and margin from minimal cache (this is what order processing updates)
                     balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
+                    
+                    # FIXED: Add fallback logic for stale/missing cache data
+                    if balance_value == "0.0" or margin_value == "0.0" or not balance_margin_data:
+                        logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Stale/missing balance_margin_cache, fetching fresh data from DB")
+                        try:
+                            # Get fresh user data from database
+                            if user_type == 'live':
+                                from app.crud.user import get_user_by_id
+                                db_user = await get_user_by_id(db, user_id)
+                            else:
+                                from app.crud.user import get_demo_user_by_id
+                                db_user = await get_demo_user_by_id(db, user_id)
+                            
+                            if db_user:
+                                # Calculate total user margin including all symbols
+                                from app.services.order_processing import calculate_total_user_margin
+                                total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+                                
+                                # Update the cache with fresh data
+                                await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                                
+                                balance_value = str(db_user.wallet_balance)
+                                margin_value = str(total_user_margin)
+                                logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Updated cache with fresh data - balance={balance_value}, margin={margin_value}")
+                            else:
+                                logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Could not fetch user data from database")
+                        except Exception as e:
+                            logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Error fetching fresh data: {e}", exc_info=True)
+                    
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
@@ -359,11 +409,41 @@ async def per_connection_redis_listener(
                     )
                 elif channel == REDIS_USER_DATA_UPDATES_CHANNEL and message_data.get("type") == "USER_DATA_UPDATE" and str(message_data.get("user_id")) == str(user_id):
                     logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Received USER_DATA_UPDATE message")
-                    static_orders = await get_user_static_orders_cache(redis_client, user_id) or {"open_orders": [], "pending_orders": []}
+                    # FIXED: Use cache refresh function to prevent orders from disappearing
+                    static_orders = await refresh_static_orders_cache_if_needed(user_id, redis_client, db, user_type)
                     # Get balance and margin from minimal cache (this is what order processing updates)
                     balance_margin_data = await get_user_balance_margin_cache(redis_client, user_id)
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
+                    
+                    # FIXED: Add fallback logic for stale/missing cache data
+                    if balance_value == "0.0" or margin_value == "0.0" or not balance_margin_data:
+                        logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Stale/missing balance_margin_cache, fetching fresh data from DB")
+                        try:
+                            # Get fresh user data from database
+                            if user_type == 'live':
+                                from app.crud.user import get_user_by_id
+                                db_user = await get_user_by_id(db, user_id)
+                            else:
+                                from app.crud.user import get_demo_user_by_id
+                                db_user = await get_demo_user_by_id(db, user_id)
+                            
+                            if db_user:
+                                # Calculate total user margin including all symbols
+                                from app.services.order_processing import calculate_total_user_margin
+                                total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+                                
+                                # Update the cache with fresh data
+                                await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                                
+                                balance_value = str(db_user.wallet_balance)
+                                margin_value = str(total_user_margin)
+                                logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Updated cache with fresh data - balance={balance_value}, margin={margin_value}")
+                            else:
+                                logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Could not fetch user data from database")
+                        except Exception as e:
+                            logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Error fetching fresh data: {e}", exc_info=True)
+                    
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
                     response_data = {
@@ -414,10 +494,19 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                     'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
-            # Add created_at field instead of updated_at
+            
+            # FIXED: Always include created_at field with proper handling
             created_at = getattr(pos, 'created_at', None)
             if created_at:
-                pos_dict['created_at'] = created_at.isoformat() if isinstance(created_at, datetime.datetime) else str(created_at)
+                if isinstance(created_at, datetime.datetime):
+                    pos_dict['created_at'] = created_at.isoformat()
+                else:
+                    pos_dict['created_at'] = str(created_at)
+            else:
+                # If created_at is None, use current timestamp as fallback
+                pos_dict['created_at'] = datetime.datetime.now().isoformat()
+                logger.warning(f"User {user_id}: Order {pos_dict.get('order_id')} has no created_at, using current timestamp")
+            
             open_orders_data.append(pos_dict)
         
         # Get pending orders - always fetch from database to ensure fresh data
@@ -430,20 +519,36 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
-            # Add created_at field instead of updated_at
+            
+            # FIXED: Always include created_at field with proper handling
             created_at = getattr(po, 'created_at', None)
             if created_at:
-                po_dict['created_at'] = created_at.isoformat() if isinstance(created_at, datetime.datetime) else str(created_at)
+                if isinstance(created_at, datetime.datetime):
+                    po_dict['created_at'] = created_at.isoformat()
+                else:
+                    po_dict['created_at'] = str(created_at)
+            else:
+                # If created_at is None, use current timestamp as fallback
+                po_dict['created_at'] = datetime.datetime.now().isoformat()
+                logger.warning(f"User {user_id}: Pending order {po_dict.get('order_id')} has no created_at, using current timestamp")
+            
             pending_orders_data.append(po_dict)
         
-        # Cache the static orders data
+        # Cache the static orders data with longer expiry to prevent disappearing
         static_orders_data = {
             "open_orders": open_orders_data,
             "pending_orders": pending_orders_data,
-            "updated_at": datetime.datetime.now().isoformat()
+            "updated_at": datetime.datetime.now().isoformat(),
+            "cache_version": "1.0"  # Add version for cache invalidation if needed
         }
-        await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
-        logger.debug(f"User {user_id}: Updated static orders cache with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
+        
+        # FIXED: Use longer expiry and add error handling
+        try:
+            await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
+            logger.info(f"User {user_id}: Successfully updated static orders cache with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
+        except Exception as cache_error:
+            logger.error(f"User {user_id}: Error updating static orders cache: {cache_error}", exc_info=True)
+            # Continue without cache update rather than failing completely
         
         # Also update balance/margin cache if we have open orders
         if open_orders_data:
@@ -464,7 +569,14 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
         return static_orders_data
     except Exception as e:
         logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
-        return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
+        # Return minimal data structure rather than empty to prevent complete failure
+        return {
+            "open_orders": [], 
+            "pending_orders": [], 
+            "updated_at": datetime.datetime.now().isoformat(),
+            "cache_version": "1.0",
+            "error": str(e)
+        }
     finally:
         # Ensure database session is properly handled
         try:
@@ -609,6 +721,34 @@ async def process_portfolio_update(
         # Prepare response data
         balance_value = user_data.get("wallet_balance", "0.0") if user_data else dynamic_portfolio.get("balance", "0.0")
         margin_value = user_data.get("margin", "0.0") if user_data else dynamic_portfolio.get("margin", "0.0")
+        
+        # FIXED: Add fallback logic for stale/missing data
+        if balance_value == "0.0" or margin_value == "0.0" or not user_data:
+            logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Stale/missing user_data, fetching fresh data from DB")
+            try:
+                # Get fresh user data from database
+                if user_type == 'live':
+                    from app.crud.user import get_user_by_id
+                    db_user = await get_user_by_id(db, user_id)
+                else:
+                    from app.crud.user import get_demo_user_by_id
+                    db_user = await get_demo_user_by_id(db, user_id)
+                
+                if db_user:
+                    # Calculate total user margin including all symbols
+                    from app.services.order_processing import calculate_total_user_margin
+                    total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+                    
+                    # Update the cache with fresh data
+                    await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                    
+                    balance_value = str(db_user.wallet_balance)
+                    margin_value = str(total_user_margin)
+                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Updated cache with fresh data - balance={balance_value}, margin={margin_value}")
+                else:
+                    logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Could not fetch user data from database")
+            except Exception as e:
+                logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Error fetching fresh data: {e}", exc_info=True)
         
         logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Final margin_value={margin_value}")
         
@@ -814,6 +954,16 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         
         # Set minimal balance/margin cache for websocket
         await set_user_balance_margin_cache(redis_client, db_user_id, user_data_to_cache["wallet_balance"], total_margin)
+        
+        # FIXED: Ensure balance/margin cache is properly set and log for debugging
+        logger.info(f"[WEBSOCKET_INIT] User {db_user_id}: Initialized balance/margin cache - balance={user_data_to_cache['wallet_balance']}, margin={total_margin}")
+        
+        # Verify cache was set correctly
+        verify_cache = await get_user_balance_margin_cache(redis_client, db_user_id)
+        if verify_cache:
+            logger.info(f"[WEBSOCKET_INIT] User {db_user_id}: Cache verification successful - {verify_cache}")
+        else:
+            logger.warning(f"[WEBSOCKET_INIT] User {db_user_id}: Cache verification failed - cache not found")
         
         # Keep the old portfolio cache for backward compatibility (can be removed later)
         user_portfolio_data = {
@@ -1111,3 +1261,42 @@ async def reset_websocket_stats():
             'last_connection_time': None
         }
     return {"message": "WebSocket statistics reset"}
+
+async def refresh_static_orders_cache_if_needed(user_id: int, redis_client: Redis, db: AsyncSession, user_type: str) -> Dict[str, Any]:
+    """
+    Refresh static orders cache if it's stale, missing, or has errors.
+    This prevents orders from disappearing from the websocket.
+    """
+    try:
+        # Check if cache exists and is valid
+        static_orders = await get_user_static_orders_cache(redis_client, user_id)
+        
+        # If cache is missing, empty, or has errors, refresh it
+        should_refresh = False
+        if not static_orders:
+            logger.warning(f"User {user_id}: Static orders cache is missing, refreshing from DB")
+            should_refresh = True
+        elif static_orders.get("error"):
+            logger.warning(f"User {user_id}: Static orders cache has error, refreshing from DB")
+            should_refresh = True
+        elif not static_orders.get("open_orders") and not static_orders.get("pending_orders"):
+            # Check if user actually has orders in DB
+            order_model = get_order_model(user_type)
+            open_count = len(await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model))
+            pending_statuses = ["BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP", "PENDING"]
+            pending_count = len(await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model))
+            
+            if open_count > 0 or pending_count > 0:
+                logger.warning(f"User {user_id}: Cache shows no orders but DB has {open_count} open + {pending_count} pending, refreshing cache")
+                should_refresh = True
+        
+        if should_refresh:
+            logger.info(f"User {user_id}: Refreshing static orders cache from database")
+            static_orders = await update_static_orders_cache(user_id, db, redis_client, user_type)
+        
+        return static_orders or {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat()}
+        
+    except Exception as e:
+        logger.error(f"User {user_id}: Error in refresh_static_orders_cache_if_needed: {e}", exc_info=True)
+        # Return minimal structure to prevent complete failure
+        return {"open_orders": [], "pending_orders": [], "updated_at": datetime.datetime.now().isoformat(), "error": str(e)}

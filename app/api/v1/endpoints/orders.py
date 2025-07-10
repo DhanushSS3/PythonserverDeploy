@@ -242,6 +242,19 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
                        for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                    'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            
+            # FIXED: Always include created_at field with proper handling
+            created_at = getattr(pos, 'created_at', None)
+            if created_at:
+                if isinstance(created_at, datetime.datetime):
+                    pos_dict['created_at'] = created_at.isoformat()
+                else:
+                    pos_dict['created_at'] = str(created_at)
+            else:
+                # If created_at is None, use current timestamp as fallback
+                pos_dict['created_at'] = datetime.datetime.now().isoformat()
+                orders_logger.warning(f"User {user_id}: Order {pos_dict.get('order_id')} has no created_at, using current timestamp")
+            
             open_orders_data.append(pos_dict)
         
         # Get pending orders - always fetch from database to ensure fresh data
@@ -254,6 +267,19 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
+            
+            # FIXED: Always include created_at field with proper handling
+            created_at = getattr(po, 'created_at', None)
+            if created_at:
+                if isinstance(created_at, datetime.datetime):
+                    po_dict['created_at'] = created_at.isoformat()
+                else:
+                    po_dict['created_at'] = str(created_at)
+            else:
+                # If created_at is None, use current timestamp as fallback
+                po_dict['created_at'] = datetime.datetime.now().isoformat()
+                orders_logger.warning(f"User {user_id}: Pending order {po_dict.get('order_id')} has no created_at, using current timestamp")
+            
             pending_orders_data.append(po_dict)
         
         # Cache the static orders data
@@ -3071,6 +3097,10 @@ async def update_order_by_service_provider(
             }
             await set_user_data_cache(redis_client, user_id, user_data_to_cache, 'live')
             
+            # Update balance/margin cache for websocket
+            await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, db_user.margin)
+            orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={db_user.margin}")
+            
             # Update static orders cache
             await update_user_static_orders(user_id, db, redis_client, 'live')
             
@@ -3269,6 +3299,37 @@ async def update_order_by_service_provider(
             # Commit changes
             await db.commit()
             
+            # Update user data cache and balance/margin cache
+            try:
+                db_user = await get_user_by_id(db, user_id)
+                if db_user:
+                    # Calculate total user margin including all symbols
+                    from app.services.order_processing import calculate_total_user_margin
+                    total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, 'live')
+                    
+                    user_data_to_cache = {
+                        "id": db_user.id,
+                        "email": getattr(db_user, 'email', None),
+                        "group_name": db_user.group_name,
+                        "leverage": db_user.leverage,
+                        "user_type": 'live',
+                        "account_number": getattr(db_user, 'account_number', None),
+                        "wallet_balance": db_user.wallet_balance,
+                        "margin": total_user_margin,  # Use calculated total margin
+                        "first_name": getattr(db_user, 'first_name', None),
+                        "last_name": getattr(db_user, 'last_name', None),
+                        "country": getattr(db_user, 'country', None),
+                        "phone_number": getattr(db_user, 'phone_number', None),
+                    }
+                    await set_user_data_cache(redis_client, user_id, user_data_to_cache, 'live')
+                    
+                    # Update balance/margin cache for websocket
+                    await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                    orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+                    
+            except Exception as e:
+                orders_logger.error(f"Error updating user data cache after pending order cancellation: {e}", exc_info=True)
+            
             # Update static orders cache
             await update_user_static_orders(user_id, db, redis_client, 'live')
             
@@ -3293,11 +3354,44 @@ async def update_order_by_service_provider(
             # Commit changes
             await db.commit()
             
+            # Update user data cache and balance/margin cache
+            try:
+                user_id = db_order.order_user_id
+                db_user = await get_user_by_id(db, user_id)
+                if db_user:
+                    # Calculate total user margin including all symbols
+                    from app.services.order_processing import calculate_total_user_margin
+                    total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, 'live')
+                    
+                    user_data_to_cache = {
+                        "id": db_user.id,
+                        "email": getattr(db_user, 'email', None),
+                        "group_name": db_user.group_name,
+                        "leverage": db_user.leverage,
+                        "user_type": 'live',
+                        "account_number": getattr(db_user, 'account_number', None),
+                        "wallet_balance": db_user.wallet_balance,
+                        "margin": total_user_margin,  # Use calculated total margin
+                        "first_name": getattr(db_user, 'first_name', None),
+                        "last_name": getattr(db_user, 'last_name', None),
+                        "country": getattr(db_user, 'country', None),
+                        "phone_number": getattr(db_user, 'phone_number', None),
+                    }
+                    await set_user_data_cache(redis_client, user_id, user_data_to_cache, 'live')
+                    
+                    # Update balance/margin cache for websocket
+                    await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                    orders_logger.info(f"Balance/margin cache updated for user {user_id}: balance={db_user.wallet_balance}, margin={total_user_margin}")
+                    
+            except Exception as e:
+                orders_logger.error(f"Error updating user data cache after service provider update: {e}", exc_info=True)
+            
             # Update static orders cache
             await update_user_static_orders(db_order.order_user_id, db, redis_client, 'live')
             
             # Publish updates to notify WebSocket clients
             await publish_order_update(redis_client, db_order.order_user_id)
+            await publish_user_data_update(redis_client, db_order.order_user_id)
             
         # Return the updated order
         await db.refresh(db_order)
@@ -4047,5 +4141,26 @@ async def test_pending_trigger(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Test error: {str(e)}")
+
+async def invalidate_and_refresh_static_orders_cache(user_id: int, redis_client: Redis, user_type: str):
+    """
+    Invalidate and refresh the static orders cache for a user.
+    This ensures the cache is always up-to-date after order changes.
+    """
+    try:
+        # Delete the existing cache to force a fresh fetch
+        from app.core.cache import REDIS_USER_STATIC_ORDERS_KEY_PREFIX
+        cache_key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_id}"
+        await redis_client.delete(cache_key)
+        orders_logger.info(f"Invalidated static orders cache for user {user_id}")
+        
+        # Refresh the cache with fresh data
+        from app.database.session import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            await update_static_orders_cache(user_id, db, redis_client, user_type)
+            orders_logger.info(f"Refreshed static orders cache for user {user_id}")
+            
+    except Exception as e:
+        orders_logger.error(f"Error invalidating/refreshing static orders cache for user {user_id}: {e}", exc_info=True)
 
 

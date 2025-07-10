@@ -124,24 +124,24 @@ async def get_pending_orders_by_price(redis: Redis, symbol: str, order_type: str
     # Convert price to float with 6 decimal precision
     price_rounded = round(float(price), 6)
     
-    # FIXED LOGIC:
-    # BUY_LIMIT: trigger when market_price <= pending_price (market goes down)
-    # SELL_STOP: trigger when market_price <= pending_price (market goes down)
-    # BUY_STOP: trigger when market_price >= pending_price (market goes up)
-    # SELL_LIMIT: trigger when market_price >= pending_price (market goes up)
+    # FIXED LOGIC: Using adjusted_ask_price for all order types
+    # BUY_LIMIT: trigger when adjusted_ask_price <= pending_price (market goes down)
+    # SELL_STOP: trigger when adjusted_ask_price <= pending_price (market goes down)  
+    # BUY_STOP: trigger when adjusted_ask_price >= pending_price (market goes up)
+    # SELL_LIMIT: trigger when adjusted_ask_price >= pending_price (market goes up)
     
     if order_type in ["BUY_LIMIT", "SELL_STOP"]:
-        # For BUY_LIMIT and SELL_STOP: find orders where pending_price >= market_price
-        # This means the market price has gone down to or below the pending price
+        # For BUY_LIMIT and SELL_STOP: find orders where pending_price >= adjusted_ask_price
+        # This means the market price (adjusted_ask_price) has gone down to or below the pending price
         order_ids = await redis.zrangebyscore(zset_key, price_rounded, "+inf")
-        logger.debug(f"[REDIS_ZSET] {order_type} query: zrangebyscore({zset_key}, {price_rounded}, +inf) - Market price {price_rounded} <= Pending price")
+        logger.debug(f"[REDIS_ZSET] {order_type} query: zrangebyscore({zset_key}, {price_rounded}, +inf) - Adjusted ask price {price_rounded} <= Pending price")
     else:
-        # For BUY_STOP and SELL_LIMIT: find orders where pending_price <= market_price
-        # This means the market price has gone up to or above the pending price
+        # For BUY_STOP and SELL_LIMIT: find orders where pending_price <= adjusted_ask_price
+        # This means the market price (adjusted_ask_price) has gone up to or above the pending price
         order_ids = await redis.zrangebyscore(zset_key, "-inf", price_rounded)
-        logger.debug(f"[REDIS_ZSET] {order_type} query: zrangebyscore({zset_key}, -inf, {price_rounded}) - Market price {price_rounded} >= Pending price")
+        logger.debug(f"[REDIS_ZSET] {order_type} query: zrangebyscore({zset_key}, -inf, {price_rounded}) - Adjusted ask price {price_rounded} >= Pending price")
     
-    logger.debug(f"[REDIS_ZSET] Found {len(order_ids)} {order_type} orders for {symbol}")
+    logger.debug(f"[REDIS_ZSET] Found {len(order_ids)} {order_type} orders for {symbol} at adjusted_ask_price {price_rounded}")
     return [oid.decode() if isinstance(oid, bytes) else oid for oid in order_ids]
 
 async def get_order_hash(redis: Redis, order_id: str):
@@ -158,8 +158,18 @@ async def get_order_hash(redis: Redis, order_id: str):
         logger.warning(f"[REDIS_DEBUG] Hash key {hash_key} exists: {exists}")
         return None
 
-async def queue_triggered_order(redis: Redis, order_id: str):
-    await redis.xadd(PENDING_TRIGGER_QUEUE, {"order_id": order_id})
+async def queue_triggered_order(redis: Redis, order_id: str, trigger_price: float = None):
+    """
+    Queue a triggered order for processing with the trigger price.
+    This ensures the execution price matches the trigger price.
+    """
+    if trigger_price is not None:
+        await redis.xadd(PENDING_TRIGGER_QUEUE, {
+            "order_id": order_id,
+            "trigger_price": str(trigger_price)
+        })
+    else:
+        await redis.xadd(PENDING_TRIGGER_QUEUE, {"order_id": order_id})
 
 async def fetch_triggered_orders(redis: Redis, last_id: str = "0"):
     """
@@ -183,6 +193,7 @@ async def fetch_triggered_orders(redis: Redis, last_id: str = "0"):
                 
                 # Extract order_id from entry_data - handle different formats
                 order_id = None
+                trigger_price = None
                 if b'order_id' in entry_data:
                     order_id = entry_data[b'order_id']
                 elif 'order_id' in entry_data:
@@ -191,12 +202,22 @@ async def fetch_triggered_orders(redis: Redis, last_id: str = "0"):
                     logger.warning(f"Stream entry {entry_id} has no order_id field")
                     continue
                 
+                # Extract trigger_price if available
+                if b'trigger_price' in entry_data:
+                    trigger_price = entry_data[b'trigger_price']
+                elif 'trigger_price' in entry_data:
+                    trigger_price = entry_data['trigger_price']
+                
                 # Decode order_id if it's bytes
                 if isinstance(order_id, bytes):
                     order_id = order_id.decode()
                 
-                processed_entries.append((entry_id_str, order_id))
-                logger.debug(f"[STREAM_DEBUG] Processed entry {entry_id_str} -> order_id {order_id}")
+                # Decode trigger_price if it's bytes
+                if isinstance(trigger_price, bytes):
+                    trigger_price = trigger_price.decode()
+                
+                processed_entries.append((entry_id_str, order_id, trigger_price))
+                logger.debug(f"[STREAM_DEBUG] Processed entry {entry_id_str} -> order_id {order_id}, trigger_price {trigger_price}")
                 
             except Exception as e:
                 logger.error(f"Error processing stream entry {entry_id}: {e}")
@@ -651,6 +672,8 @@ async def trigger_pending_order(
             'margin': full_margin_usd,
             'commission': commission,
             'triggered_price': current_price,
+            'stop_loss': None,
+            'take_profit': None,
         }
         updated_order = await crud_order.update_order_with_tracking(
             db, db_order, update_fields, user_id, user_type, "PENDING_TO_OPEN"
@@ -696,7 +719,7 @@ async def trigger_pending_order(
 
         logger.info(f"[PENDING_ORDER] Successfully executed order {order_id} for user {user_id}")
         logger.info(f"[PENDING_ORDER] Order {order_id}: Final price={exec_price}, margin={full_margin_usd}, commission={commission}")
-        logger.info(f"[PENDING_ORDER_SUMMARY] Order {order_id} executed: {order_type_original} -> {new_order_type}, Placed: {placed_price}, Triggered: {current_price}, Margin: {full_margin_usd}, Commission: {commission}, AdditionalMargin: {additional_margin}")
+        logger.info(f"[PENDING_ORDER_SUMMARY] Order {order_id} executed: {order_type_original} -> {new_order_type}, Placed: {placed_price}, Triggered: {current_price}, Margin: {full_margin_usd}, Commission: {commission}, AdditionalMargin: {None}")
 
     except Exception as e:
         logger.error(f"[PENDING_ORDER] Error triggering pending order {order_id}: {e}", exc_info=True)
@@ -1471,9 +1494,9 @@ async def check_and_trigger_pending_orders_redis(redis: Redis, symbol: str, orde
             trigger_condition = f"Market price ({adjusted_price_rounded}) >= Pending price ({order_price})"
         logger.info(f"[PENDING_CHECK] Order {order_id}: {trigger_condition} - TRIGGERED!")
         
-        # 3. Queue for processing
-        await queue_triggered_order(redis, order_id)
-        logger.info(f"[PENDING_CHECK] Queued order {order_id} for processing")
+        # 3. Queue for processing with the trigger price
+        await queue_triggered_order(redis, order_id, adjusted_price_rounded)
+        logger.info(f"[PENDING_CHECK] Queued order {order_id} for processing at trigger price {adjusted_price_rounded}")
         triggered += 1
     
     if triggered > 0:
@@ -1506,7 +1529,7 @@ async def pending_order_trigger_worker(redis: Redis, db_factory, concurrency: in
                 continue
             
             # Process each entry
-            for entry_id, order_id in entries:
+            for entry_id, order_id, trigger_price in entries:
                 async with sem:
                     try:
                         logger.info(f"[PENDING_TRIGGER_WORKER] Processing triggered order {order_id}")
@@ -1525,38 +1548,52 @@ async def pending_order_trigger_worker(redis: Redis, db_factory, concurrency: in
                                 symbol = order_data.get('order_company_name')
                                 placed_price = decimal_to_float_6dp(order_data.get('order_price', 0))
                                 
-                                # Get current market price for comparison
-                                current_market_price = None
-                                try:
-                                    # Try to get adjusted price from cache
-                                    user_data = await get_user_data_cache(redis, order_data.get('order_user_id'), db, order_data.get('user_type', 'live'))
-                                    group_name = user_data.get('group_name') if user_data else None
-                                    if group_name:
-                                        adjusted_prices = await get_adjusted_market_price_cache(redis, group_name, symbol)
-                                        if adjusted_prices:
-                                            # Use appropriate price based on order type
-                                            order_type = order_data.get('order_type', '')
-                                            if order_type in ['BUY_LIMIT', 'BUY_STOP']:
-                                                current_market_price = adjusted_prices.get('buy')
-                                            else:  # SELL_LIMIT, SELL_STOP
-                                                current_market_price = adjusted_prices.get('buy')
-                                except Exception as price_error:
-                                    logger.warning(f"[PENDING_TRIGGER_WORKER] Could not get current market price for {symbol}: {price_error}")
+                                # FIXED: Use the stored trigger price for execution
+                                # This ensures the execution price matches the trigger price exactly
+                                execution_price = None
+                                if trigger_price is not None:
+                                    try:
+                                        execution_price = float(trigger_price)
+                                        logger.info(f"[PENDING_TRIGGER_WORKER] Using stored trigger price {execution_price} for order {order_id}")
+                                    except (ValueError, TypeError):
+                                        logger.warning(f"[PENDING_TRIGGER_WORKER] Invalid trigger price {trigger_price}, falling back to placed price")
+                                        execution_price = placed_price
+                                else:
+                                    # Fallback to placed price if no trigger price stored
+                                    execution_price = placed_price
+                                    logger.warning(f"[PENDING_TRIGGER_WORKER] No trigger price stored for order {order_id}, using placed price {placed_price}")
                                 
-                                logger.info(f"[PENDING_TRIGGER_WORKER] Processing order {order_id}: symbol={symbol}, placed_price={placed_price}, current_market_price={current_market_price}")
+                                logger.info(f"[PENDING_TRIGGER_WORKER] Processing order {order_id}: symbol={symbol}, placed_price={placed_price}, execution_price={execution_price}")
+                                
+                                # FIXED: Validate that the trigger price is correct for the order type
+                                order_type = order_data.get('order_type', '')
+                                price_validation_passed = True
+                                
+                                if order_type in ['BUY_LIMIT', 'SELL_STOP']:
+                                    # These should trigger when market price <= pending price
+                                    if execution_price > placed_price:
+                                        logger.warning(f"[PENDING_TRIGGER_WORKER] Invalid trigger for {order_type}: execution_price ({execution_price}) > placed_price ({placed_price})")
+                                        price_validation_passed = False
+                                elif order_type in ['BUY_STOP', 'SELL_LIMIT']:
+                                    # These should trigger when market price >= pending price
+                                    if execution_price < placed_price:
+                                        logger.warning(f"[PENDING_TRIGGER_WORKER] Invalid trigger for {order_type}: execution_price ({execution_price}) < placed_price ({placed_price})")
+                                        price_validation_passed = False
+                                
+                                if not price_validation_passed:
+                                    logger.error(f"[PENDING_TRIGGER_WORKER] Price validation failed for order {order_id}, skipping execution")
+                                    error_count += 1
+                                    continue
                                 
                                 if symbol and placed_price > 0:
-                                    # Use current market price if available, otherwise use placed price
-                                    trigger_price = current_market_price if current_market_price is not None else placed_price
-                                    
-                                    # Trigger the order using existing logic
+                                    # Use the stored trigger price for execution to ensure consistency
                                     await trigger_pending_order(
                                         db=db,
                                         redis_client=redis,
                                         order=order_data,
-                                        current_price=Decimal(str(trigger_price))
+                                        current_price=Decimal(str(execution_price))
                                     )
-                                    logger.info(f"[PENDING_TRIGGER_WORKER] Successfully triggered order {order_id}")
+                                    logger.info(f"[PENDING_TRIGGER_WORKER] Successfully triggered order {order_id} at price {execution_price}")
                                     error_count = 0  # Reset error count on success
                                 else:
                                     logger.warning(f"[PENDING_TRIGGER_WORKER] Invalid order data for {order_id}: symbol={symbol}, price={placed_price}")
@@ -1629,7 +1666,25 @@ async def cleanup_pending_order_stream(redis: Redis):
     except Exception as e:
         logger.error(f"[CLEANUP] Error during cleanup: {e}", exc_info=True)
         return False
+
+async def cleanup_pending_order_stream_with_trigger_prices(redis: Redis):
+    """
+    Clean up the pending order stream and ensure all entries have trigger prices.
+    This is needed after updating to the new trigger price format.
+    """
+    try:
+        logger.info("[CLEANUP] Starting pending order stream cleanup with trigger price validation")
         
+        # Clear the trigger queue stream to remove old format entries
+        await redis.xtrim(PENDING_TRIGGER_QUEUE, maxlen=0)
+        logger.info("[CLEANUP] Cleared pending_trigger_queue stream to remove old format entries")
+        
+        logger.info("[CLEANUP] Pending order stream cleanup with trigger price validation completed")
+        return True
+    except Exception as e:
+        logger.error(f"[CLEANUP] Error during cleanup with trigger prices: {e}", exc_info=True)
+        return False
+
 # --- New Optimized Pending Order Processing System ---
 
 async def process_pending_orders_for_symbol(symbol: str, redis_client: Redis):

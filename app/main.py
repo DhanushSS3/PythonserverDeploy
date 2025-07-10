@@ -654,7 +654,7 @@ async def startup_event():
         
         scheduler.add_job(
             daily_swap_charge_job,
-            CronTrigger(hour=0, minute=5),
+            CronTrigger(hour=4, minute=31),
             id='daily_swap_charge_job',
             replace_existing=True
         )
@@ -725,6 +725,24 @@ async def startup_event():
             )
             background_tasks.add(pending_trigger_worker_task)
             pending_trigger_worker_task.add_done_callback(background_tasks.discard)
+            
+            # Start the stale cache cleanup task
+            stale_cache_task = asyncio.create_task(cleanup_stale_cache_entries(global_redis_client_instance))
+            background_tasks.add(stale_cache_task)
+            stale_cache_task.add_done_callback(background_tasks.discard)
+            
+            # Clean up pending order stream to ensure new trigger price format
+            try:
+                from app.services.pending_orders import cleanup_pending_order_stream_with_trigger_prices
+                await cleanup_pending_order_stream_with_trigger_prices(global_redis_client_instance)
+                logger.info("Cleaned up pending order stream for new trigger price format")
+            except Exception as e:
+                logger.error(f"Error cleaning up pending order stream: {e}", exc_info=True)
+            
+            # Start periodic cache cleanup task
+            cache_cleanup_task = asyncio.create_task(run_cache_cleanup())
+            background_tasks.add(cache_cleanup_task)
+            cache_cleanup_task.add_done_callback(background_tasks.discard)
             
         logger.info("Background tasks initialized")
             
@@ -980,3 +998,66 @@ async def cleanup_orphaned_redis_orders():
             logger.error("Error in cleanup process")
         
         await asyncio.sleep(300)
+
+# --- Periodic Cache Cleanup Task ---
+async def run_cache_cleanup():
+    """
+    Periodic task to clean up stale cache entries and ensure cache consistency.
+    This prevents orders from disappearing due to cache issues.
+    """
+    logger = redis_logger
+    
+    # Give the application a moment to initialize everything else
+    await asyncio.sleep(15)  # Wait a bit longer to let other tasks start
+    logger.info("Starting the cache cleanup task.")
+    
+    while True:
+        try:
+            if global_redis_client_instance:
+                await cleanup_stale_cache_entries(global_redis_client_instance)
+                logger.debug("Completed cache cleanup cycle")
+            else:
+                await asyncio.sleep(60)
+                continue
+                
+        except Exception as e:
+            logger.error(f"Error in cache cleanup task: {e}", exc_info=True)
+        
+        # Run cleanup every 10 minutes
+        await asyncio.sleep(600)
+
+async def cleanup_stale_cache_entries(redis_client: Redis):
+    """
+    Periodically clean up stale cache entries and ensure cache consistency.
+    This prevents orders from disappearing due to cache issues.
+    """
+    try:
+        logger.info("Starting stale cache cleanup task")
+        
+        # Get all static orders cache keys
+        from app.core.cache import REDIS_USER_STATIC_ORDERS_KEY_PREFIX
+        pattern = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}*"
+        cache_keys = await redis_client.keys(pattern)
+        
+        logger.info(f"Found {len(cache_keys)} static orders cache entries to check")
+        
+        for key in cache_keys:
+            try:
+                # Check if cache entry is valid
+                cache_data = await redis_client.get(key)
+                if cache_data:
+                    data = json.loads(cache_data)
+                    
+                    # If cache has error or is empty but shouldn't be, mark for refresh
+                    if data.get("error") or (not data.get("open_orders") and not data.get("pending_orders")):
+                        user_id = key.replace(REDIS_USER_STATIC_ORDERS_KEY_PREFIX, "")
+                        logger.warning(f"Found stale cache entry for user {user_id}, will be refreshed on next access")
+                        
+            except Exception as e:
+                logger.error(f"Error checking cache key {key}: {e}")
+                continue
+        
+        logger.info("Completed stale cache cleanup task")
+        
+    except Exception as e:
+        logger.error(f"Error in cleanup_stale_cache_entries: {e}", exc_info=True)
