@@ -546,8 +546,19 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                 }
                 await set_user_data_cache(redis_client, user_id, user_data_to_cache)
                 
+                # FIXED: Update static orders and ensure balance/margin cache is refreshed
                 from app.api.v1.endpoints.orders import update_user_static_orders
                 await update_user_static_orders(user_id, db, redis_client, user_type_str)
+                
+                # FIXED: Ensure balance/margin cache is properly updated after autocutoff
+                try:
+                    from app.services.order_processing import calculate_total_user_margin
+                    total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type_str)
+                    await set_user_balance_margin_cache(redis_client, user_id, user_data_to_cache["wallet_balance"], total_user_margin)
+                    logger.info(f"[AUTO-CUTOFF] User {user_id}: Updated balance/margin cache - balance={user_data_to_cache['wallet_balance']}, margin={total_user_margin}")
+                except Exception as e:
+                    logger.error(f"[AUTO-CUTOFF] User {user_id}: Error updating balance/margin cache: {e}", exc_info=True)
+                
                 await publish_order_update(redis_client, user_id)
                 await publish_user_data_update(redis_client, user_id)
                 await publish_market_data_trigger(redis_client)

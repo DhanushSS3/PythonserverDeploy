@@ -410,7 +410,7 @@ async def process_new_order_ultra_optimized(
             'order_user_id': user_id,
             'order_company_name': symbol,
             'order_type': order_type,
-            'order_price': price,
+            'order_price': order_data.get('order_price'),
             'order_quantity': quantity,
             'contract_value': contract_value,
             'margin': full_margin_usd,

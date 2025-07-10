@@ -291,6 +291,26 @@ async def update_user_static_orders(user_id: int, db: AsyncSession, redis_client
         await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
         orders_logger.info(f"Updated static orders cache for user {user_id} with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
         
+        # FIXED: Also update balance/margin cache to ensure websocket gets correct values after autocutoff
+        try:
+            # Get fresh user data for balance
+            user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+            if user_data:
+                balance = user_data.get('wallet_balance', '0.0')
+                
+                # Calculate total user margin including all symbols
+                from app.services.order_processing import calculate_total_user_margin
+                total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+                
+                # Update the balance/margin cache
+                await set_user_balance_margin_cache(redis_client, user_id, balance, total_user_margin)
+                orders_logger.info(f"User {user_id}: Updated balance/margin cache after static orders update - balance={balance}, margin={total_user_margin}")
+            else:
+                orders_logger.warning(f"User {user_id}: Could not get user data for balance/margin cache update")
+                
+        except Exception as e:
+            orders_logger.error(f"Error updating balance/margin cache in update_user_static_orders: {e}", exc_info=True)
+        
         return static_orders_data
     except Exception as e:
         orders_logger.error(f"Error updating static orders cache for user {user_id}: {e}", exc_info=True)
