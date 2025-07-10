@@ -154,11 +154,8 @@ async def adjusted_price_worker(redis_client: Redis):
             trigger_start_time = time.time()
             
             # Import the function here to avoid circular imports
-            from app.services.pending_orders import check_and_trigger_pending_orders_redis, debug_pending_orders_in_redis, get_users_with_pending_orders_for_symbol
+            from app.services.pending_orders import check_and_trigger_pending_orders_redis, get_users_with_pending_orders_for_symbol
             
-            # Debug: Check what pending orders exist
-            for symbol in updated_symbols:
-                await debug_pending_orders_in_redis(redis_client, symbol)
             
             # FIXED: Get users with pending orders for each symbol and use their group-specific prices
             for symbol in updated_symbols:

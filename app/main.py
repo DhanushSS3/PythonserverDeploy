@@ -45,6 +45,7 @@ from app.core.cache import (
     publish_order_update,
     publish_user_data_update,
     publish_market_data_trigger,
+    set_user_balance_margin_cache,
     REDIS_MARKET_DATA_CHANNEL,
     decode_decimal
 )
@@ -113,9 +114,14 @@ from app.database.models import UserOrder, DemoUser
 from app.services.adjusted_price_worker import adjusted_price_worker
 
 settings = get_settings()
+
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json", # Keep this as it is for now, as it just exposes the JSON schema
+    docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
+    redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
 )
 
 # --- CORS Settings ---
@@ -156,21 +162,22 @@ print(f"Loaded ALGORITHM (from code): '{ALGORITHM}'")
 print(f"---------------------------")
 
 # Log application startup
-orders_logger.info("Application starting up - Orders logging initialized")
-orders_logger.info(f"SL/TP Epsilon accuracy configured: {SLTP_EPSILON}")
+logger.info("Application starting up - Trading system initialized")
+logger.info(f"SL/TP Epsilon accuracy configured: {SLTP_EPSILON}")
+logger.info(f"Environment: {'PRODUCTION' if os.getenv('ENVIRONMENT', 'development').lower() == 'production' else 'DEVELOPMENT'}")
 
 # --- Scheduled Job Functions ---
 async def daily_swap_charge_job():
-    logger.info("APScheduler: Executing daily_swap_charge_job...")
+    logger.info("Executing daily swap charge job...")
     async with AsyncSessionLocal() as db:
         if global_redis_client_instance:
             try:
                 await apply_daily_swap_charges_for_all_open_orders(db, global_redis_client_instance)
-                logger.info("APScheduler: Daily swap charge job completed successfully.")
+                logger.info("Daily swap charge job completed successfully")
             except Exception as e:
-                logger.error(f"APScheduler: Error during daily_swap_charge_job: {e}", exc_info=True)
+                logger.error(f"Error during daily swap charge job: {e}", exc_info=True)
         else:
-            logger.error("APScheduler: Cannot execute daily_swap_charge_job - Global Redis client not available.")
+            logger.error("Cannot execute daily swap charge job - Redis client not available")
 
 # --- New Dynamic Portfolio Update Job ---
 async def update_all_users_dynamic_portfolio():
@@ -180,7 +187,6 @@ async def update_all_users_dynamic_portfolio():
     This is critical for autocutoff and validation.
     """
     try:
-        logger.debug("Starting update_all_users_dynamic_portfolio job")
         async with AsyncSessionLocal() as db:
             if not global_redis_client_instance:
                 logger.error("Cannot update dynamic portfolios - Redis client not available")
@@ -194,8 +200,6 @@ async def update_all_users_dynamic_portfolio():
                 all_users.append({"id": user.id, "user_type": "live", "group_name": user.group_name})
             for user in demo_users:
                 all_users.append({"id": user.id, "user_type": "demo", "group_name": user.group_name})
-            
-            logger.debug(f"Found {len(all_users)} active users to update portfolios")
             
             # Process each user
             for user_info in all_users:
@@ -297,14 +301,12 @@ async def update_all_users_dynamic_portfolio():
                     elif portfolio_metrics.get("margin_call", False):
                         autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} has margin call condition: margin level {margin_level}%")
                     
-                    # After portfolio update or order execution, log details if relevant
-                    # orders_logger.info(f"[PENDING_ORDER_EXECUTION][PORTFOLIO_UPDATE] user_id={user_id}, user_type={user_type}, group_name={group_name}, free_margin={dynamic_portfolio_data.get('free_margin', 'N/A')}, margin_level={dynamic_portfolio_data.get('margin_level', 'N/A')}, balance={dynamic_portfolio_data.get('balance', 'N/A')}, equity={dynamic_portfolio_data.get('equity', 'N/A')}")
+                    # Portfolio update completed for user
                     
                 except Exception as user_error:
                     logger.error(f"Error updating portfolio for user {user_id}: {user_error}", exc_info=True)
                     continue
             
-            logger.debug("Finished update_all_users_dynamic_portfolio job")
     except Exception as e:
         logger.error(f"Error in update_all_users_dynamic_portfolio job: {e}", exc_info=True)
 
@@ -604,6 +606,7 @@ async def startup_event():
     global background_tasks
     global global_redis_client_instance
     logger.info("Application startup initiated")
+    logger.info("Initializing core services...")
     import redis.asyncio as redis
 
     # r = redis.Redis(host="127.0.0.1", port=6379)
@@ -755,6 +758,11 @@ async def startup_event():
             background_tasks.add(cache_cleanup_task)
             cache_cleanup_task.add_done_callback(background_tasks.discard)
             
+            # Start periodic cache validation task
+            cache_validation_task = asyncio.create_task(run_cache_validation())
+            background_tasks.add(cache_validation_task)
+            cache_validation_task.add_done_callback(background_tasks.discard)
+            
         logger.info("Background tasks initialized")
             
     except Exception:
@@ -766,7 +774,7 @@ async def startup_event():
     except Exception:
         logger.error("Initial service account token creation failed")
     
-    logger.info("Application startup completed")
+    logger.info("Application startup completed successfully")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -887,7 +895,7 @@ async def run_sltp_checker_on_market_update():
 
     # Give the application a moment to initialize everything else
     await asyncio.sleep(5) 
-    logger.info("Starting the optimized SL/TP checker task (triggered by market updates).")
+    logger.debug("Starting the optimized SL/TP checker task (triggered by market updates).")
     
     # Subscribe to market data updates
     pubsub = global_redis_client_instance.pubsub()
@@ -908,7 +916,7 @@ async def run_sltp_checker_on_market_update():
                              isinstance(message_data[key], dict)]
                     
                     if symbols:
-                        logger.info(f"Market data update received for symbols: {symbols}, triggering optimized SL/TP check")
+                        logger.debug(f"Market data update received for symbols: {symbols}, triggering optimized SL/TP check")
                         
                         # Process SL/TP for only the symbols that updated
                         from app.services.pending_orders import process_sltp_batch
@@ -1072,3 +1080,76 @@ async def cleanup_stale_cache_entries(redis_client: Redis):
         
     except Exception as e:
         logger.error(f"Error in cleanup_stale_cache_entries: {e}", exc_info=True)
+
+async def run_cache_validation():
+    """
+    Periodic task to validate and fix cache inconsistencies.
+    This helps prevent the websocket account summary data from vanishing.
+    """
+    try:
+        logger.info("Starting cache validation task")
+        
+        if not global_redis_client_instance:
+            logger.error("Cannot run cache validation - Redis client not available")
+            return
+        
+        async with AsyncSessionLocal() as db:
+            # Get all active users
+            live_users, demo_users = await crud_user.get_all_active_users_both(db)
+            
+            all_users = []
+            for user in live_users:
+                all_users.append({"id": user.id, "user_type": "live"})
+            for user in demo_users:
+                all_users.append({"id": user.id, "user_type": "demo"})
+            
+            logger.info(f"Validating cache for {len(all_users)} users")
+            
+            for user_info in all_users:
+                try:
+                    user_id = user_info["id"]
+                    user_type = user_info["user_type"]
+                    
+                    # Check balance/margin cache
+                    from app.core.cache import get_user_balance_margin_cache, get_user_static_orders_cache
+                    balance_margin_cache = await get_user_balance_margin_cache(global_redis_client_instance, user_id)
+                    
+                    if not balance_margin_cache:
+                        logger.warning(f"User {user_id}: Missing balance/margin cache, refreshing...")
+                        from app.core.cache import refresh_balance_margin_cache_with_fallback
+                        await refresh_balance_margin_cache_with_fallback(global_redis_client_instance, user_id, user_type, db)
+                        continue
+                    
+                    balance = balance_margin_cache.get("wallet_balance", "0.0")
+                    margin = balance_margin_cache.get("margin", "0.0")
+                    
+                    # Check for suspicious values
+                    if balance == "0.0" and margin == "0.0":
+                        # Check if user actually has orders
+                        order_model = get_order_model(user_type)
+                        open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
+                        
+                        if open_orders:
+                            logger.warning(f"User {user_id}: Cache shows 0 balance/margin but has {len(open_orders)} open orders, refreshing cache...")
+                            from app.core.cache import refresh_balance_margin_cache_with_fallback
+                            await refresh_balance_margin_cache_with_fallback(global_redis_client_instance, user_id, user_type, db)
+                    
+                    # Check static orders cache
+                    static_orders_cache = await get_user_static_orders_cache(global_redis_client_instance, user_id)
+                    if not static_orders_cache:
+                        logger.warning(f"User {user_id}: Missing static orders cache, refreshing...")
+                        from app.api.v1.endpoints.orders import update_user_static_orders
+                        await update_user_static_orders(user_id, db, global_redis_client_instance, user_type)
+                    
+                except Exception as e:
+                    logger.error(f"Error validating cache for user {user_info.get('id')}: {e}")
+                    continue
+            
+            logger.info("Cache validation completed")
+            
+    except Exception as e:
+        logger.error(f"Error in cache validation task: {e}", exc_info=True)
+    
+    # Schedule next validation in 5 minutes
+    await asyncio.sleep(300)
+    asyncio.create_task(run_cache_validation())

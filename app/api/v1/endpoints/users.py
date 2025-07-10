@@ -52,7 +52,9 @@ from app.core.security import (
     get_current_admin_user,
     store_refresh_token,
     get_refresh_token_data,
-    delete_refresh_token
+    delete_refresh_token,
+    log_user_login,
+    log_user_logout
 )
 from app.core.config import get_settings
 
@@ -266,7 +268,7 @@ async def login_with_user_type(
     )
 
     await store_refresh_token(client=redis_client, user_id=user.id, refresh_token=refresh_token)
-
+    log_user_login(user)
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
 
@@ -375,6 +377,7 @@ async def logout_user(
     refresh_token = credentials.credentials
     try:
         await delete_refresh_token(client=redis_client, refresh_token=refresh_token)
+        log_user_logout(current_user)
         logger.info(f"Logout successful for user ID {current_user.id} by invalidating refresh token.")
         return StatusResponse(message="Logout successful.")
     except Exception as e:
@@ -412,7 +415,19 @@ async def read_demo_users(
     current_user: User = Depends(get_current_admin_user)
 ):
     demo_users = await crud_user.get_all_demo_users(db, skip=skip, limit=limit) # Changed to get_all_demo_users
-    return demo_users
+    
+    # Filter out users with invalid email addresses to prevent validation errors
+    valid_demo_users = []
+    for user in demo_users:
+        try:
+            # Try to create a DemoUserResponse to validate the data
+            DemoUserResponse(**user.__dict__)
+            valid_demo_users.append(user)
+        except Exception as e:
+            logger.warning(f"Skipping demo user {user.id} with invalid data: {e}")
+            continue
+    
+    return valid_demo_users
 
 @router.get(
     "/users/live",
@@ -925,6 +940,7 @@ async def login_demo_user(
     )
 
     await store_refresh_token(client=redis_client, user_id=demo_user.id, refresh_token=refresh_token, user_type=fixed_user_type) # Store user_type
+    log_user_login(demo_user)
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
 

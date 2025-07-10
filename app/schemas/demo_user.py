@@ -63,7 +63,11 @@ class DemoUserInDBBase(DemoUserBase):
 # Full schema for reading demo user data (what you'd typically return from an API)
 # Renamed from DemoUser to DemoUserResponse to match imports in users.py
 class DemoUserResponse(DemoUserInDBBase):
-    pass
+    # Override the email field to handle invalid data gracefully
+    email: Optional[str] = Field(None, description="User's email address (may be None if invalid)")
+    
+    class Config:
+        from_attributes = True
 
 # Schema for Demo User Login
 class DemoUserLogin(BaseModel):

@@ -107,14 +107,14 @@ async def calculate_total_symbol_margin_contribution(
             position_quantity = Decimal(position_quantity_str)
             position_full_margin = Decimal(position_full_margin_str)
 
-            logger.info(f"[MARGIN_TOTAL_CONTRIB_POS] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
+            logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS] User {user_id}, Symbol {symbol}, Pos {i+1} (ID: {order_id_log}): Type={position_type}, Qty={position_quantity}, StoredMargin={position_full_margin}")
 
             if position_quantity > 0:
                 margin_per_lot_of_position = Decimal("0.0")
                 if position_quantity != Decimal("0"): # Avoid division by zero if quantity is somehow zero
                     margin_per_lot_of_position = position_full_margin / position_quantity
                 all_margins_per_lot.append(margin_per_lot_of_position)
-                logger.info(f"[MARGIN_TOTAL_CONTRIB_POS] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
+                logger.debug(f"[MARGIN_TOTAL_CONTRIB_POS] User {user_id}, Symbol {symbol}, Pos {i+1}: MarginPerLot={margin_per_lot_of_position}")
 
             if position_type in ['BUY', 'BUY_LIMIT', 'BUY_STOP']:
                 total_buy_quantity += position_quantity

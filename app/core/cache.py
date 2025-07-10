@@ -11,10 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from decimal import Decimal
 from functools import wraps
-logger = logging.getLogger(__name__)
-
-logger.setLevel(logging.DEBUG)
 from app.core.logging_config import cache_logger
+
+logger = cache_logger
 # Keys for storing data in Redis
 REDIS_USER_DATA_KEY_PREFIX = "user_data:" # Stores group_name, leverage, etc.
 REDIS_USER_PORTFOLIO_KEY_PREFIX = "user_portfolio:" # Stores balance, positions
@@ -83,7 +82,6 @@ async def set_user_data_cache(redis_client: Redis, user_id: int, data: Dict[str,
         # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(data, cls=DecimalEncoder)
         await redis_client.set(key, data_serializable, ex=USER_DATA_CACHE_EXPIRY_SECONDS)
-        cache_logger.debug(f"User data cached for user {user_id} (type: {user_type})")
     except Exception as e:
         logger.error(f"Error setting user data cache for user {user_id}: {e}", exc_info=True)
 
@@ -107,7 +105,6 @@ async def get_user_data_cache(
         data_json = await redis_client.get(key)
         if data_json:
             data = json.loads(data_json, object_hook=decode_decimal)
-            cache_logger.debug(f"User data retrieved from cache for user {user_id}")
             return data
         # If not in cache, try fetching from DB if db and user_type are provided
         if db is not None and user_type is not None:
@@ -171,7 +168,6 @@ async def set_user_portfolio_cache(redis_client: Redis, user_id: int, portfolio_
     try:
         portfolio_serializable = json.dumps(portfolio_data, cls=DecimalEncoder)
         await redis_client.set(key, portfolio_serializable, ex=USER_PORTFOLIO_CACHE_EXPIRY_SECONDS)
-        cache_logger.info(f"Writing portfolio cache for user_id={user_id}: {portfolio_data}")
     except Exception as e:
         cache_logger.error(f"Error setting user portfolio cache for user {user_id}: {e}", exc_info=True)
 
@@ -189,7 +185,6 @@ async def get_user_portfolio_cache(redis_client: Redis, user_id: int) -> Optiona
         portfolio_json = await redis_client.get(key)
         if portfolio_json:
             portfolio_data = json.loads(portfolio_json, object_hook=decode_decimal)
-            cache_logger.info(f"Read portfolio cache for user_id={user_id}: {portfolio_data}")
             return portfolio_data
         return None
     except Exception as e:
@@ -217,8 +212,15 @@ async def set_user_balance_margin_cache(redis_client: Redis, user_id: int, walle
         cache_logger.warning(f"Redis client not available for setting balance/margin cache for user {user_id}.")
         return
 
-    # FIXED: Validate inputs before caching
+    # FIXED: Enhanced validation and error handling
     try:
+        # Ensure we're working with Decimal objects
+        if not isinstance(wallet_balance, Decimal):
+            wallet_balance = Decimal(str(wallet_balance))
+        if not isinstance(margin, Decimal):
+            margin = Decimal(str(margin))
+            
+        # Validate values
         if margin < 0:
             cache_logger.warning(f"Attempting to cache negative margin {margin} for user {user_id}, using 0")
             margin = Decimal("0.0")
@@ -227,11 +229,12 @@ async def set_user_balance_margin_cache(redis_client: Redis, user_id: int, walle
             cache_logger.warning(f"Attempting to cache negative balance {wallet_balance} for user {user_id}, using 0")
             wallet_balance = Decimal("0.0")
             
-        # Ensure we're working with Decimal objects
-        if not isinstance(wallet_balance, Decimal):
-            wallet_balance = Decimal(str(wallet_balance))
-        if not isinstance(margin, Decimal):
-            margin = Decimal(str(margin))
+        # Additional validation: ensure reasonable values
+        if margin > Decimal("1000000"):  # 1 million USD margin limit
+            cache_logger.warning(f"Attempting to cache unusually high margin {margin} for user {user_id}")
+            
+        if wallet_balance > Decimal("1000000"):  # 1 million USD balance limit
+            cache_logger.warning(f"Attempting to cache unusually high balance {wallet_balance} for user {user_id}")
             
     except (ValueError, TypeError, decimal.InvalidOperation) as e:
         cache_logger.error(f"Invalid balance/margin values for user {user_id}: balance={wallet_balance}, margin={margin}, error={e}")
@@ -242,18 +245,31 @@ async def set_user_balance_margin_cache(redis_client: Redis, user_id: int, walle
         data = {
             "wallet_balance": str(wallet_balance),
             "margin": str(margin),
-            "updated_at": datetime.datetime.now().isoformat()  # Add timestamp for debugging
+            "updated_at": datetime.datetime.now().isoformat(),
+            "cache_version": "2.0"  # Add version for future cache invalidation
         }
         data_serializable = json.dumps(data, cls=DecimalEncoder)
-        await redis_client.set(key, data_serializable, ex=USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS)
-        cache_logger.debug(f"Balance/margin cached for user {user_id}: balance={wallet_balance}, margin={margin}")
         
-        # FIXED: Verify the cache was set correctly
+        # Use pipeline for atomic operation
+        async with redis_client.pipeline() as pipe:
+            await pipe.set(key, data_serializable, ex=USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS)
+            await pipe.execute()
+        
+        # Enhanced cache verification
         verify_data = await redis_client.get(key)
         if verify_data:
-            verify_parsed = json.loads(verify_data, object_hook=decode_decimal)
-            if verify_parsed.get("margin") != str(margin):
-                cache_logger.error(f"Cache verification failed for user {user_id}: expected margin={margin}, cached margin={verify_parsed.get('margin')}")
+            try:
+                verify_parsed = json.loads(verify_data, object_hook=decode_decimal)
+                cached_margin = verify_parsed.get("margin", "0.0")
+                cached_balance = verify_parsed.get("wallet_balance", "0.0")
+                if cached_margin != str(margin) or cached_balance != str(wallet_balance):
+                    cache_logger.error(f"Cache verification failed for user {user_id}: expected balance={wallet_balance}, margin={margin}, cached balance={cached_balance}, margin={cached_margin}")
+                    # Retry once
+                    await redis_client.set(key, data_serializable, ex=USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS)
+                else:
+                    cache_logger.warning(f"Cache verification: values identical for user {user_id} (balance={wallet_balance}, margin={margin}) - likely harmless race condition.")
+            except Exception as verify_error:
+                cache_logger.error(f"Error during cache verification for user {user_id}: {verify_error}")
         else:
             cache_logger.error(f"Cache verification failed for user {user_id}: cache not found after setting")
             
@@ -297,7 +313,6 @@ async def get_user_balance_margin_cache(redis_client: Redis, user_id: int) -> Op
                 cache_logger.warning(f"Non-numeric cached values for user {user_id}: balance={balance}, margin={margin}")
                 return None
             
-            cache_logger.debug(f"Balance/margin retrieved from cache for user {user_id}: balance={balance}, margin={margin}")
             return data
         return None
     except Exception as e:
@@ -331,7 +346,6 @@ async def is_balance_margin_cache_stale(redis_client: Redis, user_id: int) -> bo
                 # Check if user has open orders (this would indicate stale cache)
                 from app.services.pending_orders import get_users_with_open_orders_for_symbol
                 # This is a simplified check - in practice you might want to check specific symbols
-                cache_logger.debug(f"Margin is 0 for user {user_id}, checking if this might be stale")
                 return True  # Consider stale if margin is 0
                 
             # If either value is negative, consider stale
@@ -349,14 +363,14 @@ async def is_balance_margin_cache_stale(redis_client: Redis, user_id: int) -> bo
         cache_logger.error(f"Error checking balance/margin cache staleness for user {user_id}: {e}", exc_info=True)
         return True  # Consider stale on error
 
-# FIXED: Add a new function to refresh balance/margin cache with database fallback
+# FIXED: Enhanced function to refresh balance/margin cache with multiple fallback strategies
 async def refresh_balance_margin_cache_with_fallback(redis_client: Redis, user_id: int, user_type: str, db: AsyncSession = None):
     """
     Refresh balance/margin cache with database fallback.
-    This ensures the cache always has valid data.
+    This ensures the cache always has valid data with multiple fallback strategies.
     """
     try:
-        # First check if current cache is valid
+        # Strategy 1: Check if current cache is valid
         current_cache = await get_user_balance_margin_cache(redis_client, user_id)
         if current_cache:
             balance = current_cache.get("wallet_balance", "0.0")
@@ -368,13 +382,12 @@ async def refresh_balance_margin_cache_with_fallback(redis_client: Redis, user_i
                 
                 # If both values are reasonable, cache is valid
                 if balance_decimal >= 0 and margin_decimal >= 0:
-                    cache_logger.debug(f"Balance/margin cache for user {user_id} is valid: balance={balance}, margin={margin}")
                     return current_cache
                     
             except (ValueError, decimal.InvalidOperation):
                 pass  # Continue to refresh
         
-        # Cache is invalid or missing, refresh from database
+        # Strategy 2: Refresh from database
         cache_logger.info(f"Refreshing balance/margin cache for user {user_id} from database")
         
         if not db:
@@ -409,14 +422,43 @@ async def refresh_balance_margin_cache_with_fallback(redis_client: Redis, user_i
         
         cache_logger.info(f"Successfully refreshed balance/margin cache for user {user_id}: balance={db_user.wallet_balance}, margin={total_user_margin}")
         
+        # Strategy 3: Verify the cache was set correctly
+        verify_cache = await get_user_balance_margin_cache(redis_client, user_id)
+        if not verify_cache:
+            cache_logger.warning(f"Cache verification failed for user {user_id}, retrying...")
+            # Retry once
+            await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+        
         return {
             "wallet_balance": str(db_user.wallet_balance),
             "margin": str(total_user_margin),
-            "updated_at": datetime.datetime.now().isoformat()
+            "updated_at": datetime.datetime.now().isoformat(),
+            "cache_version": "2.0"
         }
         
     except Exception as e:
         cache_logger.error(f"Error refreshing balance/margin cache for user {user_id}: {e}", exc_info=True)
+        
+        # Strategy 4: Last resort - return minimal data structure
+        try:
+            if db:
+                if user_type == 'live':
+                    from app.crud.user import get_user_by_id
+                    db_user = await get_user_by_id(db, user_id, user_type=user_type)
+                else:
+                    from app.crud.user import get_demo_user_by_id
+                    db_user = await get_demo_user_by_id(db, user_id)
+                
+                if db_user:
+                    return {
+                        "wallet_balance": str(db_user.wallet_balance),
+                        "margin": str(db_user.margin),
+                        "updated_at": datetime.datetime.now().isoformat(),
+                        "fallback": True
+                    }
+        except Exception as fallback_error:
+            cache_logger.error(f"Fallback strategy also failed for user {user_id}: {fallback_error}")
+        
         return None
 
 # --- New Static Orders Cache ---
@@ -434,7 +476,6 @@ async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static
         # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(static_orders_data, cls=DecimalEncoder)
         await redis_client.set(key, data_serializable, ex=USER_STATIC_ORDERS_CACHE_EXPIRY_SECONDS)
-        cache_logger.debug(f"Static orders cached for user {user_id}")
     except Exception as e:
         logger.error(f"Error setting static orders cache for user {user_id}: {e}", exc_info=True)
 
@@ -452,7 +493,6 @@ async def get_user_static_orders_cache(redis_client: Redis, user_id: int) -> Opt
         data_json = await redis_client.get(key)
         if data_json:
             data = json.loads(data_json, object_hook=decode_decimal)
-            cache_logger.debug(f"Static orders retrieved from cache for user {user_id}")
             return data
         return None
     except Exception as e:
@@ -474,7 +514,6 @@ async def set_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, dy
         # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(dynamic_portfolio_data, cls=DecimalEncoder)
         await redis_client.set(key, data_serializable, ex=USER_DYNAMIC_PORTFOLIO_CACHE_EXPIRY_SECONDS)
-        cache_logger.debug(f"Dynamic portfolio cached for user {user_id}")
     except Exception as e:
         logger.error(f"Error setting dynamic portfolio cache for user {user_id}: {e}", exc_info=True)
 
@@ -492,7 +531,6 @@ async def get_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int) ->
         data_json = await redis_client.get(key)
         if data_json:
             data = json.loads(data_json, object_hook=decode_decimal)
-            cache_logger.debug(f"Dynamic portfolio retrieved from cache for user {user_id}")
             return data
         return None
     except Exception as e:
@@ -515,7 +553,6 @@ async def set_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
     try:
         settings_serializable = json.dumps(settings, cls=DecimalEncoder)
         await redis_client.set(key, settings_serializable, ex=GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS)
-        logger.debug(f"Group-symbol settings cached for group '{group_name}', symbol '{symbol}'.")
     except Exception as e:
         logger.error(f"Error setting group-symbol settings cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
 
@@ -574,7 +611,6 @@ async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
                                 logger.error(f"Unexpected error processing settings key {key}: {e}", exc_info=True)
 
             if all_settings:
-                 cache_logger.debug(f"Aggregated {len(all_settings)} group-symbol settings for group '{group_name}'.")
                  return all_settings
             else:
                  
@@ -591,9 +627,7 @@ async def get_group_symbol_settings_cache(redis_client: Redis, group_name: str, 
             settings_json = await redis_client.get(key)
             if settings_json:
                 settings = json.loads(settings_json, object_hook=decode_decimal)
-                cache_logger.debug(f"Group-symbol settings retrieved from cache for group '{group_name}', symbol '{symbol}'.")
                 return settings
-            cache_logger.debug(f"Group-symbol settings not found in cache for group '{group_name}', symbol '{symbol}'.")
             return None # Return None if settings for the specific symbol are not found
         except Exception as e:
             cache_logger.error(f"Error getting group-symbol settings cache for group '{group_name}', symbol '{symbol}': {e}", exc_info=True)
@@ -626,7 +660,6 @@ async def set_adjusted_market_price_cache(
     Value is a JSON string: {"buy": "...", "sell": "...", "spread_value": "..."}
     """
     cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol}"
-    cache_logger.debug(f"Setting cache key: {cache_key}")
     try:
         # Create a dictionary with Decimal values
         adjusted_prices = {
@@ -650,7 +683,6 @@ async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: 
     Returns None if the cache is empty or expired.
     """
     cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol}"
-    # cache_logger.debug(f"Looking up cache key: {cache_key}")
     try:
         cached_data = await redis_client.get(cache_key)
         if cached_data:
@@ -661,9 +693,7 @@ async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: 
                 "sell": decimal.Decimal(price_data["sell"]),
                 "spread_value": decimal.Decimal(price_data["spread_value"])
             }
-        # else:
-        #     cache_logger.debug(f"No cached data found for key {cache_key}")
-        #     return None
+
     except Exception as e:
         cache_logger.error(f"Error fetching adjusted market price from cache for key {cache_key}: {e}", exc_info=True)
         return None
@@ -772,7 +802,6 @@ async def set_group_settings_cache(redis_client: Redis, group_name: str, setting
     try:
         settings_serializable = json.dumps(settings, cls=DecimalEncoder)
         await redis_client.set(key, settings_serializable, ex=GROUP_SETTINGS_CACHE_EXPIRY_SECONDS)
-        cache_logger.debug(f"Group settings cached for group '{group_name}'.")
     except Exception as e:
         cache_logger.error(f"Error setting group settings cache for group '{group_name}': {e}", exc_info=True)
 
@@ -794,9 +823,7 @@ async def get_group_settings_cache(redis_client: Redis, group_name: str) -> Opti
         settings_json = await redis_client.get(key)
         if settings_json:
             settings = json.loads(settings_json, object_hook=decode_decimal)
-            cache_logger.debug(f"Group settings retrieved from cache for group '{group_name}'.")
             return settings
-        cache_logger.debug(f"Group settings not found in cache for group '{group_name}'.")
         return None
     except Exception as e:
         cache_logger.error(f"Error getting group settings cache for group '{group_name}': {e}", exc_info=True)
@@ -813,7 +840,6 @@ async def set_last_known_price(redis_client: Redis, symbol: str, price_data: dic
     key = f"last_price:{symbol.upper()}"
     try:
         await redis_client.set(key, json.dumps(price_data, cls=DecimalEncoder))
-        cache_logger.debug(f"Last known price cached for symbol {symbol}")
     except Exception as e:
         cache_logger.error(f"Error setting last known price for symbol {symbol}: {e}", exc_info=True)
 
@@ -829,7 +855,6 @@ async def get_last_known_price(redis_client: Redis, symbol: str) -> Optional[dic
         data_json = await redis_client.get(key)
         if data_json:
             data = json.loads(data_json, object_hook=decode_decimal)
-            cache_logger.debug(f"Last known price retrieved from cache for symbol {symbol}")
             return data
         return None
     except Exception as e:

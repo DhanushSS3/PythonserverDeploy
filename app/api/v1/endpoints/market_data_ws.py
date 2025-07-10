@@ -311,22 +311,59 @@ async def per_connection_redis_listener(
                     balance_value = balance_margin_data.get("wallet_balance", "0.0") if balance_margin_data else "0.0"
                     margin_value = balance_margin_data.get("margin", "0.0") if balance_margin_data else "0.0"
                     
-                    # FIXED: Use improved cache refresh function for stale/missing cache data
+                    # FIXED: Enhanced cache refresh with multiple fallback strategies
                     if balance_value == "0.0" or margin_value == "0.0" or not balance_margin_data:
-                        logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Stale/missing balance_margin_cache, refreshing with fallback")
+                        logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Stale/missing balance_margin_cache, attempting refresh")
+                        
+                        # Strategy 1: Try the improved cache refresh function
                         try:
-                            # Use the improved cache refresh function
                             from app.core.cache import refresh_balance_margin_cache_with_fallback
                             refreshed_data = await refresh_balance_margin_cache_with_fallback(redis_client, user_id, user_type, db)
                             
                             if refreshed_data:
                                 balance_value = refreshed_data.get("wallet_balance", "0.0")
                                 margin_value = refreshed_data.get("margin", "0.0")
-                                logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Successfully refreshed cache - balance={balance_value}, margin={margin_value}")
+                                logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Strategy 1 successful - balance={balance_value}, margin={margin_value}")
                             else:
-                                logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Failed to refresh cache from database")
+                                raise Exception("Strategy 1 failed - no data returned")
                         except Exception as e:
-                            logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Error refreshing cache: {e}", exc_info=True)
+                            logger.warning(f"[WEBSOCKET_DEBUG] User {user_id}: Strategy 1 failed: {e}, trying Strategy 2")
+                            
+                            # Strategy 2: Direct database fetch and cache update
+                            try:
+                                if user_type == 'live':
+                                    from app.crud.user import get_user_by_id
+                                    db_user = await get_user_by_id(db, user_id)
+                                else:
+                                    from app.crud.user import get_demo_user_by_id
+                                    db_user = await get_demo_user_by_id(db, user_id)
+                                
+                                if db_user:
+                                    # Calculate total user margin including all symbols
+                                    from app.services.order_processing import calculate_total_user_margin
+                                    total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type)
+                                    
+                                    # Update the cache with fresh data
+                                    await set_user_balance_margin_cache(redis_client, user_id, db_user.wallet_balance, total_user_margin)
+                                    
+                                    balance_value = str(db_user.wallet_balance)
+                                    margin_value = str(total_user_margin)
+                                    logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Strategy 2 successful - balance={balance_value}, margin={margin_value}")
+                                else:
+                                    raise Exception("User not found in database")
+                            except Exception as e2:
+                                logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: Strategy 2 failed: {e2}, using fallback values")
+                                # Strategy 3: Use fallback values from user data cache
+                                try:
+                                    user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+                                    if user_data:
+                                        balance_value = str(user_data.get('wallet_balance', '0.0'))
+                                        margin_value = str(user_data.get('margin', '0.0'))
+                                        logger.info(f"[WEBSOCKET_DEBUG] User {user_id}: Strategy 3 successful - balance={balance_value}, margin={margin_value}")
+                                    else:
+                                        logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: All strategies failed, using default values")
+                                except Exception as e3:
+                                    logger.error(f"[WEBSOCKET_DEBUG] User {user_id}: All cache refresh strategies failed: {e3}")
                     
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Reading from balance_margin_cache - balance={balance_value}, margin={margin_value}")
                     logger.debug(f"[WEBSOCKET_DEBUG] User {user_id}: Full balance_margin_data from cache: {balance_margin_data}")
@@ -799,8 +836,7 @@ async def process_portfolio_update(
 
 # app/api/v1/endpoints/market_data_ws.py
 # ... other imports ...
-logger = websocket_logger # or temporarily: import logging; logger = logging.getLogger(__name__)
-print("DEBUG: market_data_ws.py module imported!")
+logger = websocket_logger
 
 
 
@@ -820,9 +856,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     connection_start_time = time.time()
     connection_id = f"{websocket.client.host}:{websocket.client.port}-{int(connection_start_time * 1000)}"
     
-    logger.info(f"--- MINIMAL TEST: ENTERED websocket_endpoint --- Connection ID: {connection_id}")
-    for handler in logger.handlers:
-        handler.flush()
+    logger.info(f"WebSocket connection attempt from {websocket.client.host}:{websocket.client.port}")
     db_user_instance: Optional[User | DemoUser] = None
 
     # Extract token from query params
@@ -841,7 +875,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         await websocket.accept()
         connection_time = time.time() - connection_start_time
         update_connection_metrics(connection_id, connection_time, True)
-        logger.info(f"WebSocket connection accepted (early) for {websocket.client.host}:{websocket.client.port} in {connection_time:.3f}s")
+        logger.info(f"WebSocket connection accepted from {websocket.client.host}:{websocket.client.port}")
         
         # Send a loading message to the client
         await safe_websocket_send(
@@ -873,15 +907,11 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                 return
 
             # Strictly fetch from correct table based on user_type and account_number
-            logger.info(f"WebSocket auth: token payload={payload}, account_number={account_number}, user_type={user_type}")
+            logger.info(f"WebSocket auth: Authenticating user {account_number} ({user_type})")
             if user_type == "demo":
-                logger.info(f"WebSocket auth: About to call get_demo_user_by_account_number with account_number={account_number}, user_type={user_type}")
                 db_user_instance = await get_demo_user_by_account_number(db, account_number, user_type)
-                logger.info(f"WebSocket auth: get_demo_user_by_account_number({account_number}, {user_type}) returned: {db_user_instance}")
             else:
-                logger.info(f"WebSocket auth: About to call get_user_by_account_number with account_number={account_number}, user_type={user_type}")
                 db_user_instance = await get_user_by_account_number(db, account_number, user_type)
-                logger.info(f"WebSocket auth: get_user_by_account_number({account_number}, {user_type}) returned: {db_user_instance}")
 
             if not db_user_instance:
                 logger.warning(f"Authentication failed for account_number {account_number} (type {user_type}): User not found in correct table.")
@@ -930,10 +960,8 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
         # Always use user_type to select the correct order model
         order_model_class = get_order_model(user_type)
-        logger.info(f"[WS] Using order model: {order_model_class.__name__} for user_type={user_type}, account_number={account_number}")
         # Use DB user_id (int) for querying open orders
         open_positions_orm = await crud_order.get_all_open_orders_by_user_id(db, db_user_id, order_model_class)
-        logger.info(f"[WS] Open positions from DB for user_id={db_user_id}: {open_positions_orm}")
 
         initial_positions_data = []
         for pos in open_positions_orm:
@@ -955,15 +983,8 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         # Set minimal balance/margin cache for websocket
         await set_user_balance_margin_cache(redis_client, db_user_id, user_data_to_cache["wallet_balance"], total_margin)
         
-        # FIXED: Ensure balance/margin cache is properly set and log for debugging
-        logger.info(f"[WEBSOCKET_INIT] User {db_user_id}: Initialized balance/margin cache - balance={user_data_to_cache['wallet_balance']}, margin={total_margin}")
-        
-        # Verify cache was set correctly
-        verify_cache = await get_user_balance_margin_cache(redis_client, db_user_id)
-        if verify_cache:
-            logger.info(f"[WEBSOCKET_INIT] User {db_user_id}: Cache verification successful - {verify_cache}")
-        else:
-            logger.warning(f"[WEBSOCKET_INIT] User {db_user_id}: Cache verification failed - cache not found")
+        # Initialize balance/margin cache for websocket
+        logger.info(f"User {db_user_id}: WebSocket initialized with balance={user_data_to_cache['wallet_balance']}, margin={total_margin}")
         
         # Keep the old portfolio cache for backward compatibility (can be removed later)
         user_portfolio_data = {
@@ -1014,7 +1035,6 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         if group_settings:
             # Get all symbols for this group
             group_symbols = list(group_settings.keys())
-            logger.info(f"User {account_number}: Fetching initial market data for {len(group_symbols)} symbols from cache (adjusted or last known price)")
             for symbol in group_symbols:
                 # 1. Try adjusted price cache
                 cached_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
@@ -1049,7 +1069,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                             'sell': float(adjusted_sell_price),
                             'spread': float(effective_spread_in_pips)
                         }
-                        logger.debug(f"User {account_number}: Fallback last price for {symbol}: Buy={adjusted_buy_price}, Sell={adjusted_sell_price}")
+                        # Fallback to last known price successful
                     except Exception as calc_error:
                         logger.error(f"User {account_number}: Error calculating adjusted prices for {symbol} from last known price: {calc_error}")
                     continue
@@ -1081,9 +1101,9 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             )
             
             if success:
-                logger.info(f"User {account_number}: Sent initial connection data with {len(initial_symbols_data)} symbols (fresh from cache)")
+                logger.info(f"User {account_number}: WebSocket connection established successfully")
             else:
-                logger.warning(f"User {account_number}: Failed to send initial connection data, connection may be closed")
+                logger.warning(f"User {account_number}: Failed to send initial data, connection may be closed")
                 return
         else:
             logger.warning(f"User {account_number}: Client disconnected before sending initial data")
@@ -1102,11 +1122,10 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await websocket.receive_text()
 
     except WebSocketDisconnect:
-        logger.info(f"User {account_number}: WebSocket disconnected by client.")
+        logger.info(f"User {account_number}: WebSocket disconnected")
     except Exception as e:
-        logger.error(f"User {account_number}: Error in main WebSocket loop: {e}", exc_info=True)
+        logger.error(f"User {account_number}: Error in WebSocket loop: {e}", exc_info=True)
     finally:
-        logger.info(f"User {account_number}: Cleaning up WebSocket connection.")
         remove_connection_metrics()
         
         if not listener_task.done():
@@ -1114,7 +1133,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             try:
                 await listener_task
             except asyncio.CancelledError:
-                logger.info(f"User {account_number}: Listener task successfully cancelled.")
+                pass
             except Exception as task_e:
                 logger.error(f"User {account_number}: Error during listener task cleanup: {task_e}", exc_info=True)
         
@@ -1122,8 +1141,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             try:
                 await websocket.close(code=status.WS_1000_NORMAL_CLOSURE)
             except Exception as close_e:
-                logger.error(f"User {account_number}: Error explicitly closing WebSocket: {close_e}", exc_info=True)
-        logger.info(f"User {account_number}: WebSocket connection fully closed.")
+                logger.error(f"User {account_number}: Error closing WebSocket: {close_e}", exc_info=True)
 
 
 # --- Helper Function to Update Group Symbol Settings (used by websocket_endpoint) ---
