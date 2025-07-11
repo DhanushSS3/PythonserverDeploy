@@ -136,6 +136,11 @@ async def create_new_group(
             detail="An error occurred while creating the group."
         )
 
+def fix_datetime(dt):
+    if dt is None or str(dt) == "0000-00-00 00:00:00":
+        return None  # or datetime.datetime.utcnow()
+    return dt
+
 # Endpoint to get all groups with search and pagination (Admin Only)
 @router.get(
     "/",
@@ -156,7 +161,11 @@ async def read_groups(
     # Admin check is handled by get_current_admin_user dependency
 
     groups = await crud_group.get_groups(db, skip=skip, limit=limit, search=search)
+    for group in groups:
+        group.created_at = fix_datetime(group.created_at)
+        group.updated_at = fix_datetime(group.updated_at)
     return groups
+
 
 @router.get("/my-group-spreads", response_model=dict)
 async def get_my_group_spreads(

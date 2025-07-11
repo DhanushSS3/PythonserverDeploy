@@ -666,13 +666,29 @@ async def place_order(
                 asyncio.create_task(barclays_push())
         
         # Step 7: Publish websocket updates
-        orders_logger.info(f"[PUBLISH_DEBUG] Publishing order update for user {user_id}")
-        await publish_order_update(redis_client, user_id)
-        orders_logger.info(f"[PUBLISH_DEBUG] Publishing user data update for user {user_id}")
-        await publish_user_data_update(redis_client, user_id)
-        orders_logger.info(f"[PUBLISH_DEBUG] Publishing market data trigger")
-        await publish_market_data_trigger(redis_client)
+        # orders_logger.info(f"[PUBLISH_DEBUG] Publishing order update for user {user_id}")
+        # await publish_order_update(redis_client, user_id)
+        # orders_logger.info(f"[PUBLISH_DEBUG] Publishing user data update for user {user_id}")
+        # await publish_user_data_update(redis_client, user_id)
+        # orders_logger.info(f"[PUBLISH_DEBUG] Publishing market data trigger")
+        # await publish_market_data_trigger(redis_client)
         
+        # Step 7: Trigger websocket updates asynchronously (fire-and-forget)
+        async def push_websocket_updates():
+            try:
+                orders_logger.info(f"[PUBLISH_ASYNC] Triggering websocket updates for user {user_id}")
+                await publish_order_update(redis_client, user_id)
+                await publish_user_data_update(redis_client, user_id)
+                await publish_market_data_trigger(redis_client)
+            except Exception as e:
+                orders_logger.error(f"[PUBLISH_ASYNC] Failed to push websocket updates for user {user_id}: {e}", exc_info=True)
+
+        if background_tasks:
+            background_tasks.add_task(push_websocket_updates)
+        else:
+            asyncio.create_task(push_websocket_updates())
+
+
         # Step 8: Return response
         total_time = time.perf_counter() - start_total
         orders_logger.info(f"[PERF] TOTAL place_order: {total_time:.4f}s")
