@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.cache import set_adjusted_market_price_cache, get_adjusted_market_price_cache, get_group_symbol_settings_cache, REDIS_MARKET_DATA_CHANNEL
+from app.core.cache import set_adjusted_market_price_cache, get_adjusted_market_price_cache, get_group_symbol_settings_cache, REDIS_MARKET_DATA_CHANNEL, get_last_known_price, set_last_known_price
 from app.crud import group as crud_group
 from app.database.session import AsyncSessionLocal
 import json
@@ -144,6 +144,17 @@ async def adjusted_price_worker(redis_client: Redis):
                     
                     # Track this symbol for pending order triggers
                     updated_symbols.add(symbol)
+                    
+                    # --- NEW: Set last known price for this symbol (raw bid/offer from latest_market_data) ---
+                    raw_prices = raw_market_data.get(symbol)
+                    if raw_prices and isinstance(raw_prices, dict):
+                        price_data = {}
+                        if 'b' in raw_prices:
+                            price_data['b'] = raw_prices['b']
+                        if 'o' in raw_prices:
+                            price_data['o'] = raw_prices['o']
+                        if price_data:
+                            await set_last_known_price(redis_client, symbol, price_data)
         
         await pipe.execute()
         redis_write_time = time.perf_counter() - redis_write_start

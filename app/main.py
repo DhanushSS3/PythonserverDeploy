@@ -1177,40 +1177,40 @@ async def barclays_pending_order_margin_checker():
     import datetime
     try:
         while True:
-            logger.info("[BarclaysMarginChecker] --- Loop iteration start ---")
+            # logger.info("[BarclaysMarginChecker] --- Loop iteration start ---")
             try:
                 if not global_redis_client_instance:
-                    logger.warning("[BarclaysMarginChecker] Redis client not available, skipping this cycle.")
+                    # logger.warning("[BarclaysMarginChecker] Redis client not available, skipping this cycle.")
                     await asyncio.sleep(60)
-                    logger.info("[BarclaysMarginChecker] --- Loop iteration end (after sleep, no redis) ---")
+                    # logger.info("[BarclaysMarginChecker] --- Loop iteration end (after sleep, no redis) ---")
                     continue
                 async with AsyncSessionLocal() as db:
                     # Get all live users
                     live_users, _ = await crud_user.get_all_active_users_both(db)
-                    logger.info(f"[BarclaysMarginChecker] Checking {len(live_users)} live users.")
+                    # logger.info(f"[BarclaysMarginChecker] Checking {len(live_users)} live users.")
                     for user in live_users:
                         user_id = user.id
                         user_type = 'live'
                         # Get user data from cache
                         user_data = await get_user_data_cache(global_redis_client_instance, user_id, db, user_type)
                         if not user_data:
-                            logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no user_data in cache.")
+                            # logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no user_data in cache.")
                             continue
                         group_name = user_data.get('group_name')
                         if not group_name:
-                            logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no group_name.")
+                            # logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no group_name.")
                             continue
                         # Get group settings
                         from app.core.cache import get_group_settings_cache
                         group_settings = await get_group_settings_cache(global_redis_client_instance, group_name)
                         sending_orders = group_settings.get('sending_orders') if group_settings else None
-                        logger.info(f"[BarclaysMarginChecker] User {user_id} group: {group_name}, sending_orders: {sending_orders}")
+                        # logger.info(f"[BarclaysMarginChecker] User {user_id} group: {group_name}, sending_orders: {sending_orders}")
                         if not sending_orders or sending_orders.lower() != 'barclays':
                             continue  # Only Barclays live users
                         # Get free_margin from dynamic portfolio cache
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(global_redis_client_instance, user_id)
                         if not dynamic_portfolio:
-                            logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no dynamic_portfolio in cache.")
+                            # logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no dynamic_portfolio in cache.")
                             continue
                         try:
                             free_margin = float(dynamic_portfolio.get('free_margin', 0.0))
@@ -1223,19 +1223,19 @@ async def barclays_pending_order_margin_checker():
                         pending_statuses = ["PENDING", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]
                         pending_orders = await get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
                         if not pending_orders:
-                            logger.info(f"[BarclaysMarginChecker] User {user_id}: no pending orders.")
+                            # logger.info(f"[BarclaysMarginChecker] User {user_id}: no pending orders.")
                             continue
                         # Sum total required margin for all pending orders
                         pending_orders_sorted = sorted(pending_orders, key=lambda o: float(getattr(o, 'margin', 0.0) or 0.0))
                         total_pending_margin = sum([float(getattr(o, 'margin', 0.0) or 0.0) for o in pending_orders_sorted])
-                        logger.info(f"[BarclaysMarginChecker] User {user_id}: free_margin={free_margin}, total_pending_margin={total_pending_margin}, pending_orders={len(pending_orders_sorted)}, margin={margin}")
+                        # logger.info(f"[BarclaysMarginChecker] User {user_id}: free_margin={free_margin}, total_pending_margin={total_pending_margin}, pending_orders={len(pending_orders_sorted)}, margin={margin}")
                         # Cancel pending orders one by one if needed
                         idx = 0
                         cancelled_any = False
                         while free_margin < total_pending_margin and idx < len(pending_orders_sorted):
                             order = pending_orders_sorted[idx]
                             order_margin = float(getattr(order, 'margin', 0.0) or 0.0)
-                            logger.warning(f"[BarclaysMarginChecker] Cancelling order {order.order_id} for user {user_id} (order_margin={order_margin}) due to insufficient margin.")
+                            # logger.warning(f"[BarclaysMarginChecker] Cancelling order {order.order_id} for user {user_id} (order_margin={order_margin}) due to insufficient margin.")
                             cancel_id = await generate_unique_10_digit_id(db, order_model, 'cancel_id')
                             cancel_message = "Auto-cancelled due to insufficient margin"
                             # Update order in DB
@@ -1304,7 +1304,7 @@ async def barclays_pending_order_margin_checker():
                                 float(getattr(o, 'margin', 0.0) or 0.0)
                                 for o in pending_orders_sorted[idx+1:]
                             ])
-                            logger.info(f"[BarclaysMarginChecker] After cancelling order {order.order_id}: new free_margin={free_margin}, new total_pending_margin={total_pending_margin}")
+                            # logger.info(f"[BarclaysMarginChecker] After cancelling order {order.order_id}: new free_margin={free_margin}, new total_pending_margin={total_pending_margin}")
                             idx += 1
                             cancelled_any = True
                         if not cancelled_any:
@@ -1312,6 +1312,6 @@ async def barclays_pending_order_margin_checker():
             except Exception as e:
                 logger.error(f"Error in barclays_pending_order_margin_checker loop: {e}", exc_info=True)
             await asyncio.sleep(60)
-            logger.info("[BarclaysMarginChecker] --- Loop iteration end (after sleep) ---")
+            # logger.info("[BarclaysMarginChecker] --- Loop iteration end (after sleep) ---")
     except Exception as fatal:
         logger.critical(f"[BarclaysMarginChecker] FATAL: {fatal}", exc_info=True)
