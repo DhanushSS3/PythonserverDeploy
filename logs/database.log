@@ -144,3 +144,21 @@ Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 337, in get_current_user
     raise credentials_exception
 fastapi.exceptions.HTTPException: 401: Could not validate credentials
+2025-07-14 04:38:58,566 - ERROR - database - Error in database session: 401: Invalid email, user type, or password
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 239, in login_with_user_type
+    raise HTTPException(
+    ...<3 lines>...
+    )
+fastapi.exceptions.HTTPException: 401: Invalid email, user type, or password

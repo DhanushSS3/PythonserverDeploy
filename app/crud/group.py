@@ -50,20 +50,12 @@ async def get_group_by_symbol_and_name(db: AsyncSession, symbol: Optional[str], 
 async def get_groups(
     db: AsyncSession,
     skip: int = 0,
-    limit: int = 100,
+    limit: Optional[int] = None,
     search: Optional[str] = None # Add search parameter
 ) -> List[Group]:
     """
     Retrieves a list of groups with optional search filtering and pagination.
-
-    Args:
-        db: The asynchronous database session.
-        skip: The number of records to skip (for pagination).
-        limit: The maximum number of records to return (for pagination).
-        search: Optional search string to filter by name or symbol.
-
-    Returns:
-        A list of Group SQLAlchemy model instances.
+    If skip, limit, and search are not provided, returns all groups.
     """
     query = select(Group)
 
@@ -79,8 +71,9 @@ async def get_groups(
             )
         )
 
-    # Apply pagination
-    query = query.offset(skip).limit(limit)
+    # Only apply pagination if limit is provided
+    if limit is not None:
+        query = query.offset(skip).limit(limit)
 
     result = await db.execute(query)
     return result.scalars().all()
@@ -198,17 +191,6 @@ async def delete_group(db: AsyncSession, db_group: Group):
     # If users have a foreign key to groups, the database might prevent deletion or cascade the delete.
 
     # app/crud/group.py
-
-from typing import Optional, List, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-
-from app.database.models import Group # Import Group model
-# Import the external_symbol_info CRUD functions to use get_external_symbol_info_by_symbol
-from app.crud import external_symbol_info as crud_external_symbol_info
-
-
-# app/crud/group.py
 
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession

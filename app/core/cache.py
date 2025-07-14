@@ -829,6 +829,30 @@ async def get_group_settings_cache(redis_client: Redis, group_name: str) -> Opti
         cache_logger.error(f"Error getting group settings cache for group '{group_name}': {e}", exc_info=True)
         return None
 
+async def delete_group_settings_cache(redis_client: Redis, group_name: str):
+    """
+    Deletes the general group settings cache for a group.
+    """
+    key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}"
+    try:
+        await redis_client.delete(key)
+        logger.info(f"Deleted group settings cache for group '{group_name}'.")
+    except Exception as e:
+        logger.error(f"Error deleting group settings cache for group '{group_name}': {e}", exc_info=True)
+
+async def delete_all_group_symbol_settings_cache(redis_client: Redis, group_name: str):
+    """
+    Deletes all group-symbol settings cache entries for a group.
+    """
+    prefix = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:"
+    try:
+        # Use scan_iter for efficiency and safety
+        async for key in redis_client.scan_iter(f"{prefix}*"):
+            await redis_client.delete(key)
+            logger.info(f"Deleted group-symbol settings cache: {key}")
+    except Exception as e:
+        logger.error(f"Error deleting group-symbol settings cache for group '{group_name}': {e}", exc_info=True)
+
 # --- Last Known Price Cache ---
 async def set_last_known_price(redis_client: Redis, symbol: str, price_data: dict):
     """

@@ -20,6 +20,10 @@ import datetime
 from typing import Any
 
 import logging
+from app.core.cache import (
+    set_group_settings_cache, set_group_symbol_settings_cache,
+    delete_group_settings_cache, delete_all_group_symbol_settings_cache
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,24 +113,29 @@ async def get_all_group_records_with_contract_size(
 async def create_new_group(
     group_create: GroupCreate,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
     current_user: User = Depends(get_current_admin_user) # Restrict to admin
 ):
     """
     Creates a new group.
     """
-    # Admin check is handled by get_current_admin_user dependency
-
     try:
         new_group = await crud_group.create_group(db=db, group_create=group_create)
         logger.info(f"Group '{new_group.name}' (Symbol: {new_group.symbol}) created successfully by admin {current_user.id}.")
+        # Update group settings cache
+        settings = {"sending_orders": getattr(new_group, 'sending_orders', None)}
+        await set_group_settings_cache(redis_client, new_group.name, settings)
+        # Update group-symbol settings cache for this symbol if present
+        if new_group.symbol:
+            symbol_settings = {k: getattr(new_group, k) for k in new_group.__table__.columns.keys()}
+            await set_group_symbol_settings_cache(redis_client, new_group.name, new_group.symbol, symbol_settings)
         return new_group
     except IntegrityError as e:
         await db.rollback()
-        # The IntegrityError detail message is now set in the CRUD layer to be more specific
         logger.warning(f"Attempted to create group with existing symbol/name combination by admin {current_user.id}. Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e) # Return the detail message from the IntegrityError
+            detail=str(e)
         )
     except Exception as e:
         await db.rollback()
@@ -146,21 +155,16 @@ def fix_datetime(dt):
     "/",
     response_model=List[GroupResponse],
     summary="Get all groups (Admin Only)",
-    description="Retrieves a list of all groups with optional search and pagination (requires admin authentication)."
+    description="Retrieves a list of all groups (requires admin authentication)."
 )
 async def read_groups(
-    skip: int = Query(0, description="Number of groups to skip"),
-    limit: int = Query(100, description="Maximum number of groups to return"),
-    search: Optional[str] = Query(None, description="Search term for group name or symbol"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user) # Restrict to admin
 ):
     """
-    Retrieves a paginated and searchable list of groups.
+    Retrieves a list of all groups (no pagination).
     """
-    # Admin check is handled by get_current_admin_user dependency
-
-    groups = await crud_group.get_groups(db, skip=skip, limit=limit, search=search)
+    groups = await crud_group.get_groups(db)
     for group in groups:
         group.created_at = fix_datetime(group.created_at)
         group.updated_at = fix_datetime(group.updated_at)
@@ -254,31 +258,35 @@ async def update_existing_group(
     group_id: int,
     group_update: GroupUpdate,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
     current_user: User = Depends(get_current_admin_user) # Restrict to admin
 ):
     """
     Updates a group's information.
     """
-    # Admin check is handled by get_current_admin_user dependency
-
     db_group = await crud_group.get_group_by_id(db, group_id=group_id)
     if db_group is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Group not found"
         )
-
     try:
         updated_group = await crud_group.update_group(db=db, db_group=db_group, group_update=group_update)
         logger.info(f"Group ID {group_id} updated successfully by admin {current_user.id}.")
+        # Update group settings cache
+        settings = {"sending_orders": getattr(updated_group, 'sending_orders', None)}
+        await set_group_settings_cache(redis_client, updated_group.name, settings)
+        # Update group-symbol settings cache for this symbol if present
+        if updated_group.symbol:
+            symbol_settings = {k: getattr(updated_group, k) for k in updated_group.__table__.columns.keys()}
+            await set_group_symbol_settings_cache(redis_client, updated_group.name, updated_group.symbol, symbol_settings)
         return updated_group
     except IntegrityError as e:
         await db.rollback()
-        # The IntegrityError detail message is now set in the CRUD layer to be more specific
         logger.warning(f"Attempted to update group ID {group_id} with existing symbol/name combination by admin {current_user.id}. Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e) # Return the detail message from the IntegrityError
+            detail=str(e)
         )
     except Exception as e:
         await db.rollback()
@@ -298,23 +306,25 @@ async def update_existing_group(
 async def delete_existing_group(
     group_id: int,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis_client),
     current_user: User = Depends(get_current_admin_user) # Restrict to admin
 ):
     """
     Deletes a group.
     """
-    # Admin check is handled by get_current_admin_user dependency
-
     db_group = await crud_group.get_group_by_id(db, group_id=group_id)
     if db_group is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Group not found"
         )
-
     try:
+        group_name = db_group.name
         await crud_group.delete_group(db=db, db_group=db_group)
         logger.info(f"Group ID {group_id} deleted successfully by admin {current_user.id}.")
+        # Invalidate group settings and all group-symbol settings cache for this group
+        await delete_group_settings_cache(redis_client, group_name)
+        await delete_all_group_symbol_settings_cache(redis_client, group_name)
         return StatusResponse(message=f"Group with ID {group_id} deleted successfully.")
     except Exception as e:
         await db.rollback()
