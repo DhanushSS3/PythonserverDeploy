@@ -1,5 +1,5 @@
 # app/main.py
-
+# Version 1.3.1
 # --- Environment Variable Loading ---
 # This must be at the very top, before any other app modules are imported.
 from dotenv import load_dotenv
@@ -47,7 +47,9 @@ from app.core.cache import (
     publish_market_data_trigger,
     set_user_balance_margin_cache,
     REDIS_MARKET_DATA_CHANNEL,
-    decode_decimal
+    decode_decimal,
+    get_group_settings_cache,
+    set_group_settings_cache
 )
 from app.crud import crud_order, user as crud_user
 from app.core.firebase import send_order_to_firebase
@@ -120,8 +122,8 @@ IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json", # Keep this as it is for now, as it just exposes the JSON schema
-    # docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
-    # redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
+    docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
+    redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
 )
 
 # --- CORS Settings ---
@@ -317,7 +319,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
     """
     Handles auto-cutoff for users whose margin level falls below the critical threshold.
     """
-    from app.core.cache import get_group_settings_cache
+    from app.core.cache import get_group_settings_cache, set_group_settings_cache
     from app.services.order_processing import generate_unique_10_digit_id
     from datetime import datetime, timezone
     try:
@@ -328,8 +330,21 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
         if user_type == "live":
             user_for_cutoff = await crud_user.get_user_by_id(db, user_id=user_id, user_type=user_type)
             if user_for_cutoff and user_for_cutoff.group_name:
-                # group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name, "ALL")
                 group_settings = await get_group_settings_cache(redis_client, user_for_cutoff.group_name)
+                # Fallback: fetch from DB if not found in cache
+                if group_settings is None:
+                    autocutoff_logger.warning(f"[AUTO-CUTOFF] Group settings not found in cache for group '{user_for_cutoff.group_name}', fetching from DB.")
+                    from app.crud.group import get_group_by_name
+                    db_group = await get_group_by_name(db, user_for_cutoff.group_name)
+                    if db_group:
+                        # Assume db_group is a list or object with sending_orders attribute
+                        settings = {"sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)}
+                        await set_group_settings_cache(redis_client, user_for_cutoff.group_name, settings)
+                        group_settings = settings
+                        autocutoff_logger.info(f"[AUTO-CUTOFF] Group settings fetched from DB and cached for group '{user_for_cutoff.group_name}'")
+                    else:
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Group settings not found in DB for group '{user_for_cutoff.group_name}'. Cannot proceed with auto-cutoff for user {user_id}.")
+                        return
                 if group_settings.get('sending_orders', '').lower() == 'barclays':
                     is_barclays_live_user = True
                     autocutoff_logger.info(f"[AUTO-CUTOFF] User {user_id} identified as Barclays live user")
@@ -1276,7 +1291,7 @@ async def monitor_auto_cutoff_orders():
                                         "order_status": order.order_status,
                                         "status": "close",
                                         "order_quantity": str(order.order_quantity),
-                                        "contract_value": str(order.contract_value),
+                                        "contract_value": str(order.contract_value) if order.contract_value else None,
                                         "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
                                     }
                                     
