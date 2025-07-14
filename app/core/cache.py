@@ -267,7 +267,7 @@ async def set_user_balance_margin_cache(redis_client: Redis, user_id: int, walle
                     # Retry once
                     await redis_client.set(key, data_serializable, ex=USER_BALANCE_MARGIN_CACHE_EXPIRY_SECONDS)
                 else:
-                    cache_logger.warning(f"Cache verification: values identical for user {user_id} (balance={wallet_balance}, margin={margin}) - likely harmless race condition.")
+                    cache_logger.debug(f"Cache verification successful for user {user_id} (balance={wallet_balance}, margin={margin})")
             except Exception as verify_error:
                 cache_logger.error(f"Error during cache verification for user {user_id}: {verify_error}")
         else:

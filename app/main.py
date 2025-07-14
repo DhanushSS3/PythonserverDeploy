@@ -120,8 +120,8 @@ IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json", # Keep this as it is for now, as it just exposes the JSON schema
-    docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
-    redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
+    # docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
+    # redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
 )
 
 # --- CORS Settings ---
@@ -155,10 +155,12 @@ scheduler: Optional[AsyncIOScheduler] = None
 # Now, you can safely print and access them
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
+HOST = os.getenv("DATABASE_HOST")
 
 print(f"--- Application Startup ---")
 print(f"Loaded SECRET_KEY (from code): '{SECRET_KEY}'")
 print(f"Loaded ALGORITHM (from code): '{ALGORITHM}'")
+print(f"Loaded HOST (from code): '{HOST}'")
 print(f"---------------------------")
 
 # Log application startup
@@ -315,28 +317,41 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
     """
     Handles auto-cutoff for users whose margin level falls below the critical threshold.
     """
+    from app.core.cache import get_group_settings_cache
+    from app.services.order_processing import generate_unique_10_digit_id
+    from datetime import datetime, timezone
     try:
+        autocutoff_logger.warning(f"[AUTO-CUTOFF] Starting margin cutoff process for user {user_id} (type: {user_type}) with margin level {margin_level}%")
+        
         is_barclays_live_user = False
         user_for_cutoff = None
         if user_type == "live":
-            user_for_cutoff = await crud_user.get_user_by_id(db, user_id=user_id)
+            user_for_cutoff = await crud_user.get_user_by_id(db, user_id=user_id, user_type=user_type)
             if user_for_cutoff and user_for_cutoff.group_name:
-                group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name)
+                # group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name, "ALL")
+                group_settings = await get_group_settings_cache(redis_client, user_for_cutoff.group_name)
                 if group_settings.get('sending_orders', '').lower() == 'barclays':
                     is_barclays_live_user = True
+                    autocutoff_logger.info(f"[AUTO-CUTOFF] User {user_id} identified as Barclays live user")
         else:
             user_for_cutoff = await crud_user.get_demo_user_by_id(db, user_id)
 
         if not user_for_cutoff:
+            autocutoff_logger.error(f"[AUTO-CUTOFF] User {user_id} not found in database")
             return
 
         order_model = crud_order.get_order_model(user_type)
         open_orders = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
 
         if not open_orders:
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] No open orders found for user {user_id}")
             return
 
+        autocutoff_logger.warning(f"[AUTO-CUTOFF] Found {len(open_orders)} open orders for user {user_id}")
+
         if is_barclays_live_user:
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] Processing Barclays live user {user_id} - sending close requests to Firebase")
+            
             for order in open_orders:
                 try:
                     close_id = await generate_unique_10_digit_id(db, UserOrder, 'close_id')
@@ -346,16 +361,24 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                         "close_id": close_id,
                         "order_id": order.order_id,
                         "user_id": user_id,
-                        "symbol": order.order_company_name,
+                        "order_company_name": order.order_company_name,
                         "order_type": order.order_type,
                         "order_status": order.order_status,
-                        "status": "close",
+                        "status": "CLOSED",
                         "order_quantity": str(order.order_quantity),
                         "contract_value": str(order.contract_value),
-                        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+                        # "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     }
                     
+                    # Log before sending to Firebase
+                    autocutoff_logger.warning(f"[AUTO-CUTOFF] SENDING TO FIREBASE: User {user_id}, Order {order.order_id}, Symbol {order.order_company_name}, Close ID {close_id}, Margin Level {margin_level}%")
+                    autocutoff_logger.info(f"[AUTO-CUTOFF] Firebase payload: {firebase_close_data}")
+                    
                     await send_order_to_firebase(firebase_close_data, "live")
+                    
+                    # Log successful Firebase send
+                    autocutoff_logger.warning(f"[AUTO-CUTOFF] SUCCESSFULLY SENT TO FIREBASE: User {user_id}, Order {order.order_id}, Close ID {close_id}")
                     
                     update_fields = {
                         "close_id": close_id,
@@ -365,9 +388,14 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                         db, order, update_fields, user_id, user_type, "AUTO_CUTOFF_REQUESTED"
                     )
                     await db.commit()
+                    
+                    autocutoff_logger.warning(f"[AUTO-CUTOFF] ORDER STATUS UPDATED: User {user_id}, Order {order.order_id}, Status: AUTO_CUTOFF_REQUESTED, Close ID: {close_id}")
 
-                except Exception:
+                except Exception as e:
+                    autocutoff_logger.error(f"[AUTO-CUTOFF] ERROR processing order {order.order_id} for user {user_id}: {e}", exc_info=True)
                     continue
+            
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] Completed Firebase requests for user {user_id}, publishing updates")
             
             await publish_order_update(redis_client, user_id)
             
@@ -392,8 +420,12 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
             await update_user_static_orders(user_id, db, redis_client, user_type_str)
             await publish_user_data_update(redis_client, user_id)
             await publish_market_data_trigger(redis_client)
+            
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] COMPLETED: User {user_id} auto-cutoff process finished, waiting for Firebase confirmation")
 
         else:
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] Processing demo user {user_id} - closing orders locally")
+            
             from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
             from app.services.portfolio_calculator import _convert_to_usd
             from app.services.order_processing import calculate_total_symbol_margin_contribution
@@ -413,15 +445,19 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     last_price = await get_last_known_price(redis_client, symbol)
                     
                     if not last_price:
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] No last price found for symbol {symbol}, skipping order {order.order_id}")
                         continue
 
                     close_price_str = last_price.get('o') if order.order_type == 'BUY' else last_price.get('b')
                     close_price = Decimal(str(close_price_str))
 
                     if not close_price or close_price <= 0:
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] Invalid close price {close_price} for order {order.order_id}, skipping")
                         continue
                     
                     close_id = await generate_unique_10_digit_id(db, order_model, 'close_id')
+                    
+                    autocutoff_logger.warning(f"[AUTO-CUTOFF] CLOSING ORDER: User {user_id}, Order {order.order_id}, Symbol {symbol}, Close Price {close_price}, Close ID {close_id}")
                     
                     quantity = Decimal(str(order.order_quantity))
                     entry_price = Decimal(str(order.order_price))
@@ -432,13 +468,16 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     ext_symbol_info = symbol_info_result.scalars().first()
                     
                     if not ext_symbol_info or ext_symbol_info.contract_size is None or ext_symbol_info.profit is None:
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] Symbol info not found for {symbol}, skipping order {order.order_id}")
                         continue
                     
                     contract_size = Decimal(str(ext_symbol_info.contract_size))
                     profit_currency = ext_symbol_info.profit.upper()
                     
-                    group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name, symbol)
+                    # group_settings = await get_group_symbol_settings_cache(redis_client, user_for_cutoff.group_name, symbol)
+                    group_settings = await get_group_settings_cache(redis_client, user_for_cutoff.group_name)
                     if not group_settings:
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] Group settings not found for {symbol}, skipping order {order.order_id}")
                         continue
                     
                     commission_type = int(group_settings.get('commision_type', -1))
@@ -463,10 +502,12 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     elif order_type_db == "SELL":
                         profit = (entry_price - close_price) * quantity * contract_size
                     else:
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] Invalid order type {order_type_db} for order {order.order_id}, skipping")
                         continue
                     
                     profit_usd = await _convert_to_usd(profit, profit_currency, user_for_cutoff.id, order.order_id, "PnL on Auto-Cutoff", db=db, redis_client=redis_client)
                     if profit_currency != "USD" and profit_usd == profit:
+                        autocutoff_logger.warning(f"[AUTO-CUTOFF] Currency conversion failed for order {order.order_id}, skipping")
                         continue
                     
                     net_profit = (profit_usd - total_commission_for_trade).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -482,6 +523,8 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     order.swap = swap_amount
                     
                     total_net_profit += (net_profit - swap_amount)
+                    
+                    autocutoff_logger.warning(f"[AUTO-CUTOFF] ORDER CLOSED: User {user_id}, Order {order.order_id}, Net Profit {net_profit}, Commission {total_commission_for_trade}, Swap {swap_amount}")
                     
                     transaction_time = datetime.datetime.now(datetime.timezone.utc)
                     wallet_common_data = {
@@ -510,7 +553,8 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                         transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
                         db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
 
-                except Exception:
+                except Exception as e:
+                    autocutoff_logger.error(f"[AUTO-CUTOFF] ERROR closing order {order.order_id} for user {user_id}: {e}", exc_info=True)
                     continue
 
             try:
@@ -530,6 +574,8 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                 user_for_cutoff.margin = new_total_margin.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 
                 await db.commit()
+                
+                autocutoff_logger.warning(f"[AUTO-CUTOFF] USER BALANCE UPDATED: User {user_id}, Original Balance {original_wallet_balance}, Total Net Profit {total_net_profit}, New Balance {user_for_cutoff.wallet_balance}, New Margin {user_for_cutoff.margin}")
                 
                 user_type_str = 'demo' if isinstance(user_for_cutoff, DemoUser) else 'live'
                 user_data_to_cache = {
@@ -557,19 +603,22 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     from app.services.order_processing import calculate_total_user_margin
                     total_user_margin = await calculate_total_user_margin(db, redis_client, user_id, user_type_str)
                     await set_user_balance_margin_cache(redis_client, user_id, user_data_to_cache["wallet_balance"], total_user_margin)
-                    logger.info(f"[AUTO-CUTOFF] User {user_id}: Updated balance/margin cache - balance={user_data_to_cache['wallet_balance']}, margin={total_user_margin}")
+                    autocutoff_logger.info(f"[AUTO-CUTOFF] User {user_id}: Updated balance/margin cache - balance={user_data_to_cache['wallet_balance']}, margin={total_user_margin}")
                 except Exception as e:
-                    logger.error(f"[AUTO-CUTOFF] User {user_id}: Error updating balance/margin cache: {e}", exc_info=True)
+                    autocutoff_logger.error(f"[AUTO-CUTOFF] User {user_id}: Error updating balance/margin cache: {e}", exc_info=True)
                 
                 await publish_order_update(redis_client, user_id)
                 await publish_user_data_update(redis_client, user_id)
                 await publish_market_data_trigger(redis_client)
                 
-            except Exception:
+                autocutoff_logger.warning(f"[AUTO-CUTOFF] COMPLETED: Demo user {user_id} auto-cutoff process finished successfully")
+                
+            except Exception as e:
+                autocutoff_logger.error(f"[AUTO-CUTOFF] ERROR updating user balance for user {user_id}: {e}", exc_info=True)
                 await db.rollback()
             
-    except Exception:
-        pass
+    except Exception as e:
+        autocutoff_logger.error(f"[AUTO-CUTOFF] FATAL ERROR in handle_margin_cutoff for user {user_id}: {e}", exc_info=True)
 
 # --- Service Provider JWT Rotation Job ---
 async def rotate_service_account_jwt():
@@ -675,7 +724,7 @@ async def startup_event():
         
         scheduler.add_job(
             update_all_users_dynamic_portfolio,
-            IntervalTrigger(minutes=3),  # Changed from 1 minute to 5 minutes
+            IntervalTrigger(minutes=1),  # Changed from 1 minute to 5 minutes
             id='update_all_users_dynamic_portfolio',
             replace_existing=True
         )
@@ -776,6 +825,11 @@ async def startup_event():
             barclays_pending_task = asyncio.create_task(barclays_pending_order_margin_checker())
             background_tasks.add(barclays_pending_task)
             barclays_pending_task.add_done_callback(background_tasks.discard)
+            
+            # Start auto-cutoff order monitoring task
+            auto_cutoff_monitor_task = asyncio.create_task(monitor_auto_cutoff_orders())
+            background_tasks.add(auto_cutoff_monitor_task)
+            auto_cutoff_monitor_task.add_done_callback(background_tasks.discard)
             
         logger.info("Background tasks initialized")
             
@@ -1167,6 +1221,79 @@ async def run_cache_validation():
     # Schedule next validation in 5 minutes
     await asyncio.sleep(300)
     asyncio.create_task(run_cache_validation())
+
+# --- Auto-cutoff Order Monitoring Task ---
+async def monitor_auto_cutoff_orders():
+    """
+    Monitors auto-cutoff orders to identify any that might be stuck in AUTO_CUTOFF_REQUESTED status.
+    This helps identify orders that were sent to Firebase but never received confirmation.
+    """
+    logger.info("Starting auto-cutoff order monitoring task.")
+    
+    try:
+        while True:
+            try:
+                if not global_redis_client_instance:
+                    await asyncio.sleep(60)
+                    continue
+                    
+                async with AsyncSessionLocal() as db:
+                    # Find orders stuck in AUTO_CUTOFF_REQUESTED status for more than 5 minutes
+                    from sqlalchemy import select, and_
+                    from app.database.models import UserOrder
+                    from datetime import datetime, timedelta
+                    
+                    # Get orders with AUTO_CUTOFF_REQUESTED status
+                    cutoff_time = datetime.utcnow() - timedelta(minutes=5)
+                    
+                    stuck_orders_query = select(UserOrder).where(
+                        and_(
+                            UserOrder.order_status == "AUTO_CUTOFF_REQUESTED",
+                            UserOrder.updated_at < cutoff_time
+                        )
+                    )
+                    
+                    result = await db.execute(stuck_orders_query)
+                    stuck_orders = result.scalars().all()
+                    
+                    if stuck_orders:
+                        autocutoff_logger.error(f"[AUTO-CUTOFF] Found {len(stuck_orders)} stuck auto-cutoff orders:")
+                        for order in stuck_orders:
+                            autocutoff_logger.error(f"[AUTO-CUTOFF] STUCK ORDER: User {order.order_user_id}, Order {order.order_id}, Close ID {order.close_id}, Updated {order.updated_at}, Close Message: {order.close_message}")
+                            
+                            # Check if we should retry sending to Firebase
+                            if order.updated_at < (datetime.utcnow() - timedelta(minutes=10)):
+                                autocutoff_logger.warning(f"[AUTO-CUTOFF] RETRYING FIREBASE SEND: User {order.order_user_id}, Order {order.order_id}, Close ID {order.close_id}")
+                                
+                                try:
+                                    firebase_close_data = {
+                                        "action": "close_order",
+                                        "close_id": order.close_id,
+                                        "order_id": order.order_id,
+                                        "user_id": order.order_user_id,
+                                        "symbol": order.order_company_name,
+                                        "order_type": order.order_type,
+                                        "order_status": order.order_status,
+                                        "status": "close",
+                                        "order_quantity": str(order.order_quantity),
+                                        "contract_value": str(order.contract_value),
+                                        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
+                                    }
+                                    
+                                    await send_order_to_firebase(firebase_close_data, "live")
+                                    autocutoff_logger.warning(f"[AUTO-CUTOFF] RETRY SENT TO FIREBASE: User {order.order_user_id}, Order {order.order_id}, Close ID {order.close_id}")
+                                    
+                                except Exception as retry_error:
+                                    autocutoff_logger.error(f"[AUTO-CUTOFF] RETRY FAILED: User {order.order_user_id}, Order {order.order_id}, Error: {retry_error}", exc_info=True)
+                    
+            except Exception as e:
+                logger.error(f"Error in auto-cutoff order monitoring: {e}", exc_info=True)
+                
+            # Check every 2 minutes
+            await asyncio.sleep(120)
+            
+    except Exception as fatal:
+        logger.critical(f"FATAL ERROR in auto-cutoff order monitoring: {fatal}", exc_info=True)
 
 # --- Barclays Pending Order Margin Checker ---
 async def barclays_pending_order_margin_checker():

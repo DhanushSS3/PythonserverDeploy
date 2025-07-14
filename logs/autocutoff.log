@@ -1,1 +1,11 @@
-2025-07-10 21:33:46,938 - WARNING - autocutoff - [AUTO-CUTOFF] User 9 has margin call condition: margin level 99.09782221041662839619455580%
+2025-07-13 23:56:08,060 - WARNING - autocutoff - [AUTO-CUTOFF] User 26 margin level 24.88788426364826006257022474% below cutoff threshold 50.0%. Initiating auto-cutoff.
+2025-07-13 23:56:08,061 - WARNING - autocutoff - [AUTO-CUTOFF] Starting margin cutoff process for user 26 (type: live) with margin level 24.88788426364826006257022474%
+2025-07-13 23:56:08,065 - INFO - autocutoff - [AUTO-CUTOFF] User 26 identified as Barclays live user
+2025-07-13 23:56:08,067 - WARNING - autocutoff - [AUTO-CUTOFF] Found 1 open orders for user 26
+2025-07-13 23:56:08,067 - WARNING - autocutoff - [AUTO-CUTOFF] Processing Barclays live user 26 - sending close requests to Firebase
+2025-07-13 23:56:08,069 - WARNING - autocutoff - [AUTO-CUTOFF] SENDING TO FIREBASE: User 26, Order 5893584612, Symbol BTCUSD, Close ID 6534416337, Margin Level 24.88788426364826006257022474%
+2025-07-13 23:56:08,069 - INFO - autocutoff - [AUTO-CUTOFF] Firebase payload: {'action': 'close_order', 'close_id': '6534416337', 'order_id': '5893584612', 'user_id': 26, 'order_company_name': 'BTCUSD', 'order_type': 'BUY', 'order_status': 'OPEN', 'status': 'CLOSED', 'order_quantity': '1.30000000', 'contract_value': '1.30000000', 'timestamp': '2025-07-14T06:56:08.069363+00:00'}
+2025-07-13 23:56:08,367 - WARNING - autocutoff - [AUTO-CUTOFF] SUCCESSFULLY SENT TO FIREBASE: User 26, Order 5893584612, Close ID 6534416337
+2025-07-13 23:56:08,384 - WARNING - autocutoff - [AUTO-CUTOFF] ORDER STATUS UPDATED: User 26, Order 5893584612, Status: AUTO_CUTOFF_REQUESTED, Close ID: 6534416337
+2025-07-13 23:56:08,384 - WARNING - autocutoff - [AUTO-CUTOFF] Completed Firebase requests for user 26, publishing updates
+2025-07-13 23:56:08,396 - WARNING - autocutoff - [AUTO-CUTOFF] COMPLETED: User 26 auto-cutoff process finished, waiting for Firebase confirmation
