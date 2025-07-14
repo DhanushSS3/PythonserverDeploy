@@ -746,3 +746,116 @@
 2025-07-14 03:48:49,911 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream to remove old format entries
 2025-07-14 03:48:49,911 - INFO - orders - [CLEANUP] Pending order stream cleanup with trigger price validation completed
 2025-07-14 03:48:50,861 - INFO - orders - Starting the simplified pending order checker background task.
+2025-07-14 04:14:52,346 - INFO - orders - [CLEANUP] Starting pending order stream cleanup
+2025-07-14 04:14:53,516 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream
+2025-07-14 04:14:53,516 - INFO - orders - [CLEANUP] Pending order stream cleanup completed
+2025-07-14 04:14:53,521 - INFO - orders - [CLEANUP] Starting pending order stream cleanup with trigger price validation
+2025-07-14 04:14:53,522 - INFO - orders - [PENDING_TRIGGER_WORKER] Starting pending order trigger worker
+2025-07-14 04:14:57,594 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream to remove old format entries
+2025-07-14 04:14:57,595 - INFO - orders - [CLEANUP] Pending order stream cleanup with trigger price validation completed
+2025-07-14 04:14:58,516 - INFO - orders - Starting the simplified pending order checker background task.
+2025-07-14 04:15:03,530 - INFO - orders - Starting the users with orders cache updater task.
+2025-07-14 04:15:11,259 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-14 04:15:21,427 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 3 positions for User 1, Symbol AUDJPY
+2025-07-14 04:15:21,427 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.03000000, TotalSellQty=0, NetQty=0.03000000, IsHedged=False
+2025-07-14 04:15:21,427 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('658.782104'), Decimal('658.74124'), Decimal('658.74124')], HighestMarginPerLot=658.782104
+2025-07-14 04:15:21,427 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=19.76
+2025-07-14 04:15:21,427 - INFO - orders - [TOTAL_USER_MARGIN] User 1 total margin across all symbols: 19.76
+2025-07-14 04:15:21,842 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 26, Symbol XAGUSD
+2025-07-14 04:15:21,842 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol XAGUSD: TotalBuyQty=0.01000000, TotalSellQty=0, NetQty=0.01000000, IsHedged=False
+2025-07-14 04:15:21,842 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol XAGUSD: AllMarginsPerLot=[Decimal('1954')], HighestMarginPerLot=1954
+2025-07-14 04:15:21,843 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 26, Symbol XAGUSD: CalculatedTotalMargin=19.54
+2025-07-14 04:15:21,843 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 26, Symbol BTCUSD
+2025-07-14 04:15:21,843 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol BTCUSD: TotalBuyQty=6.00000000, TotalSellQty=0, NetQty=6.00000000, IsHedged=False
+2025-07-14 04:15:21,843 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol BTCUSD: AllMarginsPerLot=[Decimal('24410.82166666666666666666667')], HighestMarginPerLot=24410.82166666666666666666667
+2025-07-14 04:15:21,843 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 26, Symbol BTCUSD: CalculatedTotalMargin=146464.93
+2025-07-14 04:15:21,843 - INFO - orders - [TOTAL_USER_MARGIN] User 26 total margin across all symbols: 146484.47
+2025-07-14 04:15:54,047 - INFO - orders - [get_rejected_orders] user_type: demo
+2025-07-14 04:15:54,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 3 positions for User 1, Symbol AUDJPY
+2025-07-14 04:15:54,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.03000000, TotalSellQty=0, NetQty=0.03000000, IsHedged=False
+2025-07-14 04:15:54,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('658.782104'), Decimal('658.74124'), Decimal('658.74124')], HighestMarginPerLot=658.782104
+2025-07-14 04:15:54,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=19.76
+2025-07-14 04:15:54,831 - INFO - orders - [TOTAL_USER_MARGIN] User 1 total margin across all symbols: 19.76
+2025-07-14 04:16:11,406 - INFO - orders - Order placement request received - User: 1, Symbol: AUDJPY, Type: BUY
+2025-07-14 04:16:11,755 - INFO - orders - [MARGIN_CALC] Market data for AUDJPY: {'b': '96.7600000000', 'o': '96.7540000000'}
+2025-07-14 04:16:11,755 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDJPY, using bid price with spread: bid=96.7600000000, ask=96.76967600000000
+2025-07-14 04:16:11,755 - INFO - orders - [MARGIN_CALC] Using prices for AUDJPY: bid=96.7600000000, ask=96.76967600000000
+2025-07-14 04:16:11,755 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 967.70 JPY to USD for margin_calculation (user_id: 1, position: None)
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: JPYUSD
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for JPYUSD, trying inverse
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDJPY
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('147.2830000000'), 'o': Decimal('147.2820000000')}
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 147.2830000000
+2025-07-14 04:16:11,756 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 967.70 JPY / 147.2830000000 = 6.570344167351289693990480911 USD
+2025-07-14 04:16:11,756 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDJPY, Type: BUY, Qty: 0.01, Price: 96.76967600000000, Margin: 6.570344167351289693990480911, Commission: 0.10
+2025-07-14 04:16:11,756 - INFO - orders - [HEDGING_MARGIN_DEBUG] Starting hedging calculation for User: 1, Symbol: AUDJPY, OrderType: BUY, Quantity: 0.01, FullMargin: 6.570344167351289693990480911
+2025-07-14 04:16:11,756 - INFO - orders - [HEDGING_MARGIN_DEBUG] Existing open orders count: 3
+2025-07-14 04:16:11,757 - INFO - orders - [HEDGING_MARGIN_DEBUG] Created simulated order: Type=BUY, Qty=0.01, Margin=6.570344167351289693990480911
+2025-07-14 04:16:11,757 - INFO - orders - [HEDGING_MARGIN_DEBUG] About to calculate margin before and after for 3 existing orders + 1 new order
+2025-07-14 04:16:11,757 - INFO - orders - [HEDGING_MARGIN_DEBUG] Executing margin calculation tasks...
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 3 positions for User 1, Symbol AUDJPY
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.03000000, TotalSellQty=0, NetQty=0.03000000, IsHedged=False
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('658.782104'), Decimal('658.74124'), Decimal('658.74124')], HighestMarginPerLot=658.782104
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=19.76
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 4 positions for User 1, Symbol AUDJPY
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.04000000, TotalSellQty=0, NetQty=0.04000000, IsHedged=False
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('658.782104'), Decimal('658.74124'), Decimal('658.74124'), Decimal('657.0344167351289693990480911')], HighestMarginPerLot=658.782104
+2025-07-14 04:16:11,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=26.35
+2025-07-14 04:16:11,757 - INFO - orders - [HEDGING_MARGIN_DEBUG] Margin calculation tasks completed
+2025-07-14 04:16:11,757 - INFO - orders - [HEDGING_MARGIN_DEBUG] User: 1, Symbol: AUDJPY, OrderType: BUY, MarginBefore: 19.76, MarginAfter: 26.35, AdditionalMargin: 6.59, OpenOrders: 3
+2025-07-14 04:16:11,757 - INFO - orders - [HEDGING_MARGIN_DEBUG] Simulated order: Type=BUY, Qty=0.01, Margin=6.570344167351289693990480911
+2025-07-14 04:16:11,779 - INFO - orders - [CACHE_UPDATE] Updating balance/margin cache for user 1: balance=17025.57000000, margin=26.35000000 (was 19.76000000)
+2025-07-14 04:16:11,779 - INFO - orders - [CACHE_UPDATE] Balance/margin cache updated for user 1
+2025-07-14 04:16:11,779 - INFO - orders - [PERF] Order processing: 0.3718s
+2025-07-14 04:16:11,795 - INFO - orders - [PERF] Order creation: 0.0161s
+2025-07-14 04:16:11,796 - INFO - orders - is_barclays_live_user in place_order: False
+2025-07-14 04:16:11,796 - INFO - orders - [PERF] TOTAL place_order: 0.3920s
+2025-07-14 04:16:11,811 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 4 positions for User 1, Symbol AUDJPY
+2025-07-14 04:16:11,811 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.04000000, TotalSellQty=0, NetQty=0.04000000, IsHedged=False
+2025-07-14 04:16:11,811 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('658.782104'), Decimal('658.74124'), Decimal('658.74124'), Decimal('657.034417')], HighestMarginPerLot=658.782104
+2025-07-14 04:16:11,811 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=26.35
+2025-07-14 04:16:11,812 - INFO - orders - [TOTAL_USER_MARGIN] User 1 total margin across all symbols: 26.35
+2025-07-14 04:16:11,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 4 positions for User 1, Symbol AUDJPY
+2025-07-14 04:16:11,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.04000000, TotalSellQty=0, NetQty=0.04000000, IsHedged=False
+2025-07-14 04:16:11,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('658.782104'), Decimal('658.74124'), Decimal('658.74124'), Decimal('657.034417')], HighestMarginPerLot=658.782104
+2025-07-14 04:16:11,830 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=26.35
+2025-07-14 04:16:11,830 - INFO - orders - [TOTAL_USER_MARGIN] User 1 total margin across all symbols: 26.35
+2025-07-14 04:16:11,833 - INFO - orders - Background balance/margin cache updated for user 1: balance=17025.57000000, margin=26.35
+2025-07-14 04:16:12,206 - INFO - orders - [PUBLISH_ASYNC] Triggering websocket updates for user 1
+2025-07-14 04:16:27,428 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-14 04:17:07,373 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-14 04:17:16,453 - INFO - orders - Order placement request received - User: 14, Symbol: AUDCAD, Type: BUY
+2025-07-14 04:17:16,869 - INFO - orders - [MARGIN_CALC] Market data for AUDCAD: {'b': '0.8981800000', 'o': '0.8981400000'}
+2025-07-14 04:17:16,869 - WARNING - orders - [MARGIN_CALC] Missing ask price for AUDCAD, using bid price with spread: bid=0.8981800000, ask=0.89826981800000
+2025-07-14 04:17:16,869 - INFO - orders - [MARGIN_CALC] Using prices for AUDCAD: bid=0.8981800000, ask=0.89826981800000
+2025-07-14 04:17:16,872 - INFO - orders - [CURRENCY_CONVERT] Starting conversion of 8.98 CAD to USD for margin_calculation (user_id: 14, position: None)
+2025-07-14 04:17:16,872 - INFO - orders - [CURRENCY_CONVERT] Trying direct conversion with symbol: CADUSD
+2025-07-14 04:17:16,873 - INFO - orders - [CURRENCY_CONVERT] Direct conversion prices from cache: None
+2025-07-14 04:17:16,873 - INFO - orders - [CURRENCY_CONVERT] No direct conversion rate found for CADUSD, trying inverse
+2025-07-14 04:17:16,873 - INFO - orders - [CURRENCY_CONVERT] Trying inverse conversion with symbol: USDCAD
+2025-07-14 04:17:16,874 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion prices from cache: {'b': Decimal('1.3672800000'), 'o': Decimal('1.3672700000')}
+2025-07-14 04:17:16,874 - INFO - orders - [CURRENCY_CONVERT] Found inverse conversion rate (bid): 1.3672800000
+2025-07-14 04:17:16,874 - INFO - orders - [CURRENCY_CONVERT] Inverse conversion successful: 8.98 CAD / 1.3672800000 = 6.567784213913755777894798432 USD
+2025-07-14 04:17:16,874 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: AUDCAD, Type: BUY, Qty: 0.01, Price: 0.89826981800000, Margin: 6.567784213913755777894798432, Commission: 0.00
+2025-07-14 04:17:16,874 - INFO - orders - [HEDGING_MARGIN_DEBUG] Starting hedging calculation for User: 14, Symbol: AUDCAD, OrderType: BUY, Quantity: 0.01, FullMargin: 6.567784213913755777894798432
+2025-07-14 04:17:16,874 - INFO - orders - [HEDGING_MARGIN_DEBUG] Existing open orders count: 0
+2025-07-14 04:17:16,874 - INFO - orders - [HEDGING_MARGIN_DEBUG] Created simulated order: Type=BUY, Qty=0.01, Margin=6.567784213913755777894798432
+2025-07-14 04:17:16,874 - INFO - orders - [HEDGING_MARGIN_DEBUG] About to calculate margin before and after for 0 existing orders + 1 new order
+2025-07-14 04:17:16,874 - INFO - orders - [HEDGING_MARGIN_DEBUG] Executing margin calculation tasks...
+2025-07-14 04:17:16,875 - INFO - orders - [MARGIN_TOTAL_CONTRIB] No open positions for User 14, Symbol AUDCAD. Returning zero margin.
+2025-07-14 04:17:16,875 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 14, Symbol AUDCAD
+2025-07-14 04:17:16,876 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol AUDCAD: TotalBuyQty=0.01, TotalSellQty=0, NetQty=0.01, IsHedged=False
+2025-07-14 04:17:16,876 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol AUDCAD: AllMarginsPerLot=[Decimal('656.7784213913755777894798432')], HighestMarginPerLot=656.7784213913755777894798432
+2025-07-14 04:17:16,876 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 14, Symbol AUDCAD: CalculatedTotalMargin=6.57
+2025-07-14 04:17:16,876 - INFO - orders - [HEDGING_MARGIN_DEBUG] Margin calculation tasks completed
+2025-07-14 04:17:16,876 - INFO - orders - [HEDGING_MARGIN_DEBUG] User: 14, Symbol: AUDCAD, OrderType: BUY, MarginBefore: 0.0, MarginAfter: 6.57, AdditionalMargin: 6.57, OpenOrders: 0
+2025-07-14 04:17:16,876 - INFO - orders - [HEDGING_MARGIN_DEBUG] Simulated order: Type=BUY, Qty=0.01, Margin=6.567784213913755777894798432
+2025-07-14 04:17:16,876 - INFO - orders - [PERF] Order processing: 0.4225s
+2025-07-14 04:17:16,902 - INFO - orders - [PERF] Order creation: 0.0250s
+2025-07-14 04:17:16,902 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-14 04:17:16,902 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-14 04:17:16,902 - INFO - orders - [PERF] TOTAL place_order: 0.4502s
+2025-07-14 04:17:16,941 - INFO - orders - Background balance/margin cache updated for user 14: balance=10000.00000000, margin=0.0
+2025-07-14 04:17:16,972 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-14 04:17:17,369 - INFO - orders - [PUBLISH_ASYNC] Triggering websocket updates for user 14

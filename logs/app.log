@@ -1708,3 +1708,166 @@
 2025-07-14 03:48:54,817 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
 2025-07-14 03:48:54,848 - INFO - app - Redis connection closed
 2025-07-14 03:48:54,848 - INFO - app - Application shutdown completed
+2025-07-14 04:14:49,857 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:14:49,872 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:14:49,883 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:14:49,883 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:14:50,196 - INFO - app - Application starting up - Trading system initialized
+2025-07-14 04:14:50,196 - INFO - app - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-14 04:14:50,196 - INFO - app - Environment: PRODUCTION
+2025-07-14 04:14:50,248 - INFO - app - Application startup initiated
+2025-07-14 04:14:50,248 - INFO - app - Initializing core services...
+2025-07-14 04:14:50,298 - INFO - app - Firebase initialized
+2025-07-14 04:14:50,298 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-07-14 04:14:52,342 - INFO - app - Redis initialized
+2025-07-14 04:14:52,344 - INFO - app - [SWAP] daily_swap_charge_job triggered
+2025-07-14 04:14:52,345 - INFO - app - Scheduler initialized
+2025-07-14 04:14:52,346 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-07-14 04:14:52,347 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-07-14 04:14:53,499 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-07-14 04:14:53,522 - INFO - app - Starting stale cache cleanup task
+2025-07-14 04:14:57,595 - INFO - app - Cleaned up pending order stream for new trigger price format
+2025-07-14 04:14:57,595 - INFO - app - Background tasks initialized
+2025-07-14 04:14:58,463 - INFO - app - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-07-14 04:14:58,463 - INFO - app - Application startup completed successfully
+2025-07-14 04:14:58,463 - INFO - app - Starting cache validation task
+2025-07-14 04:14:58,466 - INFO - app - Starting Barclays pending order margin checker task.
+2025-07-14 04:14:58,468 - INFO - app - Starting auto-cutoff order monitoring task.
+2025-07-14 04:14:58,488 - INFO - app - Validating cache for 31 users
+2025-07-14 04:15:00,502 - INFO - app - Found 24 static orders cache entries to check
+2025-07-14 04:15:02,559 - WARNING - app - User 4: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:02,600 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 26
+2025-07-14 04:15:02,601 - INFO - app.api.v1.endpoints.users - Refresh token decoded. User ID from token payload: 26
+2025-07-14 04:15:06,652 - INFO - app.api.v1.endpoints.users - Refresh token validated successfully for user ID: 26
+2025-07-14 04:15:06,655 - INFO - app.api.v1.endpoints.users - Refresh token validated successfully for user ID: 26
+2025-07-14 04:15:06,663 - WARNING - app - Found stale cache entry for user 2, will be refreshed on next access
+2025-07-14 04:15:06,670 - WARNING - app - Found stale cache entry for user 3, will be refreshed on next access
+2025-07-14 04:15:06,681 - INFO - app.api.v1.endpoints.users - New access and refresh tokens generated for user ID 26 using refresh token.
+2025-07-14 04:15:06,682 - INFO - app.api.v1.endpoints.users - New access and refresh tokens generated for user ID 26 using refresh token.
+2025-07-14 04:15:06,688 - WARNING - app - Found stale cache entry for user 18, will be refreshed on next access
+2025-07-14 04:15:06,690 - WARNING - app - User 5: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:09,582 - WARNING - app - Found stale cache entry for user 23, will be refreshed on next access
+2025-07-14 04:15:09,597 - WARNING - app - User 8: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:09,602 - WARNING - app - Found stale cache entry for user 19, will be refreshed on next access
+2025-07-14 04:15:09,711 - WARNING - app - Found stale cache entry for user 8, will be refreshed on next access
+2025-07-14 04:15:09,741 - WARNING - app - Found stale cache entry for user 5, will be refreshed on next access
+2025-07-14 04:15:09,753 - WARNING - app - Found stale cache entry for user 24, will be refreshed on next access
+2025-07-14 04:15:09,765 - WARNING - app - Found stale cache entry for user 13, will be refreshed on next access
+2025-07-14 04:15:09,771 - WARNING - app - Found stale cache entry for user 16, will be refreshed on next access
+2025-07-14 04:15:09,777 - WARNING - app - User 9: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:09,780 - WARNING - app - Found stale cache entry for user 25, will be refreshed on next access
+2025-07-14 04:15:09,789 - WARNING - app - Found stale cache entry for user 12, will be refreshed on next access
+2025-07-14 04:15:09,832 - WARNING - app - Found stale cache entry for user 11, will be refreshed on next access
+2025-07-14 04:15:11,065 - INFO - app.api.v1.endpoints.favorites - Direct SQL query found 4 symbols for user 26
+2025-07-14 04:15:11,065 - INFO - app.api.v1.endpoints.favorites - Symbols: ['AUDJPY', 'AUDSGD', 'AUDUSD', 'XAGUSD']
+2025-07-14 04:15:11,840 - WARNING - app - Found stale cache entry for user 21, will be refreshed on next access
+2025-07-14 04:15:11,873 - WARNING - app - Found stale cache entry for user 14, will be refreshed on next access
+2025-07-14 04:15:11,893 - WARNING - app - User 10: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:11,896 - WARNING - app - Found stale cache entry for user 6, will be refreshed on next access
+2025-07-14 04:15:11,915 - INFO - app - Completed stale cache cleanup task
+2025-07-14 04:15:12,060 - WARNING - app - User 11: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:12,135 - WARNING - app - User 12: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:13,474 - INFO - app - Starting stale cache cleanup task
+2025-07-14 04:15:14,207 - INFO - app - Found 24 static orders cache entries to check
+2025-07-14 04:15:14,231 - WARNING - app - Found stale cache entry for user 2, will be refreshed on next access
+2025-07-14 04:15:14,251 - WARNING - app - Found stale cache entry for user 3, will be refreshed on next access
+2025-07-14 04:15:14,257 - WARNING - app - User 13: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:14,279 - WARNING - app - Found stale cache entry for user 18, will be refreshed on next access
+2025-07-14 04:15:14,320 - WARNING - app - Found stale cache entry for user 23, will be refreshed on next access
+2025-07-14 04:15:14,333 - WARNING - app - Found stale cache entry for user 19, will be refreshed on next access
+2025-07-14 04:15:14,345 - WARNING - app - Found stale cache entry for user 8, will be refreshed on next access
+2025-07-14 04:15:14,348 - WARNING - app - User 14: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:14,369 - WARNING - app - Found stale cache entry for user 5, will be refreshed on next access
+2025-07-14 04:15:14,383 - WARNING - app - Found stale cache entry for user 24, will be refreshed on next access
+2025-07-14 04:15:14,393 - WARNING - app - Found stale cache entry for user 13, will be refreshed on next access
+2025-07-14 04:15:14,401 - WARNING - app - Found stale cache entry for user 16, will be refreshed on next access
+2025-07-14 04:15:14,410 - WARNING - app - Found stale cache entry for user 25, will be refreshed on next access
+2025-07-14 04:15:14,416 - WARNING - app - User 16: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:14,416 - WARNING - app - Found stale cache entry for user 12, will be refreshed on next access
+2025-07-14 04:15:14,428 - WARNING - app - Found stale cache entry for user 11, will be refreshed on next access
+2025-07-14 04:15:14,432 - WARNING - app - Found stale cache entry for user 21, will be refreshed on next access
+2025-07-14 04:15:16,500 - WARNING - app - Found stale cache entry for user 14, will be refreshed on next access
+2025-07-14 04:15:16,541 - WARNING - app - Found stale cache entry for user 6, will be refreshed on next access
+2025-07-14 04:15:16,576 - INFO - app - Completed stale cache cleanup task
+2025-07-14 04:15:16,592 - WARNING - app - User 17: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:16,663 - WARNING - app - User 18: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:18,763 - WARNING - app - User 19: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:18,850 - WARNING - app - User 20: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:20,976 - WARNING - app - User 21: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,027 - WARNING - app - User 22: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,091 - WARNING - app - User 23: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,152 - WARNING - app - User 24: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,292 - WARNING - app - User 25: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,368 - WARNING - app - User 1: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,463 - WARNING - app - User 2: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,514 - WARNING - app - User 3: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,569 - WARNING - app - User 5: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,664 - WARNING - app - User 6: Missing balance/margin cache, refreshing...
+2025-07-14 04:15:21,729 - INFO - app - Cache validation completed
+2025-07-14 04:15:23,046 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,066 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,083 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,099 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,131 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,192 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,194 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-14 04:15:23,392 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,392 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,393 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,394 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,415 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,415 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:23,423 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,423 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:23,424 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,424 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:23,444 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,444 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,445 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:23,477 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,477 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:23,483 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,489 - INFO - app.core.config - .env file loaded successfully.
+2025-07-14 04:15:23,506 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,506 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:23,508 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-14 04:15:23,508 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-14 04:15:41,161 - INFO - app.api.v1.endpoints.users - Logout successful for user ID 26 by invalidating refresh token.
+2025-07-14 04:15:52,387 - WARNING - app - No user data found for user 5 (live). Skipping portfolio update.
+2025-07-14 04:15:52,392 - WARNING - app - No group settings found for group string. Skipping portfolio update for user 8.
+2025-07-14 04:15:53,092 - WARNING - app.services.portfolio_calculator - MARGIN CALL ALERT: User has margin level 80.29690451144752730443029217% which is below threshold 100.0%
+2025-07-14 04:15:53,747 - WARNING - app - User 2 has no group_name set. Skipping portfolio update.
+2025-07-14 04:15:53,786 - WARNING - app - No group settings found for group string. Skipping portfolio update for user 3.
+2025-07-14 04:15:53,840 - WARNING - app - User 5 has no group_name set. Skipping portfolio update.
+2025-07-14 04:15:53,845 - WARNING - app - User 6 has no group_name set. Skipping portfolio update.
+2025-07-14 04:15:53,972 - INFO - app.api.v1.endpoints.favorites - Direct SQL query found 1 symbols for user 1
+2025-07-14 04:15:53,972 - INFO - app.api.v1.endpoints.favorites - Symbols: ['AUDCAD']
+2025-07-14 04:16:18,477 - INFO - app.api.v1.endpoints.users - Logout successful for user ID 1 by invalidating refresh token.
+2025-07-14 04:16:27,406 - INFO - app.api.v1.endpoints.favorites - Direct SQL query found 1 symbols for user 12
+2025-07-14 04:16:27,407 - INFO - app.api.v1.endpoints.favorites - Symbols: ['AUDNZD']
+2025-07-14 04:16:52,397 - WARNING - app - No user data found for user 5 (live). Skipping portfolio update.
+2025-07-14 04:16:52,407 - WARNING - app - No group settings found for group string. Skipping portfolio update for user 8.
+2025-07-14 04:16:53,200 - WARNING - app.services.portfolio_calculator - MARGIN CALL ALERT: User has margin level 80.02671887333858667748192010% which is below threshold 100.0%
+2025-07-14 04:16:53,731 - WARNING - app - User 2 has no group_name set. Skipping portfolio update.
+2025-07-14 04:16:53,755 - WARNING - app - No group settings found for group string. Skipping portfolio update for user 3.
+2025-07-14 04:16:53,795 - WARNING - app - User 5 has no group_name set. Skipping portfolio update.
+2025-07-14 04:16:53,797 - WARNING - app - User 6 has no group_name set. Skipping portfolio update.
+2025-07-14 04:16:59,006 - INFO - app.api.v1.endpoints.users - Logout successful for user ID 12 by invalidating refresh token.
+2025-07-14 04:17:07,179 - INFO - app.api.v1.endpoints.favorites - Direct SQL query found 0 symbols for user 14
+2025-07-14 04:17:07,179 - INFO - app.api.v1.endpoints.favorites - Symbols: []
+2025-07-14 04:17:16,976 - INFO - app.core.firebase - [FIREBASE] Payload being pushed to Firebase (all stringified): {'order_id': 'ORD_1920056401', 'user_id': '14', 'order_company_name': 'AUDCAD', 'order_type': 'BUY', 'order_quantity': '0.01', 'price': '0.89827', 'status': 'OPEN', 'contract_value': '1000.0', 'account_type': 'live', 'timestamp': '2025-07-14T11:17:16.976499'}
+2025-07-14 04:17:17,366 - INFO - app.core.firebase - Order data (ID: ORD_1920056401) sent to Firebase successfully.
+2025-07-14 04:17:52,373 - WARNING - app - No user data found for user 5 (live). Skipping portfolio update.
+2025-07-14 04:17:52,376 - WARNING - app - No group settings found for group string. Skipping portfolio update for user 8.
+2025-07-14 04:17:52,901 - WARNING - app.services.portfolio_calculator - MARGIN CALL ALERT: User has margin level 79.89196056073384420887756907% which is below threshold 100.0%
+2025-07-14 04:17:53,269 - WARNING - app - User 2 has no group_name set. Skipping portfolio update.
+2025-07-14 04:17:53,276 - WARNING - app - No group settings found for group string. Skipping portfolio update for user 3.
+2025-07-14 04:17:53,288 - WARNING - app - User 5 has no group_name set. Skipping portfolio update.
+2025-07-14 04:17:53,288 - WARNING - app - User 6 has no group_name set. Skipping portfolio update.
+2025-07-14 04:18:14,734 - INFO - app - Application shutdown initiated
+2025-07-14 04:18:14,735 - INFO - app - Scheduler shutdown completed
+2025-07-14 04:18:14,735 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-07-14 04:18:15,411 - INFO - app.firebase_stream - Firebase listener closed.
+2025-07-14 04:18:15,411 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-07-14 04:18:15,432 - INFO - app - Redis connection closed
+2025-07-14 04:18:15,432 - INFO - app - Application shutdown completed

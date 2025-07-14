@@ -4,15 +4,47 @@ import logging
 import random
 import asyncio
 
+# async def generate_unique_10_digit_id(db, model, column):
+#     import random
+#     from sqlalchemy.future import select
+#     while True:
+#         candidate = str(random.randint(10**9, 10**10-1))
+#         stmt = select(model).where(getattr(model, column) == candidate)
+#         result = await db.execute(stmt)
+#         if not result.scalar():
+#             return candidate
+
+
 async def generate_unique_10_digit_id(db, model, column):
     import random
     from sqlalchemy.future import select
+
+    # Mapping from column name to prefix
+    ID_PREFIXES = {
+        "order_id": "ORD_",
+        "cancel_id": "CXL_",
+        "close_id": "CLS_",
+        "modify_id": "MOD_",
+        "stoploss_id": "SL_",
+        "takeprofit_id": "TP_",
+        "stoploss_cancel_id": "SLC_",
+        "takeprofit_cancel_id": "TPC_",
+    }
+
+    prefix = ID_PREFIXES.get(column)
+    if prefix is None:
+        raise ValueError(f"No prefix defined for column '{column}'")
+
     while True:
-        candidate = str(random.randint(10**9, 10**10-1))
+        numeric_part = str(random.randint(10**9, 10**10 - 1))  # 10-digit random number
+        candidate = f"{prefix}{numeric_part}"
+
         stmt = select(model).where(getattr(model, column) == candidate)
         result = await db.execute(stmt)
+
         if not result.scalar():
             return candidate
+
 
 
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP # Import ROUND_HALF_UP for quantization
