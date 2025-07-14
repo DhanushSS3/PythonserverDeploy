@@ -675,7 +675,7 @@ async def startup_event():
         
         scheduler.add_job(
             update_all_users_dynamic_portfolio,
-            IntervalTrigger(minutes=1),
+            IntervalTrigger(minutes=3),  # Changed from 1 minute to 5 minutes
             id='update_all_users_dynamic_portfolio',
             replace_existing=True
         )
@@ -684,6 +684,15 @@ async def startup_event():
             rotate_service_account_jwt,
             IntervalTrigger(minutes=30),
             id='rotate_service_account_jwt',
+            replace_existing=True
+        )
+        
+        # Add connection pool monitoring
+        from app.database.session import log_connection_pool_status
+        scheduler.add_job(
+            log_connection_pool_status,
+            IntervalTrigger(minutes=2),
+            id='connection_pool_monitoring',
             replace_existing=True
         )
         
@@ -887,8 +896,8 @@ async def run_pending_order_checker():
             await asyncio.sleep(60)
             continue
         
-        # Update cache every 5 minutes
-        await asyncio.sleep(300)
+        # Update cache every 10 minutes (increased from 5 minutes)
+        await asyncio.sleep(600)
 
 # --- New SL/TP Checker Task (triggered by market data updates) ---
 async def run_sltp_checker_on_market_update():
@@ -982,7 +991,7 @@ async def cleanup_orphaned_redis_orders():
                 pending_orders = await get_all_pending_orders_from_redis(global_redis_client_instance)
                 
                 if not pending_orders:
-                    await asyncio.sleep(300)
+                    await asyncio.sleep(600)  # Increased from 300 to 600 seconds (10 minutes)
                     continue
                 
                 from app.crud.crud_order import get_order_model
@@ -1047,8 +1056,8 @@ async def run_cache_cleanup():
         except Exception as e:
             logger.error(f"Error in cache cleanup task: {e}", exc_info=True)
         
-        # Run cleanup every 10 minutes
-        await asyncio.sleep(600)
+        # Run cleanup every 15 minutes (increased from 10 minutes)
+        await asyncio.sleep(900)
 
 async def cleanup_stale_cache_entries(redis_client: Redis):
     """
@@ -1167,7 +1176,7 @@ async def barclays_pending_order_margin_checker():
     """
     logger.info("Starting Barclays pending order margin checker task.")
     from app.core.cache import get_user_data_cache, get_user_dynamic_portfolio_cache
-    from app.crud.crud_order import get_order_model, get_orders_by_user_id_and_statuses
+    from app.crud.crud_order import get_order_model, get_orders_by_user_id_and_statuses, get_order_by_id
     from app.services.order_processing import generate_unique_10_digit_id
     from app.core.firebase import send_order_to_firebase
     from app.crud.user import get_user_by_id
@@ -1175,143 +1184,199 @@ async def barclays_pending_order_margin_checker():
     from app.core.cache import set_user_data_cache, set_user_balance_margin_cache
     from app.api.v1.endpoints.orders import update_user_static_orders
     import datetime
+    
+    # Track recently cancelled orders to prevent duplicates
+    recently_cancelled_orders = set()
+    
     try:
         while True:
-            # logger.info("[BarclaysMarginChecker] --- Loop iteration start ---")
             try:
                 if not global_redis_client_instance:
-                    # logger.warning("[BarclaysMarginChecker] Redis client not available, skipping this cycle.")
-                    await asyncio.sleep(60)
-                    # logger.info("[BarclaysMarginChecker] --- Loop iteration end (after sleep, no redis) ---")
+                    await asyncio.sleep(1)  # Check every second
                     continue
+                    
                 async with AsyncSessionLocal() as db:
                     # Get all live users
                     live_users, _ = await crud_user.get_all_active_users_both(db)
-                    # logger.info(f"[BarclaysMarginChecker] Checking {len(live_users)} live users.")
+                    
                     for user in live_users:
                         user_id = user.id
                         user_type = 'live'
+                        
                         # Get user data from cache
                         user_data = await get_user_data_cache(global_redis_client_instance, user_id, db, user_type)
                         if not user_data:
-                            # logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no user_data in cache.")
                             continue
+                            
                         group_name = user_data.get('group_name')
                         if not group_name:
-                            # logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no group_name.")
                             continue
+                            
                         # Get group settings
                         from app.core.cache import get_group_settings_cache
                         group_settings = await get_group_settings_cache(global_redis_client_instance, group_name)
                         sending_orders = group_settings.get('sending_orders') if group_settings else None
-                        # logger.info(f"[BarclaysMarginChecker] User {user_id} group: {group_name}, sending_orders: {sending_orders}")
+                        
                         if not sending_orders or sending_orders.lower() != 'barclays':
                             continue  # Only Barclays live users
+                            
                         # Get free_margin from dynamic portfolio cache
                         dynamic_portfolio = await get_user_dynamic_portfolio_cache(global_redis_client_instance, user_id)
                         if not dynamic_portfolio:
-                            # logger.info(f"[BarclaysMarginChecker] Skipping user {user_id}: no dynamic_portfolio in cache.")
                             continue
+                            
                         try:
                             free_margin = float(dynamic_portfolio.get('free_margin', 0.0))
                             margin = float(dynamic_portfolio.get('margin', 0.0))
                         except Exception:
                             free_margin = 0.0
                             margin = 0.0
-                        # Get all pending orders for this user
+                            
+                        # Get all pending orders for this user (exclude already cancelled ones)
                         order_model = get_order_model(user_type)
                         pending_statuses = ["PENDING", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]
                         pending_orders = await get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
-                        if not pending_orders:
-                            # logger.info(f"[BarclaysMarginChecker] User {user_id}: no pending orders.")
+                        
+                        # Filter out orders that are already being cancelled or recently cancelled
+                        active_pending_orders = []
+                        for order in pending_orders:
+                            order_key = f"{user_id}:{order.order_id}"
+                            if order_key not in recently_cancelled_orders:
+                                active_pending_orders.append(order)
+                        
+                        if not active_pending_orders:
                             continue
-                        # Sum total required margin for all pending orders
-                        pending_orders_sorted = sorted(pending_orders, key=lambda o: float(getattr(o, 'margin', 0.0) or 0.0))
+                            
+                        # Sum total required margin for all active pending orders
+                        pending_orders_sorted = sorted(active_pending_orders, key=lambda o: float(getattr(o, 'margin', 0.0) or 0.0))
                         total_pending_margin = sum([float(getattr(o, 'margin', 0.0) or 0.0) for o in pending_orders_sorted])
-                        # logger.info(f"[BarclaysMarginChecker] User {user_id}: free_margin={free_margin}, total_pending_margin={total_pending_margin}, pending_orders={len(pending_orders_sorted)}, margin={margin}")
+                        
                         # Cancel pending orders one by one if needed
                         idx = 0
                         cancelled_any = False
+                        
                         while free_margin < total_pending_margin and idx < len(pending_orders_sorted):
                             order = pending_orders_sorted[idx]
                             order_margin = float(getattr(order, 'margin', 0.0) or 0.0)
-                            # logger.warning(f"[BarclaysMarginChecker] Cancelling order {order.order_id} for user {user_id} (order_margin={order_margin}) due to insufficient margin.")
-                            cancel_id = await generate_unique_10_digit_id(db, order_model, 'cancel_id')
-                            cancel_message = "Auto-cancelled due to insufficient margin"
-                            # Update order in DB
-                            update_fields = {
-                                "order_status": "CANCELLED-PROCESSING",
-                                "cancel_id": cancel_id,
-                                "cancel_message": cancel_message
-                            }
-                            from app.crud.crud_order import update_order_with_tracking
-                            await update_order_with_tracking(
-                                db,
-                                order,
-                                update_fields=update_fields,
-                                user_id=user_id,
-                                user_type=user_type,
-                                action_type="CANCEL"
-                            )
-                            await db.commit()
-                            # Send cancel details to Firebase
-                            firebase_cancel_data = {
-                                "order_id": order.order_id,
-                                "cancel_id": cancel_id,
-                                "user_id": user_id,
-                                "order_type": order.order_type,
-                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                                "status": "CANCELLED",
-                                "order_quantity": str(order.order_quantity),
-                                "order_status": order.order_status,
-                                "contract_value": str(order.contract_value) if order.contract_value else None,
-                                "cancel_message": cancel_message
-                            }
-                            await send_order_to_firebase(firebase_cancel_data, "live")
-                            # Update static orders cache
-                            await update_user_static_orders(user_id, db, global_redis_client_instance, user_type)
-                            # Update user data cache and balance/margin cache
-                            db_user = await get_user_by_id(db, user_id=user_id, user_type=user_type)
-                            if db_user:
-                                from app.services.order_processing import calculate_total_user_margin
-                                total_user_margin = await calculate_total_user_margin(db, global_redis_client_instance, user_id, user_type)
-                                user_data_to_cache = {
-                                    "id": db_user.id,
-                                    "email": getattr(db_user, 'email', None),
-                                    "group_name": db_user.group_name,
-                                    "leverage": db_user.leverage,
-                                    "user_type": user_type,
-                                    "account_number": getattr(db_user, 'account_number', None),
-                                    "wallet_balance": db_user.wallet_balance,
-                                    "margin": total_user_margin,
-                                    "first_name": getattr(db_user, 'first_name', None),
-                                    "last_name": getattr(db_user, 'last_name', None),
-                                    "country": getattr(db_user, 'country', None),
-                                    "phone_number": getattr(db_user, 'phone_number', None),
-                                }
-                                await set_user_data_cache(global_redis_client_instance, user_id, user_data_to_cache, user_type)
-                                await set_user_balance_margin_cache(global_redis_client_instance, user_id, db_user.wallet_balance, total_user_margin)
-                            # Publish updates to notify WebSocket clients
-                            await publish_order_update(global_redis_client_instance, user_id)
-                            await publish_user_data_update(global_redis_client_instance, user_id)
-                            # Update free_margin and total_pending_margin for next iteration
-                            dynamic_portfolio = await get_user_dynamic_portfolio_cache(global_redis_client_instance, user_id)
+                            order_key = f"{user_id}:{order.order_id}"
+                            
+                            # Double-check order status before cancelling
+                            current_order = await get_order_by_id(db, order.order_id, order_model)
+                            if not current_order or current_order.order_status not in pending_statuses:
+                                idx += 1
+                                continue
+                            
+                            # Mark this order as being processed to prevent duplicate cancellation
+                            recently_cancelled_orders.add(order_key)
+                            
+                            logger.warning(f"[BarclaysMarginChecker] Cancelling order {order.order_id} for user {user_id} (order_margin={order_margin}) due to insufficient margin.")
+                            
                             try:
-                                free_margin = float(dynamic_portfolio.get('free_margin', 0.0))
+                                cancel_id = await generate_unique_10_digit_id(db, order_model, 'cancel_id')
+                                cancel_message = "Auto-cancelled due to insufficient margin"
+                                
+                                # Update order in DB with atomic operation
+                                update_fields = {
+                                    "order_status": "CANCELLED-PROCESSING",
+                                    "cancel_id": cancel_id,
+                                    "cancel_message": cancel_message
+                                }
+                                
+                                from app.crud.crud_order import update_order_with_tracking
+                                await update_order_with_tracking(
+                                    db,
+                                    order,
+                                    update_fields=update_fields,
+                                    user_id=user_id,
+                                    user_type=user_type,
+                                    action_type="CANCEL"
+                                )
+                                await db.commit()
+                                
+                                # Send cancel details to Firebase
+                                firebase_cancel_data = {
+                                    "order_id": order.order_id,
+                                    "cancel_id": cancel_id,
+                                    "user_id": user_id,
+                                    "order_type": order.order_type,
+                                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                    "status": "CANCELLED",
+                                    "order_quantity": str(order.order_quantity),
+                                    "order_status": order.order_status,
+                                    "contract_value": str(order.contract_value) if order.contract_value else None,
+                                    "cancel_message": cancel_message
+                                }
+                                await send_order_to_firebase(firebase_cancel_data, "live")
+                                
+                                # Update static orders cache
+                                await update_user_static_orders(user_id, db, global_redis_client_instance, user_type)
+                                
+                                # Update user data cache and balance/margin cache
+                                db_user = await get_user_by_id(db, user_id=user_id, user_type=user_type)
+                                if db_user:
+                                    from app.services.order_processing import calculate_total_user_margin
+                                    total_user_margin = await calculate_total_user_margin(db, global_redis_client_instance, user_id, user_type)
+                                    user_data_to_cache = {
+                                        "id": db_user.id,
+                                        "email": getattr(db_user, 'email', None),
+                                        "group_name": db_user.group_name,
+                                        "leverage": db_user.leverage,
+                                        "user_type": user_type,
+                                        "account_number": getattr(db_user, 'account_number', None),
+                                        "wallet_balance": db_user.wallet_balance,
+                                        "margin": total_user_margin,
+                                        "first_name": getattr(db_user, 'first_name', None),
+                                        "last_name": getattr(db_user, 'last_name', None),
+                                        "country": getattr(db_user, 'country', None),
+                                        "phone_number": getattr(db_user, 'phone_number', None),
+                                    }
+                                    await set_user_data_cache(global_redis_client_instance, user_id, user_data_to_cache, user_type)
+                                    await set_user_balance_margin_cache(global_redis_client_instance, user_id, db_user.wallet_balance, total_user_margin)
+                                
+                                # Publish updates to notify WebSocket clients
+                                await publish_order_update(global_redis_client_instance, user_id)
+                                await publish_user_data_update(global_redis_client_instance, user_id)
+                                
+                                cancelled_any = True
+                                logger.info(f"[BarclaysMarginChecker] Successfully cancelled order {order.order_id} for user {user_id}")
+                                
+                            except Exception as cancel_error:
+                                logger.error(f"[BarclaysMarginChecker] Error cancelling order {order.order_id} for user {user_id}: {cancel_error}", exc_info=True)
+                                # Remove from recently cancelled if cancellation failed
+                                recently_cancelled_orders.discard(order_key)
+                            
+                            # Update free_margin and total_pending_margin for next iteration
+                            try:
+                                dynamic_portfolio = await get_user_dynamic_portfolio_cache(global_redis_client_instance, user_id)
+                                if dynamic_portfolio:
+                                    free_margin = float(dynamic_portfolio.get('free_margin', 0.0))
+                                else:
+                                    free_margin = 0.0
                             except Exception:
                                 free_margin = 0.0
+                                
+                            # Recalculate total pending margin excluding cancelled orders
+                            remaining_orders = pending_orders_sorted[idx+1:]
                             total_pending_margin = sum([
                                 float(getattr(o, 'margin', 0.0) or 0.0)
-                                for o in pending_orders_sorted[idx+1:]
+                                for o in remaining_orders
+                                if f"{user_id}:{o.order_id}" not in recently_cancelled_orders
                             ])
-                            # logger.info(f"[BarclaysMarginChecker] After cancelling order {order.order_id}: new free_margin={free_margin}, new total_pending_margin={total_pending_margin}")
+                            
                             idx += 1
-                            cancelled_any = True
+                            
                         if not cancelled_any:
-                            logger.info(f"[BarclaysMarginChecker] User {user_id}: No cancellation needed.")
+                            logger.debug(f"[BarclaysMarginChecker] User {user_id}: No cancellation needed.")
+                            
             except Exception as e:
                 logger.error(f"Error in barclays_pending_order_margin_checker loop: {e}", exc_info=True)
-            await asyncio.sleep(60)
-            # logger.info("[BarclaysMarginChecker] --- Loop iteration end (after sleep) ---")
+                
+            # Clean up old entries from recently_cancelled_orders (keep only last 1000)
+            if len(recently_cancelled_orders) > 1000:
+                # Keep only the most recent entries
+                recently_cancelled_orders.clear()
+                
+            await asyncio.sleep(1)  # Check every second instead of 60 seconds
+            
     except Exception as fatal:
         logger.critical(f"[BarclaysMarginChecker] FATAL: {fatal}", exc_info=True)

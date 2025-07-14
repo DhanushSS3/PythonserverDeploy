@@ -3,9 +3,10 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import logging # Import logging
 import warnings
+import asyncio # Import asyncio for Lock
 
 # Create a database logger
 db_logger = logging.getLogger("database")
@@ -38,10 +39,12 @@ logger.info(f"Attempting to connect to database using URL: {DATABASE_URL[:20]}..
 engine = create_async_engine(
     DATABASE_URL, 
     echo=settings.ECHO_SQL,
-    pool_size=20,
-    max_overflow=10,
+    pool_size=10,  # Reduced from 20 to 10
+    max_overflow=5,  # Reduced from 10 to 5
     pool_recycle=1800,  # Recycle connections every 30 minutes
-    pool_pre_ping=True
+    pool_pre_ping=True,
+    pool_timeout=30,  # Add timeout for connection acquisition
+    pool_reset_on_return='commit'  # Reset connection state on return
 )
 
 # --- Database Session Local ---
@@ -73,6 +76,57 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             db_logger.debug("Closing database session")
+
+# --- Connection Pool Monitoring ---
+async def get_connection_pool_status():
+    """
+    Get the current status of the database connection pool.
+    """
+    pool = engine.pool
+    return {
+        "pool_size": pool.size(),
+        "checked_in": pool.checkedin(),
+        "checked_out": pool.checkedout(),
+        "overflow": pool.overflow(),
+        "invalid": pool.invalid()
+    }
+
+async def log_connection_pool_status():
+    """
+    Log the current connection pool status for monitoring.
+    """
+    try:
+        status = await get_connection_pool_status()
+        db_logger.info(f"Connection pool status: {status}")
+        
+        # Check for potential connection exhaustion
+        if status["checked_out"] > (status["pool_size"] * 0.8):
+            db_logger.warning(f"High connection usage: {status['checked_out']}/{status['pool_size']} connections in use")
+        
+        if status["overflow"] > 0:
+            db_logger.warning(f"Connection pool overflow: {status['overflow']} connections")
+            
+    except Exception as e:
+        db_logger.error(f"Error getting connection pool status: {e}")
+
+async def emergency_connection_recovery():
+    """
+    Emergency function to recover from connection pool exhaustion.
+    """
+    try:
+        pool = engine.pool
+        status = await get_connection_pool_status()
+        
+        if status["checked_out"] > (status["pool_size"] * 0.9):
+            db_logger.error(f"CRITICAL: Connection pool nearly exhausted. Status: {status}")
+            
+            # Force close some connections if possible
+            if hasattr(pool, '_pool') and pool._pool:
+                # This is a last resort - force close some connections
+                db_logger.warning("Attempting emergency connection recovery...")
+                
+    except Exception as e:
+        db_logger.error(f"Error in emergency connection recovery: {e}")
 
 # --- Function to create all tables ---
 # This is useful for initial setup or development.
@@ -114,3 +168,50 @@ async def async_session_factory() -> AsyncSession:
         await session.close()
         logger.error(f"Error creating async session: {e}", exc_info=True)
         raise
+
+# --- Shared Database Session for Background Tasks ---
+# This helps reduce the number of database connections by sharing sessions
+_shared_session: Optional[AsyncSession] = None
+_session_lock = asyncio.Lock()
+
+async def get_shared_db_session() -> AsyncSession:
+    """
+    Get a shared database session for background tasks.
+    This reduces the number of concurrent database connections.
+    """
+    global _shared_session
+    
+    async with _session_lock:
+        if _shared_session is None or _shared_session.is_closed:
+            _shared_session = AsyncSessionLocal()
+        return _shared_session
+
+async def close_shared_db_session():
+    """
+    Close the shared database session.
+    """
+    global _shared_session
+    
+    async with _session_lock:
+        if _shared_session and not _shared_session.is_closed:
+            await _shared_session.close()
+            _shared_session = None
+
+# --- Context Manager for Shared Sessions ---
+class SharedDatabaseSession:
+    """
+    Context manager for using shared database sessions in background tasks.
+    """
+    def __init__(self):
+        self.session = None
+    
+    async def __aenter__(self):
+        self.session = await get_shared_db_session()
+        return self.session
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # Don't close the session here, let it be reused
+        if exc_type is not None:
+            await self.session.rollback()
+        else:
+            await self.session.commit()

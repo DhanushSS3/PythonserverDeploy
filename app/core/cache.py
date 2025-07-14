@@ -659,7 +659,7 @@ async def set_adjusted_market_price_cache(
     Key structure: adjusted_market_price:{group_name}:{symbol}
     Value is a JSON string: {"buy": "...", "sell": "...", "spread_value": "..."}
     """
-    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol}"
+    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}"
     try:
         # Create a dictionary with Decimal values
         adjusted_prices = {
@@ -682,7 +682,7 @@ async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: 
     Retrieves the cached adjusted market prices for a specific group and symbol.
     Returns None if the cache is empty or expired.
     """
-    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol}"
+    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol.upper()}"
     try:
         cached_data = await redis_client.get(cache_key)
         if cached_data:
@@ -719,7 +719,7 @@ async def get_live_adjusted_buy_price_for_pair(redis_client: Redis, symbol: str,
     Cache Key Format: adjusted_market_price:{group}:{symbol}
     Value: {"buy": "1.12345", "sell": "...", "spread_value": "..."}
     """
-    cache_key = f"adjusted_market_price:{user_group_name}:{symbol.upper()}"
+    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol.upper()}"
     try:
         cached_data_json = await redis_client.get(cache_key)
         if cached_data_json:
@@ -758,7 +758,7 @@ async def get_live_adjusted_sell_price_for_pair(redis_client: Redis, symbol: str
     Cache Key Format: adjusted_market_price:{group}:{symbol}
     Value: {"buy": "1.12345", "sell": "...", "spread_value": "..."}
     """
-    cache_key = f"adjusted_market_price:{user_group_name}:{symbol.upper()}"
+    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol.upper()}"
     try:
         cached_data_json = await redis_client.get(cache_key)
         if cached_data_json:
@@ -941,7 +941,7 @@ async def get_order_placement_data_batch(
         user_data_key = f"{REDIS_USER_DATA_KEY_PREFIX}{user_type}:{user_id}"
         group_settings_key = f"{REDIS_GROUP_SETTINGS_KEY_PREFIX}{group_name.lower()}"
         group_symbol_settings_key = f"{REDIS_GROUP_SYMBOL_SETTINGS_KEY_PREFIX}{group_name.lower()}:{symbol.upper()}"
-        adjusted_price_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}"
+        adjusted_price_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol}"
         last_price_key = f"{LAST_KNOWN_PRICE_KEY_PREFIX}{symbol.upper()}"
         
         # Batch fetch from Redis
@@ -1017,7 +1017,7 @@ async def get_market_data_batch(
     """
     try:
         # Create cache keys for all symbols
-        adjusted_price_keys = [f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}" for symbol in symbols]
+        adjusted_price_keys = [f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol}" for symbol in symbols]
         last_price_keys = [f"{LAST_KNOWN_PRICE_KEY_PREFIX}{symbol.upper()}" for symbol in symbols]
         
         # Batch fetch
