@@ -12,7 +12,8 @@ from app.crud.crud_order import get_all_system_open_orders
 from app.core.cache import get_group_symbol_settings_cache
 from app.core.firebase import get_latest_market_data
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+from app.core.logging_config import swap_logger as logger
 
 async def apply_daily_swap_charges_for_all_open_orders(db: AsyncSession, redis_client: Redis):
     """
@@ -20,11 +21,13 @@ async def apply_daily_swap_charges_for_all_open_orders(db: AsyncSession, redis_c
     This function is intended to be called daily at UTC 00:00 by a scheduler.
     Formula: (Lot * swap_rate * market_close_price) / 365
     """
-    logger.info("Starting daily swap charge application process.")
+    logger.info("[SWAP] Starting daily swap charge application process.")
     open_orders: List[UserOrder] = await get_all_system_open_orders(db)
 
+    logger.info(f"[SWAP] Number of open orders fetched: {len(open_orders)}")
+
     if not open_orders:
-        logger.info("No open orders found. Exiting swap charge process.")
+        logger.info("[SWAP] No open orders found. Exiting swap charge process.")
         return
 
     processed_count = 0
@@ -98,9 +101,12 @@ async def apply_daily_swap_charges_for_all_open_orders(db: AsyncSession, redis_c
 
             # 3. Calculate Daily Swap Charge
             # Formula: (Lot * swap_rate * market_close_price) / 365
+            logger.info(f"[SWAP] Calculating daily swap charge for order {order.order_id}: (order_quantity={order_quantity} * swap_rate_to_use={swap_rate_to_use} * market_close_price={market_close_price}) / 365")
             daily_swap_charge = (order_quantity * swap_rate_to_use * market_close_price) / Decimal(365)
+            logger.info(f"[SWAP] Raw daily swap charge for order {order.order_id}: {daily_swap_charge}")
             # Quantize to match UserOrder.swap field's precision
             daily_swap_charge = daily_swap_charge.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
+            logger.info(f"[SWAP] Quantized daily swap charge for order {order.order_id}: {daily_swap_charge}")
 
             # 4. Update Order's Swap Field
             current_swap_value = order.swap if order.swap is not None else Decimal("0.0")
@@ -117,10 +123,11 @@ async def apply_daily_swap_charges_for_all_open_orders(db: AsyncSession, redis_c
     if open_orders:
         try:
             await db.commit()
-            logger.info(f"Daily swap charges committed to DB. Processed: {processed_count}, Failed: {failed_count}.")
+            logger.info(f"[SWAP] Daily swap charges committed to DB. Processed: {processed_count}, Failed: {failed_count}.")
         except Exception as e:
-            logger.error(f"Failed to commit swap charges to DB: {e}", exc_info=True)
+            logger.error(f"[SWAP] Failed to commit swap charges to DB: {e}", exc_info=True)
             await db.rollback()
-            logger.info("Database transaction rolled back due to commit error in swap service.")
+            logger.info("[SWAP] Database transaction rolled back due to commit error in swap service.")
     else:
-        logger.info("No open orders were processed, so no database commit was attempted for swap charges.")
+        logger.info("[SWAP] No open orders were processed, so no database commit was attempted for swap charges.")
+    logger.info("[SWAP] Daily swap charge application process completed.")

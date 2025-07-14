@@ -112,7 +112,9 @@ async def get_all_open_orders_by_user_id(
 # Get all open orders from UserOrder table (system-wide)
 async def get_all_system_open_orders(db: AsyncSession):
     result = await db.execute(
-        select(UserOrder).filter(UserOrder.order_status == 'OPEN')
+        select(UserOrder)
+        .options(selectinload(UserOrder.user))  # Eager load user relationship
+        .filter(UserOrder.order_status == 'OPEN')
     )
     return result.scalars().all()
 

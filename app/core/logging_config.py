@@ -84,7 +84,7 @@ redis_logger = setup_file_logger("redis", "redis.log", logging.WARNING)
 
 # Database operations (only log errors and warnings)
 database_logger = setup_file_logger('database', 'database.log', level=logging.WARNING if IS_PRODUCTION else logging.INFO)
-
+swap_logger = setup_file_logger("swap", "swap.log", logging.INFO)
 # === DEVELOPMENT-ONLY LOGGERS (DEBUG level) ===
 # These loggers are only active in development environment
 

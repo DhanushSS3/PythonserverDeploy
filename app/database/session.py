@@ -87,8 +87,8 @@ async def get_connection_pool_status():
         "pool_size": pool.size(),
         "checked_in": pool.checkedin(),
         "checked_out": pool.checkedout(),
-        "overflow": pool.overflow(),
-        "invalid": pool.invalid()
+        "overflow": pool.overflow()
+        # Removed 'invalid' as it's not a valid attribute
     }
 
 async def log_connection_pool_status():
@@ -98,16 +98,15 @@ async def log_connection_pool_status():
     try:
         status = await get_connection_pool_status()
         db_logger.info(f"Connection pool status: {status}")
-        
+        # Extra logging for pool status
+        db_logger.debug(f"Pool size: {status['pool_size']}, Checked in: {status['checked_in']}, Checked out: {status['checked_out']}, Overflow: {status['overflow']}")
         # Check for potential connection exhaustion
         if status["checked_out"] > (status["pool_size"] * 0.8):
             db_logger.warning(f"High connection usage: {status['checked_out']}/{status['pool_size']} connections in use")
-        
         if status["overflow"] > 0:
             db_logger.warning(f"Connection pool overflow: {status['overflow']} connections")
-            
     except Exception as e:
-        db_logger.error(f"Error getting connection pool status: {e}")
+        db_logger.error(f"Error getting connection pool status: {e}", exc_info=True)
 
 async def emergency_connection_recovery():
     """

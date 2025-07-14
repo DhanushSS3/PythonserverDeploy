@@ -1,0 +1,5 @@
+2025-07-14 03:31:08,981 - ERROR - error - Error in service_provider_order_execution: 400: Invalid status transition from CLOSED to CLOSED
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3907, in service_provider_order_execution
+    raise HTTPException(status_code=400, detail=error_msg)
+fastapi.exceptions.HTTPException: 400: Invalid status transition from CLOSED to CLOSED

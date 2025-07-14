@@ -190,6 +190,7 @@ async def update_all_users_dynamic_portfolio():
     for all users, regardless of whether they are connected via WebSockets.
     This is critical for autocutoff and validation.
     """
+    from app.services.email import send_email
     try:
         async with AsyncSessionLocal() as db:
             if not global_redis_client_instance:
@@ -272,7 +273,7 @@ async def update_all_users_dynamic_portfolio():
                     
                     # Define margin thresholds based on group settings or defaults
                     margin_call_threshold = Decimal('100.0')  # Default 100%
-                    margin_cutoff_threshold = Decimal('50.0')  # Default 50%
+                    margin_cutoff_threshold = Decimal('10.0')  # Default 10%
                     
                     # Calculate portfolio metrics with margin call detection
                     portfolio_metrics = await calculate_user_portfolio(
@@ -299,9 +300,34 @@ async def update_all_users_dynamic_portfolio():
                     
                     # Check for margin call conditions
                     margin_level = Decimal(portfolio_metrics.get("margin_level", "0.0"))
+                    margin_call_email_key = f"margin_call_email_sent:{user_id}"
                     if margin_level > Decimal('0') and margin_level < margin_cutoff_threshold:
                         autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} margin level {margin_level}% below cutoff threshold {margin_cutoff_threshold}%. Initiating auto-cutoff.")
                         await handle_margin_cutoff(db, global_redis_client_instance, user_id, user_type, margin_level)
+                        # Optionally clear the email flag so user can be notified again after recovery
+                        await global_redis_client_instance.delete(margin_call_email_email_key)
+                    elif margin_level > margin_cutoff_threshold and margin_level < margin_call_threshold:
+                        # Only send margin call warning email once per event
+                        already_sent = await global_redis_client_instance.get(margin_call_email_key)
+                        if not already_sent:
+                            from app.crud.user import get_user_email
+                            user_email = await get_user_email(global_redis_client_instance, db, user_id, user_type)
+                            if user_email:
+                                # Use the HTML template email
+                                from app.services.email import send_margin_call_email
+                                dashboard_url = "https://livefxhub.com"  # TODO: Replace with actual dashboard URL
+                                try:
+                                    await send_margin_call_email(user_email, str(round(margin_level, 2)), dashboard_url)
+                                    logger.info(f"Sent margin call warning email (HTML) to user {user_id} at {user_email}")
+                                    # Set flag for 24 hours (or until margin recovers)
+                                    await global_redis_client_instance.set(margin_call_email_key, "1", ex=24*60*60)
+                                except Exception as e:
+                                    logger.error(f"Failed to send margin call warning email to user {user_id} at {user_email}: {e}")
+                            else:
+                                logger.warning(f"Could not send margin call warning email: No email found for user {user_id}")
+                    elif margin_level >= margin_call_threshold:
+                        # Margin has recovered, clear the flag so user can be notified again in the future
+                        await global_redis_client_instance.delete(margin_call_email_key)
                     elif portfolio_metrics.get("margin_call", False):
                         autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} has margin call condition: margin level {margin_level}%")
                     
@@ -732,7 +758,9 @@ async def startup_event():
         
         scheduler.add_job(
             daily_swap_charge_job,
-            CronTrigger(hour=4, minute=31),
+            CronTrigger(hour=10, minute=3, timezone='utc'),
+            # IntervalTrigger(minutes=1),
+            logger.info("[SWAP] daily_swap_charge_job triggered"),
             id='daily_swap_charge_job',
             replace_existing=True
         )

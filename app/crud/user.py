@@ -496,3 +496,19 @@ async def get_all_active_users_both(db: AsyncSession, skip: int = 0, limit: int 
     demo_users = await get_all_active_demo_users(db, skip, limit)
     return live_users, demo_users
 
+from app.core.cache import get_user_data_cache
+
+async def get_user_email(redis_client, db, user_id, user_type):
+    # Try cache first
+    user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
+    if user_data and user_data.get('email'):
+        return user_data['email']
+    # Fallback to DB
+    from app.crud.user import get_user_by_id, get_demo_user_by_id
+    if user_type == 'live':
+        db_user = await get_user_by_id(db, user_id, user_type)
+    else:
+        db_user = await get_demo_user_by_id(db, user_id)
+    if db_user and getattr(db_user, 'email', None):
+        return db_user.email
+    return None 
