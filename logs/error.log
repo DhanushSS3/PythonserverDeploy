@@ -1,0 +1,22 @@
+2025-07-15 01:50:07,180 - ERROR - error - Error in service_provider_order_execution: 400: close_price is required to close an order.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3858, in service_provider_order_execution
+    updated_order = await _handle_order_close_transition(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 4732, in _handle_order_close_transition
+    raise HTTPException(status_code=400, detail="close_price is required to close an order.")
+fastapi.exceptions.HTTPException: 400: close_price is required to close an order.
+2025-07-15 02:05:10,055 - ERROR - error - Error in service_provider_order_execution: 400: close_price is required to close an order.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3858, in service_provider_order_execution
+    updated_order = await _handle_order_close_transition(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 4732, in _handle_order_close_transition
+    raise HTTPException(status_code=400, detail="close_price is required to close an order.")
+fastapi.exceptions.HTTPException: 400: close_price is required to close an order.

@@ -531,6 +531,7 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                     'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            pos_dict['swap'] = str(getattr(pos, 'swap', '0.0'))  # Add swap field
             
             # FIXED: Always include created_at field with proper handling
             created_at = getattr(pos, 'created_at', None)
@@ -556,6 +557,7 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
                       for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 
                                   'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             po_dict['commission'] = str(getattr(po, 'commission', '0.0'))
+            po_dict['swap'] = str(getattr(po, 'swap', '0.0'))  # Add swap field
             
             # FIXED: Always include created_at field with proper handling
             created_at = getattr(po, 'created_at', None)
@@ -968,6 +970,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             pos_dict = {attr: str(v) if isinstance(v := getattr(pos, attr, None), Decimal) else v
                         for attr in ['order_id', 'order_company_name', 'order_type', 'order_quantity', 'order_price', 'margin', 'contract_value', 'stop_loss', 'take_profit', 'order_user_id', 'order_status']}
             pos_dict['commission'] = str(getattr(pos, 'commission', '0.0'))
+            pos_dict['swap'] = str(getattr(pos, 'swap', '0.0'))  # Add swap field
             # Add created_at field instead of updated_at
             created_at = getattr(pos, 'created_at', None)
             if created_at:

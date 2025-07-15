@@ -31,7 +31,7 @@ async def generate_payment_url(
         'baseCurrency': request.baseCurrency,
         'settledCurrency': request.settledCurrency,
         'networkSymbol': request.networkSymbol,
-        'callBackUrl': 'https://api.livefxhub.com/api/cryptoCallback' # This should be configurable
+        'callBackUrl': 'https://livefxhubv1.livefxhub.com/api/v1/payments/crypto-callback' # This should be configurable
     }
 
     raw = json.dumps(request_body, separators=(',', ':'), ensure_ascii=False)

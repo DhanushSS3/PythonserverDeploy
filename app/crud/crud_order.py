@@ -276,7 +276,7 @@ async def get_order_by_any_id(db: AsyncSession, generic_id: str, order_model: Ty
     )
     return result.scalars().first()
 
-async def get_order_by_suffix_id(db: AsyncSession, id_with_suffix: str, order_model: Type[Any]) -> Optional[Any]:
+async def get_order_by_suffix_id(db: AsyncSession, id_with_suffix: str, order_model: Type[Any], options=None) -> Optional[Any]:
     """
     Efficiently get order by ID using the suffix to determine the column.
     Suffixes:
@@ -309,8 +309,11 @@ async def get_order_by_suffix_id(db: AsyncSession, id_with_suffix: str, order_mo
     column = column_map.get(suffix)
     if not column:
         return None
-    # Build the query dynamically
-    stmt = select(order_model).filter(getattr(order_model, column) == id_with_suffix)
+    stmt = select(order_model)
+    if options:
+        for opt in options:
+            stmt = stmt.options(opt)
+    stmt = stmt.filter(getattr(order_model, column) == id_with_suffix)
     result = await db.execute(stmt)
     return result.scalars().first()
 

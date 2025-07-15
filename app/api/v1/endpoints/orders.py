@@ -1382,7 +1382,7 @@ async def close_order(
                     if db_order_for_response:
                         # Per request, do not change the status. Keep it OPEN until the provider confirms.
                         # db_order_for_response.order_status = "PENDING_CLOSE" 
-                        db_order_for_response.close_message = "Close request sent to service provider."
+                        db_order_for_response.close_message = "CLOSED"
                         db_order_for_response.close_id = close_id # Save close_id in DB
                         
                         # Update status field if order has SL or TP
@@ -2894,7 +2894,7 @@ async def update_order_by_service_provider(
 
         # Use the new efficient suffix-based lookup
         order_model = UserOrder  # Barclays users are always live users
-        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, order_model)
+        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, order_model, options=[selectinload(UserOrder.user)])
         
         if not db_order:
             orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
@@ -3798,7 +3798,7 @@ async def service_provider_order_execution(
             raise HTTPException(status_code=400, detail=error_msg)
 
         # Use the new efficient suffix-based lookup
-        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, UserOrder)
+        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, UserOrder, options=[selectinload(UserOrder.user)])
         if not db_order:
             error_msg = f"Order with ID {id_to_find} not found"
             service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
@@ -3962,7 +3962,7 @@ async def service_provider_order_update(
 
         # Use the new efficient suffix-based lookup
         order_model = UserOrder  # Barclays users are always live users
-        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, order_model)
+        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, order_model, options=[selectinload(UserOrder.user)])
         
         if not db_order:
             orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
@@ -4797,6 +4797,19 @@ async def _handle_order_close_transition(
     if swap != Decimal("0.0"):
         db.add(Wallet(transaction_id=await generate_unique_10_digit_id(db, Wallet, "transaction_id"), **WalletCreate(**wallet_common, transaction_type="Swap", transaction_amount=-swap, description=f"Swap for order {db_order.order_id}").model_dump(exclude_none=True)))
 
+    # Set close_message based on id suffix if id_to_find is present
+    close_message = None
+    if id_to_find and '-' in id_to_find:
+        suffix = id_to_find.split('-')[-1]
+        if suffix == '005':
+            close_message = 'STOPLOSS'
+        elif suffix == '006':
+            close_message = 'TAKEPROFIT'
+        elif suffix == '003':
+            close_message = 'CLOSED'
+    if close_message:
+        update_fields['close_message'] = close_message
+
     # --- Update Order Record ---
     update_fields.update({
         "order_status": "CLOSED", 
@@ -4865,8 +4878,8 @@ async def get_order_info_for_service_provider(
     }).decode())
     orders_logger.info(f"Service provider order info request for order_id: {request.order_id}, symbol: {request.symbol}")
 
-    # Use the new efficient suffix-based lookup
-    db_order = await crud_order.get_order_by_suffix_id(db, request.order_id, UserOrder)
+    # Use the new efficient suffix-based lookup with eager loading
+    db_order = await crud_order.get_order_by_suffix_id(db, request.order_id, UserOrder, options=[selectinload(UserOrder.user)])
     if not db_order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Order with ID '{request.order_id}' not found.")
 

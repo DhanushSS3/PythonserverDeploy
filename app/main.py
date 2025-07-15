@@ -122,8 +122,8 @@ IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json", # Keep this as it is for now, as it just exposes the JSON schema
-    docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
-    redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
+    # docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
+    # redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
 )
 
 
@@ -423,7 +423,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     
                     update_fields = {
                         "close_id": close_id,
-                        "close_message": f"Auto-cutoff triggered at margin level {margin_level}%. Close request sent to provider."
+                        "close_message": "Auto-cutoff"
                     }
                     await crud_order.update_order_with_tracking(
                         db, order, update_fields, user_id, user_type, "AUTO_CUTOFF_REQUESTED"
@@ -557,7 +557,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     
                     order.close_price = close_price
                     order.order_status = 'CLOSED'
-                    order.close_message = f"Auto-cutoff: margin level {margin_level}%"
+                    order.close_message = "Auto-cutoff"
                     order.net_profit = net_profit
                     order.commission = total_commission_for_trade
                     order.close_id = close_id
