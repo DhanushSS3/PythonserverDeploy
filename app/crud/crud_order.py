@@ -276,6 +276,44 @@ async def get_order_by_any_id(db: AsyncSession, generic_id: str, order_model: Ty
     )
     return result.scalars().first()
 
+async def get_order_by_suffix_id(db: AsyncSession, id_with_suffix: str, order_model: Type[Any]) -> Optional[Any]:
+    """
+    Efficiently get order by ID using the suffix to determine the column.
+    Suffixes:
+        -001: order_id
+        -002: cancel_id
+        -003: close_id
+        -004: modify_id
+        -005: stoploss_id
+        -006: takeprofit_id
+        -007: stoploss_cancel_id
+        -008: takeprofit_cancel_id
+        -009: transaction_id (not used for order lookup)
+    """
+    if not id_with_suffix or '-' not in id_with_suffix:
+        return None
+    try:
+        suffix = id_with_suffix.split('-')[-1]
+    except Exception:
+        return None
+    column_map = {
+        '001': 'order_id',
+        '002': 'cancel_id',
+        '003': 'close_id',
+        '004': 'modify_id',
+        '005': 'stoploss_id',
+        '006': 'takeprofit_id',
+        '007': 'stoploss_cancel_id',
+        '008': 'takeprofit_cancel_id',
+    }
+    column = column_map.get(suffix)
+    if not column:
+        return None
+    # Build the query dynamically
+    stmt = select(order_model).filter(getattr(order_model, column) == id_with_suffix)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
 async def get_open_orders_by_user_id_and_symbol(
     db: AsyncSession,
     user_id: int,

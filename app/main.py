@@ -122,8 +122,8 @@ IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json", # Keep this as it is for now, as it just exposes the JSON schema
-    # docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
-    # redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
+    docs_url=None if IS_PRODUCTION else "/docs",        # Disables Swagger UI in production
+    redoc_url=None if IS_PRODUCTION else "/redoc"      # Disables ReDoc in production
 )
 
 
@@ -138,7 +138,7 @@ origins = [
     "http://127.0.0.1:8000",
     "http://127.0.0.1:8080",
     # Add your production domains here
-    "https://yourdomain.com"
+    "https://livefxhub.com"
 ]
 
 app.add_middleware(
@@ -304,7 +304,8 @@ async def update_all_users_dynamic_portfolio():
                         autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} margin level {margin_level}% below cutoff threshold {margin_cutoff_threshold}%. Initiating auto-cutoff.")
                         await handle_margin_cutoff(db, global_redis_client_instance, user_id, user_type, margin_level)
                         # Optionally clear the email flag so user can be notified again after recovery
-                        await global_redis_client_instance.delete(margin_call_email_email_key)
+                        # await global_redis_client_instance.delete(margin_call_email_email_key)
+                        await global_redis_client_instance.delete(margin_call_email_key)
                     elif margin_level > margin_cutoff_threshold and margin_level < margin_call_threshold:
                         # Only send margin call warning email once per event
                         already_sent = await global_redis_client_instance.get(margin_call_email_key)

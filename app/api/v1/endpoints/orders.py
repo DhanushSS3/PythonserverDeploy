@@ -2892,9 +2892,9 @@ async def update_order_by_service_provider(
         if not id_to_find:
             raise HTTPException(status_code=400, detail="An order identifier must be provided.")
 
-        # Get the order from the database using the new generic search function
+        # Use the new efficient suffix-based lookup
         order_model = UserOrder  # Barclays users are always live users
-        db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
+        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, order_model)
         
         if not db_order:
             orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
@@ -3797,8 +3797,8 @@ async def service_provider_order_execution(
             service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
 
-        # Find the order by ID (could be any ID field)
-        db_order = await crud_order.get_order_by_any_id(db, id_to_find, UserOrder)
+        # Use the new efficient suffix-based lookup
+        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, UserOrder)
         if not db_order:
             error_msg = f"Order with ID {id_to_find} not found"
             service_provider_logger.error(f"SERVICE PROVIDER ERROR: {error_msg}")
@@ -3960,9 +3960,9 @@ async def service_provider_order_update(
         if not id_to_find:
             raise HTTPException(status_code=400, detail="An order identifier must be provided.")
 
-        # Get the order from the database using the new generic search function
+        # Use the new efficient suffix-based lookup
         order_model = UserOrder  # Barclays users are always live users
-        db_order = await crud_order.get_order_by_any_id(db, id_to_find, order_model)
+        db_order = await crud_order.get_order_by_suffix_id(db, id_to_find, order_model)
         
         if not db_order:
             orders_logger.error(f"Order not found with provided identifier '{id_to_find}' in request: {update_request.model_dump_json(exclude_unset=True)}")
@@ -4865,24 +4865,8 @@ async def get_order_info_for_service_provider(
     }).decode())
     orders_logger.info(f"Service provider order info request for order_id: {request.order_id}, symbol: {request.symbol}")
 
-    # 1. Fetch order and user in a single query using JOIN
-    result = await db.execute(
-        select(UserOrder)
-        .options(selectinload(UserOrder.user))
-        .filter(
-            or_(
-                UserOrder.order_id == request.order_id,
-                UserOrder.cancel_id == request.order_id,
-                UserOrder.close_id == request.order_id,
-                UserOrder.modify_id == request.order_id,
-                UserOrder.stoploss_id == request.order_id,
-                UserOrder.takeprofit_id == request.order_id,
-                UserOrder.stoploss_cancel_id == request.order_id,
-                UserOrder.takeprofit_cancel_id == request.order_id,
-            )
-        )
-    )
-    db_order = result.scalars().first()
+    # Use the new efficient suffix-based lookup
+    db_order = await crud_order.get_order_by_suffix_id(db, request.order_id, UserOrder)
     if not db_order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Order with ID '{request.order_id}' not found.")
 
