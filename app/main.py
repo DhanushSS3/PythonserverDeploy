@@ -1,5 +1,5 @@
 # app/main.py
-# Version 1.3.1
+# Version 1.3.3
 # --- Environment Variable Loading ---
 # This must be at the very top, before any other app modules are imported.
 from dotenv import load_dotenv
@@ -757,7 +757,7 @@ async def startup_event():
         
         scheduler.add_job(
             daily_swap_charge_job,
-            CronTrigger(hour=10, minute=3, timezone='utc'),
+            CronTrigger(hour=3, minute=53, timezone='utc'),
             # IntervalTrigger(minutes=1),
             logger.info("[SWAP] daily_swap_charge_job triggered"),
             id='daily_swap_charge_job',

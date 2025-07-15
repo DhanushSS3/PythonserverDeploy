@@ -3,6 +3,7 @@
 import datetime
 from decimal import Decimal # Import Decimal from the standard decimal module
 from typing import List, Optional
+from sqlalchemy import BigInteger
 
 # Import specific components from sqlalchemy
 from sqlalchemy import (
@@ -632,3 +633,10 @@ class CryptoPayment(Base):
     transaction_details = Column(Text, nullable=True)  # Store callback data as JSON
     created_at = Column(DateTime(timezone=True), default=func.now())
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+
+class IDCounter(Base):
+    __tablename__ = "id_counter"
+
+    id = Column(Integer, primary_key=True)  # Always 1
+    last_value = Column(BigInteger, nullable=False)

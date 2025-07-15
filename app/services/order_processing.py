@@ -16,34 +16,61 @@ import asyncio
 
 
 async def generate_unique_10_digit_id(db, model, column):
-    import random
-    from sqlalchemy.future import select
+    from sqlalchemy import select, update, insert
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.database.models import IDCounter  # Add the missing import
 
-    # Mapping from column name to prefix
-    ID_PREFIXES = {
-        "order_id": "ORD_",
-        "cancel_id": "CXL_",
-        "close_id": "CLS_",
-        "modify_id": "MOD_",
-        "stoploss_id": "SL_",
-        "takeprofit_id": "TP_",
-        "stoploss_cancel_id": "SLC_",
-        "takeprofit_cancel_id": "TPC_",
+    ID_SUFFIXES = {
+        "order_id": "001",
+        "cancel_id": "002",
+        "close_id": "003",
+        "modify_id": "004",
+        "stoploss_id": "005",
+        "takeprofit_id": "006",
+        "stoploss_cancel_id": "007",
+        "takeprofit_cancel_id": "008",
+        "transaction_id": "009",
     }
 
-    prefix = ID_PREFIXES.get(column)
-    if prefix is None:
-        raise ValueError(f"No prefix defined for column '{column}'")
+    suffix = ID_SUFFIXES.get(column)
+    if suffix is None:
+        raise ValueError(f"No suffix defined for column '{column}'")
 
-    while True:
-        numeric_part = str(random.randint(10**9, 10**10 - 1))  # 10-digit random number
-        candidate = f"{prefix}{numeric_part}"
+    # First, try to get the existing counter
+    result = await db.execute(
+        select(IDCounter).where(IDCounter.id == 1).with_for_update()
+    )
+    counter = result.scalar_one_or_none()
+    
+    # If counter doesn't exist, create it with initial value 0
+    if not counter:
+        try:
+            await db.execute(
+                insert(IDCounter).values(id=1, last_value=0)
+            )
+            await db.commit()
+            # Now fetch the newly created counter
+            result = await db.execute(
+                select(IDCounter).where(IDCounter.id == 1).with_for_update()
+            )
+            counter = result.scalar_one_or_none()
+            if not counter:
+                raise ValueError("Failed to create IDCounter record")
+        except Exception as e:
+            await db.rollback()
+            raise ValueError(f"Failed to initialize IDCounter table: {e}")
 
-        stmt = select(model).where(getattr(model, column) == candidate)
-        result = await db.execute(stmt)
+    new_value = counter.last_value + 1
 
-        if not result.scalar():
-            return candidate
+    await db.execute(
+        update(IDCounter)
+        .where(IDCounter.id == 1)
+        .values(last_value=new_value)
+    )
+    await db.commit()
+
+    return f"{new_value}-{suffix}"
+
 
 
 

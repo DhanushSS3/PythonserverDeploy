@@ -11,6 +11,7 @@ from app.database.models import UserOrder, User
 from app.crud.crud_order import get_all_system_open_orders
 from app.core.cache import get_group_symbol_settings_cache
 from app.core.firebase import get_latest_market_data
+from app.crud import group as crud_group  # Add this import to fetch group info
 
 # logger = logging.getLogger(__name__)
 from app.core.logging_config import swap_logger as logger
@@ -72,37 +73,28 @@ async def apply_daily_swap_charges_for_all_open_orders(db: AsyncSession, redis_c
 
             swap_rate_to_use = swap_buy_rate if order_type == "BUY" else swap_sell_rate
 
-            # 2. Get Market Close Price (using only the offer price)
-            market_data = await get_latest_market_data(order_symbol)
-
-             # --- ADDED LOGGING HERE ---
-            if market_data:
-                logger.info(f"Retrieved market data for symbol '{order_symbol}' for order {order.order_id}: {market_data}")
-            else:
-                logger.info(f"No market data retrieved for symbol '{order_symbol}' for order {order.order_id}.")
-            # --- END ADDED LOGGING ---
-
-            if not market_data or 'o' not in market_data or market_data.get('o') is None:
-                logger.warning(f"Market data (offer price) not found or incomplete for symbol '{order_symbol}' for order {order.order_id}. Skipping swap.")
+            # --- Fetch pips from Group table for this group_name and symbol ---
+            group_obj = await crud_group.get_group_by_symbol_and_name(db, symbol=order_symbol, name=user_group_name)
+            if not group_obj or group_obj.pips is None:
+                logger.warning(f"Pips not found for group '{user_group_name}', symbol '{order_symbol}'. Skipping swap for order {order.order_id}.")
                 failed_count += 1
                 continue
-
             try:
-                offer_price = Decimal(str(market_data['o']))
-                if offer_price <= Decimal("0"):
-                     logger.warning(f"Invalid (non-positive) market offer price: ({offer_price}) for {order_symbol} for order {order.order_id}. Skipping swap.")
-                     failed_count += 1
-                     continue
-                market_close_price = offer_price
-            except (InvalidOperation, TypeError) as e:
-                logger.error(f"Error processing market offer price for symbol '{order_symbol}' for order {order.order_id}: {e}. Data: {market_data}. Skipping.")
+                pips = Decimal(str(group_obj.pips))
+            except Exception as e:
+                logger.error(f"Error converting pips for group '{user_group_name}', symbol '{order_symbol}': {e}. Skipping swap for order {order.order_id}.")
                 failed_count += 1
                 continue
 
-            # 3. Calculate Daily Swap Charge
-            # Formula: (Lot * swap_rate * market_close_price) / 365
-            logger.info(f"[SWAP] Calculating daily swap charge for order {order.order_id}: (order_quantity={order_quantity} * swap_rate_to_use={swap_rate_to_use} * market_close_price={market_close_price}) / 365")
-            daily_swap_charge = (order_quantity * swap_rate_to_use * market_close_price) / Decimal(365)
+            # --- New Swap Formula ---
+            # ((order_quantity * pips) * (order_quantity * swap_rate))/10
+            logger.info(f"[SWAP] Calculating daily swap charge for order {order.order_id}: ((order_quantity={order_quantity} * pips={pips}) * (order_quantity={order_quantity} * swap_rate_to_use={swap_rate_to_use}))/10")
+            try:
+                daily_swap_charge = ((order_quantity * pips) * (order_quantity * swap_rate_to_use)) / Decimal('10')
+            except Exception as e:
+                logger.error(f"Error calculating new swap formula for order {order.order_id}: {e}")
+                failed_count += 1
+                continue
             logger.info(f"[SWAP] Raw daily swap charge for order {order.order_id}: {daily_swap_charge}")
             # Quantize to match UserOrder.swap field's precision
             daily_swap_charge = daily_swap_charge.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)

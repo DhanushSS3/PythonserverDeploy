@@ -9,6 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine # Make sure AsyncEngine is import
 
 from alembic import context
 
+from dotenv import load_dotenv
+load_dotenv()
+# config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL not set in environment")
+
 # Add your project's root directory to the sys.path
 # This is crucial so Alembic can find your 'app' package.
 # Assuming 'alembic' folder is a sibling to your 'app' folder at the project root.
@@ -39,25 +46,17 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
+from sqlalchemy.ext.asyncio import create_async_engine
 
-    This configures the context with just a URL
-    and not an actual DBAPI connection.
-
-    By using this method, a script can be executed
-    outside of a database connection.
-    """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+async def run_migrations_online() -> None:
+    connectable = create_async_engine(
+        DATABASE_URL,
+        poolclass=pool.NullPool,
+        future=True,
     )
 
-    with context.begin_transaction():
-        context.run_migrations()
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
 
 # ADD THIS NEW FUNCTION
 def do_run_migrations(connection):
@@ -90,14 +89,23 @@ async def run_migrations_online() -> None:
     connectable = config.attributes.get("connection", None)
     if connectable is None:
         # Get section from alembic.ini, specifically for sqlalchemy.url
-        alembic_cfg_section = config.get_section(config.config_ini_section, {})
+        # alembic_cfg_section = config.get_section(config.config_ini_section, {})
 
-        # Create AsyncEngine from config
+        # # Create AsyncEngine from config
+        # connectable = AsyncEngine(
+        #     engine_from_config(
+        #         alembic_cfg_section,
+        #         prefix="sqlalchemy.",
+        #         poolclass=pool.NullPool, # Use NullPool for Alembic to avoid connection issues
+        #         future=True,
+        #     )
+        # )
+        alembic_cfg_section = config.get_section(config.config_ini_section, {})
         connectable = AsyncEngine(
             engine_from_config(
                 alembic_cfg_section,
                 prefix="sqlalchemy.",
-                poolclass=pool.NullPool, # Use NullPool for Alembic to avoid connection issues
+                poolclass=pool.NullPool,
                 future=True,
             )
         )
