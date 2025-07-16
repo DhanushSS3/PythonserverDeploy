@@ -476,33 +476,64 @@ async def update_user_by_id(
     user_id: int,
     user_update: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_current_admin_user),
+    redis_client: Redis = Depends(get_redis_client)
 ):
     update_data_dict = user_update.model_dump(exclude_unset=True)
-    sensitive_fields = ["wallet_balance", "leverage", "margin", "group_name", "status", "isActive", "security_answer"] # Added security_answer
+    sensitive_fields = ["wallet_balance", "leverage", "margin", "group_name", "status", "isActive", "security_answer"]
     needs_locking = any(field in update_data_dict for field in sensitive_fields)
 
+    # Fetch user with or without lock
     if needs_locking:
         db_user = await crud_user.get_user_by_id_with_lock(db, user_id=user_id)
-        if db_user is None:
-             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        logger.info(f"Acquired lock for user ID {user_id} during update.")
     else:
         db_user = await crud_user.get_user_by_id(db, user_id=user_id)
-        if db_user is None:
-             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Check for email/phone uniqueness if changed
+    new_email = update_data_dict.get("email")
+    new_phone = update_data_dict.get("phone_number")
+    if new_email and new_email != db_user.email:
+        existing = await crud_user.get_user_by_email_and_type(db, email=new_email, user_type=db_user.user_type)
+        if existing and existing.id != db_user.id:
+            raise HTTPException(status_code=400, detail="Email already exists for this user type.")
+    if new_phone and new_phone != db_user.phone_number:
+        existing = await crud_user.get_user_by_phone_number_and_type(db, phone_number=new_phone, user_type=db_user.user_type)
+        if existing and existing.id != db_user.id:
+            raise HTTPException(status_code=400, detail="Phone number already exists for this user type.")
+
+    # Only update provided fields
+    for field, value in update_data_dict.items():
+        setattr(db_user, field, value)
 
     try:
-        updated_user = await crud_user.update_user(db=db, db_user=db_user, user_update=user_update)
+        await db.commit()
+        await db.refresh(db_user)
+        # Update Redis cache
+        from app.core.cache import set_user_data_cache, set_user_balance_margin_cache, publish_user_data_update
+        user_data_to_cache = {
+            "id": db_user.id,
+            "email": getattr(db_user, 'email', None),
+            "group_name": db_user.group_name,
+            "leverage": db_user.leverage,
+            "user_type": db_user.user_type,
+            "account_number": getattr(db_user, 'account_number', None),
+            "wallet_balance": db_user.wallet_balance,
+            "margin": db_user.margin,
+            "first_name": getattr(db_user, 'first_name', None),
+            "last_name": getattr(db_user, 'last_name', None),
+            "country": getattr(db_user, 'country', None),
+            "phone_number": getattr(db_user, 'phone_number', None),
+        }
+        await set_user_data_cache(redis_client, db_user.id, user_data_to_cache, db_user.user_type)
+        await set_user_balance_margin_cache(redis_client, db_user.id, db_user.wallet_balance, db_user.margin)
+        await publish_user_data_update(redis_client, db_user.id)
         logger.info(f"User ID {user_id} updated successfully by admin {current_user.id}.")
-        return updated_user
-
+        return db_user
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating user ID {user_id} by admin {current_user.id}: {e}", exc_info=True)
@@ -520,7 +551,8 @@ async def update_user_by_id(
 async def delete_user_by_id(
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_current_admin_user),
+    redis_client: Redis = Depends(get_redis_client)
 ):
     db_user = await crud_user.get_user_by_id(db, user_id=user_id)
     if db_user is None:
@@ -531,9 +563,13 @@ async def delete_user_by_id(
 
     try:
         await crud_user.delete_user(db=db, db_user=db_user)
+        await db.commit()
+        # Remove user data from Redis
+        from app.core.cache import REDIS_USER_DATA_KEY_PREFIX
+        user_data_key = f"{REDIS_USER_DATA_KEY_PREFIX}{db_user.user_type}:{db_user.id}"
+        await redis_client.delete(user_data_key)
         logger.info(f"User ID {user_id} deleted successfully by admin {current_user.id}.")
         return StatusResponse(message=f"User with ID {user_id} deleted successfully.")
-
     except Exception as e:
         await db.rollback()
         logger.error(f"Error deleting user ID {user_id} by admin {current_user.id}: {e}", exc_info=True)
