@@ -197,6 +197,9 @@ async def update_all_users_dynamic_portfolio():
                 logger.error("[AUTO-CUTOFF] Cannot update dynamic portfolios - Redis client not available")
                 return
             
+            # Heartbeat log to ensure this task is still running
+            logger.info("[AUTO-CUTOFF] update_all_users_dynamic_portfolio heartbeat: task is alive and running.")
+            
             # Get all active users (both live and demo) using the new unified function
             logger.info("[AUTO-CUTOFF] Fetching all active users (live and demo)...")
             live_users, demo_users = await crud_user.get_all_active_users_both(db)
@@ -230,6 +233,21 @@ async def update_all_users_dynamic_portfolio():
                         continue
                     logger.debug(f"[AUTO-CUTOFF] Getting group symbol settings for group {group_name}...")
                     group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
+                    logger.debug(f"[AUTO-CUTOFF] Group symbol settings for group '{group_name}' from cache: {group_symbol_settings}")
+                    # Robust fallback: If cache is missing or sending_orders is None, fetch from DB and update cache
+                    if group_symbol_settings is None or group_symbol_settings.get('sending_orders') is None:
+                        logger.warning(f"[AUTO-CUTOFF] Group symbol settings missing or incomplete in cache for '{group_name}', fetching from DB.")
+                        from app.crud.group import get_group_by_name
+                        db_group = await get_group_by_name(db, group_name)
+                        logger.debug(f"[AUTO-CUTOFF] DB group fetch result for '{group_name}': {db_group}")
+                        if db_group:
+                            settings = {"sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)}
+                            await set_group_settings_cache(global_redis_client_instance, group_name, settings)
+                            group_symbol_settings = settings
+                            logger.info(f"[AUTO-CUTOFF] Group symbol settings fetched from DB and cached for group '{group_name}': {settings}")
+                        else:
+                            logger.error(f"[AUTO-CUTOFF] Group symbol settings not found in DB for group '{group_name}'. Skipping portfolio update for user {user_id}.")
+                            continue
                     if not group_symbol_settings:
                         logger.warning(f"[AUTO-CUTOFF] No group settings found for group {group_name}. Skipping portfolio update for user {user_id}.")
                         continue
@@ -703,9 +721,9 @@ async def startup_event():
     logger.info("Initializing core services...")
     import redis.asyncio as redis
 
-    # r = redis.Redis(host="127.0.0.1", port=6379)
-    # await r.flushall()
-    # print("Redis flushed")
+    r = redis.Redis(host="127.0.0.1", port=6379)
+    await r.flushall()
+    print("Redis flushed")
     # Print Redis connection info for debugging
     # redis_url = os.getenv("REDIS_URL")
     # redis_host = os.getenv("REDIS_HOST")
