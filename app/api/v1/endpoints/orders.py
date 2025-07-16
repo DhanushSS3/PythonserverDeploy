@@ -1885,7 +1885,7 @@ async def modify_pending_order(
         is_barclays_live_user = (modify_request.user_type == 'live' and sending_orders_normalized == 'barclays')
 
         order_model = get_order_model(modify_request.user_type)
-        modify_id = await generate_unique_10_digit_id(db, order_model, 'order_id')
+        modify_id = await generate_unique_10_digit_id(db, order_model, 'modify_id')
 
         if is_barclays_live_user:
             firebase_modify_data = {

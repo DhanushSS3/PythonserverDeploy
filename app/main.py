@@ -190,14 +190,17 @@ async def update_all_users_dynamic_portfolio():
     This is critical for autocutoff and validation.
     """
     from app.services.email import send_email
+    logger.info("[AUTO-CUTOFF] Starting update_all_users_dynamic_portfolio job...")
     try:
         async with AsyncSessionLocal() as db:
             if not global_redis_client_instance:
-                logger.error("Cannot update dynamic portfolios - Redis client not available")
+                logger.error("[AUTO-CUTOFF] Cannot update dynamic portfolios - Redis client not available")
                 return
-                
+            
             # Get all active users (both live and demo) using the new unified function
+            logger.info("[AUTO-CUTOFF] Fetching all active users (live and demo)...")
             live_users, demo_users = await crud_user.get_all_active_users_both(db)
+            logger.info(f"[AUTO-CUTOFF] Found {len(live_users)} live users and {len(demo_users)} demo users.")
             
             all_users = []
             for user in live_users:
@@ -205,29 +208,34 @@ async def update_all_users_dynamic_portfolio():
             for user in demo_users:
                 all_users.append({"id": user.id, "user_type": "demo", "group_name": user.group_name})
             
+            logger.info(f"[AUTO-CUTOFF] Processing {len(all_users)} users for dynamic portfolio update...")
             # Process each user
             for user_info in all_users:
                 user_id = user_info["id"]
                 user_type = user_info["user_type"]
                 group_name = user_info["group_name"]
+                logger.info(f"[AUTO-CUTOFF] Processing user {user_id} ({user_type}), group: {group_name}")
                 
                 try:
                     # Get user data from cache or DB
+                    logger.debug(f"[AUTO-CUTOFF] Getting user data for user {user_id} ({user_type}) from cache/DB...")
                     user_data = await get_user_data_cache(global_redis_client_instance, user_id, db, user_type)
                     if not user_data:
-                        logger.warning(f"No user data found for user {user_id} ({user_type}). Skipping portfolio update.")
+                        logger.warning(f"[AUTO-CUTOFF] No user data found for user {user_id} ({user_type}). Skipping portfolio update.")
                         continue
                     
                     # Get group symbol settings
                     if not group_name:
-                        logger.warning(f"User {user_id} has no group_name set. Skipping portfolio update.")
+                        logger.warning(f"[AUTO-CUTOFF] User {user_id} has no group_name set. Skipping portfolio update.")
                         continue
+                    logger.debug(f"[AUTO-CUTOFF] Getting group symbol settings for group {group_name}...")
                     group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
                     if not group_symbol_settings:
-                        logger.warning(f"No group settings found for group {group_name}. Skipping portfolio update for user {user_id}.")
+                        logger.warning(f"[AUTO-CUTOFF] No group settings found for group {group_name}. Skipping portfolio update for user {user_id}.")
                         continue
                     
                     # Get open orders for this user
+                    logger.debug(f"[AUTO-CUTOFF] Getting open orders for user {user_id}...")
                     order_model = crud_order.get_order_model(user_type)
                     open_orders_orm = await crud_order.get_all_open_orders_by_user_id(db, user_id, order_model)
                     open_positions = []
@@ -246,13 +254,11 @@ async def update_all_users_dynamic_portfolio():
                             'order_status': getattr(o, 'order_status', None),
                             'order_user_id': getattr(o, 'order_user_id', None)
                         })
+                    logger.debug(f"[AUTO-CUTOFF] User {user_id} has {len(open_positions)} open orders.")
                     
-                    # if not open_positions:
-                    #     # Skip portfolio calculation for users without open positions
-                    #     continue
-
                     # Also include users with pending orders
                     pending_statuses = ["PENDING", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]
+                    logger.debug(f"[AUTO-CUTOFF] Getting pending orders for user {user_id}...")
                     pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
                     pending_positions = []
                     for po in pending_orders_orm:
@@ -270,13 +276,15 @@ async def update_all_users_dynamic_portfolio():
                             'order_status': getattr(po, 'order_status', None),
                             'order_user_id': getattr(po, 'order_user_id', None)
                         })
+                    logger.debug(f"[AUTO-CUTOFF] User {user_id} has {len(pending_positions)} pending orders.")
 
                     if not open_positions and not pending_positions:
-                        logger.warning(f"User {user_id} has no open or pending orders. Skipping portfolio update.")
+                        logger.warning(f"[AUTO-CUTOFF] User {user_id} has no open or pending orders. Skipping portfolio update.")
                         continue
 
                     # Combine open and pending positions for portfolio calculation if needed
                     all_positions = open_positions + pending_positions
+                    logger.debug(f"[AUTO-CUTOFF] User {user_id} total positions for portfolio calculation: {len(all_positions)}")
                     
                     # Get adjusted market prices for all relevant symbols
                     adjusted_market_prices = {}
@@ -296,12 +304,15 @@ async def update_all_users_dynamic_portfolio():
                                     'buy': last_price.get('b'),  # Use raw price as fallback
                                     'sell': last_price.get('o')
                                 }
+                    logger.debug(f"[AUTO-CUTOFF] User {user_id} adjusted market prices: {adjusted_market_prices}")
                     
                     # Define margin thresholds based on group settings or defaults
                     margin_call_threshold = Decimal('100.0')  # Default 100%
                     margin_cutoff_threshold = Decimal('10.0')  # Default 10%
+                    logger.debug(f"[AUTO-CUTOFF] User {user_id} margin thresholds: call={margin_call_threshold}, cutoff={margin_cutoff_threshold}")
                     
                     # Calculate portfolio metrics with margin call detection
+                    logger.info(f"[AUTO-CUTOFF] Calculating portfolio metrics for user {user_id}...")
                     portfolio_metrics = await calculate_user_portfolio(
                         user_data=user_data,
                         open_positions=open_positions,
@@ -310,6 +321,7 @@ async def update_all_users_dynamic_portfolio():
                         redis_client=global_redis_client_instance,
                         margin_call_threshold=margin_call_threshold
                     )
+                    logger.info(f"[AUTO-CUTOFF] Portfolio metrics for user {user_id}: {portfolio_metrics}")
                     
                     # Cache the dynamic portfolio data
                     dynamic_portfolio_data = {
@@ -322,11 +334,13 @@ async def update_all_users_dynamic_portfolio():
                         "positions_with_pnl": portfolio_metrics.get("positions", []),
                         "margin_call": portfolio_metrics.get("margin_call", False)
                     }
+                    logger.debug(f"[AUTO-CUTOFF] Caching dynamic portfolio data for user {user_id}: {dynamic_portfolio_data}")
                     await set_user_dynamic_portfolio_cache(global_redis_client_instance, user_id, dynamic_portfolio_data)
                     
                     # Check for margin call conditions
                     margin_level = Decimal(portfolio_metrics.get("margin_level", "0.0"))
                     margin_call_email_key = f"margin_call_email_sent:{user_id}"
+                    logger.info(f"[AUTO-CUTOFF] User {user_id} margin_level: {margin_level}")
                     if margin_level > Decimal('0') and margin_level < margin_cutoff_threshold:
                         autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} margin level {margin_level}% below cutoff threshold {margin_cutoff_threshold}%. Initiating auto-cutoff.")
                         await handle_margin_cutoff(db, global_redis_client_instance, user_id, user_type, margin_level)
@@ -345,27 +359,27 @@ async def update_all_users_dynamic_portfolio():
                                 dashboard_url = "https://livefxhub.com"  # TODO: Replace with actual dashboard URL
                                 try:
                                     await send_margin_call_email(user_email, str(round(margin_level, 2)), dashboard_url)
-                                    logger.info(f"Sent margin call warning email (HTML) to user {user_id} at {user_email}")
+                                    logger.info(f"[AUTO-CUTOFF] Sent margin call warning email (HTML) to user {user_id} at {user_email}")
                                     # Set flag for 24 hours (or until margin recovers)
                                     await global_redis_client_instance.set(margin_call_email_key, "1", ex=24*60*60)
                                 except Exception as e:
-                                    logger.error(f"Failed to send margin call warning email to user {user_id} at {user_email}: {e}")
+                                    logger.error(f"[AUTO-CUTOFF] Failed to send margin call warning email to user {user_id} at {user_email}: {e}")
                             else:
-                                logger.warning(f"Could not send margin call warning email: No email found for user {user_id}")
+                                logger.warning(f"[AUTO-CUTOFF] Could not send margin call warning email: No email found for user {user_id}")
                     elif margin_level >= margin_call_threshold:
                         # Margin has recovered, clear the flag so user can be notified again in the future
                         await global_redis_client_instance.delete(margin_call_email_key)
                     elif portfolio_metrics.get("margin_call", False):
                         autocutoff_logger.warning(f"[AUTO-CUTOFF] User {user_id} has margin call condition: margin level {margin_level}%")
                     
-                    # Portfolio update completed for user
+                    logger.info(f"[AUTO-CUTOFF] Portfolio update completed for user {user_id}")
                     
                 except Exception as user_error:
-                    logger.error(f"Error updating portfolio for user {user_id}: {user_error}", exc_info=True)
+                    logger.error(f"[AUTO-CUTOFF] Error updating portfolio for user {user_id}: {user_error}", exc_info=True)
                     continue
             
     except Exception as e:
-        logger.error(f"Error in update_all_users_dynamic_portfolio job: {e}", exc_info=True)
+        logger.error(f"[AUTO-CUTOFF] Error in update_all_users_dynamic_portfolio job: {e}", exc_info=True)
 
 # --- Auto-cutoff function for margin calls ---
 async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: int, user_type: str, margin_level: Decimal):
@@ -429,6 +443,12 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
             autocutoff_logger.warning(f"[AUTO-CUTOFF] Processing Barclays live user {user_id} - sending close requests to Firebase")
             for order in open_orders:
                 try:
+                    # --- NEW: Check Redis flag before sending close request ---
+                    autocutoff_flag_key = f"autocutoff_close_sent:{order.order_id}"
+                    already_sent = await redis_client.get(autocutoff_flag_key)
+                    if already_sent:
+                        autocutoff_logger.info(f"[AUTO-CUTOFF] Close request already sent for order {order.order_id}, skipping.")
+                        continue
                     autocutoff_logger.debug(f"[AUTO-CUTOFF] Preparing to close order {order.order_id} for user {user_id}")
                     close_id = await generate_unique_10_digit_id(db, UserOrder, 'close_id')
                     firebase_close_data = {
@@ -447,6 +467,8 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     autocutoff_logger.debug(f"[AUTO-CUTOFF] Firebase payload for order {order.order_id}: {firebase_close_data}")
                     await send_order_to_firebase(firebase_close_data, "live")
                     autocutoff_logger.warning(f"[AUTO-CUTOFF] SUCCESSFULLY SENT TO FIREBASE: User {user_id}, Order {order.order_id}, Close ID {close_id}")
+                    # --- NEW: Set Redis flag after sending ---
+                    await redis_client.set(autocutoff_flag_key, "1", ex=48*60*60)  # 48 hours expiry
                     update_fields = {
                         "close_id": close_id,
                         "close_message": "Auto-cutoff"
@@ -753,6 +775,7 @@ async def startup_event():
             id='update_all_users_dynamic_portfolio',
             replace_existing=True
         )
+        logger.info("[AUTO-CUTOFF] Scheduled update_all_users_dynamic_portfolio job to run every 1 minute.")
         
         scheduler.add_job(
             rotate_service_account_jwt,
