@@ -241,7 +241,10 @@ async def update_all_users_dynamic_portfolio():
                         db_group = await get_group_by_name(db, group_name)
                         logger.debug(f"[AUTO-CUTOFF] DB group fetch result for '{group_name}': {db_group}")
                         if db_group:
-                            settings = {"sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)}
+                            settings = {
+                                "sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None),
+                                # Add more group-level settings here if needed
+                            }
                             await set_group_settings_cache(global_redis_client_instance, group_name, settings)
                             group_symbol_settings = settings
                             logger.info(f"[AUTO-CUTOFF] Group symbol settings fetched from DB and cached for group '{group_name}': {settings}")
@@ -425,7 +428,10 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     db_group = await get_group_by_name(db, user_for_cutoff.group_name)
                     autocutoff_logger.debug(f"[AUTO-CUTOFF] DB group fetch result: {db_group}")
                     if db_group:
-                        settings = {"sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None)}
+                        settings = {
+                            "sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None),
+                            # Add more group-level settings here if needed
+                        }
                         await set_group_settings_cache(redis_client, user_for_cutoff.group_name, settings)
                         group_settings = settings
                         autocutoff_logger.info(f"[AUTO-CUTOFF] Group settings fetched from DB and cached for group '{user_for_cutoff.group_name}'")
@@ -524,7 +530,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
             await publish_market_data_trigger(redis_client)
             autocutoff_logger.warning(f"[AUTO-CUTOFF] COMPLETED: User {user_id} auto-cutoff process finished, waiting for Firebase confirmation")
         else:
-            autocutoff_logger.warning(f"[AUTO-CUTOFF] Processing demo user {user_id} - closing orders locally")
+            autocutoff_logger.warning(f"[AUTO-CUTOFF] Processing non-Barclays user {user_id} - closing orders locally")
             from app.crud.external_symbol_info import get_external_symbol_info_by_symbol
             from app.services.portfolio_calculator import _convert_to_usd
             from app.services.order_processing import calculate_total_symbol_margin_contribution
@@ -538,7 +544,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
             total_net_profit = Decimal('0.0')
             for order in open_orders:
                 try:
-                    autocutoff_logger.debug(f"[AUTO-CUTOFF] Preparing to close demo order {order.order_id} for user {user_id}")
+                    autocutoff_logger.debug(f"[AUTO-CUTOFF] Preparing to close order {order.order_id} for user {user_id}")
                     symbol = order.order_company_name
                     last_price = await get_last_known_price(redis_client, symbol)
                     autocutoff_logger.debug(f"[AUTO-CUTOFF] Last price for symbol {symbol}: {last_price}")
@@ -607,27 +613,22 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     total_net_profit += (net_profit - swap_amount)
                     autocutoff_logger.warning(f"[AUTO-CUTOFF] ORDER CLOSED: User {user_id}, Order {order.order_id}, Net Profit {net_profit}, Commission {total_commission_for_trade}, Swap {swap_amount}")
                     transaction_time = datetime.datetime.now(datetime.timezone.utc)
-                    wallet_common_data = {
-                        "symbol": symbol,
-                        "order_quantity": quantity,
-                        "is_approved": 1,
-                        "order_type": order.order_type,
-                        "transaction_time": transaction_time,
-                        "order_id": order.order_id
-                    }
-                    if isinstance(user_for_cutoff, DemoUser):
-                        wallet_common_data["demo_user_id"] = user_for_cutoff.id
-                    else:
-                        wallet_common_data["user_id"] = user_for_cutoff.id
+                    wallet_common_data = {"symbol": symbol, "order_quantity": quantity, "is_approved": 1, "order_type": order.order_type, "transaction_time": transaction_time, "order_id": order.order_id}
+                    if hasattr(user_for_cutoff, 'id'):
+                        if hasattr(user_for_cutoff, 'user_type') and user_for_cutoff.user_type == 'demo':
+                            wallet_common_data["demo_user_id"] = user_for_cutoff.id
+                        else:
+                            wallet_common_data["user_id"] = user_for_cutoff.id
                     if net_profit != Decimal("0.0"):
                         transaction_id_profit = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
-                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=net_profit, description=f"P/L for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_profit))
+                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Profit/Loss", transaction_amount=net_profit, description=f"P/L for closing order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_profit))
                     if total_commission_for_trade > Decimal("0.0"):
                         transaction_id_commission = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
-                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_commission))
+                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Commission", transaction_amount=-total_commission_for_trade, description=f"Commission for closing order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_commission))
                     if swap_amount != Decimal("0.0"):
                         transaction_id_swap = await generate_unique_10_digit_id(db, Wallet, "transaction_id")
-                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for auto-cutoff order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
+                        db.add(Wallet(**WalletCreate(**wallet_common_data, transaction_type="Swap", transaction_amount=-swap_amount, description=f"Swap for closing order {order.order_id}").model_dump(exclude_none=True), transaction_id=transaction_id_swap))
+                    await db.commit()
                 except Exception as e:
                     autocutoff_logger.error(f"[AUTO-CUTOFF] ERROR closing order {order.order_id} for user {user_id}: {e}", exc_info=True)
                     continue
@@ -647,7 +648,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                 user_for_cutoff.margin = new_total_margin.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 await db.commit()
                 autocutoff_logger.warning(f"[AUTO-CUTOFF] USER BALANCE UPDATED: User {user_id}, Original Balance {original_wallet_balance}, Total Net Profit {total_net_profit}, New Balance {user_for_cutoff.wallet_balance}, New Margin {user_for_cutoff.margin}")
-                user_type_str = 'demo' if isinstance(user_for_cutoff, DemoUser) else 'live'
+                user_type_str = 'demo' if hasattr(user_for_cutoff, 'user_type') and user_for_cutoff.user_type == 'demo' else 'live'
                 user_data_to_cache = {
                     "id": user_for_cutoff.id,
                     "email": getattr(user_for_cutoff, 'email', None),
@@ -676,7 +677,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                 await publish_order_update(redis_client, user_id)
                 await publish_user_data_update(redis_client, user_id)
                 await publish_market_data_trigger(redis_client)
-                autocutoff_logger.warning(f"[AUTO-CUTOFF] COMPLETED: Demo user {user_id} auto-cutoff process finished successfully")
+                autocutoff_logger.warning(f"[AUTO-CUTOFF] COMPLETED: Non-Barclays user {user_id} auto-cutoff process finished successfully")
             except Exception as e:
                 autocutoff_logger.error(f"[AUTO-CUTOFF] ERROR updating user balance for user {user_id}: {e}", exc_info=True)
                 await db.rollback()

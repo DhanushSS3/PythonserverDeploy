@@ -123,7 +123,10 @@ async def create_new_group(
         new_group = await crud_group.create_group(db=db, group_create=group_create)
         logger.info(f"Group '{new_group.name}' (Symbol: {new_group.symbol}) created successfully by admin {current_user.id}.")
         # Update group settings cache
-        settings = {"sending_orders": getattr(new_group, 'sending_orders', None)}
+        settings = {
+            "sending_orders": getattr(new_group, 'sending_orders', None),
+            # Add more group-level settings here if needed
+        }
         await set_group_settings_cache(redis_client, new_group.name, settings)
         # Update group-symbol settings cache for this symbol if present
         if new_group.symbol:
@@ -274,7 +277,10 @@ async def update_existing_group(
         updated_group = await crud_group.update_group(db=db, db_group=db_group, group_update=group_update)
         logger.info(f"Group ID {group_id} updated successfully by admin {current_user.id}.")
         # Update group settings cache
-        settings = {"sending_orders": getattr(updated_group, 'sending_orders', None)}
+        settings = {
+            "sending_orders": getattr(updated_group, 'sending_orders', None),
+            # Add more group-level settings here if needed
+        }
         await set_group_settings_cache(redis_client, updated_group.name, settings)
         # Update group-symbol settings cache for this symbol if present
         if updated_group.symbol:
