@@ -1,13 +1,7 @@
-2025-07-14 22:45:23,121 - INFO - app.core.security - LOGIN: user_id=1, email=dhanush777ss@gmail.com, user_type=demo, time=2025-07-15T05:45:23.121121
-2025-07-14 22:49:38,671 - INFO - app.core.security - LOGOUT: user_id=1, email=dhanush777ss@gmail.com, user_type=demo, time=2025-07-15T05:49:38.671530
-2025-07-14 22:49:41,176 - INFO - app.core.security - LOGIN: user_id=4, email=dhanush777ss@gmail.com, user_type=live, time=2025-07-15T05:49:41.176580
-2025-07-14 22:50:10,471 - INFO - app.core.security - LOGOUT: user_id=4, email=dhanush777ss@gmail.com, user_type=live, time=2025-07-15T05:50:10.470983
-2025-07-14 22:50:12,935 - INFO - app.core.security - LOGIN: user_id=4, email=dhanush777ss@gmail.com, user_type=live, time=2025-07-15T05:50:12.935301
-2025-07-14 23:15:27,150 - INFO - app.core.security - LOGOUT: user_id=4, email=dhanush777ss@gmail.com, user_type=live, time=2025-07-15T06:15:27.150476
-2025-07-14 23:15:35,283 - INFO - app.core.security - LOGIN: user_id=14, email=cursordemo3@gmail.com, user_type=live, time=2025-07-15T06:15:35.283336
-2025-07-15 00:15:02,775 - INFO - app.core.security - LOGOUT: user_id=14, email=cursordemo3@gmail.com, user_type=live, time=2025-07-15T07:15:02.775337
-2025-07-15 00:15:07,176 - INFO - app.core.security - LOGIN: user_id=11, email=cursordemo3@gmail.com, user_type=demo, time=2025-07-15T07:15:07.176060
-2025-07-15 01:33:05,849 - ERROR - app.core.security - Authentication error in get_user_from_service_or_user_token: Could not validate credentials
+2025-07-15 05:30:08,027 - INFO - app.core.security - LOGIN: user_id=11, email=cursordemo3@gmail.com, user_type=demo, time=2025-07-15T12:30:08.027197
+2025-07-15 05:30:56,318 - INFO - app.core.security - LOGOUT: user_id=11, email=cursordemo3@gmail.com, user_type=demo, time=2025-07-15T12:30:56.318548
+2025-07-15 05:30:58,717 - INFO - app.core.security - LOGIN: user_id=14, email=cursordemo3@gmail.com, user_type=live, time=2025-07-15T12:30:58.717083
+2025-07-15 21:10:38,613 - ERROR - app.core.security - Authentication error in get_user_from_service_or_user_token: Could not validate credentials
 Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 94, in decode_token
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -36,7 +30,7 @@ Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 99, in decode_token
     raise JWTError("Could not validate credentials")
 jose.exceptions.JWTError: Could not validate credentials
-2025-07-15 01:33:05,893 - ERROR - app.core.security - Authentication error in get_user_from_service_or_user_token: Could not validate credentials
+2025-07-15 21:10:38,655 - ERROR - app.core.security - Authentication error in get_user_from_service_or_user_token: Could not validate credentials
 Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 94, in decode_token
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -65,4 +59,3 @@ Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 99, in decode_token
     raise JWTError("Could not validate credentials")
 jose.exceptions.JWTError: Could not validate credentials
-2025-07-15 01:33:14,765 - INFO - app.core.security - LOGIN: user_id=14, email=cursordemo3@gmail.com, user_type=live, time=2025-07-15T08:33:14.764942

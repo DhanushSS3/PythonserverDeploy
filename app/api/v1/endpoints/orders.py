@@ -3515,7 +3515,7 @@ async def update_order_by_service_provider(
             # Update user data cache and balance/margin cache
             try:
                 user_id = db_order.order_user_id
-                db_user = await get_user_by_id(db, user_id)
+                db_user = await get_user_by_id(db, user_id, 'live')
                 if db_user:
                     # Calculate total user margin including all symbols
                     from app.services.order_processing import calculate_total_user_margin

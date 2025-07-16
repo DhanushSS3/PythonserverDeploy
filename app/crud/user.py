@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal
+from app.database.models import UserOrder
 
 from app.database.models import User, DemoUser # Import both User and DemoUser models
 from app.schemas.user import UserCreate, UserUpdate # Import UserCreate and UserUpdate
@@ -463,6 +464,26 @@ async def generate_unique_demo_account_number(db: AsyncSession) -> str:
 #         raise ValueError("OTP record must be associated with either a user or a demo user.")
 #     # ... rest of the function ...
 
+# You can add a function like this:
+from sqlalchemy.orm import selectinload
+from app.database.models import User, UserOrder
+
+async def get_all_users_with_pending_orders(db: AsyncSession) -> list[User]:
+    # Get all user IDs with pending orders
+    result = await db.execute(
+        select(UserOrder.order_user_id)
+        .filter(UserOrder.order_status.in_(["PENDING", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]))
+        .distinct()
+    )
+    user_ids = [row[0] for row in result.fetchall()]
+    if not user_ids:
+        return []
+    # Now fetch all user objects
+    result = await db.execute(
+        select(User).where(User.id.in_(user_ids))
+    )
+    return result.scalars().all()
+    
 async def get_all_active_users(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[User]:
     """
     Retrieves a list of all active live users from the database with pagination.

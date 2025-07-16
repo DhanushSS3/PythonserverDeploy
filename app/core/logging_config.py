@@ -61,7 +61,7 @@ def setup_stream_logger(name: str, level=logging.ERROR) -> logging.Logger:
 # Order lifecycle tracking
 orders_logger = setup_file_logger("orders", "orders.log", logging.INFO)
 autocutoff_logger = setup_file_logger("autocutoff", "autocutoff.log", logging.INFO)
-app_logger = setup_file_logger("app", "app.log", logging.INFO)
+app_logger = setup_file_logger("app", "app.log", logging.DEBUG if not IS_PRODUCTION else logging.INFO)
 
 # Service provider communication (critical for audit trail)
 service_provider_logger = setup_file_logger("service_provider", "service_provider.log", logging.INFO)

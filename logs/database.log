@@ -1,10 +1,8 @@
-2025-07-14 22:45:16,128 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
+2025-07-15 05:50:27,116 - ERROR - database - Error in database session: 500: Failed to process order: 400: Insufficient free margin
 Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 331, in refresh_access_token
-     raise HTTPException(
-    ...<3 lines>...
-    )
-fastapi.exceptions.HTTPException: 401: User not found or inactive
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1006, in place_pending_order
+    raise HTTPException(status_code=400, detail="Insufficient free margin")
+fastapi.exceptions.HTTPException: 400: Insufficient free margin
 
 During handling of the above exception, another exception occurred:
 
@@ -20,371 +18,13 @@ Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
     return await dependant.call(**values)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 362, in refresh_access_token
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
-2025-07-14 22:45:16,132 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 331, in refresh_access_token
-     raise HTTPException(
-    ...<3 lines>...
-    )
-fastapi.exceptions.HTTPException: 401: User not found or inactive
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 362, in refresh_access_token
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
-2025-07-14 22:45:17,956 - ERROR - database - Error in database session: 401: Could not validate credentials
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 94, in decode_token
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
-    _validate_claims(
-    ~~~~~~~~~~~~~~~~^
-        claims,
-        ^^^^^^^
-    ...<5 lines>...
-        options=defaults,
-        ^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
-    _validate_exp(claims, leeway=leeway)
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
-    raise ExpiredSignatureError("Signature has expired.")
-jose.exceptions.ExpiredSignatureError: Signature has expired.
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 288, in get_current_user
-    payload = decode_token(token)
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 99, in decode_token
-    raise JWTError("Could not validate credentials")
-jose.exceptions.JWTError: Could not validate credentials
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 291, in app
-    solved_result = await solve_dependencies(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<6 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
-    solved = await call(**solved_result.values)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 337, in get_current_user
-    raise credentials_exception
-fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-14 23:33:14,809 - ERROR - database - Error in database session: 401: Could not validate credentials
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 460, in get_user_from_service_token
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
-    _validate_claims(
-    ~~~~~~~~~~~~~~~~^
-        claims,
-        ^^^^^^^
-    ...<5 lines>...
-        options=defaults,
-        ^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
-    _validate_exp(claims, leeway=leeway)
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
-    raise ExpiredSignatureError("Signature has expired.")
-jose.exceptions.ExpiredSignatureError: Signature has expired.
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 291, in app
-    solved_result = await solve_dependencies(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<6 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
-    solved = await call(**solved_result.values)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 468, in get_user_from_service_token
-    raise credentials_exception
-fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-14 23:33:14,826 - INFO - database - Session rolled back due to error
-2025-07-14 23:33:32,360 - ERROR - database - Error in database session: (sqlalchemy.exc.MissingGreenlet) greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place?
-[SQL: SELECT users.id AS users_id, users.name AS users_name, users.email AS users_email, users.phone_number AS users_phone_number, users.hashed_password AS users_hashed_password, users.user_type AS users_user_type, users.wallet_balance AS users_wallet_balance, users.leverage AS users_leverage, users.margin AS users_margin, users.net_profit AS users_net_profit, users.account_number AS users_account_number, users.group_name AS users_group_name, users.status AS users_status, users.security_question AS users_security_question, users.security_answer AS users_security_answer, users.country AS users_country, users.city AS users_city, users.state AS users_state, users.pincode AS users_pincode, users.fund_manager AS users_fund_manager, users.is_self_trading AS users_is_self_trading, users.id_proof AS users_id_proof, users.id_proof_image AS users_id_proof_image, users.address_proof AS users_address_proof, users.address_proof_image AS users_address_proof_image, users.bank_ifsc_code AS users_bank_ifsc_code, users.bank_holder_name AS users_bank_holder_name, users.bank_branch_name AS users_bank_branch_name, users.bank_account_number AS users_bank_account_number, users.`isActive` AS `users_isActive`, users.referred_by_id AS users_referred_by_id, users.reffered_code AS users_reffered_code, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.id = %s]
-[parameters: [{'pk_1': 14}]]
-(Background on this error at: https://sqlalche.me/e/20/xd2s)
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
-    context = constructor(
-        dialect, self, conn, execution_options, *args, **kw
-    )
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 1427, in _init_compiled
-    self.cursor = self.create_cursor()
-                  ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 1766, in create_cursor
-    return self.create_default_cursor()
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 1772, in create_default_cursor
-    return self._dbapi_connection.cursor()
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1486, in cursor
-    return self.dbapi_connection.cursor(*args, **kwargs)
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 200, in cursor
-    return AsyncAdapt_aiomysql_cursor(self)
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 63, in __init__
-    self._cursor = self.await_(cursor.__aenter__())
-                   ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 123, in await_only
-    raise exc.MissingGreenlet(
-    ...<2 lines>...
-    )
-sqlalchemy.exc.MissingGreenlet: greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place? (Background on this error at: https://sqlalche.me/e/20/xd2s)
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 4873, in get_order_info_for_service_provider
-    db_user = db_order.user
-              ^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 566, in __get__
-    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
-           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1086, in get
-    value = self._fire_loader_callables(state, key, passive)
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1121, in _fire_loader_callables
-    return self.callable_(state, passive)
-           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\strategies.py", line 978, in _load_for_state
-    return self._emit_lazyload(
-           ~~~~~~~~~~~~~~~~~~~^
-        session,
-        ^^^^^^^^
-    ...<7 lines>...
-        execution_options,
-        ^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\strategies.py", line 1079, in _emit_lazyload
-    return loading.load_on_pk_identity(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        session,
-        ^^^^^^^^
-    ...<3 lines>...
-        execution_options=execution_options,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 694, in load_on_pk_identity
-    session.execute(
-    ~~~~~~~~~~~~~~~^
-        q,
-        ^^
-    ...<2 lines>...
-        bind_arguments=bind_arguments,
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2365, in execute
-    return self._execute_internal(
-           ~~~~~~~~~~~~~~~~~~~~~~^
-        statement,
-        ^^^^^^^^^^
-    ...<4 lines>...
-        _add_event=_add_event,
-        ^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2251, in _execute_internal
-    result: Result[Any] = compile_state_cls.orm_execute_statement(
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        self,
-        ^^^^^
-    ...<4 lines>...
-        conn,
-        ^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
-    result = conn.execute(
-        statement, params or {}, execution_options=execution_options
-    )
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
-    return meth(
-        self,
-        distilled_parameters,
-        execution_options or NO_OPTIONS,
-    )
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        self, distilled_params, execution_options
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
-    ret = self._execute_context(
-        dialect,
-    ...<8 lines>...
-        cache_hit=cache_hit,
-    )
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1817, in _execute_context
-    self._handle_dbapi_exception(
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        e, str(statement), parameters, None, None
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
-    context = constructor(
-        dialect, self, conn, execution_options, *args, **kw
-    )
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 1427, in _init_compiled
-    self.cursor = self.create_cursor()
-                  ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 1766, in create_cursor
-    return self.create_default_cursor()
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 1772, in create_default_cursor
-    return self._dbapi_connection.cursor()
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1486, in cursor
-    return self.dbapi_connection.cursor(*args, **kwargs)
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 200, in cursor
-    return AsyncAdapt_aiomysql_cursor(self)
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 63, in __init__
-    self._cursor = self.await_(cursor.__aenter__())
-                   ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 123, in await_only
-    raise exc.MissingGreenlet(
-    ...<2 lines>...
-    )
-sqlalchemy.exc.StatementError: (sqlalchemy.exc.MissingGreenlet) greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place?
-[SQL: SELECT users.id AS users_id, users.name AS users_name, users.email AS users_email, users.phone_number AS users_phone_number, users.hashed_password AS users_hashed_password, users.user_type AS users_user_type, users.wallet_balance AS users_wallet_balance, users.leverage AS users_leverage, users.margin AS users_margin, users.net_profit AS users_net_profit, users.account_number AS users_account_number, users.group_name AS users_group_name, users.status AS users_status, users.security_question AS users_security_question, users.security_answer AS users_security_answer, users.country AS users_country, users.city AS users_city, users.state AS users_state, users.pincode AS users_pincode, users.fund_manager AS users_fund_manager, users.is_self_trading AS users_is_self_trading, users.id_proof AS users_id_proof, users.id_proof_image AS users_id_proof_image, users.address_proof AS users_address_proof, users.address_proof_image AS users_address_proof_image, users.bank_ifsc_code AS users_bank_ifsc_code, users.bank_holder_name AS users_bank_holder_name, users.bank_branch_name AS users_bank_branch_name, users.bank_account_number AS users_bank_account_number, users.`isActive` AS `users_isActive`, users.referred_by_id AS users_referred_by_id, users.reffered_code AS users_reffered_code, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.id = %s]
-[parameters: [{'pk_1': 14}]]
-(Background on this error at: https://sqlalche.me/e/20/xd2s)
-2025-07-14 23:33:32,410 - INFO - database - Session rolled back due to error
-2025-07-14 23:33:36,483 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
-2025-07-14 23:35:36,498 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
-2025-07-14 23:37:36,489 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 9, 'checked_out': 1, 'overflow': 0}
-2025-07-14 23:42:58,173 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
-2025-07-14 23:44:52,446 - ERROR - database - Error in database session: 401: Could not validate credentials
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 460, in get_user_from_service_token
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
-    _validate_claims(
-    ~~~~~~~~~~~~~~~~^
-        claims,
-        ^^^^^^^
-    ...<5 lines>...
-        options=defaults,
-        ^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
-    _validate_exp(claims, leeway=leeway)
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
-    raise ExpiredSignatureError("Signature has expired.")
-jose.exceptions.ExpiredSignatureError: Signature has expired.
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 291, in app
-    solved_result = await solve_dependencies(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<6 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
-    solved = await call(**solved_result.values)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 468, in get_user_from_service_token
-    raise credentials_exception
-fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-14 23:44:52,459 - INFO - database - Session rolled back due to error
-2025-07-14 23:44:58,167 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
-2025-07-14 23:46:58,175 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 4, 'checked_out': 6, 'overflow': 0}
-2025-07-14 23:48:58,163 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
-2025-07-15 01:33:05,787 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 331, in refresh_access_token
-     raise HTTPException(
-    ...<3 lines>...
-    )
-fastapi.exceptions.HTTPException: 401: User not found or inactive
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 362, in refresh_access_token
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
-2025-07-15 01:33:05,860 - ERROR - database - Error in database session: 401: Could not validate credentials
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 1247, in place_pending_order
+    raise HTTPException(status_code=500, detail=f"Failed to process order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to process order: 400: Insufficient free margin
+2025-07-15 05:50:27,124 - INFO - database - Session rolled back due to error
+2025-07-15 05:53:04,314 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 06:00:08,234 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 21:10:38,622 - ERROR - database - Error in database session: 401: Could not validate credentials
 Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 94, in decode_token
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -433,34 +73,8 @@ Traceback (most recent call last):
     ...<3 lines>...
     )
 fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-15 01:33:05,883 - ERROR - database - Error in database session: 500: An error occurred while refreshing token.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 312, in refresh_access_token
-     raise HTTPException(
-    ...<3 lines>...
-    )
-fastapi.exceptions.HTTPException: 401: Invalid or expired refresh token
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 362, in refresh_access_token
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 500: An error occurred while refreshing token.
-2025-07-15 01:33:05,898 - ERROR - database - Error in database session: 401: Could not validate credentials
+2025-07-15 21:10:38,636 - INFO - database - Session rolled back due to error
+2025-07-15 21:10:38,669 - ERROR - database - Error in database session: 401: Could not validate credentials
 Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 94, in decode_token
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -509,7 +123,20 @@ Traceback (most recent call last):
     ...<3 lines>...
     )
 fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-15 01:36:28,935 - ERROR - database - Error in database session: 401: Could not validate credentials
+2025-07-15 21:10:38,675 - INFO - database - Session rolled back due to error
+2025-07-15 21:12:18,384 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 9, 'checked_out': 1, 'overflow': 0}
+2025-07-15 21:14:18,386 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 9, 'checked_out': 1, 'overflow': 0}
+2025-07-15 21:16:18,387 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 9, 'checked_out': 1, 'overflow': 0}
+2025-07-15 21:18:18,389 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 9, 'checked_out': 1, 'overflow': 0}
+2025-07-15 21:20:18,387 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 21:22:18,382 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 21:24:18,387 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 21:26:18,389 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 21:28:18,389 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 8, 'checked_out': 2, 'overflow': 0}
+2025-07-15 21:37:19,420 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 3, 'overflow': 0}
+2025-07-15 21:39:19,424 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 3, 'overflow': 0}
+2025-07-15 21:41:19,421 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 3, 'overflow': 0}
+2025-07-15 21:47:28,218 - ERROR - database - Error in database session: 401: Could not validate credentials
 Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 460, in get_user_from_service_token
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -547,17 +174,15 @@ Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 468, in get_user_from_service_token
     raise credentials_exception
 fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-15 01:50:07,185 - ERROR - database - Error in database session: 500: Error in service_provider_order_execution: 400: close_price is required to close an order.
+2025-07-15 21:47:28,235 - INFO - database - Session rolled back due to error
+2025-07-15 21:48:10,626 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 3, 'overflow': 0}
+2025-07-15 21:50:10,633 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 3, 'overflow': 0}
+2025-07-15 21:52:10,637 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 3, 'overflow': 0}
+2025-07-15 21:57:07,937 - ERROR - database - Error in database session: 500: Failed to update order: 404: Order not found with provided ID
 Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3858, in service_provider_order_execution
-    updated_order = await _handle_order_close_transition(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<5 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 4732, in _handle_order_close_transition
-    raise HTTPException(status_code=400, detail="close_price is required to close an order.")
-fastapi.exceptions.HTTPException: 400: close_price is required to close an order.
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 2901, in update_order_by_service_provider
+    raise HTTPException(status_code=404, detail="Order not found with provided ID")
+fastapi.exceptions.HTTPException: 404: Order not found with provided ID
 
 During handling of the above exception, another exception occurred:
 
@@ -573,145 +198,7 @@ Traceback (most recent call last):
   File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
     return await dependant.call(**values)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3912, in service_provider_order_execution
-    raise HTTPException(status_code=500, detail=error_msg)
-fastapi.exceptions.HTTPException: 500: Error in service_provider_order_execution: 400: close_price is required to close an order.
-2025-07-15 02:04:23,622 - ERROR - database - Error in database session: 401: Could not validate credentials
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 460, in get_user_from_service_token
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 174, in decode
-    _validate_claims(
-    ~~~~~~~~~~~~~~~~^
-        claims,
-        ^^^^^^^
-    ...<5 lines>...
-        options=defaults,
-        ^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 497, in _validate_claims
-    _validate_exp(claims, leeway=leeway)
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\jose\jwt.py", line 331, in _validate_exp
-    raise ExpiredSignatureError("Signature has expired.")
-jose.exceptions.ExpiredSignatureError: Signature has expired.
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 291, in app
-    solved_result = await solve_dependencies(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<6 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\dependencies\utils.py", line 638, in solve_dependencies
-    solved = await call(**solved_result.values)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\core\security.py", line 468, in get_user_from_service_token
-    raise credentials_exception
-fastapi.exceptions.HTTPException: 401: Could not validate credentials
-2025-07-15 02:05:10,063 - ERROR - database - Error in database session: 500: Error in service_provider_order_execution: 400: close_price is required to close an order.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3858, in service_provider_order_execution
-    updated_order = await _handle_order_close_transition(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<5 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 4732, in _handle_order_close_transition
-    raise HTTPException(status_code=400, detail="close_price is required to close an order.")
-fastapi.exceptions.HTTPException: 400: close_price is required to close an order.
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3912, in service_provider_order_execution
-    raise HTTPException(status_code=500, detail=error_msg)
-fastapi.exceptions.HTTPException: 500: Error in service_provider_order_execution: 400: close_price is required to close an order.
-2025-07-15 02:26:16,575 - ERROR - database - Error in database session: 404: No withdraw or deposit wallet records found for this user.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\wallets.py", line 51, in get_my_wallets
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 404: No withdraw or deposit wallet records found for this user.
-2025-07-15 02:26:21,989 - ERROR - database - Error in database session: 404: No withdraw or deposit wallet records found for this user.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\wallets.py", line 51, in get_my_wallets
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 404: No withdraw or deposit wallet records found for this user.
-2025-07-15 02:26:24,775 - ERROR - database - Error in database session: 404: No withdraw or deposit wallet records found for this user.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\wallets.py", line 51, in get_my_wallets
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 404: No withdraw or deposit wallet records found for this user.
-2025-07-15 02:26:31,265 - ERROR - database - Error in database session: 404: No withdraw or deposit wallet records found for this user.
-Traceback (most recent call last):
-  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
-    yield session
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ...<3 lines>...
-    )
-    ^
-  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\wallets.py", line 51, in get_my_wallets
-    raise HTTPException(
-    ...<2 lines>...
-    )
-fastapi.exceptions.HTTPException: 404: No withdraw or deposit wallet records found for this user.
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3572, in update_order_by_service_provider
+    raise HTTPException(status_code=500, detail=f"Failed to update order: {str(e)}")
+fastapi.exceptions.HTTPException: 500: Failed to update order: 404: Order not found with provided ID
+2025-07-15 21:57:07,944 - INFO - database - Session rolled back due to error
