@@ -59,8 +59,9 @@ def setup_stream_logger(name: str, level=logging.ERROR) -> logging.Logger:
 # These loggers track critical business operations and should remain at INFO level
 
 # Order lifecycle tracking
+
 orders_logger = setup_file_logger("orders", "orders.log", logging.INFO)
-autocutoff_logger = setup_file_logger("autocutoff", "autocutoff.log", logging.INFO)
+autocutoff_logger = setup_file_logger("autocutoff", "autocutoff.log", logging.DEBUG if not IS_PRODUCTION else logging.INFO)
 app_logger = setup_file_logger("app", "app.log", logging.DEBUG if not IS_PRODUCTION else logging.INFO)
 
 # Service provider communication (critical for audit trail)

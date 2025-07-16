@@ -247,9 +247,36 @@ async def update_all_users_dynamic_portfolio():
                             'order_user_id': getattr(o, 'order_user_id', None)
                         })
                     
-                    if not open_positions:
-                        # Skip portfolio calculation for users without open positions
+                    # if not open_positions:
+                    #     # Skip portfolio calculation for users without open positions
+                    #     continue
+
+                    # Also include users with pending orders
+                    pending_statuses = ["PENDING", "BUY_LIMIT", "SELL_LIMIT", "BUY_STOP", "SELL_STOP"]
+                    pending_orders_orm = await crud_order.get_orders_by_user_id_and_statuses(db, user_id, pending_statuses, order_model)
+                    pending_positions = []
+                    for po in pending_orders_orm:
+                        pending_positions.append({
+                            'order_id': getattr(po, 'order_id', None),
+                            'order_company_name': getattr(po, 'order_company_name', None),
+                            'order_type': getattr(po, 'order_type', None),
+                            'order_quantity': getattr(po, 'order_quantity', None),
+                            'order_price': getattr(po, 'order_price', None),
+                            'margin': getattr(po, 'margin', None),
+                            'contract_value': getattr(po, 'contract_value', None),
+                            'stop_loss': getattr(po, 'stop_loss', None),
+                            'take_profit': getattr(po, 'take_profit', None),
+                            'commission': getattr(po, 'commission', None),
+                            'order_status': getattr(po, 'order_status', None),
+                            'order_user_id': getattr(po, 'order_user_id', None)
+                        })
+
+                    if not open_positions and not pending_positions:
+                        logger.warning(f"User {user_id} has no open or pending orders. Skipping portfolio update.")
                         continue
+
+                    # Combine open and pending positions for portfolio calculation if needed
+                    all_positions = open_positions + pending_positions
                     
                     # Get adjusted market prices for all relevant symbols
                     adjusted_market_prices = {}

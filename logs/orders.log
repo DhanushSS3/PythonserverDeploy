@@ -532,3 +532,194 @@ fastapi.exceptions.HTTPException: 404: Order not found with provided ID
 2025-07-15 22:03:41,612 - INFO - orders - Background balance/margin cache updated for user 14: balance=9902.02000000, margin=0.0
 2025-07-15 22:03:41,627 - INFO - orders - [BARCLAYS] barclays_push called in place_order
 2025-07-15 22:03:41,958 - INFO - orders - [PUBLISH_ASYNC] Triggering websocket updates for user 14
+2025-07-15 22:55:56,178 - INFO - orders - [CLEANUP] Starting pending order stream cleanup
+2025-07-15 22:55:57,441 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream
+2025-07-15 22:55:57,441 - INFO - orders - [CLEANUP] Pending order stream cleanup completed
+2025-07-15 22:55:57,441 - INFO - orders - [CLEANUP] Starting pending order stream cleanup with trigger price validation
+2025-07-15 22:55:57,441 - INFO - orders - [PENDING_TRIGGER_WORKER] Starting pending order trigger worker
+2025-07-15 22:56:01,519 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream to remove old format entries
+2025-07-15 22:56:01,519 - INFO - orders - [CLEANUP] Pending order stream cleanup with trigger price validation completed
+2025-07-15 22:56:02,445 - INFO - orders - Starting the simplified pending order checker background task.
+2025-07-15 22:56:07,443 - INFO - orders - Starting the users with orders cache updater task.
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 26, Symbol XAGUSD
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol XAGUSD: TotalBuyQty=0.01000000, TotalSellQty=0, NetQty=0.01000000, IsHedged=False
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol XAGUSD: AllMarginsPerLot=[Decimal('1954')], HighestMarginPerLot=1954
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 26, Symbol XAGUSD: CalculatedTotalMargin=19.54
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 26, Symbol BTCUSD
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol BTCUSD: TotalBuyQty=6.00000000, TotalSellQty=0, NetQty=6.00000000, IsHedged=False
+2025-07-15 22:56:19,014 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol BTCUSD: AllMarginsPerLot=[Decimal('24410.82166666666666666666667')], HighestMarginPerLot=24410.82166666666666666666667
+2025-07-15 22:56:19,015 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 26, Symbol BTCUSD: CalculatedTotalMargin=146464.93
+2025-07-15 22:56:19,015 - INFO - orders - [TOTAL_USER_MARGIN] User 26 total margin across all symbols: 146484.47
+2025-07-15 22:56:19,046 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 2 positions for User 1, Symbol AUDJPY
+2025-07-15 22:56:19,046 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.01000000, TotalSellQty=0.01000000, NetQty=0.01000000, IsHedged=True
+2025-07-15 22:56:19,046 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('654.341805'), Decimal('654.258453')], HighestMarginPerLot=654.341805
+2025-07-15 22:56:19,047 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=6.54
+2025-07-15 22:56:19,047 - INFO - orders - [TOTAL_USER_MARGIN] User 1 total margin across all symbols: 6.54
+2025-07-15 22:56:46,234 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-15 22:57:29,514 - INFO - orders - Pending order placement request received - User ID: 14, Symbol: BTCUSD, Type: BUY_LIMIT, Quantity: 1
+2025-07-15 22:57:29,536 - INFO - orders - Calculated contract_value for pending order: 1.00000000 (contract_size: 1.00000000 * quantity: 1)
+2025-07-15 22:57:29,537 - INFO - orders - [DEBUG] User data from cache: {'id': 14, 'email': 'cursordemo3@gmail.com', 'account_number': 'DB7JG', 'group_name': 'Standard', 'leverage': Decimal('100.00'), 'wallet_balance': Decimal('9902.02000000'), 'margin': Decimal('0E-8'), 'user_type': 'live', 'first_name': None, 'last_name': None, 'country': 'India', 'phone_number': Decimal('918618025298')}
+2025-07-15 22:57:29,537 - INFO - orders - [DEBUG] Group name: Standard
+2025-07-15 22:57:29,538 - INFO - orders - User 14 is_barclays_live_user: True (user_type: live, sending_orders_normalized: barclays)
+2025-07-15 22:57:29,543 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for BTCUSD: contract_size=1.00000000, profit_currency=USD, digit=2.00000
+2025-07-15 22:57:29,831 - INFO - orders - [MARGIN_CALC] Market data for BTCUSD: {'b': '117860.2000000000', 'o': '117860.1000000000'}
+2025-07-15 22:57:29,831 - WARNING - orders - [MARGIN_CALC] Missing ask price for BTCUSD, using bid price with spread: bid=117860.2000000000, ask=117871.98602000000000
+2025-07-15 22:57:29,831 - INFO - orders - [MARGIN_CALC] Using prices for BTCUSD: bid=117860.2000000000, ask=117871.98602000000000
+2025-07-15 22:57:29,831 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: BTCUSD, Type: BUY_LIMIT, Qty: 1, Price: 117871.98602000000000, Margin: 23574.40, Commission: 589.36
+2025-07-15 22:57:29,831 - INFO - orders - Calculated initial margin: 23574.40, commission: 589.36 for pending order 1000322-001
+2025-07-15 22:57:29,852 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '1000322-001', 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('1'), 'order_price': Decimal('123'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '1000323-005', 'takeprofit_id': '1000324-006', 'order_user_id': 14, 'order_status': 'PENDING_PROCESSING', 'contract_value': Decimal('1.00000000'), 'margin': Decimal('23574.40'), 'commission': Decimal('589.36'), 'open_time': None}
+2025-07-15 22:57:29,852 - INFO - orders - [BARCLAYS] Setting initial order_status to PENDING_PROCESSING for Barclays user. Will be updated to PENDING after service provider confirmation.
+2025-07-15 22:57:29,852 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 14 at price 123
+2025-07-15 22:57:29,853 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '1000322-001', 'order_status': 'PENDING_PROCESSING', 'order_user_id': 14, 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('123'), 'order_quantity': Decimal('1'), 'contract_value': Decimal('1.00000000'), 'margin': Decimal('23574.40'), 'commission': Decimal('589.36'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '1000323-005', 'takeprofit_id': '1000324-006', 'close_id': None}
+2025-07-15 22:57:29,874 - INFO - orders - Order 1000322-001 verified in database on attempt 1 before adding to Redis.
+2025-07-15 22:57:29,875 - INFO - orders - Skipping Redis storage for Barclays user pending order 1000322-001
+2025-07-15 22:57:29,884 - INFO - orders - [PERF] TOTAL place_order: 0.3714s
+2025-07-15 22:57:29,906 - INFO - orders - Background balance/margin cache updated for user 14: balance=9902.02000000, margin=0.0
+2025-07-15 22:57:29,916 - INFO - orders - [BARCLAYS] barclays_push called for user 14, is_barclays_live_user=True
+2025-07-15 22:58:13,518 - INFO - orders - Service provider update request received: {"order_id":"1000322-001","order_status":"PENDING","status":"PENDING"}
+2025-07-15 22:58:13,533 - INFO - orders - Original order status: PENDING_PROCESSING
+2025-07-15 22:58:13,533 - INFO - orders - Update fields: {'order_id': '1000322-001', 'order_status': 'PENDING', 'status': 'PENDING'}
+2025-07-15 22:58:13,533 - INFO - orders - Processing regular update for order 1000322-001
+2025-07-15 22:58:13,560 - INFO - orders - Balance/margin cache updated for user 14: balance=9902.02000000, margin=0.0
+2025-07-15 22:58:13,560 - INFO - orders - Starting update_user_static_orders for user 14, user_type live
+2025-07-15 22:58:13,560 - INFO - orders - Using order model: UserOrder
+2025-07-15 22:58:13,563 - INFO - orders - Fetched 0 open orders for user 14
+2025-07-15 22:58:13,566 - INFO - orders - Fetched 1 pending orders for user 14
+2025-07-15 22:58:13,567 - INFO - orders - Updated static orders cache for user 14 with 0 open orders and 1 pending orders
+2025-07-15 22:58:13,573 - INFO - orders - User 14: Updated balance/margin cache after static orders update - balance=9902.02000000, margin=0.0
+2025-07-15 22:58:14,627 - INFO - orders - Starting update_user_static_orders for user 14, user_type live
+2025-07-15 22:58:14,628 - INFO - orders - Using order model: UserOrder
+2025-07-15 22:58:14,631 - INFO - orders - Fetched 0 open orders for user 14
+2025-07-15 22:58:14,634 - INFO - orders - Fetched 0 pending orders for user 14
+2025-07-15 22:58:14,636 - INFO - orders - Updated static orders cache for user 14 with 0 open orders and 0 pending orders
+2025-07-15 22:58:14,642 - INFO - orders - User 14: Updated balance/margin cache after static orders update - balance=9902.02000000, margin=0.0
+2025-07-15 22:58:25,772 - INFO - orders - Pending order placement request received - User ID: 14, Symbol: BTCUSD, Type: BUY_LIMIT, Quantity: 1
+2025-07-15 22:58:25,798 - INFO - orders - Calculated contract_value for pending order: 1.00000000 (contract_size: 1.00000000 * quantity: 1)
+2025-07-15 22:58:25,800 - INFO - orders - [DEBUG] User data from cache: {'id': 14, 'email': 'cursordemo3@gmail.com', 'group_name': 'Standard', 'leverage': Decimal('100.00'), 'user_type': 'live', 'account_number': 'DB7JG', 'wallet_balance': Decimal('9902.02000000'), 'margin': Decimal('0.0'), 'first_name': None, 'last_name': None, 'country': 'India', 'phone_number': Decimal('918618025298')}
+2025-07-15 22:58:25,800 - INFO - orders - [DEBUG] Group name: Standard
+2025-07-15 22:58:25,801 - INFO - orders - User 14 is_barclays_live_user: True (user_type: live, sending_orders_normalized: barclays)
+2025-07-15 22:58:25,803 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for BTCUSD: contract_size=1.00000000, profit_currency=USD, digit=2.00000
+2025-07-15 22:58:26,208 - INFO - orders - [MARGIN_CALC] Market data for BTCUSD: {'b': '117849.8000000000', 'o': '117849.7000000000'}
+2025-07-15 22:58:26,208 - WARNING - orders - [MARGIN_CALC] Missing ask price for BTCUSD, using bid price with spread: bid=117849.8000000000, ask=117861.58498000000000
+2025-07-15 22:58:26,209 - INFO - orders - [MARGIN_CALC] Using prices for BTCUSD: bid=117849.8000000000, ask=117861.58498000000000
+2025-07-15 22:58:26,209 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: BTCUSD, Type: BUY_LIMIT, Qty: 1, Price: 117861.58498000000000, Margin: 23572.32, Commission: 589.31
+2025-07-15 22:58:26,209 - INFO - orders - Calculated initial margin: 23572.32, commission: 589.31 for pending order 1000326-001
+2025-07-15 22:58:26,230 - INFO - orders - [DEBUG][pending_order] Prepared order_data_for_internal_processing: {'order_id': '1000326-001', 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_quantity': Decimal('1'), 'order_price': Decimal('155'), 'user_type': 'live', 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '1000327-005', 'takeprofit_id': '1000328-006', 'order_user_id': 14, 'order_status': 'PENDING_PROCESSING', 'contract_value': Decimal('1.00000000'), 'margin': Decimal('23572.32'), 'commission': Decimal('589.31'), 'open_time': None}
+2025-07-15 22:58:26,230 - INFO - orders - [BARCLAYS] Setting initial order_status to PENDING_PROCESSING for Barclays user. Will be updated to PENDING after service provider confirmation.
+2025-07-15 22:58:26,230 - INFO - orders - Placing PENDING order: BUY_LIMIT for user 14 at price 155
+2025-07-15 22:58:26,230 - INFO - orders - [ENTER-CRUD] create_order called with: {'order_id': '1000326-001', 'order_status': 'PENDING_PROCESSING', 'order_user_id': 14, 'order_company_name': 'BTCUSD', 'order_type': 'BUY_LIMIT', 'order_price': Decimal('155'), 'order_quantity': Decimal('1'), 'contract_value': Decimal('1.00000000'), 'margin': Decimal('23572.32'), 'commission': Decimal('589.31'), 'status': 'PENDING', 'stop_loss': Decimal('0'), 'take_profit': Decimal('0'), 'stoploss_id': '1000327-005', 'takeprofit_id': '1000328-006', 'close_id': None}
+2025-07-15 22:58:26,254 - INFO - orders - Order 1000326-001 verified in database on attempt 1 before adding to Redis.
+2025-07-15 22:58:26,255 - INFO - orders - Skipping Redis storage for Barclays user pending order 1000326-001
+2025-07-15 22:58:26,276 - INFO - orders - [PERF] TOTAL place_order: 0.5042s
+2025-07-15 22:58:26,318 - INFO - orders - Background balance/margin cache updated for user 14: balance=9902.02000000, margin=0.0
+2025-07-15 22:58:26,333 - INFO - orders - [BARCLAYS] barclays_push called for user 14, is_barclays_live_user=True
+2025-07-15 22:58:33,065 - INFO - orders - Service provider update request received: {"order_id":"1000326-001","order_status":"PENDING","status":"PENDING"}
+2025-07-15 22:58:33,072 - INFO - orders - Original order status: PENDING_PROCESSING
+2025-07-15 22:58:33,072 - INFO - orders - Update fields: {'order_id': '1000326-001', 'order_status': 'PENDING', 'status': 'PENDING'}
+2025-07-15 22:58:33,072 - INFO - orders - Processing regular update for order 1000326-001
+2025-07-15 22:58:33,101 - INFO - orders - Balance/margin cache updated for user 14: balance=9902.02000000, margin=0.0
+2025-07-15 22:58:33,101 - INFO - orders - Starting update_user_static_orders for user 14, user_type live
+2025-07-15 22:58:33,102 - INFO - orders - Using order model: UserOrder
+2025-07-15 22:58:33,105 - INFO - orders - Fetched 0 open orders for user 14
+2025-07-15 22:58:33,108 - INFO - orders - Fetched 1 pending orders for user 14
+2025-07-15 22:58:33,108 - INFO - orders - Updated static orders cache for user 14 with 0 open orders and 1 pending orders
+2025-07-15 22:58:33,113 - INFO - orders - User 14: Updated balance/margin cache after static orders update - balance=9902.02000000, margin=0.0
+2025-07-15 22:58:33,685 - INFO - orders - Starting update_user_static_orders for user 14, user_type live
+2025-07-15 22:58:33,686 - INFO - orders - Using order model: UserOrder
+2025-07-15 22:58:33,696 - INFO - orders - Fetched 0 open orders for user 14
+2025-07-15 22:58:33,718 - INFO - orders - Fetched 0 pending orders for user 14
+2025-07-15 22:58:33,731 - INFO - orders - Updated static orders cache for user 14 with 0 open orders and 0 pending orders
+2025-07-15 22:58:33,753 - INFO - orders - User 14: Updated balance/margin cache after static orders update - balance=9902.02000000, margin=0.0
+2025-07-15 22:58:36,160 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-15 22:58:46,575 - INFO - orders - [get_closed_orders] user_type: live
+2025-07-15 22:59:00,969 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-15 23:00:08,704 - INFO - orders - Order placement request received - User: 14, Symbol: BTCUSD, Type: BUY
+2025-07-15 23:00:09,062 - INFO - orders - [MARGIN_CALC] Market data for BTCUSD: {'b': '117858.5000000000', 'o': '117858.4000000000'}
+2025-07-15 23:00:09,062 - WARNING - orders - [MARGIN_CALC] Missing ask price for BTCUSD, using bid price with spread: bid=117858.5000000000, ask=117870.28585000000000
+2025-07-15 23:00:09,062 - INFO - orders - [MARGIN_CALC] Using prices for BTCUSD: bid=117858.5000000000, ask=117870.28585000000000
+2025-07-15 23:00:09,062 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: BTCUSD, Type: BUY, Qty: 0.4, Price: 117870.28585000000000, Margin: 9429.62, Commission: 235.74
+2025-07-15 23:00:09,062 - INFO - orders - [HEDGING_MARGIN_DEBUG] Starting hedging calculation for User: 14, Symbol: BTCUSD, OrderType: BUY, Quantity: 0.4, FullMargin: 9429.62
+2025-07-15 23:00:09,063 - INFO - orders - [HEDGING_MARGIN_DEBUG] Existing open orders count: 0
+2025-07-15 23:00:09,063 - INFO - orders - [HEDGING_MARGIN_DEBUG] Created simulated order: Type=BUY, Qty=0.4, Margin=9429.62
+2025-07-15 23:00:09,063 - INFO - orders - [HEDGING_MARGIN_DEBUG] About to calculate margin before and after for 0 existing orders + 1 new order
+2025-07-15 23:00:09,063 - INFO - orders - [HEDGING_MARGIN_DEBUG] Executing margin calculation tasks...
+2025-07-15 23:00:09,064 - INFO - orders - [MARGIN_TOTAL_CONTRIB] No open positions for User 14, Symbol BTCUSD. Returning zero margin.
+2025-07-15 23:00:09,064 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 14, Symbol BTCUSD
+2025-07-15 23:00:09,064 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: TotalBuyQty=0.4, TotalSellQty=0, NetQty=0.4, IsHedged=False
+2025-07-15 23:00:09,065 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: AllMarginsPerLot=[Decimal('23574.05')], HighestMarginPerLot=23574.05
+2025-07-15 23:00:09,065 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 14, Symbol BTCUSD: CalculatedTotalMargin=9429.62
+2025-07-15 23:00:09,065 - INFO - orders - [HEDGING_MARGIN_DEBUG] Margin calculation tasks completed
+2025-07-15 23:00:09,065 - INFO - orders - [HEDGING_MARGIN_DEBUG] User: 14, Symbol: BTCUSD, OrderType: BUY, MarginBefore: 0.0, MarginAfter: 9429.62, AdditionalMargin: 9429.62, OpenOrders: 0
+2025-07-15 23:00:09,066 - INFO - orders - [HEDGING_MARGIN_DEBUG] Simulated order: Type=BUY, Qty=0.4, Margin=9429.62
+2025-07-15 23:00:09,066 - INFO - orders - [PERF] Order processing: 0.3594s
+2025-07-15 23:00:09,080 - INFO - orders - [PERF] Order creation: 0.0136s
+2025-07-15 23:00:09,080 - INFO - orders - is_barclays_live_user in place_order: True
+2025-07-15 23:00:09,080 - INFO - orders - [BARCLAYS] Scheduling barclays_push in place_order
+2025-07-15 23:00:09,080 - INFO - orders - [PERF] TOTAL place_order: 0.3811s
+2025-07-15 23:00:09,105 - INFO - orders - Background balance/margin cache updated for user 14: balance=9902.02000000, margin=0.0
+2025-07-15 23:00:09,117 - INFO - orders - [BARCLAYS] barclays_push called in place_order
+2025-07-15 23:00:09,518 - INFO - orders - [PUBLISH_ASYNC] Triggering websocket updates for user 14
+2025-07-15 23:02:06,574 - INFO - orders - [CLEANUP] Starting pending order stream cleanup
+2025-07-15 23:02:07,705 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream
+2025-07-15 23:02:07,705 - INFO - orders - [CLEANUP] Pending order stream cleanup completed
+2025-07-15 23:02:07,705 - INFO - orders - [CLEANUP] Starting pending order stream cleanup with trigger price validation
+2025-07-15 23:02:07,705 - INFO - orders - [PENDING_TRIGGER_WORKER] Starting pending order trigger worker
+2025-07-15 23:02:11,777 - INFO - orders - [CLEANUP] Cleared pending_trigger_queue stream to remove old format entries
+2025-07-15 23:02:11,777 - INFO - orders - [CLEANUP] Pending order stream cleanup with trigger price validation completed
+2025-07-15 23:02:12,705 - INFO - orders - Starting the simplified pending order checker background task.
+2025-07-15 23:02:17,717 - INFO - orders - Starting the users with orders cache updater task.
+2025-07-15 23:02:22,556 - INFO - orders - [get_closed_orders] user_type: live
+2025-07-15 23:02:24,089 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 26, Symbol XAGUSD
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol XAGUSD: TotalBuyQty=0.01000000, TotalSellQty=0, NetQty=0.01000000, IsHedged=False
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol XAGUSD: AllMarginsPerLot=[Decimal('1954')], HighestMarginPerLot=1954
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 26, Symbol XAGUSD: CalculatedTotalMargin=19.54
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 26, Symbol BTCUSD
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol BTCUSD: TotalBuyQty=6.00000000, TotalSellQty=0, NetQty=6.00000000, IsHedged=False
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 26, Symbol BTCUSD: AllMarginsPerLot=[Decimal('24410.82166666666666666666667')], HighestMarginPerLot=24410.82166666666666666666667
+2025-07-15 23:02:31,260 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 26, Symbol BTCUSD: CalculatedTotalMargin=146464.93
+2025-07-15 23:02:31,260 - INFO - orders - [TOTAL_USER_MARGIN] User 26 total margin across all symbols: 146484.47
+2025-07-15 23:02:31,293 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 2 positions for User 1, Symbol AUDJPY
+2025-07-15 23:02:31,293 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: TotalBuyQty=0.01000000, TotalSellQty=0.01000000, NetQty=0.01000000, IsHedged=True
+2025-07-15 23:02:31,293 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 1, Symbol AUDJPY: AllMarginsPerLot=[Decimal('654.341805'), Decimal('654.258453')], HighestMarginPerLot=654.341805
+2025-07-15 23:02:31,293 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 1, Symbol AUDJPY: CalculatedTotalMargin=6.54
+2025-07-15 23:02:31,293 - INFO - orders - [TOTAL_USER_MARGIN] User 1 total margin across all symbols: 6.54
+2025-07-15 23:02:52,383 - INFO - orders - Order 1000330-001 transitioning to OPEN. Calculating margin.
+2025-07-15 23:02:52,384 - INFO - orders - Using fixed UserOrder model for Barclays service provider integration
+2025-07-15 23:02:52,385 - INFO - orders - Using group_name: Standard for order 1000330-001
+2025-07-15 23:02:52,753 - INFO - orders - [SYMBOL_INFO] Retrieved external symbol info for BTCUSD: contract_size=1.00000000, profit_currency=USD, digit=2.00000
+2025-07-15 23:02:52,753 - INFO - orders - Using user's leverage from cache: 100.00
+2025-07-15 23:02:52,753 - INFO - orders - [MARGIN_CALC] Market data for BTCUSD: {'b': '117772.3300000000', 'o': '117772.3300000000'}
+2025-07-15 23:02:52,754 - WARNING - orders - [MARGIN_CALC] Missing ask price for BTCUSD, using bid price with spread: bid=117772.3300000000, ask=117784.10723300000000
+2025-07-15 23:02:52,754 - INFO - orders - [MARGIN_CALC] Using prices for BTCUSD: bid=117772.3300000000, ask=117784.10723300000000
+2025-07-15 23:02:52,754 - INFO - orders - [MARGIN_CALC_OPTIMIZED] Symbol: BTCUSD, Type: BUY, Qty: 0.40000000, Price: 117784.10723300000000, Margin: 9422.73, Commission: 235.57
+2025-07-15 23:02:52,754 - INFO - orders - New margin calculated: 9422.73, contract_value: 0.40
+2025-07-15 23:02:52,754 - INFO - orders - [MARGIN] Final stored margin (USD): 9422.73
+2025-07-15 23:02:52,754 - INFO - orders - Recalculating total hedged margin for user 14 on symbol BTCUSD
+2025-07-15 23:02:52,757 - INFO - orders - Found 0 existing open positions for this symbol
+2025-07-15 23:02:52,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB] No open positions for User 14, Symbol BTCUSD. Returning zero margin.
+2025-07-15 23:02:52,757 - INFO - orders - Old total margin for BTCUSD: 0.0
+2025-07-15 23:02:52,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 14, Symbol BTCUSD
+2025-07-15 23:02:52,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: TotalBuyQty=0.40000000, TotalSellQty=0, NetQty=0.40000000, IsHedged=False
+2025-07-15 23:02:52,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: AllMarginsPerLot=[Decimal('23556.825')], HighestMarginPerLot=23556.825
+2025-07-15 23:02:52,757 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 14, Symbol BTCUSD: CalculatedTotalMargin=9422.73
+2025-07-15 23:02:52,757 - INFO - orders - New total margin for BTCUSD: 9422.73
+2025-07-15 23:02:52,757 - INFO - orders - Margin change for user 14: 9422.73
+2025-07-15 23:02:52,762 - INFO - orders - User 14 margin updated from 0 to 9422.73
+2025-07-15 23:02:52,804 - INFO - orders - Starting update_user_static_orders for user 14, user_type live
+2025-07-15 23:02:52,804 - INFO - orders - Using order model: UserOrder
+2025-07-15 23:02:52,808 - INFO - orders - Fetched 1 open orders for user 14
+2025-07-15 23:02:52,811 - INFO - orders - Fetched 0 pending orders for user 14
+2025-07-15 23:02:52,811 - INFO - orders - Updated static orders cache for user 14 with 1 open orders and 0 pending orders
+2025-07-15 23:02:52,815 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 14, Symbol BTCUSD
+2025-07-15 23:02:52,815 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: TotalBuyQty=0.40000000, TotalSellQty=0, NetQty=0.40000000, IsHedged=False
+2025-07-15 23:02:52,815 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: AllMarginsPerLot=[Decimal('23556.825')], HighestMarginPerLot=23556.825
+2025-07-15 23:02:52,815 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 14, Symbol BTCUSD: CalculatedTotalMargin=9422.73
+2025-07-15 23:02:52,815 - INFO - orders - [TOTAL_USER_MARGIN] User 14 total margin across all symbols: 9422.73
+2025-07-15 23:02:52,817 - INFO - orders - User 14: Updated balance/margin cache after static orders update - balance=9902.02000000, margin=9422.73
+2025-07-15 23:05:06,107 - INFO - orders - [get_rejected_orders] user_type: live
+2025-07-15 23:05:09,105 - INFO - orders - [MARGIN_TOTAL_CONTRIB] Calculating margin for 1 positions for User 14, Symbol BTCUSD
+2025-07-15 23:05:09,106 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: TotalBuyQty=0.40000000, TotalSellQty=0, NetQty=0.40000000, IsHedged=False
+2025-07-15 23:05:09,106 - INFO - orders - [MARGIN_TOTAL_CONTRIB_CALC] User 14, Symbol BTCUSD: AllMarginsPerLot=[Decimal('23556.825')], HighestMarginPerLot=23556.825
+2025-07-15 23:05:09,106 - INFO - orders - [MARGIN_TOTAL_CONTRIB_EXIT] User 14, Symbol BTCUSD: CalculatedTotalMargin=9422.73
+2025-07-15 23:05:09,106 - INFO - orders - [TOTAL_USER_MARGIN] User 14 total margin across all symbols: 9422.73

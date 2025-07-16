@@ -581,14 +581,18 @@ async def place_order(
         
         # Step 4: Process order with optimized function
         start_processing = time.perf_counter()
-        processed_order_data = await process_new_order(
-            db=db,
-            redis_client=redis_client,
-            user_id=user_id,
-            order_data=order_data,
-            user_type=user_type,
-            is_barclays_live_user=is_barclays_user_result
-        )
+        try:
+            processed_order_data = await process_new_order(
+                db=db,
+                redis_client=redis_client,
+                user_id=user_id,
+                order_data=order_data,
+                user_type=user_type,
+                is_barclays_live_user=is_barclays_user_result
+            )
+        except InsufficientFundsError:
+            orders_logger.info(f"User {user_id} has insufficient free margin for order {symbol} {order_type} {quantity}")
+            raise HTTPException(status_code=400, detail="Insufficient free margin")
         processing_time = time.perf_counter() - start_processing
         orders_logger.info(f"[PERF] Order processing: {processing_time:.4f}s")
         
@@ -1660,7 +1664,7 @@ async def close_order(
 
                 # Get all open orders for this symbol to recalculate margin
                 all_open_orders_for_symbol = await crud_order.get_open_orders_by_user_id_and_symbol(
-                    db=db, user_id=db_user_locked.id, symbol=order_symbol, order_model=order_model_class
+                    db=db, user_id=db_user_locked.id, symbol=db_order.order_company_name, order_model=order_model_class
                 )
 
                 # Calculate margin before closing this order
@@ -1668,7 +1672,7 @@ async def close_order(
                     db=db,
                     redis_client=redis_client,
                     user_id=db_user_locked.id,
-                    symbol=order_symbol,
+                    symbol=db_order.order_company_name,
                     open_positions_for_symbol=all_open_orders_for_symbol,
                     user_type=user_type,
                     order_model=order_model_class
@@ -1683,7 +1687,7 @@ async def close_order(
                     db=db,
                     redis_client=redis_client,
                     user_id=db_user_locked.id,
-                    symbol=order_symbol,
+                    symbol=db_order.order_company_name,
                     open_positions_for_symbol=remaining_orders_for_symbol_after_close,
                     user_type=user_type,
                     order_model=order_model_class
@@ -3724,7 +3728,6 @@ async def _handle_order_open_transition(
         new_margin = original_margin + margin_change
         if actual_user.wallet_balance < new_margin:
             orders_logger.error(f"User {db_order.order_user_id} does not have enough wallet balance to cover margin. wallet_balance={actual_user.wallet_balance}, new_margin={new_margin}")
-            raise HTTPException(status_code=400, detail="Insufficient funds to cover margin")
         actual_user.margin = new_margin
         db.add(actual_user)
         update_fields['user_margin_after'] = new_margin
