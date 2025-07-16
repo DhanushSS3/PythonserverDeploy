@@ -14,6 +14,7 @@ async def get_redis_client() -> Redis:
     if global_redis_client_instance is None:
         logger.warning("Redis client not initialized, attempting late connection.")
         global_redis_client_instance = await connect_to_redis()
+        # logger.info(f"Connecting to Redis at {settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
         if global_redis_client_instance is None:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Redis unavailable")
     return global_redis_client_instance
