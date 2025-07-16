@@ -14,6 +14,9 @@ from app.core.logging_config import orders_logger
 
 logger = logging.getLogger(__name__)
 
+class CurrencyConversionError(Exception):
+    pass
+
 async def _convert_to_usd(
     amount: Decimal,
     from_currency: str,
@@ -25,6 +28,7 @@ async def _convert_to_usd(
 ) -> Decimal:
     """
     Converts an amount from a given currency to USD using raw market prices.
+    Raises CurrencyConversionError if conversion fails.
     """
     try:
         orders_logger.info(f"[CURRENCY_CONVERT] Starting conversion of {amount} {from_currency} to USD for {value_description} (user_id: {user_id}, position: {position_id})")
@@ -47,15 +51,12 @@ async def _convert_to_usd(
             try:
                 rate = Decimal(str(rate_str))
                 if rate <= 0:
-                    orders_logger.error(f"[CURRENCY_CONVERT] Invalid direct conversion rate for {direct_conversion_symbol}: {rate}")
-                    return amount
-                
+                    raise CurrencyConversionError(f"Invalid direct conversion rate for {direct_conversion_symbol}: {rate}")
                 converted_amount_usd = amount * rate
                 orders_logger.info(f"[CURRENCY_CONVERT] Direct conversion successful: {amount} {from_currency} * {rate} = {converted_amount_usd} USD")
                 return converted_amount_usd
             except (InvalidOperation, TypeError) as e:
-                orders_logger.error(f"[CURRENCY_CONVERT] Error converting direct rate to Decimal: {e}, rate_str: {rate_str}")
-                # Continue to try inverse conversion
+                raise CurrencyConversionError(f"Error converting direct rate to Decimal: {e}, rate_str: {rate_str}")
         else:
             orders_logger.info(f"[CURRENCY_CONVERT] No direct conversion rate found for {direct_conversion_symbol}, trying inverse")
 
@@ -73,26 +74,22 @@ async def _convert_to_usd(
             try:
                 rate = Decimal(str(rate_str))
                 if rate <= 0:
-                    orders_logger.error(f"[CURRENCY_CONVERT] Invalid inverse conversion rate for {inverse_conversion_symbol}: {rate}")
-                    return amount
-                
+                    raise CurrencyConversionError(f"Invalid inverse conversion rate for {inverse_conversion_symbol}: {rate}")
                 converted_amount_usd = amount / rate
                 orders_logger.info(f"[CURRENCY_CONVERT] Inverse conversion successful: {amount} {from_currency} / {rate} = {converted_amount_usd} USD")
                 return converted_amount_usd
             except (InvalidOperation, TypeError) as e:
-                orders_logger.error(f"[CURRENCY_CONVERT] Error converting inverse rate to Decimal: {e}, rate_str: {rate_str}")
-                # Fall through to error case
+                raise CurrencyConversionError(f"Error converting inverse rate to Decimal: {e}, rate_str: {rate_str}")
         else:
             orders_logger.info(f"[CURRENCY_CONVERT] No inverse conversion rate found for {inverse_conversion_symbol}")
 
-        orders_logger.error(f"[CURRENCY_CONVERT] No conversion rate found for {from_currency} to USD for {value_description}")
-        orders_logger.error(f"[CURRENCY_CONVERT] Returning original amount without conversion: {amount} {from_currency}")
-        return amount
+        raise CurrencyConversionError(f"No conversion rate found for {from_currency} to USD for {value_description}")
 
+    except CurrencyConversionError:
+        raise
     except Exception as e:
         orders_logger.error(f"[CURRENCY_CONVERT] Error converting {value_description} from {from_currency} to USD: {e}", exc_info=True)
-        orders_logger.error(f"[CURRENCY_CONVERT] Returning original amount due to error: {amount} {from_currency}")
-        return amount
+        raise CurrencyConversionError(f"Error converting {value_description} from {from_currency} to USD: {e}")
 
 async def _calculate_adjusted_prices_from_raw(
     symbol: str,

@@ -102,6 +102,7 @@ from app.core.cache import (
 )
 from app.core.firebase import get_latest_market_data
 from app.core.logging_config import orders_logger
+from app.services.portfolio_calculator import CurrencyConversionError
 
 # Use the orders_logger instead of creating a new logger
 logger = orders_logger
@@ -364,19 +365,23 @@ async def process_new_order_ultra_optimized(
 
         # Step 5: ULTRA-OPTIMIZED margin calculation
         order_price = Decimal(str(order_data.get('order_price', '0')))
-        full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
-            redis_client=redis_client,
-            symbol=symbol,
-            order_type=order_type,
-            quantity=quantity,
-            user_leverage=leverage,
-            group_settings=group_settings,
-            external_symbol_info=external_symbol_info,
-            raw_market_data=raw_market_data,
-            db=db,
-            user_id=user_id,
-            order_price=order_price
-        )
+        try:
+            full_margin_usd, price, contract_value, commission = await calculate_single_order_margin(
+                redis_client=redis_client,
+                symbol=symbol,
+                order_type=order_type,
+                quantity=quantity,
+                user_leverage=leverage,
+                group_settings=group_settings,
+                external_symbol_info=external_symbol_info,
+                raw_market_data=raw_market_data,
+                db=db,
+                user_id=user_id,
+                order_price=order_price
+            )
+        except CurrencyConversionError as cce:
+            logger.error(f"Currency conversion failed: {cce}")
+            raise OrderProcessingError(f"Currency conversion failed: {cce}")
         if full_margin_usd is None:
             raise OrderProcessingError("Margin calculation failed")
 
