@@ -774,7 +774,15 @@ async def startup_event():
                 #     print(f"[STARTUP] Error fetching Redis keys: {e}")
     except Exception:
         logger.warning("Redis initialization failed")
-    
+    from app.core.cache import cache_all_groups_and_symbols
+    try:
+        if global_redis_client_instance:
+            async with AsyncSessionLocal() as db:
+                await cache_all_groups_and_symbols(global_redis_client_instance, db)
+            logger.info("All group settings and group-symbol settings cached in Redis at startup.")
+    except Exception as e:
+        logger.error(f"Error caching all group settings at startup: {e}", exc_info=True)
+
     # Initialize APScheduler
     try:
         scheduler = AsyncIOScheduler()

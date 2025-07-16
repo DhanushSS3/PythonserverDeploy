@@ -1327,3 +1327,25 @@ async def cache_user_group_settings_and_symbols(user, db, redis_client):
     for info in all_symbol_info:
         # Optionally cache to Redis if you have a cache function for external symbol info
         pass
+
+
+# app/core/cache.py
+
+from app.crud import group as crud_group
+
+async def cache_all_groups_and_symbols(redis_client, db):
+    """
+    Fetch all groups from the DB and cache their settings and symbol settings in Redis.
+    """
+    groups = await crud_group.get_groups(db)
+    for group in groups:
+        # Cache general group settings
+        settings = {
+            "sending_orders": getattr(group, 'sending_orders', None),
+            # Add more group-level settings here if needed
+        }
+        await set_group_settings_cache(redis_client, group.name, settings)
+        # Cache group-symbol settings if symbol is present
+        if group.symbol:
+            symbol_settings = {k: getattr(group, k) for k in group.__table__.columns.keys()}
+            await set_group_symbol_settings_cache(redis_client, group.name, group.symbol, symbol_settings)

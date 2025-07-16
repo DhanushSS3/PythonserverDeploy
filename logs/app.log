@@ -1,0 +1,321 @@
+2025-07-16 06:13:11,381 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-16 06:13:11,432 - INFO - app.core.config - .env file loaded successfully.
+2025-07-16 06:13:11,452 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-16 06:13:11,452 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-16 06:13:11,939 - INFO - app - Application starting up - Trading system initialized
+2025-07-16 06:13:11,940 - INFO - app - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-16 06:13:11,940 - INFO - app - Environment: DEVELOPMENT
+2025-07-16 06:13:11,999 - INFO - app - Application startup initiated
+2025-07-16 06:13:11,999 - INFO - app - Initializing core services...
+2025-07-16 06:13:12,066 - INFO - app - Firebase initialized
+2025-07-16 06:13:12,066 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-07-16 06:13:12,105 - INFO - app - Redis initialized
+2025-07-16 06:13:12,106 - ERROR - app - Error caching all group settings at startup: name 'cache_all_groups_and_symbols' is not defined
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\main.py", line 781, in startup_event
+    await cache_all_groups_and_symbols(global_redis_client_instance, db)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'cache_all_groups_and_symbols' is not defined
+2025-07-16 06:13:12,117 - INFO - app - [SWAP] daily_swap_charge_job triggered
+2025-07-16 06:13:12,117 - INFO - app - [AUTO-CUTOFF] Scheduled update_all_users_dynamic_portfolio job to run every 1 minute.
+2025-07-16 06:13:12,118 - INFO - app - Scheduler initialized
+2025-07-16 06:13:12,123 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-07-16 06:13:12,124 - DEBUG - app.firebase_stream - Successfully got running event loop in process_firebase_events task.
+2025-07-16 06:13:12,124 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-07-16 06:13:13,378 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-07-16 06:13:13,415 - DEBUG - app.firebase_stream - Firebase listener triggered (1). Event Type: put, Path: /. Timestamp: 1752671593.38242
+2025-07-16 06:13:13,415 - DEBUG - app.firebase_stream - Prepared batch update for 48 symbols from root path for queue. Preview: {'AUDCAD': {'b': '0.8946400000', 'o': '0.8946000000'}, 'AUDCHF': {'b': '0.5240000000', 'o': '0.5239400000'}, 'AUDJPY': {'b': '96.9240000000', 'o': '96.9180000000'}, 'AUDNZD': {'b': '1.0000000000', 'o'
+2025-07-16 06:13:13,416 - INFO - app - Starting stale cache cleanup task
+2025-07-16 06:13:13,417 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'AUDCAD': {'b': '0.8946400000', 'o': '0.8946000000'}, 'AUDCHF': {'b': '0.5240000000', 'o': '0.5239400000'}, 'AUDJPY': {'b': '96.9240000000', 'o': '96.9180000000'}, 'AUDNZD': {'b': '1.0000000000', 'o'...
+2025-07-16 06:13:13,417 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type put at path /.
+2025-07-16 06:13:13,467 - INFO - app - Cleaned up pending order stream for new trigger price format
+2025-07-16 06:13:13,467 - INFO - app - Background tasks initialized
+2025-07-16 06:13:13,672 - DEBUG - app.firebase_stream - Firebase listener triggered (2). Event Type: patch, Path: /. Timestamp: 1752671593.6725132
+2025-07-16 06:13:13,672 - DEBUG - app.firebase_stream - Prepared batch update for 13 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0792000000', 'o': '13.0766000000'}, 'GBPAUD': {'b': '2.0544700000', 'o': '2.0543100000'}, 'USDJPY': {'b': '148.7380000000', 'o': '148.7380000000'}, 'USDCNH': {'b': '7.1838600000',
+2025-07-16 06:13:13,673 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'GBPSEK': {'b': '13.0792000000', 'o': '13.0766000000'}, 'GBPAUD': {'b': '2.0544700000', 'o': '2.0543100000'}, 'USDJPY': {'b': '148.7380000000', 'o': '148.7380000000'}, 'USDCNH': {'b': '7.1838600000',...
+2025-07-16 06:13:13,674 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:14,214 - INFO - app - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-07-16 06:13:14,214 - INFO - app - Application startup completed successfully
+2025-07-16 06:13:14,215 - INFO - app - Starting cache validation task
+2025-07-16 06:13:14,220 - INFO - app - Starting Barclays pending order margin checker task.
+2025-07-16 06:13:14,221 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:14,225 - INFO - app - Starting auto-cutoff order monitoring task.
+2025-07-16 06:13:14,234 - INFO - app - Found 7 static orders cache entries to check
+2025-07-16 06:13:14,236 - WARNING - app - Found stale cache entry for user 13, will be refreshed on next access
+2025-07-16 06:13:14,238 - WARNING - app - Found stale cache entry for user 4, will be refreshed on next access
+2025-07-16 06:13:14,244 - WARNING - app - Found stale cache entry for user 12, will be refreshed on next access
+2025-07-16 06:13:14,245 - INFO - app - Completed stale cache cleanup task
+2025-07-16 06:13:14,455 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:14,459 - INFO - app - Validating cache for 30 users
+2025-07-16 06:13:14,474 - WARNING - app - User 4: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,494 - WARNING - app - User 5: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,500 - WARNING - app - User 8: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,529 - WARNING - app - User 9: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,540 - WARNING - app - User 10: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,549 - WARNING - app - User 11: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,560 - WARNING - app - User 12: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,569 - WARNING - app - User 13: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,580 - WARNING - app - User 16: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,593 - WARNING - app - User 17: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,604 - WARNING - app - User 18: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,615 - WARNING - app - User 19: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,625 - WARNING - app - User 20: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,635 - WARNING - app - User 21: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,647 - WARNING - app - User 22: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,658 - WARNING - app - User 23: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,669 - WARNING - app - User 25: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,677 - WARNING - app - User 26: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,686 - WARNING - app - User 1: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,700 - WARNING - app - User 2: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,710 - WARNING - app - User 3: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,722 - WARNING - app - User 5: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,732 - WARNING - app - User 6: Missing balance/margin cache, refreshing...
+2025-07-16 06:13:14,762 - INFO - app - Cache validation completed
+2025-07-16 06:13:15,475 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:15,478 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:15,569 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-16 06:13:15,768 - INFO - app.core.config - .env file loaded successfully.
+2025-07-16 06:13:15,779 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-16 06:13:15,779 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-16 06:13:16,024 - DEBUG - app.firebase_stream - Firebase listener triggered (3). Event Type: patch, Path: /. Timestamp: 1752671596.0242558
+2025-07-16 06:13:16,024 - DEBUG - app.firebase_stream - Prepared batch update for 15 symbols from root path for queue. Preview: {'NZDJPY': {'b': '88.2860000000', 'o': '88.2820000000'}, 'GBPAUD': {'b': '2.0544500000', 'o': '2.0543100000'}, 'USDJPY': {'b': '148.7400000000', 'o': '148.7380000000'}, 'USDCNH': {'b': '7.1838700000',
+2025-07-16 06:13:16,025 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'NZDJPY': {'b': '88.2860000000', 'o': '88.2820000000'}, 'GBPAUD': {'b': '2.0544500000', 'o': '2.0543100000'}, 'USDJPY': {'b': '148.7400000000', 'o': '148.7380000000'}, 'USDCNH': {'b': '7.1838700000',...
+2025-07-16 06:13:16,026 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:16,488 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:16,493 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:17,502 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:17,508 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:18,395 - DEBUG - app.firebase_stream - Firebase listener triggered (4). Event Type: patch, Path: /. Timestamp: 1752671598.3951483
+2025-07-16 06:13:18,395 - DEBUG - app.firebase_stream - Prepared batch update for 25 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0789000000', 'o': '13.0766500000'}, 'XAGUSD': {'b': '37.8880000000', 'o': '37.8780000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542600000'}, 'BTCUSD': {'b': '118691.900000000
+2025-07-16 06:13:18,396 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'GBPSEK': {'b': '13.0789000000', 'o': '13.0766500000'}, 'XAGUSD': {'b': '37.8880000000', 'o': '37.8780000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542600000'}, 'BTCUSD': {'b': '118691.900000000...
+2025-07-16 06:13:18,396 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:18,510 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:18,512 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:19,524 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:19,527 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:20,533 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:20,536 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:20,634 - DEBUG - app.firebase_stream - Firebase listener triggered (5). Event Type: patch, Path: /. Timestamp: 1752671600.6342888
+2025-07-16 06:13:20,634 - DEBUG - app.firebase_stream - Prepared batch update for 24 symbols from root path for queue. Preview: {'XAGUSD': {'b': '37.8880000000', 'o': '37.8730000000'}, 'NZDJPY': {'b': '88.2920000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542400000'}, 'BTCUSD': {'b': '118670.500000000
+2025-07-16 06:13:20,635 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 1. Data preview: {'XAGUSD': {'b': '37.8880000000', 'o': '37.8730000000'}, 'NZDJPY': {'b': '88.2920000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542400000'}, 'BTCUSD': {'b': '118670.500000000...
+2025-07-16 06:13:20,635 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:21,546 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:21,550 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:22,556 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:22,559 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:23,001 - DEBUG - app.firebase_stream - Firebase listener triggered (6). Event Type: patch, Path: /. Timestamp: 1752671603.0017989
+2025-07-16 06:13:23,002 - DEBUG - app.firebase_stream - Prepared batch update for 25 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0792000000', 'o': '13.0766500000'}, 'XAGUSD': {'b': '37.8880000000', 'o': '37.8740000000'}, 'NZDJPY': {'b': '88.2890000000', 'o': '88.2810000000'}, 'GBPAUD': {'b': '2.0544300000',
+2025-07-16 06:13:23,002 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 1. Data preview: {'GBPSEK': {'b': '13.0792000000', 'o': '13.0766500000'}, 'XAGUSD': {'b': '37.8880000000', 'o': '37.8740000000'}, 'NZDJPY': {'b': '88.2890000000', 'o': '88.2810000000'}, 'GBPAUD': {'b': '2.0544300000',...
+2025-07-16 06:13:23,003 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:23,565 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:23,567 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:24,572 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:24,574 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:25,242 - DEBUG - app.firebase_stream - Firebase listener triggered (7). Event Type: patch, Path: /. Timestamp: 1752671605.2419813
+2025-07-16 06:13:25,242 - DEBUG - app.firebase_stream - Prepared batch update for 23 symbols from root path for queue. Preview: {'NZDJPY': {'b': '88.2920000000', 'o': '88.2880000000'}, 'GBPAUD': {'b': '2.0545000000', 'o': '2.0543300000'}, 'BTCUSD': {'b': '118675.2000000000', 'o': '118675.1000000000'}, 'USDJPY': {'b': '148.7480
+2025-07-16 06:13:25,242 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'NZDJPY': {'b': '88.2920000000', 'o': '88.2880000000'}, 'GBPAUD': {'b': '2.0545000000', 'o': '2.0543300000'}, 'BTCUSD': {'b': '118675.2000000000', 'o': '118675.1000000000'}, 'USDJPY': {'b': '148.7480...
+2025-07-16 06:13:25,242 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:25,588 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:25,591 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:26,598 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:26,600 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:27,605 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:27,608 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:27,918 - DEBUG - app.firebase_stream - Firebase listener triggered (8). Event Type: patch, Path: /. Timestamp: 1752671607.9187696
+2025-07-16 06:13:27,919 - DEBUG - app.firebase_stream - Prepared batch update for 25 symbols from root path for queue. Preview: {'XAGUSD': {'b': '37.8830000000', 'o': '37.8710000000'}, 'NZDJPY': {'b': '88.2950000000', 'o': '88.2890000000'}, 'USDJPY': {'b': '148.7560000000', 'o': '148.7530000000'}, 'USDCNH': {'b': '7.1839200000
+2025-07-16 06:13:27,919 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'XAGUSD': {'b': '37.8830000000', 'o': '37.8710000000'}, 'NZDJPY': {'b': '88.2950000000', 'o': '88.2890000000'}, 'USDJPY': {'b': '148.7560000000', 'o': '148.7530000000'}, 'USDCNH': {'b': '7.1839200000...
+2025-07-16 06:13:27,920 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:28,618 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:28,621 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:29,217 - INFO - app - Starting stale cache cleanup task
+2025-07-16 06:13:29,219 - INFO - app - Found 7 static orders cache entries to check
+2025-07-16 06:13:29,220 - WARNING - app - Found stale cache entry for user 13, will be refreshed on next access
+2025-07-16 06:13:29,221 - WARNING - app - Found stale cache entry for user 4, will be refreshed on next access
+2025-07-16 06:13:29,229 - WARNING - app - Found stale cache entry for user 12, will be refreshed on next access
+2025-07-16 06:13:29,230 - INFO - app - Completed stale cache cleanup task
+2025-07-16 06:13:29,633 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:29,636 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:30,175 - DEBUG - app.firebase_stream - Firebase listener triggered (9). Event Type: patch, Path: /. Timestamp: 1752671610.175147
+2025-07-16 06:13:30,176 - DEBUG - app.firebase_stream - Prepared batch update for 23 symbols from root path for queue. Preview: {'NZDJPY': {'b': '88.2900000000', 'o': '88.2810000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542700000'}, 'USDJPY': {'b': '148.7440000000', 'o': '148.7400000000'}, 'USDCNH': {'b': '7.1839600000',
+2025-07-16 06:13:30,177 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 1. Data preview: {'NZDJPY': {'b': '88.2900000000', 'o': '88.2810000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542700000'}, 'USDJPY': {'b': '148.7440000000', 'o': '148.7400000000'}, 'USDCNH': {'b': '7.1839600000',...
+2025-07-16 06:13:30,177 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:30,641 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:30,644 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:31,653 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:31,657 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:32,532 - DEBUG - app.firebase_stream - Firebase listener triggered (10). Event Type: patch, Path: /. Timestamp: 1752671612.5322478
+2025-07-16 06:13:32,532 - DEBUG - app.firebase_stream - Prepared batch update for 30 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0792800000', 'o': '13.0768000000'}, 'NZDJPY': {'b': '88.2930000000', 'o': '88.2890000000'}, 'GBPAUD': {'b': '2.0544400000', 'o': '2.0542800000'}, 'USDJPY': {'b': '148.7560000000',
+2025-07-16 06:13:32,532 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 1. Data preview: {'GBPSEK': {'b': '13.0792800000', 'o': '13.0768000000'}, 'NZDJPY': {'b': '88.2930000000', 'o': '88.2890000000'}, 'GBPAUD': {'b': '2.0544400000', 'o': '2.0542800000'}, 'USDJPY': {'b': '148.7560000000',...
+2025-07-16 06:13:32,532 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:32,660 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:32,663 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:33,672 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:33,677 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:34,690 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:34,694 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:34,772 - DEBUG - app.firebase_stream - Firebase listener triggered (11). Event Type: patch, Path: /. Timestamp: 1752671614.772752
+2025-07-16 06:13:34,773 - DEBUG - app.firebase_stream - Prepared batch update for 22 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0795000000', 'o': '13.0769000000'}, 'XAGUSD': {'b': '37.8720000000', 'o': '37.8610000000'}, 'NZDJPY': {'b': '88.2930000000', 'o': '88.2850000000'}, 'GBPAUD': {'b': '2.0544700000',
+2025-07-16 06:13:34,774 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'GBPSEK': {'b': '13.0795000000', 'o': '13.0769000000'}, 'XAGUSD': {'b': '37.8720000000', 'o': '37.8610000000'}, 'NZDJPY': {'b': '88.2930000000', 'o': '88.2850000000'}, 'GBPAUD': {'b': '2.0544700000',...
+2025-07-16 06:13:34,774 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:35,697 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:35,701 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:36,069 - INFO - app - Application shutdown initiated
+2025-07-16 06:13:36,069 - INFO - app - Scheduler shutdown completed
+2025-07-16 06:13:36,070 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-07-16 06:13:37,117 - INFO - app.firebase_stream - Firebase listener closed.
+2025-07-16 06:13:37,117 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-07-16 06:13:37,130 - INFO - app - Redis connection closed
+2025-07-16 06:13:37,131 - INFO - app - Application shutdown completed
+2025-07-16 06:13:39,482 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-16 06:13:39,510 - INFO - app.core.config - .env file loaded successfully.
+2025-07-16 06:13:39,525 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-16 06:13:39,525 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-16 06:13:39,982 - INFO - app - Application starting up - Trading system initialized
+2025-07-16 06:13:39,983 - INFO - app - SL/TP Epsilon accuracy configured: 0.00001
+2025-07-16 06:13:39,983 - INFO - app - Environment: DEVELOPMENT
+2025-07-16 06:13:40,039 - INFO - app - Application startup initiated
+2025-07-16 06:13:40,039 - INFO - app - Initializing core services...
+2025-07-16 06:13:40,075 - INFO - app - Firebase initialized
+2025-07-16 06:13:40,075 - WARNING - app.dependencies.redis_client - Redis client not initialized, attempting late connection.
+2025-07-16 06:13:40,186 - INFO - app - Redis initialized
+2025-07-16 06:13:41,434 - INFO - app - All group settings and group-symbol settings cached in Redis at startup.
+2025-07-16 06:13:41,437 - INFO - app - [SWAP] daily_swap_charge_job triggered
+2025-07-16 06:13:41,437 - INFO - app - [AUTO-CUTOFF] Scheduled update_all_users_dynamic_portfolio job to run every 1 minute.
+2025-07-16 06:13:41,438 - INFO - app - Scheduler initialized
+2025-07-16 06:13:41,439 - INFO - app.firebase_stream - Starting Firebase Admin event processing task for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-07-16 06:13:41,439 - DEBUG - app.firebase_stream - Successfully got running event loop in process_firebase_events task.
+2025-07-16 06:13:41,440 - INFO - app.firebase_stream - Attempting to start Firebase Admin listener for path: 'datafeeds'.
+2025-07-16 06:13:42,335 - INFO - app.firebase_stream - Firebase Admin listener started successfully for path: 'datafeeds'. Queuing data for Redis publishing.
+2025-07-16 06:13:42,354 - DEBUG - app.firebase_stream - Firebase listener triggered (1). Event Type: put, Path: /. Timestamp: 1752671622.3546898
+2025-07-16 06:13:42,354 - DEBUG - app.firebase_stream - Prepared batch update for 48 symbols from root path for queue. Preview: {'AUDCAD': {'b': '0.8946200000', 'o': '0.8946000000'}, 'AUDCHF': {'b': '0.5240200000', 'o': '0.5239600000'}, 'AUDJPY': {'b': '96.9330000000', 'o': '96.9270000000'}, 'AUDNZD': {'b': '1.0000000000', 'o'
+2025-07-16 06:13:42,356 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'AUDCAD': {'b': '0.8946200000', 'o': '0.8946000000'}, 'AUDCHF': {'b': '0.5240200000', 'o': '0.5239600000'}, 'AUDJPY': {'b': '96.9330000000', 'o': '96.9270000000'}, 'AUDNZD': {'b': '1.0000000000', 'o'...
+2025-07-16 06:13:42,356 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type put at path /.
+2025-07-16 06:13:42,361 - INFO - app - Starting stale cache cleanup task
+2025-07-16 06:13:42,451 - INFO - app - Cleaned up pending order stream for new trigger price format
+2025-07-16 06:13:42,451 - INFO - app - Background tasks initialized
+2025-07-16 06:13:43,365 - INFO - app - Service account JWT for 'barclays_service_provider' was generated and pushed to Firebase.
+2025-07-16 06:13:43,365 - INFO - app - Application startup completed successfully
+2025-07-16 06:13:43,365 - INFO - app - Starting cache validation task
+2025-07-16 06:13:43,368 - INFO - app - Starting Barclays pending order margin checker task.
+2025-07-16 06:13:43,368 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:43,370 - INFO - app - Starting auto-cutoff order monitoring task.
+2025-07-16 06:13:43,421 - INFO - app - Found 7 static orders cache entries to check
+2025-07-16 06:13:43,459 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:43,463 - INFO - app - Validating cache for 30 users
+2025-07-16 06:13:43,465 - WARNING - app - Found stale cache entry for user 13, will be refreshed on next access
+2025-07-16 06:13:43,476 - WARNING - app - Found stale cache entry for user 4, will be refreshed on next access
+2025-07-16 06:13:43,486 - WARNING - app - User 5: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,499 - WARNING - app - Found stale cache entry for user 12, will be refreshed on next access
+2025-07-16 06:13:43,499 - INFO - app - Completed stale cache cleanup task
+2025-07-16 06:13:43,527 - WARNING - app - User 8: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,565 - WARNING - app - User 16: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,587 - WARNING - app - User 17: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,603 - WARNING - app - User 18: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,618 - WARNING - app - User 19: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,632 - WARNING - app - User 20: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,647 - WARNING - app - User 21: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,663 - WARNING - app - User 22: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,680 - WARNING - app - User 23: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,694 - WARNING - app - User 25: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,709 - WARNING - app - User 26: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,722 - WARNING - app - User 1: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,744 - WARNING - app - User 2: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,756 - WARNING - app - User 3: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,772 - WARNING - app - User 6: Missing static orders cache, refreshing...
+2025-07-16 06:13:43,799 - INFO - app - Cache validation completed
+2025-07-16 06:13:43,989 - DEBUG - app.firebase_stream - Firebase listener triggered (2). Event Type: patch, Path: /. Timestamp: 1752671623.9890857
+2025-07-16 06:13:43,989 - DEBUG - app.firebase_stream - Prepared batch update for 26 symbols from root path for queue. Preview: {'NZDJPY': {'b': '88.2920000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0544400000', 'o': '2.0543900000'}, 'USDJPY': {'b': '148.7350000000', 'o': '148.7300000000'}, 'USDCNH': {'b': '7.1840300000',
+2025-07-16 06:13:43,989 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 1. Data preview: {'NZDJPY': {'b': '88.2920000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0544400000', 'o': '2.0543900000'}, 'USDJPY': {'b': '148.7350000000', 'o': '148.7300000000'}, 'USDCNH': {'b': '7.1840300000',...
+2025-07-16 06:13:43,990 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:44,471 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:44,473 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:44,597 - INFO - app.shared_state - Initialized redis_publish_queue in shared_state with maxsize=500.
+2025-07-16 06:13:44,781 - INFO - app.core.config - .env file loaded successfully.
+2025-07-16 06:13:44,792 - INFO - app.core.config - Settings instance loaded. Project: Trading App, API Prefix: /api/v1
+2025-07-16 06:13:44,793 - INFO - app.database.session - Attempting to connect to database using URL: mysql+aiomysql://roo...
+2025-07-16 06:13:45,475 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:45,479 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:46,348 - DEBUG - app.firebase_stream - Firebase listener triggered (3). Event Type: patch, Path: /. Timestamp: 1752671626.3481085
+2025-07-16 06:13:46,348 - DEBUG - app.firebase_stream - Prepared batch update for 28 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0796000000', 'o': '13.0770000000'}, 'XAGUSD': {'b': '37.8880000000', 'o': '37.8730000000'}, 'GBPAUD': {'b': '2.0545500000', 'o': '2.0544100000'}, 'BTCUSD': {'b': '118619.600000000
+2025-07-16 06:13:46,349 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 1. Data preview: {'GBPSEK': {'b': '13.0796000000', 'o': '13.0770000000'}, 'XAGUSD': {'b': '37.8880000000', 'o': '37.8730000000'}, 'GBPAUD': {'b': '2.0545500000', 'o': '2.0544100000'}, 'BTCUSD': {'b': '118619.600000000...
+2025-07-16 06:13:46,350 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:46,488 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:46,507 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:47,512 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:47,515 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:48,516 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:48,519 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:48,595 - DEBUG - app.firebase_stream - Firebase listener triggered (4). Event Type: patch, Path: /. Timestamp: 1752671628.5954657
+2025-07-16 06:13:48,595 - DEBUG - app.firebase_stream - Prepared batch update for 29 symbols from root path for queue. Preview: {'XAGUSD': {'b': '37.8780000000', 'o': '37.8650000000'}, 'NZDJPY': {'b': '88.2910000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0544100000', 'o': '2.0543700000'}, 'BTCUSD': {'b': '118630.000000000
+2025-07-16 06:13:48,596 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'XAGUSD': {'b': '37.8780000000', 'o': '37.8650000000'}, 'NZDJPY': {'b': '88.2910000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0544100000', 'o': '2.0543700000'}, 'BTCUSD': {'b': '118630.000000000...
+2025-07-16 06:13:48,596 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:49,530 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:49,533 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:50,540 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:50,544 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:50,962 - DEBUG - app.firebase_stream - Firebase listener triggered (5). Event Type: patch, Path: /. Timestamp: 1752671630.9626386
+2025-07-16 06:13:50,963 - DEBUG - app.firebase_stream - Prepared batch update for 29 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0789900000', 'o': '13.0764000000'}, 'XAGUSD': {'b': '37.8750000000', 'o': '37.8630000000'}, 'NZDJPY': {'b': '88.2900000000', 'o': '88.2810000000'}, 'GBPAUD': {'b': '2.0544200000',
+2025-07-16 06:13:50,964 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'GBPSEK': {'b': '13.0789900000', 'o': '13.0764000000'}, 'XAGUSD': {'b': '37.8750000000', 'o': '37.8630000000'}, 'NZDJPY': {'b': '88.2900000000', 'o': '88.2810000000'}, 'GBPAUD': {'b': '2.0544200000',...
+2025-07-16 06:13:50,964 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:51,548 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:51,552 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:52,560 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:52,564 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:53,197 - DEBUG - app.firebase_stream - Firebase listener triggered (6). Event Type: patch, Path: /. Timestamp: 1752671633.197557
+2025-07-16 06:13:53,197 - DEBUG - app.firebase_stream - Prepared batch update for 24 symbols from root path for queue. Preview: {'NZDJPY': {'b': '88.2900000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0542700000', 'o': '2.0542200000'}, 'BTCUSD': {'b': '118628.9300000000', 'o': '118621.3000000000'}, 'CADCHF': {'b': '0.585720
+2025-07-16 06:13:53,198 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'NZDJPY': {'b': '88.2900000000', 'o': '88.2830000000'}, 'GBPAUD': {'b': '2.0542700000', 'o': '2.0542200000'}, 'BTCUSD': {'b': '118628.9300000000', 'o': '118621.3000000000'}, 'CADCHF': {'b': '0.585720...
+2025-07-16 06:13:53,198 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:53,577 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:53,580 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:54,586 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:54,589 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:55,556 - DEBUG - app.firebase_stream - Firebase listener triggered (7). Event Type: patch, Path: /. Timestamp: 1752671635.556661
+2025-07-16 06:13:55,556 - DEBUG - app.firebase_stream - Prepared batch update for 38 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0794000000', 'o': '13.0768000000'}, 'XAGUSD': {'b': '37.8780000000', 'o': '37.8650000000'}, 'NZDJPY': {'b': '88.2920000000', 'o': '88.2840000000'}, 'GBPAUD': {'b': '2.0543000000',
+2025-07-16 06:13:55,557 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'GBPSEK': {'b': '13.0794000000', 'o': '13.0768000000'}, 'XAGUSD': {'b': '37.8780000000', 'o': '37.8650000000'}, 'NZDJPY': {'b': '88.2920000000', 'o': '88.2840000000'}, 'GBPAUD': {'b': '2.0543000000',...
+2025-07-16 06:13:55,557 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:55,591 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:55,595 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:56,609 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:56,613 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:57,617 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:57,620 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:57,908 - DEBUG - app.firebase_stream - Firebase listener triggered (8). Event Type: patch, Path: /. Timestamp: 1752671637.908754
+2025-07-16 06:13:57,909 - DEBUG - app.firebase_stream - Prepared batch update for 27 symbols from root path for queue. Preview: {'GBPSEK': {'b': '13.0793000000', 'o': '13.0767000000'}, 'NZDJPY': {'b': '88.2900000000', 'o': '88.2840000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542700000'}, 'BTCUSD': {'b': '118621.400000000
+2025-07-16 06:13:57,909 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'GBPSEK': {'b': '13.0793000000', 'o': '13.0767000000'}, 'NZDJPY': {'b': '88.2900000000', 'o': '88.2840000000'}, 'GBPAUD': {'b': '2.0544200000', 'o': '2.0542700000'}, 'BTCUSD': {'b': '118621.400000000...
+2025-07-16 06:13:57,909 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:13:58,379 - INFO - app - Starting stale cache cleanup task
+2025-07-16 06:13:58,381 - INFO - app - Found 23 static orders cache entries to check
+2025-07-16 06:13:58,383 - WARNING - app - Found stale cache entry for user 6, will be refreshed on next access
+2025-07-16 06:13:58,384 - WARNING - app - Found stale cache entry for user 23, will be refreshed on next access
+2025-07-16 06:13:58,385 - WARNING - app - Found stale cache entry for user 18, will be refreshed on next access
+2025-07-16 06:13:58,386 - WARNING - app - Found stale cache entry for user 19, will be refreshed on next access
+2025-07-16 06:13:58,386 - WARNING - app - Found stale cache entry for user 13, will be refreshed on next access
+2025-07-16 06:13:58,387 - WARNING - app - Found stale cache entry for user 21, will be refreshed on next access
+2025-07-16 06:13:58,388 - WARNING - app - Found stale cache entry for user 25, will be refreshed on next access
+2025-07-16 06:13:58,389 - WARNING - app - Found stale cache entry for user 3, will be refreshed on next access
+2025-07-16 06:13:58,390 - WARNING - app - Found stale cache entry for user 22, will be refreshed on next access
+2025-07-16 06:13:58,393 - WARNING - app - Found stale cache entry for user 2, will be refreshed on next access
+2025-07-16 06:13:58,394 - WARNING - app - Found stale cache entry for user 17, will be refreshed on next access
+2025-07-16 06:13:58,395 - WARNING - app - Found stale cache entry for user 8, will be refreshed on next access
+2025-07-16 06:13:58,396 - WARNING - app - Found stale cache entry for user 4, will be refreshed on next access
+2025-07-16 06:13:58,397 - WARNING - app - Found stale cache entry for user 20, will be refreshed on next access
+2025-07-16 06:13:58,404 - WARNING - app - Found stale cache entry for user 16, will be refreshed on next access
+2025-07-16 06:13:58,405 - WARNING - app - Found stale cache entry for user 5, will be refreshed on next access
+2025-07-16 06:13:58,406 - WARNING - app - Found stale cache entry for user 12, will be refreshed on next access
+2025-07-16 06:13:58,406 - INFO - app - Completed stale cache cleanup task
+2025-07-16 06:13:58,633 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:58,637 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:13:59,650 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:13:59,653 - DEBUG - app - Fetched 0 live users for Barclays margin check.
+2025-07-16 06:14:00,172 - DEBUG - app.firebase_stream - Firebase listener triggered (9). Event Type: patch, Path: /. Timestamp: 1752671640.1722546
+2025-07-16 06:14:00,172 - DEBUG - app.firebase_stream - Prepared batch update for 30 symbols from root path for queue. Preview: {'XAGUSD': {'b': '37.8790000000', 'o': '37.8680000000'}, 'NZDJPY': {'b': '88.2830000000', 'o': '88.2780000000'}, 'GBPAUD': {'b': '2.0543400000', 'o': '2.0542500000'}, 'BTCUSD': {'b': '118675.200000000
+2025-07-16 06:14:00,172 - DEBUG - app.firebase_stream - Successfully queued data for path '/'. Queue size (approx): 0. Data preview: {'XAGUSD': {'b': '37.8790000000', 'o': '37.8680000000'}, 'NZDJPY': {'b': '88.2830000000', 'o': '88.2780000000'}, 'GBPAUD': {'b': '2.0543400000', 'o': '2.0542500000'}, 'BTCUSD': {'b': '118675.200000000...
+2025-07-16 06:14:00,173 - DEBUG - app.firebase_stream - Firebase listener callback finished for event type patch at path /.
+2025-07-16 06:14:00,555 - INFO - app - Application shutdown initiated
+2025-07-16 06:14:00,555 - INFO - app - Scheduler shutdown completed
+2025-07-16 06:14:00,698 - DEBUG - app - BarclaysMarginChecker heartbeat: loop is alive
+2025-07-16 06:14:00,701 - INFO - app.firebase_stream - Firebase event processing task cancelled.
+2025-07-16 06:14:02,399 - INFO - app.firebase_stream - Firebase listener closed.
+2025-07-16 06:14:02,399 - INFO - app.firebase_stream - Firebase Admin event processing task finished.
+2025-07-16 06:14:02,405 - INFO - app - Redis connection closed
+2025-07-16 06:14:02,405 - INFO - app - Application shutdown completed
