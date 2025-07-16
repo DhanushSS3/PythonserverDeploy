@@ -98,3 +98,80 @@ Traceback (most recent call last):
     )
 fastapi.exceptions.HTTPException: 401: Could not validate credentials
 2025-07-15 23:42:15,185 - INFO - database - Session rolled back due to error
+2025-07-16 00:10:02,110 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 1, 'overflow': -2}
+2025-07-16 00:12:02,108 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 1, 'overflow': -2}
+2025-07-16 00:14:02,110 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 1, 'overflow': -2}
+2025-07-16 00:16:02,116 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 1, 'overflow': -2}
+2025-07-16 00:18:02,111 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 1, 'overflow': -2}
+2025-07-16 00:20:02,108 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 7, 'checked_out': 1, 'overflow': -2}
+2025-07-16 00:21:30,902 - ERROR - database - Error in database session: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 557, in delete_user_by_id
+    db_user = await crud_user.get_user_by_id(db, user_id=user_id)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-07-16 00:21:30,910 - INFO - database - Session rolled back due to error
+2025-07-16 00:24:00,913 - ERROR - database - Error in database session: get_user_by_id() missing 1 required positional argument: 'user_type'
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 490, in update_user_by_id
+    db_user = await crud_user.get_user_by_id(db, user_id=user_id)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_user_by_id() missing 1 required positional argument: 'user_type'
+2025-07-16 00:24:00,925 - INFO - database - Session rolled back due to error
+2025-07-16 00:24:30,528 - ERROR - database - Error in database session: 400: Email already exists for this user type.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 503, in update_user_by_id
+    raise HTTPException(status_code=400, detail="Email already exists for this user type.")
+fastapi.exceptions.HTTPException: 400: Email already exists for this user type.
+2025-07-16 00:24:30,531 - INFO - database - Session rolled back due to error
+2025-07-16 00:24:59,000 - ERROR - database - Error in database session: 400: Phone number already exists for this user type.
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\database\session.py", line 70, in get_db
+    yield session
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Dhanush\FASTAPI\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\users.py", line 507, in update_user_by_id
+    raise HTTPException(status_code=400, detail="Phone number already exists for this user type.")
+fastapi.exceptions.HTTPException: 400: Phone number already exists for this user type.
+2025-07-16 00:24:59,004 - INFO - database - Session rolled back due to error
+2025-07-16 00:26:16,895 - INFO - database - Connection pool status: {'pool_size': 10, 'checked_in': 9, 'checked_out': 1, 'overflow': 0}

@@ -487,7 +487,7 @@ async def update_user_by_id(
     if needs_locking:
         db_user = await crud_user.get_user_by_id_with_lock(db, user_id=user_id)
     else:
-        db_user = await crud_user.get_user_by_id(db, user_id=user_id)
+        db_user = await crud_user.get_user_by_id(db, user_id=user_id, user_type="live")
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -554,7 +554,7 @@ async def delete_user_by_id(
     current_user: User = Depends(get_current_admin_user),
     redis_client: Redis = Depends(get_redis_client)
 ):
-    db_user = await crud_user.get_user_by_id(db, user_id=user_id)
+    db_user = await crud_user.get_user_by_id(db, user_id=user_id, user_type="live")
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
