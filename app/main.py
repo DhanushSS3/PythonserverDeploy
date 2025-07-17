@@ -1586,4 +1586,4 @@ async def run_update_all_users_dynamic_portfolio_loop():
             await update_all_users_dynamic_portfolio()
         except Exception as e:
             logger.error(f"[AUTO-CUTOFF] Exception in update_all_users_dynamic_portfolio loop: {e}", exc_info=True)
-        await asyncio.sleep(60)  # 1 minute interval
+        await asyncio.sleep(30)  # 1 minute interval

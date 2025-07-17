@@ -143,11 +143,13 @@ async def calculate_user_portfolio(
         from app.core.cache import get_user_static_orders_cache, get_user_balance_margin_cache, refresh_balance_margin_cache_with_fallback
         from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
         from sqlalchemy.ext.asyncio import AsyncSession
+        import logging
+        logger = logging.getLogger("app.services.portfolio_calculator")
 
         # 1. Get open_positions from static orders cache, fallback to DB if missing
         static_orders = await get_user_static_orders_cache(redis_client, user_id)
         if not static_orders or 'open_orders' not in static_orders:
-            # Fallback: fetch from DB and update static orders cache
+            logger.warning(f"[PORTFOLIO] user_static_orders cache miss for user {user_id}, falling back to DB and updating cache.")
             db = None
             if 'db' in user_data:
                 db = user_data['db']
@@ -161,13 +163,19 @@ async def calculate_user_portfolio(
                             break
                 if db is not None:
                     static_orders = await update_static_orders_cache(user_id, db, redis_client, user_type)
-            except Exception:
+                    logger.info(f"[PORTFOLIO] user_static_orders cache updated from DB for user {user_id}.")
+            except Exception as e:
+                logger.error(f"[PORTFOLIO] Failed to update user_static_orders cache from DB for user {user_id}: {e}")
                 static_orders = None
+        else:
+            logger.debug(f"[PORTFOLIO] user_static_orders cache hit for user {user_id}.")
         open_positions = static_orders.get('open_orders', []) if static_orders else []
+        logger.debug(f"[PORTFOLIO] user {user_id} open_positions count: {len(open_positions)}")
 
         # 2. Get margin/balance from balance/margin cache, fallback to DB if missing
         balance_margin = await get_user_balance_margin_cache(redis_client, user_id)
         if not balance_margin:
+            logger.warning(f"[PORTFOLIO] user_balance_margin cache miss for user {user_id}, falling back to DB and updating cache.")
             db = None
             if 'db' in user_data:
                 db = user_data['db']
@@ -180,8 +188,12 @@ async def calculate_user_portfolio(
                             break
                 if db is not None:
                     balance_margin = await refresh_balance_margin_cache_with_fallback(redis_client, user_id, user_type, db)
-            except Exception:
+                    logger.info(f"[PORTFOLIO] user_balance_margin cache updated from DB for user {user_id}.")
+            except Exception as e:
+                logger.error(f"[PORTFOLIO] Failed to update user_balance_margin cache from DB for user {user_id}: {e}")
                 balance_margin = None
+        else:
+            logger.debug(f"[PORTFOLIO] user_balance_margin cache hit for user {user_id}.")
         balance = Decimal(str(balance_margin.get('wallet_balance', '0.0'))) if balance_margin else Decimal('0.0')
         overall_hedged_margin_usd = Decimal(str(balance_margin.get('margin', '0.0'))) if balance_margin else Decimal('0.0')
         leverage = Decimal(str(user_data.get('leverage', '1.0')))
@@ -291,10 +303,10 @@ async def calculate_user_portfolio(
             # Calculate PnL based on order type and contract size
             if order_type == 'BUY':
                 price_diff = current_sell - entry_price
-                pnl = price_diff * quantity * contract_size
+                pnl = price_diff * quantity 
             else:  # SELL
                 price_diff = entry_price - current_buy
-                pnl = price_diff * quantity * contract_size
+                pnl = price_diff * quantity 
 
             # Use stored commission value if available, otherwise use 0
             commission_usd = Decimal(str(position.get('commission', '0.0')))
