@@ -1557,3 +1557,13 @@ async def barclays_pending_order_margin_checker():
             await asyncio.sleep(1)
     except Exception as fatal:
         logger.critical(f"[BarclaysMarginChecker] FATAL: {fatal}", exc_info=True)
+
+
+async def run_update_all_users_dynamic_portfolio_loop():
+    logger.info("[AUTO-CUTOFF] Starting update_all_users_dynamic_portfolio background loop")
+    while True:
+        try:
+            await update_all_users_dynamic_portfolio()
+        except Exception as e:
+            logger.error(f"[AUTO-CUTOFF] Exception in update_all_users_dynamic_portfolio loop: {e}", exc_info=True)
+        await asyncio.sleep(60)  # 1 minute interval
