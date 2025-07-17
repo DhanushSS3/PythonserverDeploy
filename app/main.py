@@ -742,9 +742,9 @@ async def startup_event():
     logger.info("Initializing core services...")
     import redis.asyncio as redis
 
-    r = redis.Redis(host="127.0.0.1", port=6379)
-    await r.flushall()
-    print("Redis flushed")
+    # r = redis.Redis(host="127.0.0.1", port=6379)
+    # await r.flushall()
+    # print("Redis flushed")
     # Print Redis connection info for debugging
     redis_url = os.getenv("REDIS_URL")
     redis_host = os.getenv("REDIS_HOST")
