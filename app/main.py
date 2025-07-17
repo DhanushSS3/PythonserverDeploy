@@ -800,13 +800,14 @@ async def startup_event():
             replace_existing=True
         )
         
-        scheduler.add_job(
-            update_all_users_dynamic_portfolio,
-            IntervalTrigger(minutes=1),  # Changed from 1 minute to 5 minutes
-            id='update_all_users_dynamic_portfolio',
-            replace_existing=True
-        )
-        logger.info("[AUTO-CUTOFF] Scheduled update_all_users_dynamic_portfolio job to run every 1 minute.")
+        # REMOVE the update_all_users_dynamic_portfolio APScheduler job
+        # scheduler.add_job(
+        #     update_all_users_dynamic_portfolio,
+        #     IntervalTrigger(minutes=1),  # Changed from 1 minute to 5 minutes
+        #     id='update_all_users_dynamic_portfolio',
+        #     replace_existing=True
+        # )
+        logger.info("[AUTO-CUTOFF] update_all_users_dynamic_portfolio will run as a background asyncio task, not via APScheduler.")
         
         scheduler.add_job(
             rotate_service_account_jwt,
@@ -909,6 +910,11 @@ async def startup_event():
             auto_cutoff_monitor_task = asyncio.create_task(monitor_auto_cutoff_orders())
             background_tasks.add(auto_cutoff_monitor_task)
             auto_cutoff_monitor_task.add_done_callback(background_tasks.discard)
+            
+            # Start the new autocutoff/dynamic portfolio update background loop
+            update_portfolio_task = asyncio.create_task(run_update_all_users_dynamic_portfolio_loop())
+            background_tasks.add(update_portfolio_task)
+            update_portfolio_task.add_done_callback(background_tasks.discard)
             
         logger.info("Background tasks initialized")
             
