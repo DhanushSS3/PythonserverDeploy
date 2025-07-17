@@ -288,21 +288,21 @@ async def per_connection_redis_listener(
                 channel = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
 
                 # --- Always fetch fresh prices from in-memory dict before sending any message ---
-                adjusted_prices = adjusted_prices_in_memory.get(group_name, {})
+                adjusted_prices = adjusted_prices_in_memory.get(group_name.lower(), {})
 
                 if channel == REDIS_MARKET_DATA_CHANNEL and message_data.get("type") == "market_data_update":
                     # Only send changed symbols after initial connection
                     changed_prices = {}
                     for symbol in symbol_list:
-                        price = adjusted_prices.get(symbol)
-                        last = last_sent_prices.get(symbol)
+                        price = adjusted_prices.get(symbol.upper())
+                        last = last_sent_prices.get(symbol.upper())
                         if price and (not last or (
                             price['buy'] != last['buy'] or
                             price['sell'] != last['sell'] or
                             price['spread'] != last['spread']
                         )):
                             changed_prices[symbol] = price
-                            last_sent_prices[symbol] = price.copy()
+                            last_sent_prices[symbol.upper()] = price.copy()
                     
                     # FIXED: Use cache refresh function to prevent orders from disappearing
                     static_orders = await refresh_static_orders_cache_if_needed(user_id, redis_client, db, user_type)

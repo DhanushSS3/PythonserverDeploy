@@ -122,31 +122,31 @@ async def adjusted_price_worker(redis_client: Redis):
         updated_symbols = set()
         
         for group_name, adjusted_prices in group_results:
-            # Update in-memory dict
-            if group_name not in adjusted_prices_in_memory:
-                adjusted_prices_in_memory[group_name] = {}
+            group_name_norm = group_name.lower()  # Normalize group name
+            if group_name_norm not in adjusted_prices_in_memory:
+                adjusted_prices_in_memory[group_name_norm] = {}
             for symbol, prices in adjusted_prices.items():
-                # Only update if changed
-                prev = adjusted_prices_in_memory[group_name].get(symbol)
+                symbol_norm = symbol.upper()  # Normalize symbol
+                prev = adjusted_prices_in_memory[group_name_norm].get(symbol_norm)
                 if not prev or (
                     prev['buy'] != prices['buy'] or
                     prev['sell'] != prices['sell'] or
                     prev['spread'] != prices['spread']
                 ):
-                    adjusted_prices_in_memory[group_name][symbol] = {
+                    adjusted_prices_in_memory[group_name_norm][symbol_norm] = {
                         'buy': prices['buy'],
                         'sell': prices['sell'],
                         'spread': prices['spread']
                     }
                     # Redis persistence (not hot path)
-                    await set_adjusted_market_price_cache(pipe, group_name, symbol, prices['buy'], prices['sell'], prices['spread_value'])
+                    await set_adjusted_market_price_cache(pipe, group_name_norm, symbol_norm, prices['buy'], prices['sell'], prices['spread_value'])
                     write_count += 1
                     
                     # Track this symbol for pending order triggers
-                    updated_symbols.add(symbol)
+                    updated_symbols.add(symbol_norm)
                     
                     # --- NEW: Set last known price for this symbol (raw bid/offer from latest_market_data) ---
-                    raw_prices = raw_market_data.get(symbol)
+                    raw_prices = raw_market_data.get(symbol_norm)
                     if raw_prices and isinstance(raw_prices, dict):
                         price_data = {}
                         if 'b' in raw_prices:
@@ -154,7 +154,7 @@ async def adjusted_price_worker(redis_client: Redis):
                         if 'o' in raw_prices:
                             price_data['o'] = raw_prices['o']
                         if price_data:
-                            await set_last_known_price(redis_client, symbol, price_data)
+                            await set_last_known_price(redis_client, symbol_norm, price_data)
         
         await pipe.execute()
         redis_write_time = time.perf_counter() - redis_write_start
@@ -200,9 +200,9 @@ async def adjusted_price_worker(redis_client: Redis):
                     
                     # Process each group separately with their specific adjusted prices
                     for group_name, users in users_by_group.items():
-                        # Get this group's adjusted prices for this symbol
-                        group_adjusted_prices = adjusted_prices_in_memory.get(group_name, {})
-                        symbol_prices = group_adjusted_prices.get(symbol)
+                        group_name_norm = group_name.lower()
+                        group_adjusted_prices = adjusted_prices_in_memory.get(group_name_norm, {})
+                        symbol_prices = group_adjusted_prices.get(symbol.upper())
                         
                         if not symbol_prices:
                             logger.warning(f"[PENDING_TRIGGER] No adjusted prices for {symbol} in group {group_name}")

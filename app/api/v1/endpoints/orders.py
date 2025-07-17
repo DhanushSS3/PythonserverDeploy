@@ -19,7 +19,7 @@ from fastapi import BackgroundTasks, Depends
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
-from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
+from app.api.v1.endpoints.market_data_ws import update_static_orders_cache, update_dynamic_portfolio_cache
 
 from app.core.logging_config import orders_logger, order_audit_logger
 import orjson
@@ -1611,6 +1611,26 @@ async def close_order(
                     orders_logger.info(f"Balance/margin cache updated for user {db_user_locked.id}: balance={db_user_locked.wallet_balance}, margin={db_user_locked.margin}")
                     
                     await update_user_static_orders(db_user_locked.id, db, redis_client, user_type)
+                    # Inject dynamic portfolio cache update
+                    if background_tasks:
+                        background_tasks.add_task(
+                            update_user_dynamic_portfolio_cache,
+                            db_user_locked.id,
+                            db_user_locked.group_name,
+                            user_type,
+                            redis_client,
+                            db
+                        )
+                    else:
+                        asyncio.create_task(
+                            update_user_dynamic_portfolio_cache(
+                                db_user_locked.id,
+                                db_user_locked.group_name,
+                                user_type,
+                                redis_client,
+                                db
+                            )
+                        )
                     
                     # Publish updates in the correct order
                     orders_logger.info(f"Publishing order update for user {db_user_locked.id}")
@@ -5033,5 +5053,41 @@ async def invalidate_and_refresh_static_orders_cache(user_id: int, redis_client:
             
     except Exception as e:
         orders_logger.error(f"Error invalidating/refreshing static orders cache for user {user_id}: {e}", exc_info=True)
+
+async def update_user_dynamic_portfolio_cache(user_id: int, group_name: str, user_type: str, redis_client: Redis, db: AsyncSession):
+    """
+    Fetch latest open and pending orders from static orders cache (or DB as fallback), get adjusted market prices, and update the dynamic portfolio cache.
+    """
+    from app.core.cache import get_user_static_orders_cache, get_group_symbol_settings_cache, get_adjusted_market_price_cache, get_user_data_cache
+    # Try to get static orders from cache
+    static_orders = await get_user_static_orders_cache(redis_client, user_id)
+    if not static_orders:
+        # Fallback: fetch from DB and update static orders cache
+        from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
+        static_orders = await update_static_orders_cache(user_id, db, redis_client, user_type)
+    open_positions = static_orders.get("open_orders", []) if static_orders else []
+    # Get group symbol settings
+    group_symbol_settings = await get_group_symbol_settings_cache(redis_client, group_name, "ALL")
+    if not group_symbol_settings:
+        return
+    # Get adjusted market prices for all relevant symbols
+    adjusted_market_prices = {}
+    for symbol in group_symbol_settings.keys():
+        adjusted_prices = await get_adjusted_market_price_cache(redis_client, group_name, symbol)
+        if adjusted_prices:
+            adjusted_market_prices[symbol] = {
+                'buy': adjusted_prices.get('buy'),
+                'sell': adjusted_prices.get('sell')
+            }
+    # Call the update_dynamic_portfolio_cache function
+    await update_dynamic_portfolio_cache(
+        user_id=user_id,
+        group_name=group_name,
+        open_positions=open_positions,
+        adjusted_market_prices=adjusted_market_prices,
+        redis_client=redis_client,
+        db=db,
+        user_type=user_type
+    )
 
 

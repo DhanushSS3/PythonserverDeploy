@@ -1,0 +1,15 @@
+2025-07-17 04:58:19,122 - WARNING - autocutoff - [AUTO-CUTOFF] User 14 margin level 0.4881320502767767121257750564% below cutoff threshold 10.0%. Initiating auto-cutoff.
+2025-07-17 04:58:19,123 - DEBUG - autocutoff - [AUTO-CUTOFF] handle_margin_cutoff called for user 14 (type: live), margin_level=0.4881320502767767121257750564
+2025-07-17 04:58:19,123 - DEBUG - autocutoff - [AUTO-CUTOFF] Fetching live user 14 from DB...
+2025-07-17 04:58:19,127 - DEBUG - autocutoff - [AUTO-CUTOFF] User 14 group_name: Standard
+2025-07-17 04:58:19,130 - DEBUG - autocutoff - [AUTO-CUTOFF] Group settings for group 'Standard': {'sending_orders': 'barclays'}
+2025-07-17 04:58:19,130 - INFO - autocutoff - [AUTO-CUTOFF] User 14 identified as Barclays live user
+2025-07-17 04:58:19,136 - DEBUG - autocutoff - [AUTO-CUTOFF] User 14 has 3 open orders.
+2025-07-17 04:58:19,137 - WARNING - autocutoff - [AUTO-CUTOFF] Found 3 open orders for user 14
+2025-07-17 04:58:19,137 - WARNING - autocutoff - [AUTO-CUTOFF] Processing Barclays live user 14 - sending close requests to Firebase
+2025-07-17 04:58:19,139 - INFO - autocutoff - [AUTO-CUTOFF] Close request already sent for order 1000330-001, skipping.
+2025-07-17 04:58:19,141 - INFO - autocutoff - [AUTO-CUTOFF] Close request already sent for order 1000332-001, skipping.
+2025-07-17 04:58:19,144 - INFO - autocutoff - [AUTO-CUTOFF] Close request already sent for order 1000333-001, skipping.
+2025-07-17 04:58:19,144 - WARNING - autocutoff - [AUTO-CUTOFF] Completed Firebase requests for user 14, publishing updates
+2025-07-17 04:58:19,146 - DEBUG - autocutoff - [AUTO-CUTOFF] Setting user data cache for user 14: {'id': 14, 'email': 'cursordemo3@gmail.com', 'group_name': 'Standard', 'leverage': Decimal('100.00'), 'user_type': 'live', 'account_number': 'DB7JG', 'wallet_balance': Decimal('9902.02000000'), 'margin': Decimal('9494.47000000'), 'first_name': None, 'last_name': None, 'country': 'India', 'phone_number': '+918618025298'}
+2025-07-17 04:58:19,190 - WARNING - autocutoff - [AUTO-CUTOFF] COMPLETED: User 14 auto-cutoff process finished, waiting for Firebase confirmation

@@ -105,72 +105,134 @@ def decode_token(token: str) -> dict[str, Any]:
 
 import socket
 
-async def connect_to_redis() -> Optional[aioredis.Redis]:
-    # logger.info("Attempting to connect to Redis...") # This line is removed as per the edit hint
+# async def connect_to_redis() -> Optional[aioredis.Redis]:
+#     # logger.info("Attempting to connect to Redis...") # This line is removed as per the edit hint
 
+#     try:
+#         redis_host = settings.REDIS_HOST
+#         redis_port = settings.REDIS_PORT
+
+#         # Resolve IP address from hostname
+#         resolved_ip = socket.gethostbyname(redis_host)
+
+#         # logger.info( # This line is removed as per the edit hint
+#         #     f"Redis connection details:\n" # This line is removed as per the edit hint
+#         #     f"  Host: {redis_host}\n" # This line is removed as per the edit hint
+#         #     f"  Resolved IP: {resolved_ip}\n" # This line is removed as per the edit hint
+#         #     f"  Port: {redis_port}\n" # This line is removed as per the edit hint
+#         #     f"  DB: {settings.REDIS_DB}\n" # This line is removed as per the edit hint
+#         #     f"  Password: {'<set>' if settings.REDIS_PASSWORD else '<not set>'}\n" # This line is removed as per the edit hint
+#         #     f"  Persistence: AOF enabled (appendonly.aof)" # This line is removed as per the edit hint
+#         # ) # This line is removed as per the edit hint
+
+#         client = aioredis.Redis(
+#             host=redis_host,
+#             port=redis_port,
+#             db=settings.REDIS_DB,
+#             password=settings.REDIS_PASSWORD,
+#             decode_responses=True
+#         )
+#         await client.ping()
+        
+#         # Ensure AOF persistence is enabled
+#         config_get = await client.config_get('appendonly')
+#         if config_get and config_get.get('appendonly') != 'yes':
+#             # logger.warning("AOF persistence is not enabled in Redis. Attempting to enable it...") # This line is removed as per the edit hint
+#             await client.config_set('appendonly', 'yes')
+#             await client.config_set('appendfsync', 'everysec')
+#             # logger.info("AOF persistence has been enabled with appendfsync=everysec") # This line is removed as per the edit hint
+#         else:
+#             # logger.info("[SUCCESS] AOF persistence is correctly configured") # This line is removed as per the edit hint
+#             pass # This line is added as per the edit hint
+            
+#         # logger.info(f"[SUCCESS] Connected to Redis at {redis_host} ({resolved_ip}):{redis_port}") # This line is removed as per the edit hint
+#         return client
+
+#     except Exception as e:
+#         # logger.error(f"❌ Failed to connect to Redis: {e}", exc_info=True) # This line is removed as per the edit hint
+#         return None
+
+# async def close_redis_connection(client: Optional[aioredis.Redis]):
+#     """
+#     Closes the Redis connection.
+#     Called during application shutdown. Accepts the client instance to close.
+#     """
+#     if client:
+#         # logger.info("Closing Redis connection...") # This line is removed as per the edit hint
+#         try:
+#             await client.close()
+#             # logger.info("Redis connection closed.") # This line is removed as per the edit hint
+#         except Exception as e:
+#             # logger.error(f"Error closing Redis connection: {e}", exc_info=True) # This line is removed as per the edit hint
+#             pass # This line is added as per the edit hint
+
+# # Remove the redundant 'import datetime' and 'import json' here, they are already at the top
+# # from typing import Optional # Already imported
+
+# # Change this import (this was good)
+# # import redis.asyncio as redis_client # This alias is fine, but the type hint should match aioredis.Redis
+
+# app/core/security.py
+
+from typing import Optional
+import socket
+from redis.asyncio import Redis
+from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+async def connect_to_redis() -> Optional[Redis]:
+    """
+    Establishes a Redis connection with configured host, port, db, and password.
+    Validates connection with PING and ensures AOF persistence is enabled.
+    Returns the Redis client instance or None on failure.
+    """
     try:
         redis_host = settings.REDIS_HOST
         redis_port = settings.REDIS_PORT
 
-        # Resolve IP address from hostname
+        # Resolve IP for clarity (optional in most environments)
         resolved_ip = socket.gethostbyname(redis_host)
 
-        # logger.info( # This line is removed as per the edit hint
-        #     f"Redis connection details:\n" # This line is removed as per the edit hint
-        #     f"  Host: {redis_host}\n" # This line is removed as per the edit hint
-        #     f"  Resolved IP: {resolved_ip}\n" # This line is removed as per the edit hint
-        #     f"  Port: {redis_port}\n" # This line is removed as per the edit hint
-        #     f"  DB: {settings.REDIS_DB}\n" # This line is removed as per the edit hint
-        #     f"  Password: {'<set>' if settings.REDIS_PASSWORD else '<not set>'}\n" # This line is removed as per the edit hint
-        #     f"  Persistence: AOF enabled (appendonly.aof)" # This line is removed as per the edit hint
-        # ) # This line is removed as per the edit hint
-
-        client = aioredis.Redis(
+        client = Redis(
             host=redis_host,
             port=redis_port,
             db=settings.REDIS_DB,
             password=settings.REDIS_PASSWORD,
             decode_responses=True
         )
+
         await client.ping()
-        
+        logger.info(f"[Redis] Connected to {redis_host} ({resolved_ip}):{redis_port}")
+
         # Ensure AOF persistence is enabled
         config_get = await client.config_get('appendonly')
-        if config_get and config_get.get('appendonly') != 'yes':
-            # logger.warning("AOF persistence is not enabled in Redis. Attempting to enable it...") # This line is removed as per the edit hint
+        if config_get.get('appendonly') != 'yes':
+            logger.warning("[Redis] AOF persistence not enabled. Enabling now...")
             await client.config_set('appendonly', 'yes')
             await client.config_set('appendfsync', 'everysec')
-            # logger.info("AOF persistence has been enabled with appendfsync=everysec") # This line is removed as per the edit hint
+            logger.info("[Redis] AOF persistence enabled with appendfsync=everysec.")
         else:
-            # logger.info("[SUCCESS] AOF persistence is correctly configured") # This line is removed as per the edit hint
-            pass # This line is added as per the edit hint
-            
-        # logger.info(f"[SUCCESS] Connected to Redis at {redis_host} ({resolved_ip}):{redis_port}") # This line is removed as per the edit hint
+            logger.info("[Redis] AOF persistence already enabled.")
+
         return client
 
     except Exception as e:
-        # logger.error(f"❌ Failed to connect to Redis: {e}", exc_info=True) # This line is removed as per the edit hint
+        logger.error(f"[Redis] Connection failed: {e}", exc_info=True)
         return None
 
-async def close_redis_connection(client: Optional[aioredis.Redis]):
+async def close_redis_connection(client: Optional[Redis]) -> None:
     """
-    Closes the Redis connection.
-    Called during application shutdown. Accepts the client instance to close.
+    Closes the Redis connection safely during application shutdown.
     """
     if client:
-        # logger.info("Closing Redis connection...") # This line is removed as per the edit hint
         try:
             await client.close()
-            # logger.info("Redis connection closed.") # This line is removed as per the edit hint
+            logger.info("[Redis] Connection closed successfully.")
         except Exception as e:
-            # logger.error(f"Error closing Redis connection: {e}", exc_info=True) # This line is removed as per the edit hint
-            pass # This line is added as per the edit hint
+            logger.error(f"[Redis] Error while closing connection: {e}", exc_info=True)
 
-# Remove the redundant 'import datetime' and 'import json' here, they are already at the top
-# from typing import Optional # Already imported
-
-# Change this import (this was good)
-# import redis.asyncio as redis_client # This alias is fine, but the type hint should match aioredis.Redis
 
 async def store_refresh_token(
     client: aioredis.Redis, # Use the original aioredis type hint

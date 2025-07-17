@@ -235,25 +235,39 @@ async def update_all_users_dynamic_portfolio():
                     group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
                     logger.debug(f"[AUTO-CUTOFF] Group symbol settings for group '{group_name}' from cache: {group_symbol_settings}")
                     # Robust fallback: If cache is missing or sending_orders is None, fetch from DB and update cache
-                    if group_symbol_settings is None or group_symbol_settings.get('sending_orders') is None:
+                    # if group_symbol_settings is None or group_symbol_settings.get('sending_orders') is None:
+                    #     logger.warning(f"[AUTO-CUTOFF] Group symbol settings missing or incomplete in cache for '{group_name}', fetching from DB.")
+                    #     from app.crud.group import get_group_by_name
+                    #     db_group = await get_group_by_name(db, group_name)
+                    #     logger.debug(f"[AUTO-CUTOFF] DB group fetch result for '{group_name}': {db_group}")
+                    #     if db_group:
+                    #         settings = {
+                    #             "sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None),
+                    #             # Add more group-level settings here if needed
+                    #         }
+                    #         await set_group_settings_cache(global_redis_client_instance, group_name, settings)
+                    #         group_symbol_settings = settings
+                    #         logger.info(f"[AUTO-CUTOFF] Group symbol settings fetched from DB and cached for group '{group_name}': {settings}")
+                    #     else:
+                    #         logger.error(f"[AUTO-CUTOFF] Group symbol settings not found in DB for group '{group_name}'. Skipping portfolio update for user {user_id}.")
+                    #         continue
+                    # if not group_symbol_settings:
+                    #     logger.warning(f"[AUTO-CUTOFF] No group settings found for group {group_name}. Skipping portfolio update for user {user_id}.")
+                    #     continue
+
+                    if group_symbol_settings is None or not any(isinstance(v, dict) and ('margin' in v or 'spread' in v) for v in group_symbol_settings.values()):
                         logger.warning(f"[AUTO-CUTOFF] Group symbol settings missing or incomplete in cache for '{group_name}', fetching from DB.")
-                        from app.crud.group import get_group_by_name
-                        db_group = await get_group_by_name(db, group_name)
-                        logger.debug(f"[AUTO-CUTOFF] DB group fetch result for '{group_name}': {db_group}")
-                        if db_group:
-                            settings = {
-                                "sending_orders": getattr(db_group[0] if isinstance(db_group, list) else db_group, 'sending_orders', None),
-                                # Add more group-level settings here if needed
-                            }
-                            await set_group_settings_cache(global_redis_client_instance, group_name, settings)
-                            group_symbol_settings = settings
-                            logger.info(f"[AUTO-CUTOFF] Group symbol settings fetched from DB and cached for group '{group_name}': {settings}")
+                        from app.crud.group import get_group_symbol_settings_for_all_symbols
+                        symbol_settings_dict = await get_group_symbol_settings_for_all_symbols(db, group_name)
+                        if symbol_settings_dict:
+                            for symbol, settings in symbol_settings_dict.items():
+                                await set_group_symbol_settings_cache(global_redis_client_instance, group_name, symbol, settings)
+                            # Now reload the cache
+                            group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
+                            logger.info(f"[AUTO-CUTOFF] Group symbol settings fetched from DB and cached for group '{group_name}'")
                         else:
                             logger.error(f"[AUTO-CUTOFF] Group symbol settings not found in DB for group '{group_name}'. Skipping portfolio update for user {user_id}.")
                             continue
-                    if not group_symbol_settings:
-                        logger.warning(f"[AUTO-CUTOFF] No group settings found for group {group_name}. Skipping portfolio update for user {user_id}.")
-                        continue
                     
                     # Get open orders for this user
                     logger.debug(f"[AUTO-CUTOFF] Getting open orders for user {user_id}...")
@@ -310,7 +324,10 @@ async def update_all_users_dynamic_portfolio():
                     # Get adjusted market prices for all relevant symbols
                     
                     adjusted_market_prices = {}
-                    for symbol in group_symbol_settings.keys():
+                    for symbol, settings in group_symbol_settings.items():
+                        # Only process real trading symbols (settings must be a dict and contain 'margin' or 'spread')
+                        if not isinstance(settings, dict) or ('margin' not in settings and 'spread' not in settings):
+                            continue  # skip config fields like 'sending_orders'
                         # Try to get adjusted prices from cache
                         logger.debug(f"Looking up adjusted price for group '{group_name}', symbol '{symbol}'")
                         adjusted_prices = await get_adjusted_market_price_cache(global_redis_client_instance, group_name, symbol)
@@ -725,9 +742,9 @@ async def startup_event():
     logger.info("Initializing core services...")
     import redis.asyncio as redis
 
-    # r = redis.Redis(host="127.0.0.1", port=6379)
-    # await r.flushall()
-    # print("Redis flushed")
+    r = redis.Redis(host="127.0.0.1", port=6379)
+    await r.flushall()
+    print("Redis flushed")
     # Print Redis connection info for debugging
     redis_url = os.getenv("REDIS_URL")
     redis_host = os.getenv("REDIS_HOST")

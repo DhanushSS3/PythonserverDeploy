@@ -47,11 +47,22 @@ GROUP_SYMBOL_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group 
 GROUP_SETTINGS_CACHE_EXPIRY_SECONDS = 30 * 24 * 60 * 60 # Example: Group settings change infrequently
 
 # --- Last Known Price Cache ---
+# class DecimalEncoder(json.JSONEncoder):
+#     def default(self, o):
+#         if isinstance(o, decimal.Decimal):
+#             return str(o)
+#         return super().default(o)
+import decimal
+import datetime  # ← Correct import of module
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
             return str(o)
+        if isinstance(o, (datetime.datetime, datetime.date, datetime.time)):  # ← Proper types
+            return o.isoformat()
         return super().default(o)
+
 
 def decode_decimal(obj):
     """Recursively decode dictionary values, attempting to convert strings to Decimal."""
@@ -659,7 +670,10 @@ async def set_adjusted_market_price_cache(
     Key structure: adjusted_market_price:{group_name}:{symbol}
     Value is a JSON string: {"buy": "...", "sell": "...", "spread_value": "..."}
     """
-    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}"
+    # cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{group_name}:{symbol.upper()}"
+    group_name = group_name.lower()
+    symbol = symbol.upper()
+    cache_key = f"adjusted_market_price:{group_name}:{symbol}"
     try:
         # Create a dictionary with Decimal values
         adjusted_prices = {
@@ -682,7 +696,10 @@ async def get_adjusted_market_price_cache(redis_client: Redis, user_group_name: 
     Retrieves the cached adjusted market prices for a specific group and symbol.
     Returns None if the cache is empty or expired.
     """
-    cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol.upper()}"
+    # cache_key = f"{REDIS_ADJUSTED_MARKET_PRICE_KEY_PREFIX}{user_group_name}:{symbol.upper()}"
+    group_name = user_group_name.strip().lower()
+    symbol = symbol.strip().upper()
+    cache_key = f"adjusted_market_price:{group_name}:{symbol}"
     try:
         cached_data = await redis_client.get(cache_key)
         if cached_data:
@@ -861,7 +878,9 @@ async def set_last_known_price(redis_client: Redis, symbol: str, price_data: dic
     if not redis_client:
         cache_logger.warning(f"Redis client not available for setting last known price for {symbol}.")
         return
-    key = f"last_price:{symbol.upper()}"
+    # key = f"last_price:{symbol.upper()}"
+    symbol = symbol.upper()
+    key = f"last_price:{symbol}"
     try:
         await redis_client.set(key, json.dumps(price_data, cls=DecimalEncoder))
     except Exception as e:
@@ -874,7 +893,9 @@ async def get_last_known_price(redis_client: Redis, symbol: str) -> Optional[dic
     if not redis_client:
         cache_logger.warning(f"Redis client not available for getting last known price for {symbol}.")
         return None
-    key = f"last_price:{symbol.upper()}"
+    # key = f"last_price:{symbol.upper()}"
+    symbol = symbol.upper()
+    key = f"last_price:{symbol}"
     try:
         data_json = await redis_client.get(key)
         if data_json:

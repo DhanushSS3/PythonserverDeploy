@@ -79,7 +79,7 @@ error_logger = setup_file_logger("error", "error.log", logging.ERROR)
 
 # High-frequency operational loggers
 cache_logger = setup_file_logger("cache", "cache.log", logging.WARNING)
-websocket_logger = setup_file_logger("websocket", "websocket.log", logging.WARNING)
+websocket_logger = setup_file_logger("websocket", "websocket.log", logging.DEBUG)
 market_data_logger = setup_file_logger("market_data", "market_data.log", logging.WARNING)
 redis_logger = setup_file_logger("redis", "redis.log", logging.WARNING)
 

@@ -94,6 +94,22 @@ async def get_all_symbols_for_group(db: AsyncSession, group_name: str) -> List[s
     symbols = [row[0] for row in result.all() if row[0] is not None]
     return symbols
 
+# --- NEW FUNCTION: Get all symbol settings for a group as a dict ---
+async def get_group_symbol_settings_for_all_symbols(db: AsyncSession, group_name: str) -> dict:
+    """
+    Fetches all symbols for a group and returns a dict mapping symbol -> settings dict (all columns).
+    """
+    from app.database.models import Group
+    result = await db.execute(select(Group).filter(Group.name == group_name))
+    group_records = result.scalars().all()
+    symbol_settings = {}
+    for group in group_records:
+        if group.symbol:
+            # Convert all columns to a dict
+            settings = {col: getattr(group, col) for col in group.__table__.columns.keys()}
+            symbol_settings[group.symbol] = settings
+    return symbol_settings
+
 # Function to create a new group
 async def create_group(db: AsyncSession, group_create: GroupCreate) -> Group:
     """

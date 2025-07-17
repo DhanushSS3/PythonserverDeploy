@@ -1,14 +1,14 @@
 # app/services/portfolio_calculator.py
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import for raw market data
 # from app.firebase_stream import get_latest_market_data
 from app.core.firebase import get_latest_market_data
-from app.core.cache import get_adjusted_market_price_cache, get_last_known_price
+from app.core.cache import get_adjusted_market_price_cache, get_last_known_price, get_user_static_orders_cache, get_user_balance_margin_cache, refresh_balance_margin_cache_with_fallback
 from redis import Redis
 from app.core.logging_config import orders_logger
 
@@ -126,7 +126,7 @@ async def _calculate_adjusted_prices_from_raw(
 
 async def calculate_user_portfolio(
     user_data: Dict[str, Any],
-    open_positions: List[Dict[str, Any]],
+    open_positions: Optional[List[Dict[str, Any]]],
     adjusted_market_prices: Dict[str, Dict[str, Decimal]],
     group_symbol_settings: Dict[str, Any],
     redis_client: Redis,
@@ -134,32 +134,57 @@ async def calculate_user_portfolio(
 ) -> Dict[str, Any]:
     """
     Calculates the user's portfolio metrics including equity, margin, and PnL.
-    This function focuses on dynamic metrics that change with market prices.
-    
-    Args:
-        user_data: User account information including balance and leverage
-        open_positions: List of open positions
-        adjusted_market_prices: Dictionary of current market prices by symbol
-        group_symbol_settings: Dictionary of symbol settings by group
-        redis_client: Redis client for caching
-        margin_call_threshold: Threshold for margin call (percentage, default 100%)
-        
-    Returns:
-        Dictionary containing portfolio metrics including:
-        - balance: Current wallet balance
-        - equity: Balance + unrealized PnL
-        - margin: Total margin used
-        - free_margin: Equity - margin
-        - profit_loss: Total unrealized PnL
-        - margin_level: Equity / margin * 100 (percentage)
-        - positions: List of positions with PnL
-        - margin_call: Boolean indicating if margin_level is below threshold
+    If open_positions is None, fetches from static orders cache.
     """
     try:
-        # Initialize portfolio metrics
-        balance = Decimal(str(user_data.get('wallet_balance', '0.0')))
+        # Always fetch open_positions from user_static_orders cache
+        user_id = user_data.get('id')
+        user_type = user_data.get('user_type', 'live')
+        from app.core.cache import get_user_static_orders_cache, get_user_balance_margin_cache, refresh_balance_margin_cache_with_fallback
+        from app.api.v1.endpoints.market_data_ws import update_static_orders_cache
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        # 1. Get open_positions from static orders cache, fallback to DB if missing
+        static_orders = await get_user_static_orders_cache(redis_client, user_id)
+        if not static_orders or 'open_orders' not in static_orders:
+            # Fallback: fetch from DB and update static orders cache
+            db = None
+            if 'db' in user_data:
+                db = user_data['db']
+            try:
+                # Try to get db from global context if not in user_data
+                if db is None:
+                    import inspect
+                    for frame_info in inspect.stack():
+                        if 'db' in frame_info.frame.f_locals:
+                            db = frame_info.frame.f_locals['db']
+                            break
+                if db is not None:
+                    static_orders = await update_static_orders_cache(user_id, db, redis_client, user_type)
+            except Exception:
+                static_orders = None
+        open_positions = static_orders.get('open_orders', []) if static_orders else []
+
+        # 2. Get margin/balance from balance/margin cache, fallback to DB if missing
+        balance_margin = await get_user_balance_margin_cache(redis_client, user_id)
+        if not balance_margin:
+            db = None
+            if 'db' in user_data:
+                db = user_data['db']
+            try:
+                if db is None:
+                    import inspect
+                    for frame_info in inspect.stack():
+                        if 'db' in frame_info.frame.f_locals:
+                            db = frame_info.frame.f_locals['db']
+                            break
+                if db is not None:
+                    balance_margin = await refresh_balance_margin_cache_with_fallback(redis_client, user_id, user_type, db)
+            except Exception:
+                balance_margin = None
+        balance = Decimal(str(balance_margin.get('wallet_balance', '0.0'))) if balance_margin else Decimal('0.0')
+        overall_hedged_margin_usd = Decimal(str(balance_margin.get('margin', '0.0'))) if balance_margin else Decimal('0.0')
         leverage = Decimal(str(user_data.get('leverage', '1.0')))
-        overall_hedged_margin_usd = Decimal(str(user_data.get('margin', '0.0')))
         total_pnl_usd = Decimal('0.0')
 
         # Get raw market data

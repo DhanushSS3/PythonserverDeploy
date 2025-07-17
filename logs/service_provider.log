@@ -10,3 +10,17 @@
 2025-07-16 02:53:38,454 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=1000341-001, status=PROCESSING, user_id=9
 2025-07-16 02:53:38,484 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: PROCESSING -> OPEN
 2025-07-16 02:53:38,986 - INFO - service_provider - SERVICE PROVIDER ORDER OPENED: order_id=1000341-001, status=OPEN
+2025-07-17 03:39:26,023 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=1000341-001, status=OPEN, user_id=9
+2025-07-17 03:39:26,025 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: OPEN -> OPEN
+2025-07-17 03:39:26,025 - ERROR - service_provider - SERVICE PROVIDER ERROR: Invalid status transition from OPEN to OPEN
+2025-07-17 03:39:26,028 - ERROR - service_provider - SERVICE PROVIDER EXCEPTION: Error in service_provider_order_execution: 400: Invalid status transition from OPEN to OPEN
+Traceback (most recent call last):
+  File "C:\Users\Dhanush\FASTAPI\app\api\v1\endpoints\orders.py", line 3910, in service_provider_order_execution
+    raise HTTPException(status_code=400, detail=error_msg)
+fastapi.exceptions.HTTPException: 400: Invalid status transition from OPEN to OPEN
+2025-07-17 03:39:34,337 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=1000341-001, status=OPEN, user_id=9
+2025-07-17 03:39:34,337 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: OPEN -> CLOSED
+2025-07-17 03:39:34,515 - INFO - service_provider - SERVICE PROVIDER ORDER CLOSED: order_id=1000341-001, status=CLOSED, net_profit=-1358.16000000
+2025-07-17 04:29:46,702 - INFO - service_provider - SERVICE PROVIDER ORDER FOUND: order_id=1000347-001, status=PROCESSING, user_id=9
+2025-07-17 04:29:46,703 - INFO - service_provider - SERVICE PROVIDER STATUS TRANSITION: PROCESSING -> OPEN
+2025-07-17 04:29:47,164 - INFO - service_provider - SERVICE PROVIDER ORDER OPENED: order_id=1000347-001, status=OPEN
