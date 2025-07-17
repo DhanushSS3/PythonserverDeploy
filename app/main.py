@@ -308,10 +308,13 @@ async def update_all_users_dynamic_portfolio():
                     logger.debug(f"[AUTO-CUTOFF] User {user_id} total positions for portfolio calculation: {len(all_positions)}")
                     
                     # Get adjusted market prices for all relevant symbols
+                    
                     adjusted_market_prices = {}
                     for symbol in group_symbol_settings.keys():
                         # Try to get adjusted prices from cache
+                        logger.debug(f"Looking up adjusted price for group '{group_name}', symbol '{symbol}'")
                         adjusted_prices = await get_adjusted_market_price_cache(global_redis_client_instance, group_name, symbol)
+                        logger.debug(f"Adjusted prices for {group_name}:{symbol}: {adjusted_prices}")
                         if adjusted_prices:
                             adjusted_market_prices[symbol] = {
                                 'buy': adjusted_prices.get('buy'),

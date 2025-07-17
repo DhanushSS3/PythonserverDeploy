@@ -200,6 +200,27 @@ async def calculate_user_portfolio(
 
             # Get current prices from adjusted market prices
             current_prices = adjusted_market_prices.get(symbol, {})
+            # --- PATCH: Fallback to last known price if adjusted price is missing ---
+            if not current_prices or not (str(current_prices.get('buy', '0')) != '0' and str(current_prices.get('sell', '0')) != '0'):
+                last_price = await get_last_known_price(redis_client, symbol)
+                if last_price and symbol_settings:
+                    try:
+                        raw_ask = Decimal(str(last_price.get('b', '0')))
+                        raw_bid = Decimal(str(last_price.get('o', '0')))
+                        spread = Decimal(str(symbol_settings.get('spread', '0')))
+                        spread_pip = Decimal(str(symbol_settings.get('spread_pip', '0.00001')))
+                        half_spread = (spread * spread_pip) / Decimal('2')
+                        adjusted_buy = raw_ask + half_spread
+                        adjusted_sell = raw_bid - half_spread
+                        current_prices = {'buy': adjusted_buy, 'sell': adjusted_sell}
+                        logger.warning(f"[FALLBACK] Used last known price for {symbol}: buy={adjusted_buy}, sell={adjusted_sell}")
+                    except Exception as e:
+                        logger.error(f"Error calculating adjusted prices from last known price for {symbol}: {e}")
+                        current_prices = {}
+                else:
+                    logger.warning(f"No adjusted or last known prices found for symbol {symbol}")
+            # --- End of PATCH ---
+
             if not current_prices:
                 logger.warning(f"No adjusted prices found for symbol {symbol}")
                 # Skip this position in PnL calculation but include it in the result
