@@ -720,21 +720,21 @@ async def startup_event():
     global global_redis_client_instance
     logger.info("Application startup initiated")
     logger.info("Initializing core services...")
-    # import redis.asyncio as redis
+    import redis.asyncio as redis
 
-    # r = redis.Redis(host="127.0.0.1", port=6379)
-    # await r.flushall()
-    # print("Redis flushed")
+    r = redis.Redis(host="127.0.0.1", port=6379)
+    await r.flushall()
+    print("Redis flushed")
     # Print Redis connection info for debugging
-    # redis_url = os.getenv("REDIS_URL")
-    # redis_host = os.getenv("REDIS_HOST")
-    # redis_port = os.getenv("REDIS_PORT")
-    # redis_password = os.getenv("REDIS_PASSWORD")
-    # print(f"[DEBUG] Redis connection info:")
-    # print(f"  REDIS_URL: {redis_url}")
-    # print(f"  REDIS_HOST: {redis_host}")
-    # print(f"  REDIS_PORT: {redis_port}")
-    # print(f"  REDIS_PASSWORD: {redis_password}")
+    redis_url = os.getenv("REDIS_URL")
+    redis_host = os.getenv("REDIS_HOST")
+    redis_port = os.getenv("REDIS_PORT")
+    redis_password = os.getenv("REDIS_PASSWORD")
+    print(f"[DEBUG] Redis connection info:")
+    print(f"  REDIS_URL: {redis_url}")
+    print(f"  REDIS_HOST: {redis_host}")
+    print(f"  REDIS_PORT: {redis_port}")
+    print(f"  REDIS_PASSWORD: {redis_password}")
 
     # Initialize Firebase
 
@@ -755,6 +755,10 @@ async def startup_event():
         logger.error("Firebase initialization error")
     
     # Initialize Redis connection pool
+
+    from app.core.cache import cache_all_groups_and_symbols
+    
+
     redis_available = False
     try:
         redis_client = await get_redis_client()
@@ -765,23 +769,23 @@ async def startup_event():
                 global_redis_client_instance = redis_client
                 logger.info("Redis initialized")
                 # --- Print all Redis keys at startup ---
-                # try:
-                #     keys = await redis_client.keys("*")
-                #     print(f"[STARTUP] Redis contains {len(keys)} keys:")
-                #     for k in keys:
-                #         print(f"  - {k}")
-                # except Exception as e:
-                #     print(f"[STARTUP] Error fetching Redis keys: {e}")
+                try:
+                    async with AsyncSessionLocal() as db:
+                        await cache_all_groups_and_symbols(global_redis_client_instance, db)
+                    logger.info("All group settings and group-symbol settings cached in Redis at startup.")
+                except Exception as e:
+                    logger.error(f"Error caching all group settings at startup: {e}", exc_info=True)
+
+                try:
+                    keys = await redis_client.keys("*")
+                    print(f"[STARTUP] Redis contains {len(keys)} keys:")
+                    for k in keys:
+                        print(f"  - {k}")
+                except Exception as e:
+                    print(f"[STARTUP] Error fetching Redis keys: {e}")
     except Exception:
         logger.warning("Redis initialization failed")
-    from app.core.cache import cache_all_groups_and_symbols
-    try:
-        if global_redis_client_instance:
-            async with AsyncSessionLocal() as db:
-                await cache_all_groups_and_symbols(global_redis_client_instance, db)
-            logger.info("All group settings and group-symbol settings cached in Redis at startup.")
-    except Exception as e:
-        logger.error(f"Error caching all group settings at startup: {e}", exc_info=True)
+
 
     # Initialize APScheduler
     try:
