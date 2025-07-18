@@ -492,12 +492,50 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                 try:
                     # --- NEW: Check Redis flag before sending close request ---
                     autocutoff_flag_key = f"autocutoff_close_sent:{order.order_id}"
-                    already_sent = await redis_client.get(autocutoff_flag_key)
-                    if already_sent:
+                    was_set = await redis_client.set(autocutoff_flag_key, "1", ex=48*60*60, nx=True)
+                    if not was_set:
                         autocutoff_logger.info(f"[AUTO-CUTOFF] Close request already sent for order {order.order_id}, skipping.")
                         continue
                     autocutoff_logger.debug(f"[AUTO-CUTOFF] Preparing to close order {order.order_id} for user {user_id}")
                     close_id = await generate_unique_10_digit_id(db, UserOrder, 'close_id')
+
+                    # --- NEW: Check for stoploss/takeprofit and send cancel requests if needed ---
+                    stoploss_cancel_id = None
+                    takeprofit_cancel_id = None
+                    has_sl_or_tp = False
+                    if order.stop_loss is not None and order.stop_loss > 0:
+                        has_sl_or_tp = True
+                        stoploss_cancel_id = await generate_unique_10_digit_id(db, UserOrder, 'stoploss_cancel_id')
+                        sl_cancel_payload = {
+                            "action": "cancel_stoploss",
+                            "status": "TP/SL-CLOSED",
+                            "stop_loss": order.stop_loss,
+                            "order_id": order.order_id,
+                            "user_id": user_id,
+                            "stoploss_id": getattr(order, 'stoploss_id', None),
+                            "stoploss_cancel_id": stoploss_cancel_id,
+                            "order_company_name": order.order_company_name,
+                            "order_type": order.order_type
+                        }
+                        autocutoff_logger.info(f"[FIREBASE_SL_CANCEL] Sending stop loss cancellation: {sl_cancel_payload}")
+                        await send_order_to_firebase(sl_cancel_payload, "live")
+                    if order.take_profit is not None and order.take_profit > 0:
+                        has_sl_or_tp = True
+                        takeprofit_cancel_id = await generate_unique_10_digit_id(db, UserOrder, 'takeprofit_cancel_id')
+                        tp_cancel_payload = {
+                            "action": "cancel_takeprofit",
+                            "status": "TP/SL-CLOSED",
+                            "take_profit": order.take_profit,
+                            "order_id": order.order_id,
+                            "user_id": user_id,
+                            "takeprofit_id": getattr(order, 'takeprofit_id', None),
+                            "takeprofit_cancel_id": takeprofit_cancel_id,
+                            "order_company_name": order.order_company_name,
+                            "order_type": order.order_type
+                        }
+                        autocutoff_logger.info(f"[FIREBASE_TP_CANCEL] Sending take profit cancellation: {tp_cancel_payload}")
+                        await send_order_to_firebase(tp_cancel_payload, "live")
+                    close_request_status = "TP/SL-CLOSED" if has_sl_or_tp else "CLOSED"
                     firebase_close_data = {
                         "action": "close_order",
                         "close_id": close_id,
@@ -506,7 +544,7 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                         "order_company_name": order.order_company_name,
                         "order_type": order.order_type,
                         "order_status": order.order_status,
-                        "status": "CLOSED",
+                        "status": close_request_status,
                         "order_quantity": str(order.order_quantity),
                         "contract_value": str(order.contract_value),
                         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -515,12 +553,16 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     await send_order_to_firebase(firebase_close_data, "live")
                     autocutoff_logger.warning(f"[AUTO-CUTOFF] SUCCESSFULLY SENT TO FIREBASE: User {user_id}, Order {order.order_id}, Close ID {close_id}")
                     # --- NEW: Set Redis flag after sending ---
-                    await redis_client.set(autocutoff_flag_key, "1", ex=48*60*60)  # 48 hours expiry
+                    # (already set above with nx=True)
                     update_fields = {
                         "close_id": close_id,
                         "close_message": "Auto-cutoff",
-                        "status": "CLOSED"
+                        "status": close_request_status
                     }
+                    if stoploss_cancel_id:
+                        update_fields["stoploss_cancel_id"] = stoploss_cancel_id
+                    if takeprofit_cancel_id:
+                        update_fields["takeprofit_cancel_id"] = takeprofit_cancel_id
                     await crud_order.update_order_with_tracking(
                         db, order, update_fields, user_id, user_type, "AUTO_CUTOFF_REQUESTED"
                     )
