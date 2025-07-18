@@ -14,8 +14,13 @@ async def admin_add_funds(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    balance = await add_funds_to_wallet(db, req.user_id, req.amount, req.currency, req.reason, by_admin=True)
-    return AdminWalletActionResponse(status=True, message="Funds added successfully", balance=balance)
+    try:
+        balance = await add_funds_to_wallet(db, req.user_id, req.amount, req.currency, req.reason, by_admin=True)
+        return AdminWalletActionResponse(status=True, message="Funds added successfully", balance=balance)
+    except Exception as e:
+        if str(e) == "User not found":
+            raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/admin/wallet/withdraw-funds", response_model=AdminWalletActionResponse)
 async def admin_withdraw_funds(
@@ -27,4 +32,6 @@ async def admin_withdraw_funds(
         wallet_balance = await withdraw_funds_from_wallet(db, req.user_id, req.amount, req.currency, req.reason, by_admin=True)
         return AdminWalletActionResponse(status=True, message="Funds withdrawn successfully", balance=wallet_balance)
     except Exception as e:
+        if str(e) == "User not found":
+            raise HTTPException(status_code=404, detail="User not found")
         raise HTTPException(status_code=400, detail=str(e)) 

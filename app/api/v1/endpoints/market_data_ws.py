@@ -180,7 +180,8 @@ async def _get_full_portfolio_details(
         user_data=user_data, # This is a dict
         open_positions=open_positions, # List of dicts
         adjusted_market_prices=market_prices_for_calc, # Dict of symbol -> {'buy': Decimal, 'sell': Decimal}
-        group_symbol_settings=group_symbol_settings_all, # Dict of symbol -> settings dict
+        group_symbol_settings=group_symbol_settings_all,
+        db=db, # Dict of symbol -> settings dict
         redis_client=redis_client
     )
     
@@ -583,7 +584,7 @@ async def update_static_orders_cache(user_id: int, db: AsyncSession, redis_clien
         
         # FIXED: Use longer expiry and add error handling
         try:
-            await set_user_static_orders_cache(redis_client, user_id, static_orders_data)
+            await set_user_static_orders_cache(redis_client, user_id, static_orders_data, user_type)
             logger.info(f"User {user_id}: Successfully updated static orders cache with {len(open_orders_data)} open orders and {len(pending_orders_data)} pending orders")
         except Exception as cache_error:
             logger.error(f"User {user_id}: Error updating static orders cache: {cache_error}", exc_info=True)
@@ -655,6 +656,7 @@ async def update_dynamic_portfolio_cache(
             open_positions=open_positions,
             adjusted_market_prices=adjusted_market_prices,
             group_symbol_settings=group_symbol_settings,
+            db=db,
             redis_client=redis_client
         )
         
@@ -668,7 +670,7 @@ async def update_dynamic_portfolio_cache(
             "margin_level": portfolio_metrics.get("margin_level", "0.0"),
             "positions_with_pnl": portfolio_metrics.get("positions", [])  # Positions with PnL calculations
         }
-        await set_user_dynamic_portfolio_cache(redis_client, user_id, dynamic_portfolio_data)
+        await set_user_dynamic_portfolio_cache(redis_client, user_id, dynamic_portfolio_data, user_type)
         logger.debug(f"Updated dynamic portfolio cache for user {user_id}")
         
         return dynamic_portfolio_data
@@ -699,7 +701,7 @@ async def process_portfolio_update(
     """
     try:
         # Try to get static orders from cache first
-        static_orders = await get_user_static_orders_cache(redis_client, user_id)
+        static_orders = await get_user_static_orders_cache(redis_client, user_id, user_type)
         
         # Only query database if cache is empty or this is initial connection
         if not static_orders or is_initial_connection:
@@ -734,7 +736,7 @@ async def process_portfolio_update(
             logger.error(f"User {user_id}: Error updating dynamic portfolio cache: {e}", exc_info=True)
         
         # Get dynamic portfolio from cache
-        dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id)
+        dynamic_portfolio = await get_user_dynamic_portfolio_cache(redis_client, user_id, user_type)
         
         # Get user data from cache (only query DB if cache is empty)
         user_data = await get_user_data_cache(redis_client, user_id, db, user_type)
@@ -1022,7 +1024,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "margin_level": "0.0",
         "positions_with_pnl": []
     }
-    await set_user_dynamic_portfolio_cache(redis_client, db_user_id, initial_dynamic_portfolio)
+    await set_user_dynamic_portfolio_cache(redis_client, db_user_id, initial_dynamic_portfolio, user_type)
 
     # Send initial connection data with all available symbols
     try:
@@ -1290,7 +1292,7 @@ async def refresh_static_orders_cache_if_needed(user_id: int, redis_client: Redi
     """
     try:
         # Check if cache exists and is valid
-        static_orders = await get_user_static_orders_cache(redis_client, user_id)
+        static_orders = await get_user_static_orders_cache(redis_client, user_id, user_type)
         
         # If cache is missing, empty, or has errors, refresh it
         should_refresh = False

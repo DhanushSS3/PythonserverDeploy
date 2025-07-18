@@ -159,9 +159,9 @@ ALGORITHM = os.getenv("ALGORITHM")
 HOST = os.getenv("DATABASE_HOST")
 
 print(f"--- Application Startup ---")
-print(f"Loaded SECRET_KEY (from code): '{SECRET_KEY}'")
-print(f"Loaded ALGORITHM (from code): '{ALGORITHM}'")
-print(f"Loaded HOST (from code): '{HOST}'")
+# print(f"Loaded SECRET_KEY (from code): '{SECRET_KEY}'")
+# print(f"Loaded ALGORITHM (from code): '{ALGORITHM}'")
+# print(f"Loaded HOST (from code): '{HOST}'")
 print(f"---------------------------")
 
 # Log application startup
@@ -233,6 +233,7 @@ async def update_all_users_dynamic_portfolio():
                         continue
                     logger.debug(f"[AUTO-CUTOFF] Getting group symbol settings for group {group_name}...")
                     group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
+                    # print(f"Group Symbol Settings {group_symbol_settings}")
                     logger.debug(f"[AUTO-CUTOFF] Group symbol settings for group '{group_name}' from cache: {group_symbol_settings}")
                     # Robust fallback: If cache is missing or sending_orders is None, fetch from DB and update cache
                     # if group_symbol_settings is None or group_symbol_settings.get('sending_orders') is None:
@@ -264,6 +265,7 @@ async def update_all_users_dynamic_portfolio():
                                 await set_group_symbol_settings_cache(global_redis_client_instance, group_name, symbol, settings)
                             # Now reload the cache
                             group_symbol_settings = await get_group_symbol_settings_cache(global_redis_client_instance, group_name, "ALL")
+                            # print(f"Group Symbol Settings {group_symbol_settings}")
                             logger.info(f"[AUTO-CUTOFF] Group symbol settings fetched from DB and cached for group '{group_name}'")
                         else:
                             logger.error(f"[AUTO-CUTOFF] Group symbol settings not found in DB for group '{group_name}'. Skipping portfolio update for user {user_id}.")
@@ -360,6 +362,7 @@ async def update_all_users_dynamic_portfolio():
                         adjusted_market_prices=adjusted_market_prices,
                         group_symbol_settings=group_symbol_settings,
                         redis_client=global_redis_client_instance,
+                        db=db,
                         margin_call_threshold=margin_call_threshold
                     )
                     logger.info(f"[AUTO-CUTOFF] Portfolio metrics for user {user_id}: {portfolio_metrics}")
@@ -376,7 +379,7 @@ async def update_all_users_dynamic_portfolio():
                         "margin_call": portfolio_metrics.get("margin_call", False)
                     }
                     logger.debug(f"[AUTO-CUTOFF] Caching dynamic portfolio data for user {user_id}: {dynamic_portfolio_data}")
-                    await set_user_dynamic_portfolio_cache(global_redis_client_instance, user_id, dynamic_portfolio_data)
+                    await set_user_dynamic_portfolio_cache(global_redis_client_instance, user_id, dynamic_portfolio_data, user_type)
                     
                     # Check for margin call conditions
                     margin_level = Decimal(portfolio_metrics.get("margin_level", "0.0"))
@@ -515,7 +518,8 @@ async def handle_margin_cutoff(db: AsyncSession, redis_client: Redis, user_id: i
                     await redis_client.set(autocutoff_flag_key, "1", ex=48*60*60)  # 48 hours expiry
                     update_fields = {
                         "close_id": close_id,
-                        "close_message": "Auto-cutoff"
+                        "close_message": "Auto-cutoff",
+                        "status": "CLOSED"
                     }
                     await crud_order.update_order_with_tracking(
                         db, order, update_fields, user_id, user_type, "AUTO_CUTOFF_REQUESTED"
@@ -713,7 +717,7 @@ async def rotate_service_account_jwt():
     try:
         service_name = "barclays_service_provider"
         # Generate a token valid for 35 minutes. It will be refreshed every 30 minutes.
-        token = create_service_account_token(service_name, expires_minutes=35)
+        token = create_service_account_token(service_name, expires_minutes=1333)
 
         # Path in Firebase to store the token
         jwt_ref = firebase_db.reference(f"service_provider_credentials/{service_name}")
@@ -746,15 +750,15 @@ async def startup_event():
     # await r.flushall()
     # print("Redis flushed")
     # Print Redis connection info for debugging
-    redis_url = os.getenv("REDIS_URL")
-    redis_host = os.getenv("REDIS_HOST")
-    redis_port = os.getenv("REDIS_PORT")
-    redis_password = os.getenv("REDIS_PASSWORD")
-    print(f"[DEBUG] Redis connection info:")
-    print(f"  REDIS_URL: {redis_url}")
-    print(f"  REDIS_HOST: {redis_host}")
-    print(f"  REDIS_PORT: {redis_port}")
-    print(f"  REDIS_PASSWORD: {redis_password}")
+    # redis_url = os.getenv("REDIS_URL")
+    # redis_host = os.getenv("REDIS_HOST")
+    # redis_port = os.getenv("REDIS_PORT")
+    # redis_password = os.getenv("REDIS_PASSWORD")
+    # print(f"[DEBUG] Redis connection info:")
+    # print(f"  REDIS_URL: {redis_url}")
+    # print(f"  REDIS_HOST: {redis_host}")
+    # print(f"  REDIS_PORT: {redis_port}")
+    # print(f"  REDIS_PASSWORD: {redis_password}")
 
     # Initialize Firebase
 
@@ -792,9 +796,11 @@ async def startup_event():
                 try:
                     async with AsyncSessionLocal() as db:
                         await cache_all_groups_and_symbols(global_redis_client_instance, db)
-                    logger.info("All group settings and group-symbol settings cached in Redis at startup.")
+                        from app.core.cache import cache_all_external_symbol_info
+                        await cache_all_external_symbol_info(global_redis_client_instance, db)
+                    logger.info("All group settings, group-symbol settings, and external symbol info cached in Redis at startup.")
                 except Exception as e:
-                    logger.error(f"Error caching all group settings at startup: {e}", exc_info=True)
+                    logger.error(f"Error caching all group settings or external symbol info at startup: {e}", exc_info=True)
 
                 try:
                     keys = await redis_client.keys("*")
@@ -831,7 +837,7 @@ async def startup_event():
         
         scheduler.add_job(
             rotate_service_account_jwt,
-            IntervalTrigger(minutes=30),
+            IntervalTrigger(minutes=1),
             id='rotate_service_account_jwt',
             replace_existing=True
         )

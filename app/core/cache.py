@@ -472,8 +472,8 @@ async def refresh_balance_margin_cache_with_fallback(redis_client: Redis, user_i
         
         return None
 
-# --- New Static Orders Cache ---
-async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static_orders_data: Dict[str, Any]):
+# --- User Static Orders Cache ---
+async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static_orders_data: Dict[str, Any], user_type: str = 'live'):
     """
     Stores static order data (open and pending orders without PnL) in Redis.
     This should be called whenever orders are added, modified, or removed.
@@ -482,7 +482,7 @@ async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static
         logger.warning(f"Redis client not available for setting static orders cache for user {user_id}.")
         return
 
-    key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_id}"
+    key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_type}:{user_id}"
     try:
         # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(static_orders_data, cls=DecimalEncoder)
@@ -490,7 +490,7 @@ async def set_user_static_orders_cache(redis_client: Redis, user_id: int, static
     except Exception as e:
         logger.error(f"Error setting static orders cache for user {user_id}: {e}", exc_info=True)
 
-async def get_user_static_orders_cache(redis_client: Redis, user_id: int) -> Optional[Dict[str, Any]]:
+async def get_user_static_orders_cache(redis_client: Redis, user_id: int, user_type: str = 'live') -> Optional[Dict[str, Any]]:
     """
     Retrieves static order data from Redis cache.
     Returns None if data is not found.
@@ -499,7 +499,7 @@ async def get_user_static_orders_cache(redis_client: Redis, user_id: int) -> Opt
         logger.warning(f"Redis client not available for getting static orders cache for user {user_id}.")
         return None
 
-    key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_id}"
+    key = f"{REDIS_USER_STATIC_ORDERS_KEY_PREFIX}{user_type}:{user_id}"
     try:
         data_json = await redis_client.get(key)
         if data_json:
@@ -510,8 +510,8 @@ async def get_user_static_orders_cache(redis_client: Redis, user_id: int) -> Opt
         logger.error(f"Error getting static orders cache for user {user_id}: {e}", exc_info=True)
         return None
 
-# --- New Dynamic Portfolio Cache ---
-async def set_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, dynamic_portfolio_data: Dict[str, Any]):
+# --- User Dynamic Portfolio Cache ---
+async def set_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, dynamic_portfolio_data: Dict[str, Any], user_type: str = 'live'):
     """
     Stores dynamic portfolio metrics (free_margin, positions with PnL, margin_level) in Redis.
     This should be called whenever market data changes affect the user's portfolio.
@@ -520,7 +520,7 @@ async def set_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, dy
         logger.warning(f"Redis client not available for setting dynamic portfolio cache for user {user_id}.")
         return
 
-    key = f"{REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX}{user_id}"
+    key = f"{REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX}{user_type}:{user_id}"
     try:
         # Ensure all Decimal values are handled by DecimalEncoder
         data_serializable = json.dumps(dynamic_portfolio_data, cls=DecimalEncoder)
@@ -528,7 +528,7 @@ async def set_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, dy
     except Exception as e:
         logger.error(f"Error setting dynamic portfolio cache for user {user_id}: {e}", exc_info=True)
 
-async def get_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int) -> Optional[Dict[str, Any]]:
+async def get_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int, user_type: str = 'live') -> Optional[Dict[str, Any]]:
     """
     Retrieves dynamic portfolio metrics from Redis cache.
     Returns None if data is not found.
@@ -537,7 +537,7 @@ async def get_user_dynamic_portfolio_cache(redis_client: Redis, user_id: int) ->
         logger.warning(f"Redis client not available for getting dynamic portfolio cache for user {user_id}.")
         return None
 
-    key = f"{REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX}{user_id}"
+    key = f"{REDIS_USER_DYNAMIC_PORTFOLIO_KEY_PREFIX}{user_type}:{user_id}"
     try:
         data_json = await redis_client.get(key)
         if data_json:
@@ -1370,3 +1370,24 @@ async def cache_all_groups_and_symbols(redis_client, db):
         if group.symbol:
             symbol_settings = {k: getattr(group, k) for k in group.__table__.columns.keys()}
             await set_group_symbol_settings_cache(redis_client, group.name, group.symbol, symbol_settings)
+
+EXTERNAL_SYMBOL_INFO_KEY_PREFIX = "external_symbol_info:"
+
+async def set_external_symbol_info_cache(redis_client: Redis, symbol: str, info: dict):
+    key = f"{EXTERNAL_SYMBOL_INFO_KEY_PREFIX}{symbol.upper()}"
+    await redis_client.set(key, json.dumps(info, cls=DecimalEncoder), ex=30*24*60*60)  # 30 days
+
+async def get_external_symbol_info_cache(redis_client: Redis, symbol: str) -> Optional[dict]:
+    key = f"{EXTERNAL_SYMBOL_INFO_KEY_PREFIX}{symbol.upper()}"
+    data = await redis_client.get(key)
+    if data:
+        return json.loads(data, object_hook=decode_decimal)
+    return None
+
+from app.crud.external_symbol_info import get_all_external_symbol_info
+
+async def cache_all_external_symbol_info(redis_client, db):
+    all_symbol_info = await get_all_external_symbol_info(db)
+    for info in all_symbol_info:
+        symbol = info.fix_symbol
+        await set_external_symbol_info_cache(redis_client, symbol, {c.name: getattr(info, c.name) for c in info.__table__.columns})

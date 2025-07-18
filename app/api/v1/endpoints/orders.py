@@ -200,6 +200,7 @@ async def update_portfolio(user_id, db, redis_client, user_type):
                 open_positions=open_positions,
                 adjusted_market_prices=adjusted_market_prices,
                 group_symbol_settings=group_symbol_settings,
+                db=db,
                 redis_client=redis_client
             )
         except Exception as e:

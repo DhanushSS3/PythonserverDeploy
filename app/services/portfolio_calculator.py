@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import for raw market data
 # from app.firebase_stream import get_latest_market_data
 from app.core.firebase import get_latest_market_data
-from app.core.cache import get_adjusted_market_price_cache, get_last_known_price, get_user_static_orders_cache, get_user_balance_margin_cache, refresh_balance_margin_cache_with_fallback
+from app.core.cache import get_adjusted_market_price_cache, get_last_known_price, get_user_static_orders_cache, get_user_balance_margin_cache, refresh_balance_margin_cache_with_fallback, get_external_symbol_info_cache
 from redis import Redis
 from app.core.logging_config import orders_logger
 
@@ -130,6 +130,7 @@ async def calculate_user_portfolio(
     adjusted_market_prices: Dict[str, Dict[str, Decimal]],
     group_symbol_settings: Dict[str, Any],
     redis_client: Redis,
+    db: AsyncSession,
     margin_call_threshold: Decimal = Decimal('100.0')  # Default threshold for margin call (100%)
 ) -> Dict[str, Any]:
     """
@@ -147,7 +148,7 @@ async def calculate_user_portfolio(
         logger = logging.getLogger("app.services.portfolio_calculator")
 
         # 1. Get open_positions from static orders cache, fallback to DB if missing
-        static_orders = await get_user_static_orders_cache(redis_client, user_id)
+        static_orders = await get_user_static_orders_cache(redis_client, user_id, user_type)
         if not static_orders or 'open_orders' not in static_orders:
             logger.warning(f"[PORTFOLIO] user_static_orders cache miss for user {user_id}, falling back to DB and updating cache.")
             db = None
@@ -199,6 +200,17 @@ async def calculate_user_portfolio(
         leverage = Decimal(str(user_data.get('leverage', '1.0')))
         total_pnl_usd = Decimal('0.0')
 
+        # 3. Batch fetch external symbol info for all symbols in open positions
+        symbols = {pos.get('order_company_name', '').upper() for pos in open_positions}
+        external_info_map = {}
+        for symbol in symbols:
+            external_info = await get_external_symbol_info_cache(redis_client, symbol)
+            if external_info:
+                external_info_map[symbol] = external_info
+                logger.debug(f"[PORTFOLIO] Found external symbol info for {symbol} in cache")
+            else:
+                logger.warning(f"[PORTFOLIO] No external symbol info found in cache for {symbol}")
+
         # Get raw market data
         raw_market_data = await get_latest_market_data()
         if not raw_market_data:
@@ -224,13 +236,20 @@ async def calculate_user_portfolio(
             margin = Decimal(str(position.get('margin', '0.0')))
             contract_value = Decimal(str(position.get('contract_value', '0.0')))
 
-            # Get symbol settings
+            # Get symbol settings from group settings
             symbol_settings = group_symbol_settings.get(symbol, {})
-            contract_size = Decimal(str(symbol_settings.get('contract_size', '100000')))
-            spread_pip = Decimal(str(symbol_settings.get('spread_pip', '0.00001')))
-            profit_currency = symbol_settings.get('profit_currency', 'USD')
             
-            # Get commission settings
+            # Get external symbol info from cache (contract_size and profit_currency)
+            external_info = external_info_map.get(symbol, {})
+            contract_size = Decimal(str(external_info.get('contract_size', '1'))) if external_info else Decimal('1')
+            profit_currency = external_info.get('profit', 'USD') if external_info else 'USD'
+            # print(f"Contract size and Profit Currency for symbol{symbol}")
+            # print(contract_size)
+            # print(profit_currency)
+            # Get spread_pip from group settings
+            spread_pip = Decimal(str(symbol_settings.get('spread_pip', '0.00001')))
+            
+            # Get commission settings from group settings
             commission_type = int(symbol_settings.get('commision_type', 0))
             commission_value_type = int(symbol_settings.get('commision_value_type', 0))
             commission_rate = Decimal(str(symbol_settings.get('commision', '0.0')))
@@ -303,10 +322,10 @@ async def calculate_user_portfolio(
             # Calculate PnL based on order type and contract size
             if order_type == 'BUY':
                 price_diff = current_sell - entry_price
-                pnl = price_diff * quantity 
+                pnl = price_diff * quantity * contract_size
             else:  # SELL
                 price_diff = entry_price - current_buy
-                pnl = price_diff * quantity 
+                pnl = price_diff * quantity * contract_size
 
             # Use stored commission value if available, otherwise use 0
             commission_usd = Decimal(str(position.get('commission', '0.0')))
