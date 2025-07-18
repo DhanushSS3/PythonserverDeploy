@@ -2933,6 +2933,16 @@ async def update_order_by_service_provider(
         update_fields = update_request.model_dump(exclude_unset=True)
         orders_logger.info(f"Update fields: {update_fields}")
         
+        # Prevent updates to ID fields
+        id_fields = [
+            "order_id", "close_id", "takeprofit_id", "stoploss_id",
+            "takeprofit_cancel_id", "stoploss_cancel_id", "modify_id", "cancel_id"
+        ]
+        for id_field in id_fields:
+            if id_field in update_fields:
+                orders_logger.warning(f"Attempt to update ID field '{id_field}' in service_provider_order_update for order {db_order.order_id}. This field will be ignored.")
+                del update_fields[id_field]
+        
         # Handle special status transitions
         new_order_status = update_fields.get('order_status')
         
